@@ -40,11 +40,13 @@ assert e(resource_peak_bytes) <= e(resource_hard_mem_bytes)
 assert e(resource_admitted) == 1
 assert `"`c(rngstate)'"' == `"`rng_before'"'
 
+local rejecting_gib = .99*e(resource_peak_bytes)/1024^3
+
 // Lowering only the actual allocation envelope fails at the complete direct
 // peak before RNG; it is not mislabeled as a percentage-based batch failure.
 capture noisily fevc y [fw=frequency], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) probes(2) batch(8)       ///
-    preconditioner(diagonal) memory_gib(.30) seed(8675309)        ///
+    preconditioner(diagonal) memory_gib(`rejecting_gib') memorycheck(error) seed(8675309)        ///
     tolerance(1e-10) backend(mata) rng(stata) nodisplay
 assert _rc == 498
 assert inlist("`e(withholding_status)'",                       ///

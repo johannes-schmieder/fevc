@@ -312,6 +312,13 @@ impl<'a> PreparedTwoWaySolver<'a> {
         }
     }
 
+    pub(crate) fn reconcile_full_cmg_memory(&self, peak: u64) -> Result<()> {
+        if let PreparedSolverBackend::FullCmg(solver) = &self.backend {
+            solver.reconcile_memory(peak)?;
+        }
+        Ok(())
+    }
+
     #[must_use]
     pub fn maximum_full_residual_tolerance(&self) -> f64 {
         match &self.backend {

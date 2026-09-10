@@ -186,6 +186,7 @@ pub struct GenericJlaOptions {
     pub rank_tolerance: f64,
     pub block_tolerance: f64,
     pub blocksize_limit: usize,
+    pub memory_budget: crate::memory::MemoryBudget,
     pub memory_limit_bytes: u64,
     /// Bytes retained by the caller's prepared problem/context.  They count
     /// against the whole-command limit but are not allocated by this module.
@@ -218,6 +219,7 @@ impl Default for GenericJlaOptions {
             rank_tolerance: 1.0e-10,
             block_tolerance: 1.0e-10,
             blocksize_limit: 5_000,
+            memory_budget: crate::memory::MemoryBudget::Legacy,
             memory_limit_bytes: u64::MAX,
             prepared_persistent_bytes: 0,
             retained_mask_bytes: 0,
@@ -257,7 +259,7 @@ impl GenericJlaOptions {
         if self.blocksize_limit == 0 || self.blocksize_limit > 1_000_000 {
             return Err(invalid("block-size limit must lie in [1, 1000000]"));
         }
-        if self.memory_limit_bytes == 0 {
+        if self.memory_budget.limit(self.memory_limit_bytes) == Some(0) {
             return Err(invalid("whole-command memory limit must be positive"));
         }
         if self.retained_mask_bytes > self.prepared_persistent_bytes {
@@ -726,7 +728,11 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
     interrupt.checkpoint("generic_jla_entry")?;
-    let routing = execution_options.routing.validate()?;
+    let mut routing = execution_options.routing;
+    if execution_options.estimator.memory_budget != crate::memory::MemoryBudget::Legacy {
+        routing.cmg.memory_budget = execution_options.estimator.memory_budget;
+    }
+    let routing = routing.validate()?;
     let mut options = execution_options.estimator;
     options.solver = routing.solver;
     let mut options = options.validate()?;
@@ -927,7 +933,12 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         memory.peak = checked_sum(&[memory.peak, memory.component_inference])?;
         memory.peak_phase = GenericJlaMemoryPeakPhase::ComponentInference;
     }
-    admit_memory(memory.peak, options.memory_limit_bytes)?;
+    if options
+        .memory_budget
+        .rejects(memory.peak, options.memory_limit_bytes)
+    {
+        admit_memory(memory.peak, options.memory_limit_bytes)?;
+    }
     let wall = wall_work_receipt(
         generic_jla_wall_work(problem, options, full_parameters, hybrid.is_some())?,
         execution_options.wallseconds,
@@ -7505,6 +7516,7 @@ fn plan_generic_jla_batches(
             route_width_cap: GENERIC_JLA_ROUTE_BATCH_WIDTH_CAP_V1.max(explicit_cap),
             non_batched_peak_bytes,
             hard_memory_bytes: options.memory_limit_bytes,
+            memory_budget: options.memory_budget,
         },
         |width| lookup_batch_forecast(&leverage_forecasts, width),
         |width| lookup_batch_forecast(&target_forecasts, width),

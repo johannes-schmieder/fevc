@@ -7,6 +7,7 @@
 //! elapsed time, solver iterations, or scheduler behavior.
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::memory::MemoryBudget;
 
 pub const BATCH_PLAN_SCHEMA_VERSION: u32 = 1;
 pub const BATCH_WIDTH_CANDIDATES: [usize; 7] = [1, 2, 4, 8, 16, 32, 64];
@@ -22,6 +23,8 @@ pub enum BatchRequest {
 pub enum BatchSelectionReason {
     LargestAdmissibleCandidate,
     ExplicitWidth,
+    NoBudgetPerformanceChoice,
+    MinimumMemoryOverBudget,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -36,6 +39,7 @@ pub struct BatchPlannerCaps {
     /// or result-export phases where neither planned batch is active.
     pub non_batched_peak_bytes: u64,
     pub hard_memory_bytes: u64,
+    pub memory_budget: MemoryBudget,
 }
 
 impl BatchPlannerCaps {
@@ -44,14 +48,17 @@ impl BatchPlannerCaps {
             || self.declared_threads == 0
             || self.columns_per_thread == 0
             || self.route_width_cap == 0
-            || self.hard_memory_bytes == 0
         {
             return Err(BackendError::invalid(
                 "batch_plan",
                 "probe, thread, route, and memory caps must be positive",
             ));
         }
-        if self.non_batched_peak_bytes > self.hard_memory_bytes {
+        self.memory_budget.validate(self.hard_memory_bytes)?;
+        if self
+            .memory_budget
+            .rejects(self.non_batched_peak_bytes, self.hard_memory_bytes)
+        {
             return Err(memory_error(
                 "non-batched",
                 0,
@@ -218,7 +225,11 @@ where
             } else {
                 command_forecast(width)?
             };
-            if bytes > caps.input.hard_memory_bytes {
+            if caps
+                .input
+                .memory_budget
+                .rejects(bytes, caps.input.hard_memory_bytes)
+            {
                 return Err(memory_error(
                     phase,
                     width,
@@ -247,23 +258,50 @@ where
                     ));
                 }
                 previous = Some(bytes);
-                if bytes <= caps.input.hard_memory_bytes {
+                if caps
+                    .input
+                    .memory_budget
+                    .fits(bytes, caps.input.hard_memory_bytes)
+                {
                     selected = Some((width, bytes));
                 }
             }
-            let (width, bytes) = selected.ok_or_else(|| {
-                memory_error(
-                    phase,
-                    1,
-                    width_one_forecast_bytes,
-                    caps.input.hard_memory_bytes,
-                )
-            })?;
-            (
-                width,
-                bytes,
-                BatchSelectionReason::LargestAdmissibleCandidate,
-            )
+            let (width, bytes, reason) = match selected {
+                Some((width, bytes)) => (
+                    width,
+                    bytes,
+                    if caps
+                        .input
+                        .memory_budget
+                        .limit(caps.input.hard_memory_bytes)
+                        .is_none()
+                    {
+                        BatchSelectionReason::NoBudgetPerformanceChoice
+                    } else {
+                        BatchSelectionReason::LargestAdmissibleCandidate
+                    },
+                ),
+                None if !caps
+                    .input
+                    .memory_budget
+                    .rejects(width_one_forecast_bytes, caps.input.hard_memory_bytes) =>
+                {
+                    (
+                        1,
+                        width_one_forecast_bytes,
+                        BatchSelectionReason::MinimumMemoryOverBudget,
+                    )
+                }
+                None => {
+                    return Err(memory_error(
+                        phase,
+                        1,
+                        width_one_forecast_bytes,
+                        caps.input.hard_memory_bytes,
+                    ))
+                }
+            };
+            (width, bytes, reason)
         }
     };
     Ok(BatchPhaseReceipt {
@@ -307,6 +345,7 @@ mod tests {
             route_width_cap: 64,
             non_batched_peak_bytes: 0,
             hard_memory_bytes: memory,
+            memory_budget: MemoryBudget::Legacy,
         }
     }
 
@@ -435,6 +474,7 @@ mod tests {
                 route_width_cap: 12,
                 non_batched_peak_bytes: 0,
                 hard_memory_bytes: u64::MAX,
+                memory_budget: MemoryBudget::Legacy,
             },
             model,
             model,
@@ -475,6 +515,7 @@ mod tests {
                 route_width_cap: 1,
                 non_batched_peak_bytes: 0,
                 hard_memory_bytes: 1,
+                memory_budget: MemoryBudget::Legacy,
             },
             PhaseMemoryModel {
                 fixed_bytes: 0,
@@ -547,5 +588,69 @@ mod tests {
         )
         .expect_err("one byte above whole-command limit");
         assert_eq!(error.code, ErrorCode::ResourceLimit);
+    }
+    #[test]
+    fn absent_budget_does_not_change_width_with_numeric_limit() {
+        let model = PhaseMemoryModel {
+            fixed_bytes: 100,
+            bytes_per_width: 100,
+        };
+        for numeric_limit in [0, 1, 4 << 30] {
+            let receipt = plan_batches(
+                BatchRequest::Auto,
+                BatchRequest::Auto,
+                BatchPlannerCaps {
+                    memory_budget: MemoryBudget::Unspecified,
+                    ..caps(numeric_limit)
+                },
+                model,
+                model,
+            )
+            .unwrap();
+            assert_eq!(receipt.leverage.selected_width, 64);
+            assert_eq!(
+                receipt.leverage.reason,
+                BatchSelectionReason::NoBudgetPerformanceChoice
+            );
+        }
+    }
+
+    #[test]
+    fn advisory_budget_shrinks_only_automatic_batches() {
+        use crate::memory::MemoryCheck;
+        let model = PhaseMemoryModel {
+            fixed_bytes: 100,
+            bytes_per_width: 100,
+        };
+        for check in [MemoryCheck::Warn, MemoryCheck::Off] {
+            let budget = MemoryBudget::Explicit { bytes: 1, check };
+            let configured = BatchPlannerCaps {
+                memory_budget: budget,
+                ..caps(1)
+            };
+            let automatic = plan_batches(
+                BatchRequest::Auto,
+                BatchRequest::Auto,
+                configured,
+                model,
+                model,
+            )
+            .unwrap();
+            assert_eq!(automatic.leverage.selected_width, 1);
+            assert_eq!(
+                automatic.leverage.reason,
+                BatchSelectionReason::MinimumMemoryOverBudget
+            );
+            let explicit = plan_batches(
+                BatchRequest::Explicit(32),
+                BatchRequest::Explicit(16),
+                configured,
+                model,
+                model,
+            )
+            .unwrap();
+            assert_eq!(explicit.leverage.selected_width, 32);
+            assert_eq!(explicit.target.selected_width, 16);
+        }
     }
 }

@@ -20,6 +20,7 @@ fn caps(memory: u64) -> BatchPlannerCaps {
         route_width_cap: 64,
         non_batched_peak_bytes: 0,
         hard_memory_bytes: memory,
+        memory_budget: vckss_core::memory::MemoryBudget::Legacy,
     }
 }
 

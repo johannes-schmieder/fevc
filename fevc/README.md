@@ -37,8 +37,49 @@ for exact and generic JLA through the versioned augmentation lifecycle.
 The package preserves coefficient cells, deletion units, and exact
 target-scale strata as separate objects. It never merges target scales by a
 tolerance. Accepted calculations must pass identification, rank,
-complete-original-system residual, accounting, finite-output, direct-memory,
-and caller-state restoration gates.
+complete-original-system residual, accounting, finite-output,
+and caller-state restoration gates. Memory forecasts are advisory by default.
+
+## Memory planning
+
+Omitting `memory_gib()` declares no budget: the command forecasts memory and
+continues without memory-based batch or concurrency adjustment. An explicit
+budget guides automatic batches; `memorycheck(warn)` is the default,
+`memorycheck(error)` opts into forecast-based rejection, and `memorycheck(off)`
+suppresses warnings and rejection. Explicit batch sizes are preserved.
+
+`memorycheck()` alone never creates a budget. With an advisory budget that
+cannot fit the minimum automatic batch, the command proceeds at that minimum.
+Invalid options and actual allocation or numerical failures remain errors.
+
+```stata
+* No assumed budget or memory-based planning
+fevc wage, worker(id) firm(fid)
+* Explicit 2-GiB planning budget; warn and continue by default
+fevc wage, worker(id) firm(fid) memory_gib(2)
+* Enforce the forecast limit
+fevc wage, worker(id) firm(fid) memory_gib(2) memorycheck(error)
+* Keep budget-based planning but suppress memory warnings and rejection
+fevc wage, worker(id) firm(fid) memory_gib(2) memorycheck(off)
+```
+
+Native forecasts describe direct command allocations, excluding the original
+Stata dataset and runtime RSS. Preparation is measured while it runs, and CMG
+storage is refined after deterministic setup and before estimator random
+draws. A strict check may therefore stop after preparation; final forecasts
+and warnings accompany successful completion. These are forecasts, not an
+OS memory cap or a dry-run facility. Mata uses its own working-data model.
+
+`e(memory_forecast_bytes)` reports the expected peak;
+`e(memory_admission_forecast_bytes)` also includes conditional refinement
+reserve and is used for budget comparisons. Check
+`e(memory_forecast_scope)` before interpreting either value. An omitted
+budget sets `e(memory_budget_supplied)=0` and leaves `e(memory_gib)` and
+`e(batch_memory_budget_bytes)` missing.
+The [memory guide](docs/MEMORY.md) covers all returns and accuracy limits;
+[development measurements](docs/MEMORY_FORECAST_2026-09-10.md) establish
+0.17–2.64% forecast excess on four full-CMG allocation fixtures, not universal
+RSS or inference precision.
 
 ## Backend routing
 

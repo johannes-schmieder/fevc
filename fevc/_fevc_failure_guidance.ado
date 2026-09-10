@@ -57,9 +57,13 @@ program define _fevc_failure_guidance, rclass
         local reason "The requested rows do not yield a uniquely selected, leave-out-connected target graph."
         local suggestion "Check the if/in restriction, worker and firm IDs, match IDs, and mover histories; inspect whether a meaningful leave-out-connected component exists before changing the sample rule."
     }
+    else if "`failure_status'" == "AMBIGUOUS_CONTROL_BASIS" {
+        local reason "Numerical error prevents certification of a coordinate-invariant control basis; this does not demonstrate model singularity."
+        local suggestion "Inspect the diagnostic cause, control scales and near dependencies. Consider a scientifically equivalent, better-scaled control representation; keep the sample, rank and residual tolerances unchanged."
+    }
     else if inlist("`failure_status'", "SINGULAR_INFORMATION",  ///
         "SINGULAR_NUISANCE_BLOCK", "NONESTIMABLE_DELETION",     ///
-        "UNVERIFIED_DELETION_RANK", "AMBIGUOUS_CONTROL_BASIS", ///
+        "UNVERIFIED_DELETION_RANK", ///
         "INVERSE_FORWARD_ERROR_FAILED", "INVERSE_RESIDUAL_FAILED", ///
         "BLOCK_INVERSE_FAILED", "CONTROL_SCHUR_RESIDUAL_FAILED") {
         local reason "The full model, nuisance block, or at least one declared deletion could not be certified as identified and numerically stable."

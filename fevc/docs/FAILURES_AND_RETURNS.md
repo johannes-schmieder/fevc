@@ -162,12 +162,26 @@ iterations, freshly recomputed complete relative residual, and convergence.
 It also posts `e(route_diagnostics)`, `e(preconditioner_requested)`,
 `e(preconditioner_selected)`, `e(routing_reason)`, `e(fallback_status)`, and
 `e(fallback_message)`. `e(route_api)` identifies structural routing.
-`e(memory_gib)` is the declared direct allocation envelope,
+`e(memory_budget_supplied)` records whether `memory_gib()` was supplied;
+`e(memory_gib)` is its value in GiB or missing when omitted. The policy macro
+`e(memory_check)` is `warn` by default, `error`, or `off`; a policy alone
+creates no budget. `e(memory_forecast_bytes)` is the expected peak within
+`e(memory_forecast_scope)`. `e(memory_admission_forecast_bytes)` adds
+conditional refinement reserve and is the value compared with an explicit
+budget. `e(memory_conditional_reserve_bytes)` is their difference, and
+`e(memory_forecast_model)` is currently 1. These returns follow successful
+completion; they are not a separate pre-execution forecast API. Native direct
+allocation payload is distinct from total process RSS. Mata JLA includes
+modeled Stata working data. See [MEMORY.md](MEMORY.md).
+
 `e(batch_requested)` preserves `auto` or the caller's integer, and `e(batch)`
 is the selected numeric batch. `e(batch_routing_reason)`,
 `e(batch_column_forecast_bytes)`, `e(batch_scratch_forecast_bytes)`, and
-`e(batch_memory_budget_bytes)` identify the deterministic choice. Exact mode
-labels routing not applicable.
+`e(batch_memory_budget_bytes)` identify the deterministic choice. The last is
+a route-specific planning allowance, not necessarily the whole budget; it is
+missing without a budget. Omission disables memory-based batch, concurrency
+and route adjustments. Explicit batches are preserved under every policy.
+Exact mode labels routing not applicable.
 CMG routes expose the fine hybrid vertex/edge counts, hierarchy level count,
 and bounded terminal vertex count in `e(route_hybrid_vertices)`,
 `e(route_hybrid_edges)`, `e(route_hierarchy_levels)`, and
@@ -229,7 +243,7 @@ requested inference method or its absence.
 `e(status)` is `KSS_POINT_ESTIMATES_ONLY` for point-only general and exact engines
 and `KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES` for the compressed engine. Both
 mean that the requested finite point calculation passed its registered
-scientific, numerical, direct-memory, and restoration gates. The latter name
+scientific, numerical, memory-policy/reconciliation, and restoration gates. The latter name
 is an engine-development label, not a scale qualification. Neither status
 means that the application's independence assumptions were verified.
 
@@ -311,12 +325,18 @@ estimand. The catalog includes:
 - `EXACT_SIZE_LIMIT` and `BLOCK_SIZE_LIMIT`;
 - `PHYSICAL_COPY_LIMIT` when any selected JLA route would allocate more
   literal-copy state than `physical_limit()` authorizes;
-- `RESOURCE_ADMISSION_FAILED` or `GENERIC_RESOURCE_ADMISSION_FAILED` when an
-  unavoidable compressed or general direct allocation exceeds
-  `memory_gib()`. A provisional CMG planning forecast, memory-headroom value,
-  or wall forecast cannot produce these statuses by itself;
-- `SOLVER_MEMORY_LIMIT` when the direct FE design and concurrent solver
-  allocation exceed `memory_gib()` before estimator RNG;
+- `RESOURCE_ADMISSION_FAILED` or `GENERIC_RESOURCE_ADMISSION_FAILED` for
+  over-budget allocation forecasts only when an explicit `memory_gib()` is
+  paired with `memorycheck(error)`;
+- `SOLVER_MEMORY_LIMIT` when the solver admission forecast exceeds that
+  explicit strict budget before estimator RNG. Preparation and hierarchy
+  construction may already have run. With no budget, `warn`, or `off`, an
+  over-budget forecast alone does not fail the public command. Actual
+  allocation failures, overflow and inconsistent memory receipts remain
+  errors. Legacy internal callers retain their older strict semantics;
+- percentage headroom and wall forecasts do not independently produce a
+  memory rejection; conditional refinement storage is included in the
+  admission forecast and is not percentage headroom;
 - `PCG_BREAKDOWN`, `PCG_NONCONVERGENCE`, and
   `SOLVER_RESIDUAL_FAILED`;
 - `FORCED_CMG_FAILED` when an explicitly requested CMG route fails setup or
@@ -360,3 +380,24 @@ or count outside [512,2147483647] returns `INVALID_INFERENCE_TUNING`. Omitted
 precision is 2048. Current Stata requires component interface 4; a stale plugin
 returns `COMPONENT_NATIVE_INTERFACE_REQUIRED`. The result count must equal
 the requested/planned count; a corrupted receipt fails atomically.
+
+## Control-basis certification (API 23)
+
+`AMBIGUOUS_CONTROL_BASIS` describes an unavailable numerical certificate, not
+demonstrated model singularity. This includes a control-Gram inverse-residual
+failure in both backends. Its diagnostic detail retains
+`INVERSE_RESIDUAL_FAILED`, `control_basis_gram`, the measured residual and gate.
+An actual singular Gram retains its existing singularity status. Inspect scales
+and near dependencies and consider a scientifically equivalent representation;
+the command does not change the sample, controls or numerical tolerances.
+See [the complete numerical contract](CONTROL_BASIS_CERTIFICATION.md).
+
+## API 24 control-preparation memory and interruption
+
+The 256-lane control kernel is checked against its allocation forecast before
+Gram construction when `memorycheck(error)` and an explicit budget apply.
+Insufficient control-phase memory returns `RESOURCE_LIMIT`; the generic route
+may reject earlier through its existing resource-admission status. Warning,
+off and omitted-budget behavior is unchanged. A user interrupt during control
+preparation returns Stata code 1, clears estimates, and restores ordinary
+caller state; it is not `MATA_RUNTIME_FAILED` or control-basis ambiguity.

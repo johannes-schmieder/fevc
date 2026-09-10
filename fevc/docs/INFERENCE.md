@@ -77,8 +77,12 @@ limitation recorded in `RC_OBSERVATION_CONFIRMATION_2026-09-05.md`.
 
 The runnable candidate retains **200 JLA probes by default**. The separate
 `inferencegramprobes(#)` option sets Gram precision for this explicit structured
-Rust tuple: integers 512 through 2,147,483,647, default 2,048, subject to memory
-and count admission. Unsupported explicit use is rejected before RNG. Counts
+Rust tuple: integers 512 through 2,147,483,647, default 2,048, subject to count
+limits and the selected [memory policy](MEMORY.md). An omitted memory budget
+never rejects a forecast; an explicit budget warns by default, and only
+`memorycheck(error)` makes it a forecast gate. Actual allocation failures
+remain errors. Inference memory bounds remain conservative and are not
+qualified by the point-estimation full-CMG accuracy measurements. Unsupported explicit use is rejected before RNG. Counts
 below 2,048 are a lower-precision speed tradeoff, not recommended for reported
 inference. `e(inference_gram_method)` is `direct_residual_covariance`.
 Changing this count leaves point, covariance, spectral and critical-value RNG
@@ -486,7 +490,8 @@ C boundary, and Stata:
   roundoff-scale PSD cleanup;
 - JLA variance-proxy range and complete-system tolerance;
 - exact RHS counts, result bytes, prepared resident bytes, augmentation peak,
-  solve peak, and whole-command memory admission; and
+  solve peak, and whole-command memory-policy reconciliation; strict forecast
+  admission applies only to an explicit budget with `memorycheck(error)`; and
 - the public projection column names and existing `e(projection_*)` shapes.
 
 The existing four public result matrices are unchanged. Additive diagnostic

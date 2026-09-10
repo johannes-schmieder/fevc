@@ -1,8 +1,8 @@
 *! generated GPL-3.0-only source-informed CMG Mata core; do not edit
 *! generator_api 5
 *! namespace vckss_cmg
-*! canonical_template_sha256 64e8684077782b1c728bda4cf5efd64b66ce8ad42cf231cda58cdad5059e4eda
-*! generated_section_sha256 dd335678d8002d26c54aa3ba9336480887802af83eb6f5e5f4793f9bdee09ccc
+*! canonical_template_sha256 9b6b34aeee17bfe1eb13adcd46e00e5d9ba9924cd9f74f431cf4b9e56da5def8
+*! generated_section_sha256 2c9ead55fe2c44d3565a136e66727989adf99609dc869593ce3920286546cb4e
 
 *! CMG, Copyright (c) 2008-2010 Ioannis Koutis and Gary Miller
 *! Source-informed Mata port and modifications Copyright (c) 2026 Johannes Schmieder
@@ -16,7 +16,7 @@ mata set matalnum off
 
 real scalar vckss_cmg__api_level()
 {
-    return(8)
+    return(9)
 }
 
 string scalar vckss_cmg__numeric_mode()
@@ -26,7 +26,7 @@ string scalar vckss_cmg__numeric_mode()
 
 string scalar vckss_cmg__design_label()
 {
-    return("gpl-cmg-mata-degree3-hybrid-v8-vckss-component")
+    return("gpl-cmg-mata-degree3-hybrid-v9-memory-policy")
 }
 
 struct vckss_cmg__cells
@@ -815,7 +815,7 @@ struct vckss_cmg__preflight_result scalar vckss_cmg__preflight(
         missing(planned_rhs) | planned_rhs < 1 |
         planned_rhs != floor(planned_rhs) |
         !(canonical_keys_available == 0 | canonical_keys_available == 1) |
-        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0 |
+        missing(memory_envelope_bytes) | (memory_envelope_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1") |
         !vckss_cmg__options_valid(options)) return(out)
     predicted_edges = 0
     predicted_auxiliary = 0
@@ -859,8 +859,9 @@ struct vckss_cmg__preflight_result scalar vckss_cmg__preflight(
         out.message = "canonical ID-free vertex keys are unavailable"
         return(out)
     }
-    effective_scratch_cap = min((options.construction_scratch_bytes,
-        0.25*memory_envelope_bytes))
+    effective_scratch_cap = options.construction_scratch_bytes
+    if (st_global("VCKSS_MEMORY_ADVISORY")!="1")
+        effective_scratch_cap = min((effective_scratch_cap,0.25*memory_envelope_bytes))
     if (out.predicted_scratch_bytes > effective_scratch_cap) {
         out.message = "hierarchy memory forecast exceeds its pre-allocation cap"
         return(out)
@@ -2830,7 +2831,7 @@ struct vckss_cmg__workspace scalar vckss_cmg__workspace_init(
     if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1 |
         missing(batch_capacity) | batch_capacity < 1 |
         batch_capacity != floor(batch_capacity) |
-        missing(memory_cap_bytes) | memory_cap_bytes <= 0) {
+        missing(memory_cap_bytes) | (memory_cap_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) {
         out.message = "workspace dimensions or memory cap are invalid"
         return(out)
     }
@@ -2840,7 +2841,7 @@ struct vckss_cmg__workspace scalar vckss_cmg__workspace_init(
         total_vertices = total_vertices+level.graph.n_vertex
     }
     predicted_bytes = 24*batch_capacity*total_vertices
-    if (missing(predicted_bytes) | predicted_bytes > memory_cap_bytes) {
+    if (missing(predicted_bytes) | (st_global("VCKSS_MEMORY_ADVISORY")!="1" & predicted_bytes > memory_cap_bytes)) {
         out.status = "WORKSPACE_MEMORY_LIMIT"
         out.message = "reusable workspace exceeds its pre-allocation cap"
         return(out)

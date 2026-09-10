@@ -31,6 +31,7 @@ pub struct CmgOptions {
     pub post_sweeps: u32,
     pub maximum_edge_complexity: f64,
     pub maximum_vertex_complexity: f64,
+    pub memory_budget: crate::memory::MemoryBudget,
     pub memory_limit_bytes: u64,
 }
 
@@ -47,6 +48,7 @@ impl Default for CmgOptions {
             post_sweeps: 1,
             maximum_edge_complexity: 12.0,
             maximum_vertex_complexity: 5.0,
+            memory_budget: crate::memory::MemoryBudget::Legacy,
             memory_limit_bytes: 2_u64 << 30,
         }
     }
@@ -99,7 +101,7 @@ impl CmgOptions {
                 "hierarchy complexity caps must be finite and at least one",
             ));
         }
-        if self.memory_limit_bytes == 0 {
+        if self.memory_budget.limit(self.memory_limit_bytes) == Some(0) {
             return Err(cmg_setup_error("CMG memory limit must be positive"));
         }
         Ok(self)
@@ -400,7 +402,7 @@ struct DenseGroundedSolver {
 impl DenseGroundedSolver {
     fn factor_with_interrupt(
         graph: &LaplacianGraph,
-        memory_limit: u64,
+        memory_limit: Option<u64>,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
         let vertices = graph.vertices();
@@ -421,7 +423,7 @@ impl DenseGroundedSolver {
         let setup_bytes = factor_bytes
             .checked_mul(2)
             .ok_or_else(|| resource_error("dense terminal setup byte forecast overflow"))?;
-        if setup_bytes > memory_limit {
+        if memory_limit.is_some_and(|limit| setup_bytes > limit) {
             return Err(resource_error(
                 "dense terminal setup exceeds the admitted CMG memory limit",
             ));
@@ -805,20 +807,29 @@ impl CmgHierarchy {
         let reserved = structural_bytes
             .checked_add(workspace_bytes)
             .ok_or_else(|| resource_error("CMG memory receipt overflow"))?;
-        if reserved > options.memory_limit_bytes {
+        if options
+            .memory_budget
+            .rejects(reserved, options.memory_limit_bytes)
+        {
             return Err(resource_error(
                 "CMG hierarchy and workspace exceed the admitted memory limit",
             ));
         }
         let terminal = DenseGroundedSolver::factor_with_interrupt(
             &level.last().expect("terminal").graph,
-            options.memory_limit_bytes - reserved,
+            options
+                .memory_budget
+                .hard_limit(options.memory_limit_bytes)
+                .map(|limit| limit.saturating_sub(reserved)),
             interrupt,
         )?;
         let total_bytes = reserved
             .checked_add(terminal.factor_bytes)
             .ok_or_else(|| resource_error("CMG total byte receipt overflow"))?;
-        if total_bytes > options.memory_limit_bytes {
+        if options
+            .memory_budget
+            .rejects(total_bytes, options.memory_limit_bytes)
+        {
             return Err(resource_error(
                 "CMG terminal factor exceeds the admitted memory limit",
             ));
@@ -1258,7 +1269,10 @@ impl CmgPreconditioner {
             .and_then(|value| value.checked_add(receipt.preconditioner_bytes))
             .and_then(|value| value.checked_add(receipt.dense_factor_bytes))
             .ok_or_else(|| resource_error("preconditioner total byte receipt overflow"))?;
-        if total_bytes > options.memory_limit_bytes {
+        if options
+            .memory_budget
+            .rejects(total_bytes, options.memory_limit_bytes)
+        {
             return Err(resource_error(
                 "CMG preconditioner exceeds the admitted memory limit",
             ));

@@ -350,7 +350,7 @@ fn invert_from_scaled(
         return Err(BackendError::new(
             ErrorCode::InverseResidualFailed,
             phase,
-            "dense symmetric inverse failed its original-matrix residual gate",
+            format!("INVERSE_RESIDUAL_FAILED: dense symmetric inverse residuals scaled={scaled_relres:.17e}, original={original_relres:.17e}, gate={residual_gate:.17e}"),
         ));
     }
     Ok(DenseInverse {

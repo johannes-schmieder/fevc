@@ -27,12 +27,12 @@ void test_scale_resource()
     struct vckss_resource_selection scalar selected
     struct vckss_resource_reconciliation scalar reconciled, unsafe
 
-    assert(vckss_resource__api_level() == 10)
+    assert(vckss_resource__api_level() == 12)
     assert(vckss_resource__build_id() ==
-        "vckss-resource-api10-fe-buf1-buffered")
-    assert(vckss_solver__api_level() == 26)
+        "vckss-resource-api12-control-scratch")
+    assert(vckss_solver__api_level() == 27)
     assert(vckss_solver__build_id() ==
-        "vckss-solver-api26-gpl-mata-cmg")
+        "vckss-solver-api27-memory-policy")
     // Compatibility defaults are not package-wide ceilings.
     assert(vckss_resource__hard_mem_bytes() == 56*1024^3)
     assert(vckss_resource__hard_wall_secs() == 12*60*60)

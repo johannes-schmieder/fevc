@@ -71,6 +71,13 @@ program define fevc_rust, rclass
         exit
     }
 
+    if "`subcommand'" == "memorycapabilities" {
+        _fevc_rust_plugin_call `plugin', memorycapabilities
+        return scalar memory_api = scalar(__vckss_memory_api)
+        capture scalar drop __vckss_memory_api
+        exit
+    }
+
     if "`subcommand'" == "lasterror" {
         if strtrim(`"`0'"') != "" {
             di as err "lasterror does not accept additional arguments"
@@ -1785,12 +1792,12 @@ program define fevc_rust, rclass
         syntax varlist(min=6 numeric) [if] [in],                        ///
             [CLEANUP GENerate(name) MEMORYGib(real 4) DELETION(string) ///
                 PROBEOrder(name) IMPLICITMATCH]
-        if `memorygib' <= 0 | missing(`memorygib') {
+        if (`memorygib' <= 0 & "$VCKSS_MEMORY_PRESENT"!="0") | missing(`memorygib') {
             di as err "memorygib() must be finite and positive"
             exit 198
         }
         local memory_bytes = floor(`memorygib' * 1073741824)
-        if `memory_bytes' <= 0 | `memory_bytes' > 9007199254740992 {
+        if (`memory_bytes' <= 0 & "$VCKSS_MEMORY_PRESENT"!="0") | `memory_bytes' > 9007199254740992 {
             di as err "memorygib() is outside the exactly representable byte range"
             exit 198
         }
@@ -1821,11 +1828,15 @@ program define fevc_rust, rclass
         else confirm new variable `retained'
         quietly generate byte `retained' = 0
 
+        local memory_policy_args
+        if "$VCKSS_MEMORY_ACTIVE" == "1" {
+            local memory_policy_args $VCKSS_MEMORY_MODE $VCKSS_MEMORY_PRESENT
+        }
         local cleanup_arg nocleanup
         if "`cleanup'" != "" local cleanup_arg cleanup
         capture noisily _fevc_rust_plugin_call `plugin' `touse' `plugin_varlist' `retained' ///
             if `touse', prepare `cleanup_arg' `memory_arg' `deletion' `controls_count' ///
-            `probeorder_arg' `implicit_match_arg'
+            `probeorder_arg' `implicit_match_arg' `memory_policy_args'
         local prepare_rc = _rc
         if `prepare_rc' {
             capture drop `retained'

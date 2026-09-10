@@ -1,0 +1,298 @@
+{
+  "schema": "FEVC-MEMORY-FORECAST-RESULT-V1",
+  "date": "2026-09-10",
+  "status": "IMPLEMENTED_WITH_ACCURACY_QUALIFICATION_LIMITS",
+  "source_head": "f3098bc1369992fccbc1d276aac5fc65ceb3f404",
+  "dirty_state": "owner changes preserved; working on main; no commits",
+  "scope": "source-local macOS implementation and regression evidence; not a release",
+  "policy": {
+    "omitted_budget": null,
+    "omitted_budget_memory_planning": false,
+    "explicit_budget_default": "warn",
+    "options": [
+      "warn",
+      "error",
+      "off"
+    ],
+    "explicit_batches_preserved": true
+  },
+  "forecast": {
+    "preparation": "measured requested Rust heap peak plus overlapping C input and export storage",
+    "solve": "constructed hierarchy, actual capacities, selected batches, phase lifetimes",
+    "expected": "direct command allocation payload",
+    "admission": "expected plus conditional refinement reserve",
+    "excluded": [
+      "Stata original dataset",
+      "allocator retained pages",
+      "runtime residency and thread stacks"
+    ],
+    "legacy_abi": "prior strict numeric semantics and packed-mask receipt arithmetic retained"
+  },
+  "accuracy": {
+    "allocation_scope": "full-CMG core fixture execution",
+    "status": "PASS_FOR_FOUR_TESTED_CASES",
+    "probes": 200,
+    "seed": 8675309,
+    "solver_tolerance": 1e-10,
+    "cases": [
+      {
+        "rows": 30720,
+        "cores": 1,
+        "worker_degree": 3,
+        "observed_owned_peak_bytes": 34889149,
+        "expected_forecast_bytes": 34947675,
+        "excess_fraction": 0.001677484308946601,
+        "status": "PASS"
+      },
+      {
+        "rows": 61440,
+        "cores": 4,
+        "worker_degree": 3,
+        "observed_owned_peak_bytes": 70547356,
+        "expected_forecast_bytes": 71354907,
+        "excess_fraction": 0.011446935020498854,
+        "status": "PASS"
+      },
+      {
+        "rows": 245760,
+        "cores": 4,
+        "worker_degree": 3,
+        "observed_owned_peak_bytes": 294845596,
+        "expected_forecast_bytes": 300886040,
+        "excess_fraction": 0.020486804218707067,
+        "status": "PASS"
+      },
+      {
+        "rows": 61440,
+        "cores": 4,
+        "worker_degree": 4,
+        "observed_owned_peak_bytes": 78149000,
+        "expected_forecast_bytes": 80214982,
+        "excess_fraction": 0.02643644832307515,
+        "status": "PASS"
+      }
+    ],
+    "rss_status": "UNMET_NOT_CALIBRATED",
+    "all_regimes_five_percent_status": "NOT_QUALIFIED",
+    "remaining_conservative_bounds": [
+      "component inference",
+      "stayer augmentation"
+    ],
+    "no_cross_platform_accuracy_claim": true
+  },
+  "runtime_comparison": {
+    "baseline_median_seconds": 3.072,
+    "candidate_median_seconds": 3.066,
+    "additional_seconds": -0.006000000000000227,
+    "allowed_additional_seconds": 0.09215999999999999,
+    "overhead_pass": true,
+    "numerical_max_absolute_difference": 0.0,
+    "alternating_pairs": 5,
+    "rows": 122880,
+    "cores": 4,
+    "probes": 200,
+    "seed": 8675309,
+    "corrected_estimates_exactly_equal": true,
+    "baseline_forecast_bytes": 3550141913,
+    "candidate_forecast_bytes": 154045057,
+    "candidate_identity": "native-qualification2; before final retained-mask byte correction",
+    "evidence": "comparison/result.json",
+    "baseline_plugin_sha256": "6634e324f03b863c97208c202e1e74e9c7833848a489d498c5ddcee049d1eea6",
+    "candidate_plugin_sha256": "175ca5ae58070b4b24f28a85fbd8b25b142a7cfd7e27f2e41313725b4f14a91e"
+  },
+  "tests": [
+    {
+      "command": "./.venv/bin/python -m pytest -q",
+      "status": "PASS",
+      "passed": 798,
+      "evidence": "logs/fevc-memory-checks-final.sanitized.log"
+    },
+    {
+      "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "status": "PASS",
+      "evidence": "logs/fevc-memory-checks-final.sanitized.log"
+    },
+    {
+      "command": "./.venv/bin/python fevc/tools/run_checks.py",
+      "status": "PASS",
+      "includes": [
+        "CMG local core gates (28 Python tests)",
+        "Stata quick and full suites",
+        "installation, provenance and historical-evidence checks",
+        "local benchmark and comparator smokes"
+      ],
+      "evidence": "logs/fevc-memory-checks-final.sanitized.log",
+      "source_note": "before final plugin retained-mask correction; Ado/Mata and core sources unchanged by that correction"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml --locked --workspace --all-targets",
+      "status": "PASS",
+      "passed": 506,
+      "ignored": 1,
+      "suites": 40,
+      "evidence": "logs/fevc-memory-rust-final3.sanitized.log",
+      "source_note": "before final retained-mask correction; corrected plugin separately retested"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml --locked -p vckss-plugin --all-targets",
+      "status": "PASS",
+      "passed": 83,
+      "suites": 7,
+      "evidence": "logs/fevc-memory-mask-tests.sanitized.log",
+      "source_note": "final retained-mask correction, allocation layout and exact budget boundary"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml --release -p vckss-core --test compressed_jla_memory -- --nocapture",
+      "status": "PASS",
+      "evidence": "logs/fevc-memory-allocation-final.sanitized.log"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml -p vckss-core --test compressed_jla_memory -- --nocapture",
+      "status": "PASS",
+      "evidence": "logs/fevc-memory-allocation-debug-fixed.sanitized.log"
+    },
+    {
+      "command": "arch -<arm64|x86_64> /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_memory_policy.do <package-dir>",
+      "status": "PASS",
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "scope": "final installed candidate hashes; omitted budget, each policy, explicit batch preservation, CMG, invalid input, RNG restoration and idle registry"
+    },
+    {
+      "command": "./.venv/bin/python -m pytest -q fevc/tests/python/test_batch_memory_policy.py fevc/tests/python/test_fevc_public_identity.py fevc/tests/python/test_match_documentation.py fevc/tests/python/test_package_layout.py fevc/tests/python/test_scale_resource.py",
+      "status": "PASS",
+      "passed": 61,
+      "scope": "final policy, documentation, identity, packaging and resource regressions"
+    }
+  ],
+  "development_failures": [
+    {
+      "failure": "degree-four expected peak exceeded the registered allocation tolerance",
+      "resolution": "separate conditional refinement admission reserve from expected solve peak; original threshold unchanged"
+    },
+    {
+      "failure": "test allocator reset could underflow after late thread destruction",
+      "resolution": "continuous counter accounting with per-case baselines; debug and release pass"
+    },
+    {
+      "failure": "legacy fixed preparation formulas rejected valid measured receipts in Stata tests",
+      "resolution": "version-aware structural and generation reconciliation; corrupt receipts remain rejected"
+    },
+    {
+      "failure": "two Mata CMG advisory comparisons had incorrect boolean grouping",
+      "resolution": "guard complete allocation sum; tiny off-budget CMG regression passes"
+    },
+    {
+      "failure": "full-CMG maximum RHS capacity confused with selected batch width",
+      "resolution": "preserve constructed pool capacity, publish selected batch widths separately"
+    },
+    {
+      "failure": "qualification SDK download blocked in sandbox",
+      "resolution": "authorized network execution fetched and authenticated pinned public SDK"
+    },
+    {
+      "failure": "final qualification artifacts directory missing on initial invocation",
+      "resolution": "created empty ignored evidence directory, then reran"
+    }
+  ],
+  "external_gates_not_run": [
+    "new Linux qualification",
+    "new Windows qualification",
+    "native Intel hardware qualification",
+    "public release"
+  ],
+  "publication": false,
+  "release": false,
+  "registration_sha256": "4fc839af64ddd347852417f80730e078e0eec7ceea3534f78dd4fb2bbd4a17c4",
+  "native": {
+    "status": "PASS",
+    "classification": "LOCAL_CHECKPOINT_DIRTY_TREE",
+    "receipt": ".local/diagnostics/memory-implementation-20260910/native-receipt4.txt",
+    "receipt_sha256": "30c3afcb8edf80ae2ed12afac8e2ec13764bd8b916a5561fec9e5ee7a6166675",
+    "source_manifest": ".local/diagnostics/memory-implementation-20260910/native-qualification4/source-manifest.sha256",
+    "source_manifest_sha256": "7d9f441f2e542c2b983c8bcf5e7adec6f23c2740c553a70a2901f7f21987b07b",
+    "source_file_count": 156,
+    "binaries": {
+      "fevc/fevc_rust_macos_x86_64.plugin": "4f4a280f66424752ec005d76587cb0f7500720092cad2ade66db15fdf90c97dc",
+      "fevc/fevc_rust_macos.plugin": "438cb6a04f9f8d4553aa6422dde6a727ac9a63f40cf2c1f3f05155bdc17842c0",
+      "fevc/fevc_rust_macos_arm64.plugin": "097af49ad7b64c7db49f1fa3418733e418218aae6ea14e84910d15e1661f37ae"
+    },
+    "versions": {
+      "host_macos": "26.6.2",
+      "rustc": "rustc 1.85.1 (4eb161250 2025-03-15)",
+      "cargo": "cargo 1.85.1 (d73d2caf9 2024-12-31)",
+      "clang": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+      "stata_arm64_environment": "VCKSS_STATA_ENV version=19 edition=MP os=Unix machine=Mac (Apple Silicon)",
+      "stata_x86_64_environment": "VCKSS_STATA_ENV version=19 edition=MP os=Unix machine=Macintosh (Intel 64-bit)"
+    },
+    "checks": {
+      "cshim_interrupt_test": "PASS",
+      "cshim_error_transport_test": "PASS",
+      "abi_header_compat_test": "PASS",
+      "cargo_fmt": "PASS",
+      "cargo_clippy": "PASS",
+      "cargo_test": "PASS",
+      "arm64_shared_atoms": "PASS test_rust_mata_shared_atoms.do",
+      "arm64_public_route": "PASS test_rust_public.do",
+      "arm64_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "arm64_public_component_inference": "PASS test_rust_component_inference.do",
+      "arm64_public_match_component_inference": "PASS test_rust_match_component_inference.do",
+      "arm64_public_individual_inference": "PASS test_rust_individual_inference.do",
+      "arm64_backend_routing": "PASS test_backend_routing.do",
+      "arm64_universal_public_route": "PASS test_rust_public.do",
+      "arm64_universal_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "arm64_clean_install": "PASS test_rust_public_install.do",
+      "arm64_canonical_install_unavailable": "PASS test_rust_public_install.do",
+      "arm64_test_status": "PASS_NATIVE",
+      "x86_64_test_status": "PASS_ROSETTA",
+      "x86_64_shared_atoms": "PASS test_rust_mata_shared_atoms.do",
+      "x86_64_public_route": "PASS test_rust_public.do",
+      "x86_64_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "x86_64_public_component_inference": "PASS test_rust_component_inference.do",
+      "x86_64_public_match_component_inference": "PASS test_rust_match_component_inference.do",
+      "x86_64_public_individual_inference": "PASS test_rust_individual_inference.do",
+      "x86_64_backend_routing": "PASS test_backend_routing.do",
+      "x86_64_universal_public_route": "PASS test_rust_public.do",
+      "x86_64_universal_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "x86_64_clean_install": "PASS test_rust_public_install.do",
+      "x86_64_canonical_install_unavailable": "PASS test_rust_public_install.do"
+    },
+    "excluded_claims": "public-release,Windows,Linux,native-Intel,representative-scale,human-license-provenance-review",
+    "command": "rust/stata_backend/qualify_macos.sh --receipt .local/diagnostics/memory-implementation-20260910/native-receipt4.txt --artifacts-dir .local/diagnostics/memory-implementation-20260910/native-qualification4"
+  },
+  "evidence_root": ".local/diagnostics/memory-implementation-20260910",
+  "tests_environment": {
+    "rust_toolchain_bin": "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin",
+    "RUSTC": "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/rustc",
+    "python": "./.venv/bin/python",
+    "stata": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp"
+  },
+  "final_public_policy_tests": [
+    {
+      "architecture": "arm64",
+      "returncode": 0,
+      "status": "PASS",
+      "log": ".local/diagnostics/memory-implementation-20260910/final-policy/arm64.log",
+      "log_sha256": "31b1b06d6fb07930d61f930382d586e0d1a50443fbb69ce548a91ec261dd447c"
+    },
+    {
+      "architecture": "x86_64",
+      "returncode": 0,
+      "status": "PASS",
+      "log": ".local/diagnostics/memory-implementation-20260910/final-policy/x86_64.log",
+      "log_sha256": "31b1b06d6fb07930d61f930382d586e0d1a50443fbb69ce548a91ec261dd447c"
+    },
+    {
+      "case": "previously_false_rejected_0.5gib",
+      "rows": 30720,
+      "cores": 4,
+      "status": "PASS",
+      "expected_peak_bytes": 35584940,
+      "admission_peak_bytes": 35978156,
+      "log": ".local/diagnostics/memory-implementation-20260910/final-policy/strict-0.5gib.log",
+      "log_sha256": "a5563a981ebc89121dcd551fa69c246ace2419f10042c064498fd940924931d7"
+    }
+  ]
+}

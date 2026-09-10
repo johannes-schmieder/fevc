@@ -60,7 +60,7 @@ in `docs/JLA_FINITE_PROJECTION.md`; do not restate or fork them here.
   behavior as part of a comparison.
 - Keep cancellation-sensitive reductions stable or compensated.
 - Preserve rank, inverse, reciprocal, maker, control-basis, deletion,
-  accounting, direct-memory, and finite-output gates.
+  accounting, policy-aware memory admission/reconciliation, and finite-output gates.
 - Do not introduce hidden regularization, sample changes, tolerance relaxation,
   or post-failure estimator changes.
 
@@ -83,9 +83,11 @@ correctness gates.
   before RNG and must be receipted.
 - Reconcile requested and selected capability, route, solver, batch, memory,
   fallback, residual, and result-family fields in returned receipts.
-- Treat `memory_gib()` as a per-command direct-allocation safety envelope,
-  not a repository-wide development ceiling. Forecast, admit, and reconcile
-  material allocations and measured RSS honestly.
+- An omitted `memory_gib()` means no budget and no memory-based planning.
+  Explicit budgets guide automatic batches and warn by default; only
+  `memorycheck(error)` enforces forecast admission. Preserve explicit batches
+  and reconcile material allocation receipts under every policy. Forecasts
+  describe direct command allocations; measure process RSS separately.
 - Treat wall forecasts and headroom as advisory unless a real allocation limit
   applies. Performance claims require measured complete-command evidence.
 

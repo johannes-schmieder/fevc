@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-rc.1 05sep2026}{...}
+{* *! version 0.5.0-rc.1 10sep2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -28,8 +28,9 @@ A minimal call is
 {pstd}
 This uses match deletion, joint nuisance handling, the combined
 mover-plus-eligible-stayer target, 200 JLA probes, and automatic backend,
-engine, preconditioner, and batch selection.  A call with controls and an
-explicit dependence-block identifier is
+engine, preconditioner, and batch selection. No memory budget is assumed;
+forecasts do not adjust the computation for memory when {cmd:memory_gib()}
+is omitted. A call with controls and an explicit dependence-block identifier is
 
 {phang2}{cmd:. fevc log_wage i.year, worker(worker_id) firm(firm_id) ///}{p_end}
 {phang3}{cmd:deletion(match) deletionid(match_id) nuisance(joint)}{p_end}
@@ -98,7 +99,8 @@ and descriptive full-model fit accounting.
     {cmd:projectweight(frequency|target)}{col 36}projection weighting; default frequency
 
   {ul:Safety and resource envelopes}
-    {cmd:memory_gib(}{it:#}{cmd:)}{col 36}direct-allocation envelope; default 4 GiB
+    {cmd:memory_gib(}{it:#}{cmd:)}{col 36}optional direct-allocation budget; omitted by default
+    {cmd:memorycheck(warn|error|off)}{col 36}budget policy; default warn
     {cmd:wallseconds(}{it:#}{cmd:)}{col 36}optional advisory wall-time envelope
     {cmd:exact_limit(}{it:#}{cmd:)}{col 36}maximum exact identified dimension; default 500
     {cmd:rank_tolerance(}{it:#}{cmd:)}{col 36}rank gate; default 1e-10
@@ -280,7 +282,7 @@ mass; and the match-graph pruning certificate when applicable.
 {phang}
 {cmd:estat computation} reports backend and RNG routing, the selected
 algorithm, engine, preconditioner, JLA work and solver settings, fallback,
-processor count, and memory envelope.
+processor count, and the supplied memory budget when applicable.
 
 {phang}
 {cmd:estat diagnostics} reports leverage, conditioning and residual
@@ -399,10 +401,64 @@ combined design or any required mover-match or stayer-observation deletion
 fails a rank, convergence, or numerical gate, the complete request is
 withheld.
 
+{marker memory}
+{dlgtab:Memory forecasts and optional budgets}
+
 {pstd}
-The complete direct-peak forecast is the memory admission gate; percentage and processor rules are
-only automatic batch-width heuristics.  Structural preflight, not routing trial solves, selects the
-automatic preconditioner.  Reported setup and fit are disjoint timings, so setup is not counted twice.
+When {cmd:memory_gib()} is omitted, fevc forecasts memory and continues.
+It assumes no memory budget and performs no memory-based batch, concurrency
+or route adjustment. No implicit 4-GiB limit, detected-RAM limit, or large
+substitute budget is used. Probe, processor and implementation limits still
+apply, including normal performance choices under {cmd:batch(auto)}.
+With an explicit budget, automatic batches may shrink to fit; an explicit
+{cmd:batch()} is preserved. {cmd:memorycheck(warn)}, the default, reports an
+over-budget forecast and continues. {cmd:memorycheck(error)} stops when the
+forecast exceeds the explicit budget. {cmd:memorycheck(off)} suppresses memory
+warnings and forecast-based rejection; an explicit budget still guides
+automatic batching. {cmd:memorycheck()} alone never creates a budget.
+If an advisory budget cannot fit the minimum automatic batch, execution
+continues at the minimum supported width. One GiB is 1024^3 bytes. An explicit
+budget must be finite and positive and specify between 1 and 2^53 bytes.
+
+{pstd}
+The following calls illustrate each policy. Omit {cmd:memory_gib()} to disable
+memory-based planning as well as rejection:
+
+{phang2}{cmd:. fevc wage, worker(id) firm(fid)}{p_end}
+{phang2}{cmd:. fevc wage, worker(id) firm(fid) memory_gib(2)}{p_end}
+{phang2}{cmd:. fevc wage, worker(id) firm(fid) memory_gib(2) memorycheck(error)}{p_end}
+{phang2}{cmd:. fevc wage, worker(id) firm(fid) memory_gib(2) memorycheck(off)}{p_end}
+
+{pstd}
+Native forecasts describe command-owned direct allocations, excluding the
+original Stata dataset, allocator residency, libraries and thread stacks.
+They are not predictions of total process RSS or guarantees against an actual allocation
+failure. The full-CMG forecast is refined after deterministic hierarchy
+construction and before estimator randomness, using the selected batches
+and the hierarchy actually retained. Preparation's Rust allocation peak is
+measured while preparing the actual data; a strict check can therefore stop
+after preparation. {cmd:e(memory_forecast_bytes)} reports expected peak direct
+allocations. {cmd:e(memory_admission_forecast_bytes)} includes conditional
+refinement workspace; the difference is {cmd:e(memory_conditional_reserve_bytes)}.
+Warning and error policies compare this admission forecast with the budget.
+Preparation warnings can appear before the solve; the final forecast warning
+appears with the completed command. Mata models working data separately and
+no longer adds historical fixed runtime-RSS allowances to public forecasts.
+Structural, numerical, overflow and allocation-failure checks remain active
+in every memory policy. An explicit budget is not an operating-system
+memory reservation or cap, and there is no separate forecast-only dry run.
+
+{pstd}
+The four full-CMG development fixtures forecast within 0.17--2.64% above
+independently measured direct allocation peaks. This does not establish
+that precision for other inputs, total process RSS, Mata, or inference.
+Component inference and stayer augmentation retain conservative bounds.
+
+{dlgtab:Routing, timing and random-number state}
+
+{pstd}
+Structural preflight, not routing trial solves, selects the automatic
+preconditioner. Reported setup and fit are disjoint timings.
 
 {pstd}
 The fixed seed is tied to the runtime contract and canonical semantic atom
@@ -615,40 +671,10 @@ Target mass remains stored-row mass and is not multiplied by frequency.  The
 native runtime obtains the requested block variance proxy from the same JLA solve,
 solves the fixed-effect projection loadings without a full inverse, and
 streams the score covariance without retaining an observation-by-coefficient
-design.  Complete-system residual, projection-Gram conditioning, PSD, and
-memory gates are fail closed.
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(observation) inference(highrank)}{p_end}
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(observation) inference(q1) level(95)}{p_end}
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(observation) inference(highrank) ///}{p_end}
-{phang3}{cmd:inferencemodel(structured_common) backend(rust) ///}{p_end}
-{phang3}{cmd:rng(counter_v1) algorithm(jla) engine(generic) ///}{p_end}
-{phang3}{cmd:preconditioner(diagonal) stayers(movers)}{p_end}
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:project(education experience) ///}{p_end}
-{phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(match) nuisance(fixedoffset) stayers(movers) ///}{p_end}
-{phang3}{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///}{p_end}
-{phang3}{cmd:preconditioner(diagonal) inference(highrank) ///}{p_end}
-{phang3}{cmd:inferencemodel(structured_common)}{p_end}
-{phang2}{cmd:. estat diagnostics}{p_end}
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(observation) inference(highrank) ///}{p_end}
-{phang3}{cmd:project(education experience) projecteffect(firm)}{p_end}
-
-{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:project(education experience) ///}{p_end}
-{phang3}{cmd:projecteffect(firm) backend(rust) rng(counter_v1) ///}{p_end}
-{phang3}{cmd:algorithm(jla) engine(generic) preconditioner(cmg)}{p_end}
+design. Complete-system residual, projection-Gram conditioning, PSD, and
+memory-receipt reconciliation fail closed. Forecast admission follows
+{cmd:memorycheck()}; only an explicit budget with {cmd:memorycheck(error)}
+rejects an over-budget forecast.
 
 {pstd}
 The leave-out point estimator and reference-distribution formulas follow the
@@ -690,7 +716,8 @@ the deletion unit, reduce probes, or loosen tolerances silently.
     Unsupported component route{col 34}use Mata exact observation deletion with unit frequency weights
     Invalid inference covariance{col 34}inspect leverage, support, smoothing fit, and projection rank
     PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
-    Memory admission{col 34}reduce batch width or declare only actually available memory
+    Strict memory admission{col 34}reduce batch width or choose memorycheck(warn|off)
+    Actual allocation failure{col 34}reduce working storage or use more available memory
     Forced compressed failure{col 34}use the full explicit generic tuple or backend(mata)
 
   {ul:Installation and runtime}
@@ -699,6 +726,12 @@ the deletion unit, reduce probes, or loosen tolerances silently.
     Unavailable Rust artifact{col 34}build and test a local developer artifact or use backend(mata)
     Unsupported Rust options{col 34}use exact, frozen compressed JLA, explicit generic JLA, or backend(mata)
   {hline 76}
+
+{pstd}
+An over-budget warning under {cmd:memorycheck(warn)} does not withhold the
+calculation. With {cmd:memorycheck(error)}, revise the explicit budget only
+when it reflects the resources available for the forecast scope, or select
+an advisory policy. External operating-system and scheduler limits still apply.
 
 {pstd}
 Do not treat a conservative rejection as proof that the economic estimand does
@@ -850,6 +883,28 @@ Sample and design scalars include {cmd:e(N_requested)},
 {cmd:e(weighted_rss)}, {cmd:e(max_leverage)}, and graph-pruning counts.
 
 {pstd}
+Memory returns are posted after successful completion, including with
+{cmd:nodisplay}. {cmd:e(memory_budget_supplied)} is 1 for an explicit budget
+and 0 otherwise. {cmd:e(memory_gib)} is that budget in GiB or missing when
+omitted. {cmd:e(memory_check)} records {cmd:warn}, {cmd:error}, or {cmd:off};
+its default is {cmd:warn} even when no budget is supplied.
+
+{pstd}
+{cmd:e(memory_forecast_bytes)} is the expected peak;
+{cmd:e(memory_admission_forecast_bytes)} includes conditional refinement
+reserve and is used for budget comparisons. Their difference is
+{cmd:e(memory_conditional_reserve_bytes)}. {cmd:e(memory_forecast_scope)}
+describes the accounting scope and {cmd:e(memory_forecast_model)} is
+currently 1. A zero reserve means the model reports no separate reserve,
+not that its forecast is certain. {cmd:e(batch_memory_budget_bytes)} is a
+route-specific planning allowance, which need not equal the whole budget;
+it is missing when {cmd:memory_gib()} is omitted. For example:
+
+{phang2}{cmd:. display e(memory_forecast_bytes)/1024^3}{p_end}
+{phang2}{cmd:. display e(memory_admission_forecast_bytes)/1024^3}{p_end}
+{phang2}{cmd:. display "`e(memory_forecast_scope)'"}{p_end}
+
+{pstd}
 JLA additionally stores the selected engine, preconditioner, routing reason,
 batch, probes, complete residual, per-RHS convergence diagnostics, resource
 forecasts, timing diagnostics, RNG contract, and restoration metadata.  Type
@@ -896,18 +951,26 @@ On a recognized failure, the principal strings are
 Each example creates its own connected AKM-style worker-firm graph.  The
 visible {cmd:preserve}/{cmd:restore} lines make the block safe to copy into a
 do-file.  The clickable link executes the marked inner block through
-{cmd:fevc_run}, which also restores the caller's data.  The first three
-examples display the population worker and firm variances, worker-firm
-covariance, and total implied by their DGP before estimation.
+{cmd:fevc_run}, which also restores the caller's data.  The first two
+examples construct positive sorting by relating each worker effect to the
+mean firm effect across that worker's jobs.  They display the true components
+for the realized sample, using the same observation-weighted population
+moments as the estimator.  With the specified seeds, the plug-in covariance
+is negative and the bias correction brings it close to the positive truth.
+The correction also brings both variances and their total closer to the
+true values in these simulated samples.
+{cmd:estat decomposition, full} shows raw covariance; the main table reports
+twice the covariance as the sorting contribution.  Example 3 displays the
+population moments implied by its DGP.
 
-{space 4}{hline 10} {it:Example 1 - Small exact calculation with joint controls} {hline 10}
+{space 4}{hline 10} {it:Example 1 - Positive sorting with exact bias correction} {hline 10}
 {cmd}{...}
           preserve
 {* example_start - exact_controls}{...}
           clear
           set seed 20260820
-          local workers 80
-          local firms 20
+          local workers 200
+          local firms 61
           local spells 3
           local periods 2
           set obs `=`workers'*`spells'*`periods''
@@ -915,58 +978,72 @@ covariance, and total implied by their DGP before estimation.
           bysort worker_id: generate byte within_worker = _n
           generate byte spell = ceil(within_worker/`periods')
           generate byte period = mod(within_worker-1,`periods')+1
-          generate long firm_id = mod(worker_id-1+(spell-1)*7,`firms')+1
+          by worker_id: generate int step = runiformint(1,`firms'-1) if _n==1
+          by worker_id: replace step = step[1]
+          generate long firm_id = mod(worker_id-1+(spell-1)*step,`firms')+1
           generate long match_id = worker_id*10+spell
-          generate double worker_fe = rnormal() if within_worker==1
-          bysort worker_id: replace worker_fe = worker_fe[1]
-          bysort firm_id: generate double firm_fe = rnormal() if _n==1
-          bysort firm_id: replace firm_fe = firm_fe[1]
+          bysort firm_id (worker_id within_worker): generate double firm_fe = rnormal() if _n==1
+          by firm_id: replace firm_fe = firm_fe[1]
+          bysort worker_id (within_worker): egen double mean_firm_fe = mean(firm_fe)
+          by worker_id: generate double worker_fe = .5*mean_firm_fe+rnormal() if _n==1
+          by worker_id: replace worker_fe = worker_fe[1]
           generate double productivity = rnormal()
-          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+.50*rnormal()
-          display as text _newline "True DGP worker-firm components (population):"
-          display as text "  Var(worker effect)       = " as result %6.2f 1
-          display as text "  Var(firm effect)         = " as result %6.2f 1
-          display as text "  Cov(worker, firm)        = " as result %6.2f 0
-          display as text "  Var(worker + firm)       = " as result %6.2f 2
+          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+3*rnormal()
+          quietly correlate worker_fe firm_fe, covariance
+          tempname true_components
+          matrix `true_components' = r(C)*(r(N)-1)/r(N)
+          display as text _newline "True worker-firm components (realized sample):"
+          display as text "  Var(worker effect)       = " as result %7.3f el(`true_components',1,1)
+          display as text "  Var(firm effect)         = " as result %7.3f el(`true_components',2,2)
+          display as text "  Cov(worker, firm)        = " as result %7.3f el(`true_components',1,2)
+          display as text "  Var(worker + firm)       = " as result %7.3f (el(`true_components',1,1)+el(`true_components',2,2)+2*el(`true_components',1,2))
           fevc log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
               deletion(match) deletionid(match_id) nuisance(joint) algorithm(exact)
+          estat decomposition, full
 {* example_end}{...}
           restore
 {txt}{...}
 {space 4}{hline 76}
 {space 4}{it:({stata fevc_run exact_controls using fevc.sthlp:click to run})}
 
-{space 4}{hline 10} {it:Example 2 - Larger controlled graph with JLA} {hline 10}
+{space 4}{hline 10} {it:Example 2 - Positive sorting in a larger graph with JLA} {hline 10}
 {cmd}{...}
           preserve
 {* example_start - jla_controls}{...}
           clear
           set seed 20260821
-          local workers 180
-          local firms 45
-          local spells 4
+          local workers 10000
+          local firms 3001
+          local spells 3
           local periods 2
           set obs `=`workers'*`spells'*`periods''
           generate long worker_id = ceil(_n/(`spells'*`periods'))
           bysort worker_id: generate byte within_worker = _n
           generate byte spell = ceil(within_worker/`periods')
           generate byte period = mod(within_worker-1,`periods')+1
-          generate long firm_id = mod(worker_id-1+(spell-1)*11,`firms')+1
+          by worker_id: generate int step = runiformint(1,`firms'-1) if _n==1
+          by worker_id: replace step = step[1]
+          generate long firm_id = mod(worker_id-1+(spell-1)*step,`firms')+1
           generate long match_id = worker_id*10+spell
-          generate double worker_fe = rnormal() if within_worker==1
-          bysort worker_id: replace worker_fe = worker_fe[1]
-          bysort firm_id: generate double firm_fe = .7*rnormal() if _n==1
-          bysort firm_id: replace firm_fe = firm_fe[1]
+          bysort firm_id (worker_id within_worker): generate double firm_fe = rnormal() if _n==1
+          by firm_id: replace firm_fe = firm_fe[1]
+          bysort worker_id (within_worker): egen double mean_firm_fe = mean(firm_fe)
+          by worker_id: generate double worker_fe = .5*mean_firm_fe+rnormal() if _n==1
+          by worker_id: replace worker_fe = worker_fe[1]
           generate double productivity = rnormal()
-          generate double log_wage = 2+worker_fe+firm_fe+.25*productivity+.10*(period==2)+.60*rnormal()
-          display as text _newline "True DGP worker-firm components (population):"
-          display as text "  Var(worker effect)       = " as result %6.2f 1
-          display as text "  Var(firm effect)         = " as result %6.2f .49
-          display as text "  Cov(worker, firm)        = " as result %6.2f 0
-          display as text "  Var(worker + firm)       = " as result %6.2f 1.49
+          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+3*rnormal()
+          quietly correlate worker_fe firm_fe, covariance
+          tempname true_components
+          matrix `true_components' = r(C)*(r(N)-1)/r(N)
+          display as text _newline "True worker-firm components (realized sample):"
+          display as text "  Var(worker effect)       = " as result %7.3f el(`true_components',1,1)
+          display as text "  Var(firm effect)         = " as result %7.3f el(`true_components',2,2)
+          display as text "  Cov(worker, firm)        = " as result %7.3f el(`true_components',1,2)
+          display as text "  Var(worker + firm)       = " as result %7.3f (el(`true_components',1,1)+el(`true_components',2,2)+2*el(`true_components',1,2))
           fevc log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
               deletion(match) deletionid(match_id) nuisance(joint) algorithm(jla) ///
-              probes(40) batch(8) seed(8675309) engine(auto) preconditioner(auto)
+              probes(200) seed(8675309)
+          estat decomposition, full
 {* example_end}{...}
           restore
 {txt}{...}
@@ -1009,7 +1086,46 @@ covariance, and total implied by their DGP before estimation.
 {space 4}{hline 76}
 {space 4}{it:({stata fevc_run weights_targets using fevc.sthlp:click to run})}
 
-{space 4}{hline 10} {it:Example 4 - Component inference and lincom} {hline 10}
+{space 4}{hline 10} {it:Example 4 - Project firm effects on firm size} {hline 10}
+
+{pstd}
+Each worker is observed for four years and moves once.  Firms start with
+unequal numbers of workers.  Firm size is average annual employment:
+the number of worker-year observations at the firm divided by four.
+The true firm effect is {cmd:0.5*ln(firm_size)}, so larger firms pay a
+higher wage premium.  The projection should recover a slope near 0.5;
+doubling firm size raises the true firm effect by about 0.347 log points.
+{cmd:projectweight(frequency)} weights the projection by worker-year
+observations.  The intercept depends on the fixed-effect normalization.
+
+{cmd}{...}
+          preserve
+{* example_start - projection_inference}{...}
+          clear
+          set seed 20260824
+          set obs 10
+          generate byte origin_firm = _n
+          expand 2*origin_firm
+          generate long worker_id = _n
+          generate double worker_fe = .4*rnormal()
+          expand 4
+          bysort worker_id: generate byte year = _n
+          generate byte firm_id = cond(year<=2,origin_firm,mod(origin_firm,10)+1)
+          bysort firm_id: generate double firm_size = _N/4
+          generate double log_firm_size = ln(firm_size)
+          generate double firm_fe = .5*log_firm_size
+          sort worker_id year
+          generate double log_wage = 2+worker_fe+firm_fe+.15*rnormal()
+          display as text "True slope on log firm size = 0.5"
+          fevc log_wage, worker(worker_id) firm(firm_id) deletion(match) algorithm(exact) ///
+              project(log_firm_size) projecteffect(firm) projectweight(frequency)
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata fevc_run projection_inference using fevc.sthlp:click to run})}
+
+{space 4}{hline 10} {it:Example 5 - Component inference and lincom} {hline 10}
 {cmd}{...}
           preserve
 {* example_start - component_inference}{...}
@@ -1044,49 +1160,6 @@ covariance, and total implied by their DGP before estimation.
 For rank-one weak-identification intervals, replace
 {cmd:inference(highrank)} with {cmd:inference(q1)}.  The command then reports
 both the ordinary component table and the rank-one interval table.
-
-{space 4}{hline 10} {it:Example 5 - Firm-effect projection with movers and stayers} {hline 10}
-{cmd}{...}
-          preserve
-{* example_start - projection_inference}{...}
-          clear
-          set obs 28
-          generate long worker_id = .
-          generate byte firm_id = .
-          generate long match_id = .
-          generate double productivity = .
-          generate double policy = .
-          local firms 0 0 1 1 0 2 2 1 1 2 3 3 2 3 0 0 3 1 1 2 3 3 2 0
-          local matches 10 10 11 11 20 21 21 22 30 31 32 32 40 41 42 42 50 51 51 52 60 60 61 62
-          forvalues row = 1/24 {
-              quietly replace worker_id = floor((`row'-1)/4) in `row'
-              local value : word `row' of `firms'
-              quietly replace firm_id = `value' in `row'
-              local value : word `row' of `matches'
-              quietly replace match_id = `value' in `row'
-              quietly replace productivity = mod(`row'-1,4)-1.5 in `row'
-              quietly replace policy = mod(`row',3)==0 in `row'
-          }
-          quietly replace worker_id = 100 in 25/26
-          quietly replace firm_id = 0 in 25/26
-          quietly replace worker_id = 101 in 27/28
-          quietly replace firm_id = 2 in 27/28
-          quietly replace match_id = 1000+_n in 25/28
-          quietly replace productivity = -.4+.25*(_n-25) in 25/28
-          quietly replace policy = mod(_n,2) in 25/28
-          generate double target_mass = 1+mod(_n,5)/7
-          generate double projection_z = sin(_n/3)
-          generate double log_wage = -48.8+.07*worker_id-.11*firm_id ///
-              +.35*productivity-.2*policy+sin(_n)/20
-          fevc log_wage productivity policy, worker(worker_id) firm(firm_id) ///
-              deletionid(match_id) targetweight(target_mass) algorithm(exact) ///
-              project(projection_z) projecteffect(firm) projectweight(target)
-          estat sample
-{* example_end}{...}
-          restore
-{txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run projection_inference using fevc.sthlp:click to run})}
 
 {marker reference}
 {title:Reference}

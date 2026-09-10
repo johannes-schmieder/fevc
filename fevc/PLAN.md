@@ -1,3 +1,81 @@
+# Audit repairs and 256-lane control preparation, 2026-09-10
+
+The three audit discrepancies are repaired without relaxing their checks.
+All 799 Python tests, CMG gates, Stata quick/full and clean-install checks pass.
+The 256-lane compensated Mata kernel passes cancellation, integer-weight/copy,
+invariance through 32 controls, adversarial anchor, memory-policy and real
+interruption checks, with arm64 and Rosetta coverage. Both exact and JLA now
+preserve UserBreak and clear results. Runtime identities are Mata API 24 and
+resource API 12; native source, ABI and qualified binaries are unchanged.
+
+On the accepted 100,000-row, 32-control design, median control preparation falls
+from 2.388 to 1.940 seconds and complete-command time from 20.732 to 20.342
+seconds. Complete-command peak RSS increases by about 22 MiB; larger scratch
+is charged before allocation. The two-control AKM timing is essentially
+unchanged. This is a local checkpoint, without competitive-performance or
+release promotion. The original 13.2% evidence and earlier investigation remain
+preserved. See the [follow-up report](docs/CONTROL_LANES_256_2026-09-10.md),
+[numerical contract](docs/CONTROL_BASIS_CERTIFICATION.md) and
+[source/binary record](docs/control_lanes_256_v1_result.json).
+
+## Previous control-basis checkpoint
+
+# Certified control-basis repair, 2026-09-10
+
+API 23 implements compensated control cross products, an operation-based error
+certificate and certification of the selected anchor's prefix. The original
+uncentered 50,000-row AKM example passes Mata, Rust and automatic routing;
+the adversarial witness retains public ambiguity with its inverse-residual
+cause. Estimator, sample, tolerances and native layouts are preserved.
+
+Independent arithmetic/score oracles, focused regressions, Rust workspace,
+Stata quick/full and local arm64/Rosetta native qualification pass. The aggregate
+Python gate remains red: one initial manual-inventory failure and two concurrent
+owner documentation-audit failures are preserved. The accepted 32-control Mata
+benchmark retains 13.2% complete-command overhead after compensation optimization.
+This is a local checkpoint, without release or competitive-performance promotion.
+See the [repair report](docs/CONTROL_BASIS_REPAIR_2026-09-10.md),
+[derivation](docs/CONTROL_BASIS_CERTIFICATION.md) and
+[source/binary result](docs/control_basis_repair_v1_result.json).
+
+## Previous concurrent checkpoint
+
+# Memory documentation and paper completion, 2026-09-10
+
+The help file, active package/Rust/CMG documentation, and companion paper now
+describe omitted budgets, warning/error/off policy, forecast timing and
+scope, returned diagnostics and bounded accuracy. The paper PDF (58 pages)
+and phone HTML are rebuilt and visually checked. Documentation regressions
+and editorial checks pass; the historical full-paper audit still requires
+its archived source/binary identity. See the
+[documentation and compatibility record](docs/MEMORY_DOCUMENTATION_2026-09-10.md).
+Historical evidence and owner changes are preserved. No numerical campaign,
+native rebuild, commit or release accompanied this documentation update.
+
+## Implementation checkpoint
+
+# Memory policy and forecast refinement, 2026-09-10
+
+The owner requested accurate forecasts, warning instead of error by default,
+and no assumed budget when `memory_gib()` is omitted. The implementation
+removes memory-based batch/concurrency planning for omitted budgets, adds
+warning/error/off policies, measures native preparation, and refines CMG
+storage from the constructed solver before estimator RNG. Expected direct
+allocations and conditional admission reserve are separate receipts.
+
+The independent full-CMG allocation regression passes at 0.17–2.64% excess
+on the four tested size/degree/core combinations. This is not a universal
+RSS or inference-accuracy qualification. The registered RSS target remains
+unmet, and the conservative inference/stayer-augmentation bounds are recorded
+in [the memory report](docs/MEMORY_FORECAST_2026-09-10.md).
+Implementation and local validation are complete: 798 Python tests, Stata
+quick/full suites, Rust regressions, and final Mac arm64/Rosetta native checks
+pass. The [result record](docs/memory_forecast_v1_result.json) binds the final
+source and installed candidate hashes. No commit, publication, remote
+deployment or release was performed.
+
+## Previous inference checkpoint
+
 # Direct residual-probe inference and paper completion
 
 ## Completed owner scope, 2026-09-08

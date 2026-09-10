@@ -6,6 +6,8 @@
 //! exports capability/self-test functions and the complete numerical engine ABI while
 //! keeping every panic and owned native context behind a C-compatible boundary.
 
+#[path = "../../crates/vckss-plugin/src/allocation_meter.rs"]
+mod allocation_meter;
 #[path = "../../crates/vckss-plugin/src/context.rs"]
 pub mod context;
 #[path = "../../crates/vckss-plugin/src/ffi_engine.rs"]

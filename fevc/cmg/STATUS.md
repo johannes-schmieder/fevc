@@ -2,10 +2,13 @@
 
 - Ownership: internal component of `fevc`
 - Runtime namespace: `vckss_cmg`
-- Component API: 8
+- Component API: 9
 - Generator API: 5
 - Numerical basis: API-6-qualified source-informed GPL Mata core
 - Standalone release: disabled; source ships only inside the FEVC prerelease
+
+API 9 propagates the public optional warning/error/off memory policy.
+Structural caps and numerical algorithms remain unchanged.
 
 API 8 records the package and generated-target rename to `fevc`; generator
 API 5 emits only the renamed target identity. Neither change

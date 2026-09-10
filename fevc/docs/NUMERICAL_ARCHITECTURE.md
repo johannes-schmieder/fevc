@@ -189,7 +189,12 @@ is then reduced to a canonical row-anchor basis. The selected anchor rows
 become the identity. The certified range is `k<=32` controls.
 
 The implementation uses the dimensioned envelope stated in
-`ESTIMATOR_CONTRACT.md`. It covers Gram accumulation, inverse and Cholesky
+`ESTIMATOR_CONTRACT.md` and derived in
+[Control-basis certification](CONTROL_BASIS_CERTIFICATION.md). Weighted Gram,
+whitening and reconstruction products use compensated arithmetic with a
+second-order row-count error term and absolute underflow contributions.
+Only the selected anchor and its predecessors require comparison certification;
+the global maximum still includes every row. It covers Gram accumulation, inverse and Cholesky
 conditioning, the computed span, every score/cutoff decision, every later
 anchor projector, and final anchor/span reconstruction. Maximum-column inverse
 residuals are multiplied by `sqrt(k)` and divided by a positive reciprocal-
@@ -297,19 +302,35 @@ right-hand sides or reject a route using projected work or wall time. Every
 production solve still has to converge and pass the complete original-system
 residual gate.
 
-`memory_gib()` declares any positive direct allocation envelope. The maximum
-simultaneous predicted allocation must fit that value before estimator RNG.
-The additional 30-percent headroom calculation is advisory, as are wall-time
-forecasts and `wallseconds()`. Concrete scheduler memory, wall, and temporary
-disk limits remain hard for a submitted job.
-`batch(auto)` resolves after deterministic sample construction and before
-solver routing or random probes. It chooses the largest evidence-backed width
-in 8, 16, 32, 64 that fits the probe count, processor heuristic, and a
-conservative scratch heuristic. Those percentages select a practical width;
-they are not separate rejection gates. Explicit positive integer batches,
-including 128, retain the sequential direction stream when the complete
-direct-peak forecast fits. Performance evidence cannot relax tolerances,
-probes, sample selection, or the estimator.
+`memory_gib()` is an optional direct-allocation budget. Omission supplies no
+budget, no detected-RAM substitute and no memory-dependent batch, concurrency
+or route choice. An explicit budget defaults to `memorycheck(warn)`;
+`memorycheck(error)` enforces forecast admission and `memorycheck(off)`
+suppresses memory warnings and rejection. An explicit budget still guides
+automatic batches under `off`. A policy alone never supplies a budget.
+
+Rust measures preparation heap payload while processing the actual input,
+accounts for overlapping C input/export buffers, and reconciles retained
+capacities. Constructed CMG hierarchies supply realized storage and workspace
+sizes before estimator random draws. Final phase forecasts account for
+selected batches and allocation lifetimes; expected solve storage is
+separate from conditional refinement reserve. Admission and warning checks
+use the latter-inclusive forecast. A strict check may stop after preparation
+has already allocated memory. These are direct-allocation forecasts, not
+process RSS or a guarantee against actual allocation failure. Mata retains a
+working-data model; its public forecasts exclude historical fixed runtime-RSS
+allowances. See [MEMORY.md](MEMORY.md) for timing and returned fields.
+
+`batch(auto)` resolves from the retained structure, applicable constructed
+solver and probe/processor limits before estimator randomness. With a budget,
+route-specific scratch allowances may reduce the selected width. With an
+advisory budget that fits no candidate, planning uses the minimum supported
+width and continues. Omission bypasses memory-dependent selection. Explicit
+positive integer batches, including 128, are preserved; a strict budget can
+reject them. Percentage headroom and wall forecasts remain advisory and are
+distinct from conditional refinement storage. Real scheduler memory, wall and
+temporary-disk limits remain external hard boundaries. Memory policy cannot
+relax tolerances, probes, sample selection, numerical gates or the estimator.
 
 The reusable CMG workspace remains an equality-tested API but is not the
 production application path. At 32,768 hybrid vertices it was 34 percent

@@ -24,6 +24,12 @@ records the passing local Mac, replay and paper checks. Historical scientific
 passes remain source-specific; other platforms and public distribution remain
 separate.
 
+Memory budgets are optional. With no `memory_gib()`, the command forecasts
+and continues without memory-based batch or concurrency adjustment. Explicit
+budgets warn by default; `memorycheck(error)` opts into strict forecast
+admission. See the [memory guide](fevc/docs/MEMORY.md) for scope, timing,
+returned results and accuracy limits.
+
 The companion working paper is maintained separately in the sibling
 `fevc-paper` repository. Its active repository and PDF filenames use the
 `fevc` identity; frozen predecessor and migration records retain old names.

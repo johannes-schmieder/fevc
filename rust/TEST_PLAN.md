@@ -700,7 +700,10 @@ All accepted native routes must preserve:
   tolerance as applicable;
 - structural pre-RNG algorithm, engine, route, fallback, batch, memory, wall,
   and Counter receipts;
-- direct allocation within `memory_gib()`;
+- optional budget presence and `warn`/`error`/`off` policy reconciliation;
+  forecast rejection only for an explicit `memory_gib()` with
+  `memorycheck(error)`, no memory-based planning when omitted, and exact
+  preservation of explicit batches;
 - exact request/selection/result-family reconciliation; and
 - caller data, `e(sample)`, RNG algorithm/stream/state, sort state, release,
   and idle registry restoration on success, error, and UserBreak.

@@ -6,6 +6,7 @@
 //! translation unit. These exports make capability negotiation and isolated
 //! self-tests available before any dataset is read.
 
+mod allocation_meter;
 pub mod context;
 pub mod ffi_engine;
 pub mod session;

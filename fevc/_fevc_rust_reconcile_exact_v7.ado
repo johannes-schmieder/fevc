@@ -99,7 +99,7 @@ program define _fevc_rust_reconcile_exact_v7, rclass
         `firms'!=floor(`firms') | `controls'<0 |                    ///
         `controls'!=floor(`controls') | `ranktol'<=0 | `blocktol'<=0 | ///
         `tolerance'<=0 | `exactlimit'<2 | `exactlimit'>2000 |       ///
-        `exactlimit'!=floor(`exactlimit') | `memlimit'<=0 |           ///
+        `exactlimit'!=floor(`exactlimit') | (`memlimit'<=0 & "$VCKSS_MEMORY_PRESENT"!="0") |           ///
         `memlimit'!=floor(`memlimit') |                               ///
         `inputcopy'<0 | `inputcopy'!=floor(`inputcopy') |            ///
         `preppeak'<0 | `preppeak'!=floor(`preppeak') |               ///
@@ -222,7 +222,7 @@ program define _fevc_rust_reconcile_exact_v7, rclass
             `r_exactpeak'==max(`r_fitpeak',`r_corrpeak') &          ///
             `r_solvepeak'==`r_exactpeak' &                          ///
             `r_cmdpeak'==max(`r_preppeak',`r_solvepeak') &          ///
-            `r_cmdpeak'<=`r_memlimit'
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `r_cmdpeak'<=`r_memlimit')
         if !`ok' local detail "exact V4/V7 direct-memory receipt mismatch"
     }
     if `ok' {

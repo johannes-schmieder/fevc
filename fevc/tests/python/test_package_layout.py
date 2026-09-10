@@ -8,7 +8,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.5.0-rc.1"
-API_LEVEL = 21
+API_LEVEL = 24
 
 
 def test_package_manifest_is_complete() -> None:
@@ -39,6 +39,7 @@ def test_package_manifest_is_complete() -> None:
         "fevc_scale_runtime.mata",
         "_fevc_display.ado",
         "_fevc_lifecycle.ado",
+        "_fevc_memory_options.ado",
         "fevc_estat.ado",
         "fevc_run.ado",
         "fevc_rust.ado",
@@ -118,7 +119,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "vckss-api21-stayer-hybrid"
+    build_id = "vckss-api24-control-lanes256"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -128,20 +129,20 @@ def test_mata_api_guard_agrees() -> None:
     assert "vckss-graph-api21-prep-map1-retained" in graph
     solver = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
-    assert "return(26)" in solver
-    assert "vckss-solver-api26-gpl-mata-cmg" in solver
+    assert "return(27)" in solver
+    assert "vckss-solver-api27-memory-policy" in solver
     assert "vckss_solver__route_api()" in solver
     assert "vckss_solver__pilot_api()" not in solver
     resource = (ROOT / "fevc_resource.mata").read_text(encoding="utf-8")
     assert "vckss_resource__api_level()" in resource
-    assert "return(10)" in resource
-    assert "vckss-resource-api10-fe-buf1-buffered" in resource
+    assert "return(12)" in resource
+    assert "vckss-resource-api12-control-scratch" in resource
     rng = (ROOT / "fevc_rng.mata").read_text(encoding="utf-8")
     assert "return(4)" in rng
     assert "vckss-rng-numeric-ranks-v4" in rng
     cmg = (ROOT / "fevc_cmg.mata").read_text(encoding="utf-8")
     assert "vckss_cmg__api_level()" in cmg
-    assert "return(8)" in cmg
+    assert "return(9)" in cmg
     assert '"STALE_MATA_RUNTIME"' in ado
     assert '"AMBIGUOUS_PROBE_ORDER"' not in ado
     assert "`target'/`frequency'" in ado
@@ -175,7 +176,9 @@ def test_control_and_frequency_certificates_are_fail_closed() -> None:
     assert "operator_residual=sqrt(dimension)*max_column_relres" in mata
     assert "denominator=reciprocal_condition-operator_residual" in mata
     assert "projection_error=vckss__norm2(projector*projector-projector)" in mata
-    assert "span_error=vckss__norm2(out.controls-orthonormal*checked)" in mata
+    assert "span_error=vckss__control_bound_up((vckss__norm2(out.controls-orthonormal*checked)" in mata
+    assert "vckss__control_product_error(checked_product)" in mata
+    assert "vckss__control_cross(controls,controls,frequency)" in mata
     assert "return(1e-8)" in mata
     assert mata.count("vckss__propagate_error(") >= 6
 
@@ -196,6 +199,7 @@ def test_runtime_has_no_external_language_dependency() -> None:
             "fevc_scale_runtime.mata",
             "_fevc_display.ado",
             "_fevc_lifecycle.ado",
+        "_fevc_memory_options.ado",
             "fevc_estat.ado",
             "fevc_run.ado",
         )
@@ -226,7 +230,10 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
     assert help_text.count("{* example_end}{...}") == len(examples)
     assert help_text.count(
         'display as text _newline "True DGP worker-firm components (population):"'
-    ) == 3
+    ) == 1
+    assert help_text.count(
+        'display as text _newline "True worker-firm components (realized sample):"'
+    ) == 2
     assert help_text.count('display as text "  Var(worker effect)') == 3
     assert help_text.count('display as text "  Var(firm effect)') == 3
     assert help_text.count('display as text "  Cov(worker, firm)') == 3
@@ -384,7 +391,7 @@ def test_api19_public_routing_surface_is_typed() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
     for token in (
         "PREConditioner(string)",
-        "MEMory_gib(real 4)",
+        "MEMory_gib(string)",
         'local batch_requested = lower(strtrim("`batch\'"))',
         "vckss__stata_jla_routed",
         "ereturn matrix route_diagnostics",

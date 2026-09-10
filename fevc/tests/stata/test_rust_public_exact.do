@@ -118,8 +118,9 @@ foreach nuisance in joint fixedoffset {
             assert e(rust_exact_memory_receipt)[1,3] == max(          ///
                 e(rust_exact_memory_receipt)[1,1],                    ///
                 e(rust_exact_memory_receipt)[1,2])
-            assert e(rust_exact_memory_receipt)[1,5] <=              ///
-                e(rust_exact_memory_receipt)[1,6]
+            assert e(memory_budget_supplied)==0 & missing(e(memory_gib))
+            assert e(rust_exact_memory_receipt)[1,5]>0 & ///
+                e(rust_exact_memory_receipt)[1,6]==0
             assert e(parameters) == cond("`nuisance'" == "joint",4,3)
             assert e(full_parameters) == 4
             assert e(correction_parameters) ==                       ///
@@ -295,7 +296,7 @@ quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
 capture quietly fevc y, worker(worker) firm(firm)             ///
-    algorithm(exact) backend(rust) memory_gib(1e-6)            ///
+    algorithm(exact) backend(rust) memory_gib(1e-6) memorycheck(error)            ///
     stayers(movers) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',"RESOURCE_LIMIT",         ///

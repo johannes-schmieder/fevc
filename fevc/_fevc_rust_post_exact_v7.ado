@@ -293,7 +293,8 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         `p_controls'>=0 & `p_input'==`ncomplete' &                  ///
         `p_retained'==`retained_count' &                            ///
         `p_input_copy'==`expected_input_copy' &                      ///
-        `p_prep_peak'==`expected_prep_peak' & `p_resident'>0 &      ///
+        (`p_prep_peak'==`expected_prep_peak' | ///
+            ("$VCKSS_MEMORY_ACTIVE"=="1" & `p_prep_peak'>=`p_input_copy')) & `p_resident'>0 &      ///
         `p_target'>0 & `retained_target'>0 &                        ///
         abs(`p_target'-`retained_target')<=1e-10*max(1,abs(`p_target')) & ///
         `g_input_rows'==`ncomplete' & `g_keep_rows'==`retained_count' & ///

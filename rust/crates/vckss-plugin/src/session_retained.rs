@@ -21,6 +21,7 @@ use vckss_core::graph::{
 };
 use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
+use vckss_core::memory::MemoryBudget;
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
 use vckss_core::projection::{
     prepare_projection_with_interrupt, PreparedProjection, ProjectionEffect, ProjectionWeight,
@@ -156,7 +157,9 @@ impl PreparedProblemWithMask {
         columns: InputColumns,
         memory: PreparationMemoryReceipt,
     ) -> Result<Self> {
-        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+        if memory.budget.limit(memory.hard_limit_bytes) == Some(0)
+            || memory.preparation_peak_forecast_bytes == 0
+        {
             return Err(BackendError::invalid(
                 "engine_memory",
                 "admitted preparation memory receipt is incomplete",
@@ -177,7 +180,9 @@ impl PreparedProblemWithMask {
         memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+        if memory.budget.limit(memory.hard_limit_bytes) == Some(0)
+            || memory.preparation_peak_forecast_bytes == 0
+        {
             return Err(BackendError::invalid(
                 "engine_memory",
                 "admitted preparation memory receipt is incomplete",
@@ -192,7 +197,9 @@ impl PreparedProblemWithMask {
         memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+        if memory.budget.limit(memory.hard_limit_bytes) == Some(0)
+            || memory.preparation_peak_forecast_bytes == 0
+        {
             return Err(BackendError::invalid(
                 "engine_memory",
                 "admitted preparation memory receipt is incomplete",
@@ -208,7 +215,9 @@ impl PreparedProblemWithMask {
         memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+        if memory.budget.limit(memory.hard_limit_bytes) == Some(0)
+            || memory.preparation_peak_forecast_bytes == 0
+        {
             return Err(BackendError::invalid(
                 "engine_memory",
                 "admitted preparation memory receipt is incomplete",
@@ -225,7 +234,9 @@ impl PreparedProblemWithMask {
         memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+        if memory.budget.limit(memory.hard_limit_bytes) == Some(0)
+            || memory.preparation_peak_forecast_bytes == 0
+        {
             return Err(BackendError::invalid(
                 "engine_memory",
                 "admitted preparation memory receipt is incomplete",
@@ -349,11 +360,11 @@ impl PreparedProblemWithMask {
                 "retention mask and compressed row count disagree",
             ));
         }
-        if memory.hard_limit_bytes != 0 {
+        if memory.preparation_peak_forecast_bytes != 0 {
             interrupt.checkpoint("session_prepare_resident_reconcile")?;
             let retained_bytes = to_u64(
-                bit_packed_capacity_bytes(retained.capacity()),
-                "bit-packed retained-mask capacity",
+                retained_mask_capacity_bytes(retained.capacity(), memory.budget),
+                "retained-mask capacity",
             )?;
             let problem_bytes = match plan.as_ref() {
                 Some(plan) => vckss_core::engine::prepared_problem_bytes(&problem, plan)?,
@@ -377,7 +388,7 @@ impl PreparedProblemWithMask {
                         "simultaneous caller/prepared byte count overflow",
                     )
                 })?;
-            if simultaneous > memory.hard_limit_bytes {
+            if memory.budget.rejects(simultaneous, memory.hard_limit_bytes) {
                 return Err(BackendError::new(
                     ErrorCode::ResourceLimit,
                     "engine_memory",
@@ -547,9 +558,17 @@ impl PreparedProblemWithMask {
                 )
             })?;
         let hard_limit = self.receipt.memory.hard_limit_bytes;
-        if hard_limit == 0
-            || total_prepared_resident_bytes > hard_limit
-            || augmentation_peak_forecast_bytes > hard_limit
+        if self.receipt.memory.budget.limit(hard_limit) == Some(0)
+            || self
+                .receipt
+                .memory
+                .budget
+                .rejects(total_prepared_resident_bytes, hard_limit)
+            || self
+                .receipt
+                .memory
+                .budget
+                .rejects(augmentation_peak_forecast_bytes, hard_limit)
         {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -679,7 +698,13 @@ impl PreparedProblemWithMask {
             )
         })?;
         let hard_limit = self.receipt.memory.hard_limit_bytes;
-        if hard_limit == 0 || augmentation_peak_forecast_bytes > hard_limit {
+        if self.receipt.memory.budget.limit(hard_limit) == Some(0)
+            || self
+                .receipt
+                .memory
+                .budget
+                .rejects(augmentation_peak_forecast_bytes, hard_limit)
+        {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
                 "session_component_inference_augmentation",
@@ -792,7 +817,7 @@ impl PreparedProblemWithMask {
                 "the prepared generation already owns a stayer augmentation",
             ));
         }
-        if memory.hard_limit_bytes == 0
+        if memory.budget.limit(memory.hard_limit_bytes) == Some(0)
             || memory.hard_limit_bytes != self.receipt.memory.hard_limit_bytes
             || memory.total_prepared_resident_bytes != self.receipt.memory.prepared_resident_bytes
         {
@@ -850,7 +875,7 @@ impl PreparedProblemWithMask {
                     "simultaneous stayer caller/resident byte count overflow",
                 )
             })?;
-        if simultaneous > memory.hard_limit_bytes {
+        if memory.budget.rejects(simultaneous, memory.hard_limit_bytes) {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
                 "session_stayer_augmentation",
@@ -866,13 +891,36 @@ impl PreparedProblemWithMask {
     }
 }
 
-pub(crate) const fn bit_packed_capacity_bytes(bit_capacity: usize) -> usize {
-    bit_capacity.div_ceil(8)
+pub(crate) const fn retained_mask_capacity_bytes(capacity: usize, budget: MemoryBudget) -> usize {
+    // Preserve old ABI receipt arithmetic. Vec<bool> actually stores one byte
+    // per element; versioned policy callers receive its physical payload size.
+    match budget {
+        MemoryBudget::Legacy => capacity.div_ceil(8),
+        _ => capacity * std::mem::size_of::<bool>(),
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::bit_packed_capacity_bytes;
+    use super::{retained_mask_capacity_bytes, MemoryBudget};
+
+    fn bit_packed_capacity_bytes(capacity: usize) -> usize {
+        retained_mask_capacity_bytes(capacity, MemoryBudget::Legacy)
+    }
+
+    #[test]
+    fn versioned_retained_mask_uses_its_actual_allocation_layout() {
+        for rows in [0, 1, 7, 8, 9, 12345] {
+            let mask = vec![false; rows];
+            let actual = std::alloc::Layout::array::<bool>(mask.capacity())
+                .expect("mask allocation layout")
+                .size();
+            assert_eq!(
+                retained_mask_capacity_bytes(mask.capacity(), MemoryBudget::Unspecified),
+                actual
+            );
+        }
+    }
 
     #[test]
     fn bit_packed_capacity_rounds_only_at_byte_boundaries() {

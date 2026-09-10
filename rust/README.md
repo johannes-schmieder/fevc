@@ -17,6 +17,21 @@ floating-point paths. The active promotion thresholds are registered in
 bitwise identity and legacy fixed roundoff gates are diagnostic when hard
 correctness and corrected-result equivalence pass.
 
+## Memory contract
+
+The public Stata command has no implicit memory budget. Its versioned native
+interface carries budget presence and check policy separately from byte
+counts: omission disables memory-based planning, explicit budgets warn by
+default, and `memorycheck(error)` enables strict forecast admission. Legacy
+native entrypoints retain their prior numeric-limit defaults and semantics.
+
+Preparation measures requested heap payload; constructed CMG receipts refine
+solver storage. Expected direct allocation and conditional admission reserve
+are separate and do not predict total process RSS. All memory and lifecycle
+receipts must still reconcile under advisory policy. See the
+[current guide](../fevc/docs/MEMORY.md) and
+[bounded accuracy evidence](../fevc/docs/MEMORY_FORECAST_2026-09-10.md).
+
 ## Source map
 
 - `crates/vckss-core/`: estimator, graph, exact/JLA, solver, CMG adapter,

@@ -13,7 +13,7 @@ quietly do "fevc/fevc.mata"
 quietly do "fevc/fevc_cmg.mata"
 quietly do "fevc/fevc_rng.mata"
 quietly do "fevc/fevc_solver.mata"
-mata: assert(vckss_solver__api_level() == 26)
+mata: assert(vckss_solver__api_level() == 27)
 
 set rng kiss32
 set seed 20260817

@@ -150,10 +150,11 @@ fn preparation_breaks_are_reachable_across_every_major_phase() {
 }
 
 #[test]
-fn exact_resident_limit_charges_the_retained_mask_as_bit_packed() {
+fn legacy_resident_limit_preserves_the_historical_packed_mask_receipt() {
     let (input, _) = disconnected_fixture(false);
     let caller_copy_bytes = u64::try_from(input.worker.len()).expect("rows") * 6 * 8;
     let generous = PreparationMemoryReceipt {
+        budget: vckss_core::memory::MemoryBudget::Legacy,
         hard_limit_bytes: 1_u64 << 30,
         caller_copy_bytes,
         preparation_peak_forecast_bytes: 1,
@@ -183,10 +184,63 @@ fn exact_resident_limit_charges_the_retained_mask_as_bit_packed() {
 }
 
 #[test]
+fn versioned_resident_limit_charges_actual_boolean_storage() {
+    use vckss_core::memory::{MemoryBudget, MemoryCheck};
+
+    let (input, _) = disconnected_fixture(false);
+    let caller_copy_bytes = u64::try_from(input.worker.len()).expect("rows") * 6 * 8;
+    let generous = PreparationMemoryReceipt {
+        budget: MemoryBudget::Unspecified,
+        hard_limit_bytes: 0,
+        caller_copy_bytes,
+        preparation_peak_forecast_bytes: 1,
+        prepared_resident_bytes: 0,
+    };
+    let prepared = PreparedProblemWithMask::from_columns_with_memory(input, generous)
+        .expect("unbudgeted preparation");
+    let problem_bytes = vckss_core::engine::prepared_problem_bytes(
+        &prepared.problem,
+        prepared.plan.as_ref().expect("compressed plan"),
+    )
+    .expect("problem storage");
+    let mask_bytes = std::alloc::Layout::array::<bool>(prepared.retained.capacity())
+        .expect("mask allocation layout")
+        .size() as u64;
+    assert_eq!(
+        prepared.receipt.memory.prepared_resident_bytes,
+        problem_bytes + mask_bytes
+    );
+    let exact_limit = caller_copy_bytes + problem_bytes + mask_bytes;
+    for (limit, succeeds) in [(exact_limit, true), (exact_limit - 1, false)] {
+        let (input, _) = disconnected_fixture(false);
+        let result = PreparedProblemWithMask::from_columns_with_memory(
+            input,
+            PreparationMemoryReceipt {
+                budget: MemoryBudget::Explicit {
+                    bytes: limit,
+                    check: MemoryCheck::Error,
+                },
+                hard_limit_bytes: limit,
+                ..generous
+            },
+        );
+        if succeeds {
+            result.expect("complete caller and resident storage fits exactly");
+        } else {
+            assert_eq!(
+                result.expect_err("one byte short").code,
+                ErrorCode::ResourceLimit
+            );
+        }
+    }
+}
+
+#[test]
 fn projection_augmentation_is_admitted_at_its_complete_synchronous_peak() {
     let (input, _) = disconnected_fixture(false);
     let caller_copy_bytes = u64::try_from(input.worker.len()).expect("rows") * 6 * 8;
     let generous = PreparationMemoryReceipt {
+        budget: vckss_core::memory::MemoryBudget::Legacy,
         hard_limit_bytes: 1_u64 << 30,
         caller_copy_bytes,
         preparation_peak_forecast_bytes: 1,

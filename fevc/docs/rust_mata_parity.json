@@ -106,7 +106,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": false,
-      "evidence": "exact Mata and sparse Rust generic-JLA routes; explicit diagonal or forced generic CMG; positive integer frequency weights match literal expansion; maintained-MATLAB weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates; automatic projection routing withheld"
+      "evidence": "exact Mata and sparse Rust generic-JLA routes; explicit diagonal or forced generic CMG; positive integer frequency weights match literal expansion; KSS Matlab weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates; automatic projection routing withheld"
     },
     {
       "id": "macos-arm64-rosetta",

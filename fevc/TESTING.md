@@ -173,7 +173,7 @@ Tests must preserve:
   `corrected = plugin - correction`;
 - structural pre-RNG algorithm, engine, route, batch, memory, wall, fallback,
   and Counter receipts;
-- direct allocation within `memory_gib()`; and
+- optional strict admission within an explicitly supplied `memory_gib()`; and
 - caller data, `e(sample)`, RNG algorithm/stream/state, and sort restoration on
   success, typed failure, and UserBreak.
 
@@ -191,10 +191,26 @@ fallback to diagonal is permitted only before estimator RNG and must be
 recorded. Actual solves still must converge and pass the complete residual
 gate.
 
-`memory_gib()` is the hard direct-allocation envelope. Wall forecasts, the
+`memory_gib()` is an optional direct-allocation budget. Only
+`memorycheck(error)` makes its forecast an admission gate; the default is
+`memorycheck(warn)`. Omission declares no budget. Wall forecasts, the
 registered 30-percent memory headroom, 50-percent wall allowance, timing
 models, and automatic batch percentages are planning diagnostics or selection
-heuristics, not scientific withholding gates.
+heuristics, not scientific withholding gates. No budget means no memory-based
+batch, concurrency or route adjustment; explicit batches remain unchanged.
+Conditional refinement storage is included in the admission forecast and is
+separate from percentage headroom. Malformed receipts and actual allocation
+failures still fail closed.
+
+The focused public policy test is `tests/stata/test_memory_policy.do`; it
+checks both backends, absent budgets under every policy, explicit budgets and
+batches, CMG, invalid options, RNG restoration and idle native lifecycle.
+Native allocation-layout tests check retained boolean storage and strict
+one-byte boundaries. `compressed_jla_memory` independently measures four
+full-CMG core fixtures in debug and release. Its registered 5%/1-MiB excess
+gate is a bounded allocation-accuracy test, not total RSS or an all-regime
+precision guarantee. Keep new accuracy measurements separate from historical
+receipts; see [MEMORY.md](docs/MEMORY.md).
 
 ## Optional performance and cluster evidence
 

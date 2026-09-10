@@ -1,4 +1,4 @@
-# CMG API 8 component contract
+# CMG API 9 component contract
 
 ## Ownership and generated surfaces
 
@@ -20,16 +20,15 @@ mode, generated-section hash, complete-artifact hash, and output path.
 
 ## Version boundary
 
-API 8 records the `fevc` package and generated-target identity. Its numerical
-core is the
-source-informed GPL API-6 implementation qualified under `CMG-MATA-1`.
-The hierarchy, V-cycle, resource forecasts, deterministic tie-breaking,
-terminal policy, and status meanings are unchanged. A package loader must
-require:
+API 9 adds the command's optional budget and warning/error/off policy to the
+API 8 package identity. Its source-informed GPL numerical core derives from
+the API-6 implementation qualified under `CMG-MATA-1`. Hierarchy algebra,
+V-cycle, deterministic tie-breaking, terminal cap and numerical status
+meanings are unchanged. A package loader must require:
 
-- `vckss_cmg__api_level() == 8`;
+- `vckss_cmg__api_level() == 9`;
 - `vckss_cmg__numeric_mode() == "off"`;
-- design label `gpl-cmg-mata-degree3-hybrid-v8-vckss-component`.
+- design label `gpl-cmg-mata-degree3-hybrid-v9-memory-policy`.
 
 Predecessor or mismatched runtimes fail closed before estimator RNG.
 
@@ -43,7 +42,12 @@ remain typed failures; no path regularizes, changes the sample, or relaxes a
 tolerance.
 
 The bounded dense terminal remains capped at 6,144 vertices. Hierarchy and
-workspace allocations must fit the package-provided direct-memory envelope.
+workspace forecasts are checked against a package-provided budget only when
+that budget is explicit and its policy is `memorycheck(error)`. With an
+advisory or absent budget, an over-budget forecast alone does not reject
+construction or application. Actual allocation failure, overflow, structural
+caps and receipt invariants remain binding. Standalone diagnostics retain
+their prior strict numeric semantics. See [MEMORY.md](../../docs/MEMORY.md).
 One validated hierarchy and its factors may be reused across KSS right-hand
 sides while the V-cycle remains fixed, linear, symmetric, and quotient-SPD.
 

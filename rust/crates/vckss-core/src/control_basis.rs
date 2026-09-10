@@ -535,9 +535,17 @@ fn canonicalize_controls_ordered_input_with_interrupt(
     }
 
     let original = columns_to_row_major(controls, rows, control_count, interrupt)?;
-    let gram = weighted_crossproduct(&original, rows, control_count, frequency, interrupt)?;
+    let gram_product = certified_weighted_product(
+        &original,
+        &original,
+        rows,
+        control_count,
+        frequency,
+        interrupt,
+    )?;
+    let gram = &gram_product.values;
     let gram_inverse = invert_scaled_spd(
-        &gram,
+        gram,
         control_count,
         rank_tolerance,
         interrupt,
@@ -554,7 +562,8 @@ fn canonicalize_controls_ordered_input_with_interrupt(
             error
         }
     })?;
-    drop(gram);
+    let summation_error = scaled_gram_error(&gram_product, control_count, gram_inverse.rcond)?;
+    drop(gram_product);
     let whitener = cholesky_factor(
         &gram_inverse.inverse,
         control_count,
@@ -571,8 +580,18 @@ fn canonicalize_controls_ordered_input_with_interrupt(
     )?;
     drop(original);
     drop(whitener);
-    let checked = weighted_crossproduct(&orthonormal, rows, control_count, frequency, interrupt)?;
-    let whitening_error = identity_residual(&checked, control_count, interrupt)?;
+    let checked = certified_weighted_product(
+        &orthonormal,
+        &orthonormal,
+        rows,
+        control_count,
+        frequency,
+        interrupt,
+    )?;
+    let whitening_error = bound_up(
+        identity_residual(&checked.values, control_count, interrupt)?
+            + checked.norm_error(control_count),
+    );
     drop(checked);
     let margin = (1.0e-10_f64).max(1000.0 * rank_tolerance);
     if !whitening_error.is_finite() || whitening_error > margin {
@@ -584,21 +603,21 @@ fn canonicalize_controls_ordered_input_with_interrupt(
     }
 
     let q = control_count as f64;
-    let summation_error = q * rounding_gamma(2.0 * rows as f64)? / gram_inverse.rcond;
     let cholesky_error = q * rounding_gamma(2.0 * q + 1.0)? / gram_inverse.rcond;
     let basis_product_error = rounding_gamma(2.0 * q)? * (1.0 + gram_inverse.rcond.recip());
     let inverse_error =
         inverse_forward_error(gram_inverse.relres, gram_inverse.rcond, control_count).ok_or_else(
             || ambiguous("control-span whitening error has no certified forward bound"),
         )?;
-    let mut numerical_error =
-        whitening_error + summation_error + cholesky_error + basis_product_error + inverse_error;
+    let mut numerical_error = bound_up(
+        whitening_error + summation_error + cholesky_error + basis_product_error + inverse_error,
+    );
     if !numerical_error.is_finite() || numerical_error >= 0.25 {
         return Err(ambiguous(
             "control-span whitening error has no certified forward bound",
         ));
     }
-    numerical_error /= 1.0 - numerical_error;
+    numerical_error = bound_up(numerical_error / (1.0 - numerical_error));
     let mut uncertainty = score_uncertainty(numerical_error, q)?;
     if uncertainty >= margin / 4.0 {
         return Err(ambiguous(
@@ -618,42 +637,7 @@ fn canonicalize_controls_ordered_input_with_interrupt(
     for pivot in 0..control_count {
         checkpoint_chunk(interrupt, pivot, "control_basis_anchor")?;
         let score = row_norm_squares(&residualized, rows, control_count, interrupt)?;
-        let mut maximum = f64::NEG_INFINITY;
-        for (row, &candidate) in score.iter().enumerate() {
-            checkpoint_chunk(interrupt, row, "control_basis_anchor_maximum")?;
-            maximum = maximum.max(candidate);
-        }
-        if !maximum.is_finite() || maximum <= margin {
-            return Err(BackendError::new(
-                ErrorCode::SingularInformation,
-                "control_basis",
-                "control-span anchor selection lost rank",
-            ));
-        }
-        let cutoff = maximum - margin * maximum.max(1.0);
-        for (row, &candidate) in score.iter().enumerate() {
-            checkpoint_chunk(interrupt, row, "control_basis_anchor_ambiguity")?;
-            if (candidate - cutoff).abs() <= uncertainty {
-                return Err(ambiguous(
-                    "control-span anchor score is numerically ambiguous at the canonical tie boundary",
-                ));
-            }
-        }
-        let mut chosen = None;
-        for (row, &candidate) in score.iter().enumerate() {
-            checkpoint_chunk(interrupt, row, "control_basis_anchor_choose")?;
-            if candidate > cutoff {
-                chosen = Some(row);
-                break;
-            }
-        }
-        let chosen = chosen.ok_or_else(|| {
-            BackendError::new(
-                ErrorCode::SingularInformation,
-                "control_basis",
-                "control-span anchor selection failed",
-            )
-        })?;
+        let chosen = certified_anchor(&score, margin, uncertainty, interrupt)?;
         selected.push(chosen);
         let anchor = select_rows(&orthonormal, control_count, &selected, interrupt)?;
         let anchor_gram = crossproduct(&anchor, pivot + 1, control_count, interrupt)?;
@@ -719,8 +703,13 @@ fn canonicalize_controls_ordered_input_with_interrupt(
             interrupt,
             "control_basis_selected_residual",
         )?;
-        numerical_error +=
-            anchor_forward_error + product_error + projection_error + selected_zero_error;
+        numerical_error = bound_up(
+            numerical_error
+                + anchor_forward_error
+                + product_error
+                + projection_error
+                + selected_zero_error,
+        );
         if !numerical_error.is_finite() || numerical_error >= 0.25 {
             return Err(ambiguous(
                 "control-span anchor update has no certified forward bound",
@@ -756,7 +745,7 @@ fn canonicalize_controls_ordered_input_with_interrupt(
     )?;
     let selected_canonical = select_rows(&canonical, control_count, &selected, interrupt)?;
     let anchor_error = identity_residual(&selected_canonical, control_count, interrupt)?;
-    let checked_span = weighted_transpose_product(
+    let checked_span = certified_weighted_product(
         &orthonormal,
         &canonical,
         rows,
@@ -768,24 +757,27 @@ fn canonicalize_controls_ordered_input_with_interrupt(
         &orthonormal,
         rows,
         control_count,
-        &checked_span,
+        &checked_span.values,
         control_count,
         interrupt,
     )?;
-    let span_error =
-        difference_norm(
+    let span_error = bound_up(
+        (difference_norm(
             &canonical,
             &projected_span,
             interrupt,
             "control_basis_span_difference",
-        )? / stable_norm_with_interrupt(&canonical, interrupt, "control_basis_span_norm")?.max(1.0);
+        )? + checked_span.norm_error(control_count) * (q * (1.0 + whitening_error)).sqrt())
+            / stable_norm_with_interrupt(&canonical, interrupt, "control_basis_span_norm")?
+                .max(1.0),
+    );
     let anchor_forward_error =
         inverse_forward_error(anchor_inverse.relres, anchor_inverse.rcond, control_count)
             .ok_or_else(|| ambiguous("complete control-span anchor has no forward-error bound"))?;
     let product_error =
         rounding_gamma(8.0 * q)? * (1.0 + q / anchor_inverse.rcond.max(rank_tolerance));
     let canonical_error = anchor_error + span_error + anchor_forward_error + product_error;
-    numerical_error += canonical_error;
+    numerical_error = bound_up(numerical_error + canonical_error);
     let mut canonical_finite = true;
     for (index, value) in canonical.iter().enumerate() {
         checkpoint_chunk(interrupt, index, "control_basis_output_validate")?;
@@ -844,6 +836,117 @@ pub(crate) fn enforce_downstream_bound(
         return Err(ambiguous(message));
     }
     Ok(())
+}
+
+// Bounds use full epsilon (twice unit roundoff). This outward inflation also
+// covers <=16 positive bound operations and the denominators bounded away
+// from zero below. MIN_SUBNORMAL covers rounding of subnormal bounds.
+fn bound_up(value: f64) -> f64 {
+    value * (1.0 + 64.0 * f64::EPSILON) + f64::from_bits(1)
+}
+
+struct CertifiedProduct {
+    values: Vec<f64>,
+    errors: Vec<f64>,
+}
+
+impl CertifiedProduct {
+    fn norm_error(&self, columns: usize) -> f64 {
+        bound_up(columns as f64 * self.errors.iter().copied().fold(0.0_f64, f64::max))
+    }
+}
+
+// Neumaier's error-free residual and accumulated correction retain the low
+// term in [1e16, 1, -1e16]. The n-dependent error is second order, not gamma_n.
+// See docs/CONTROL_BASIS_CERTIFICATION.md for product and underflow terms.
+fn certified_weighted_product(
+    left: &[f64],
+    right: &[f64],
+    rows: usize,
+    columns: usize,
+    frequency: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<CertifiedProduct> {
+    let mut values = zeroed_f64_with_interrupt(
+        columns * columns,
+        "certified control product",
+        interrupt,
+        "control_basis_crossproduct_allocate",
+    )?;
+    let mut errors = values.clone();
+    let gamma = rounding_gamma(4.0 * rows as f64)?;
+    let rho = bound_up(f64::EPSILON + gamma * gamma);
+    let products = rounding_gamma(2.0)?;
+    if rho >= 0.25 {
+        return Err(ambiguous(
+            "compensated control sum has no finite certificate",
+        ));
+    }
+    let underflow = bound_up(rows as f64 * f64::from_bits(1) / (1.0 - products));
+    let coefficient = bound_up(rho + products / (1.0 - products));
+    for a in 0..columns {
+        for b in 0..columns {
+            let mut value = StableAccumulator::default();
+            let mut absolute = StableAccumulator::default();
+            for row in 0..rows {
+                checkpoint_chunk(
+                    interrupt,
+                    (a * columns + b) * rows + row,
+                    "control_basis_crossproduct",
+                )?;
+                let weight = frequency[row] as f64;
+                // u64::MAX rounds up to 2^64 and a saturating cast would hide it.
+                if weight >= 18446744073709551616.0 || weight as u64 != frequency[row] {
+                    return Err(resource(
+                        "control weight is not exactly representable in binary64",
+                    ));
+                }
+                let term = (weight * left[row * columns + a]) * right[row * columns + b];
+                if !term.is_finite() {
+                    return Err(ambiguous("nonfinite weighted control product"));
+                }
+                value.add(term);
+                absolute.add(term.abs());
+            }
+            let index = a * columns + b;
+            values[index] = value.finish();
+            let magnitude = bound_up(absolute.finish() / (1.0 - rho));
+            errors[index] = bound_up(coefficient * magnitude + underflow);
+            if !values[index].is_finite() || !errors[index].is_finite() {
+                return Err(ambiguous("nonfinite compensated control accumulation"));
+            }
+        }
+    }
+    Ok(CertifiedProduct { values, errors })
+}
+
+fn scaled_gram_error(product: &CertifiedProduct, columns: usize, rcond: f64) -> Result<f64> {
+    let mut norm = 0.0_f64;
+    for a in 0..columns {
+        let mut row_sum = 0.0;
+        for b in 0..columns {
+            // Division in two steps avoids overflowing/underflowing a product
+            // of diagonal scales. Symmetrization is covered by max(Eab,Eba).
+            let error = product.errors[a * columns + b].max(product.errors[b * columns + a]);
+            row_sum = bound_up(
+                row_sum
+                    + bound_up(
+                        bound_up(error / product.values[a * columns + a].sqrt())
+                            / product.values[b * columns + b].sqrt(),
+                    ),
+            );
+        }
+        norm = norm.max(row_sum);
+    }
+    // The diagonally scaled matrix has lambda_max >= 1 up to scaling
+    // roundoff; 1/2 is a conservative lower bound throughout Q <= 32.
+    let error = bound_up(2.0 * norm / rcond);
+    if !error.is_finite() || error >= 0.25 {
+        return Err(ambiguous(
+            "control Gram accumulation has no certified forward bound",
+        ));
+    }
+    Ok(error)
 }
 
 fn weighted_crossproduct(
@@ -1324,10 +1427,53 @@ fn zeroed_matrix_columns(
     Ok(output)
 }
 
+fn certified_anchor(
+    score: &[f64],
+    margin: f64,
+    uncertainty: f64,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<usize> {
+    let mut maximum = f64::NEG_INFINITY;
+    for (row, &candidate) in score.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "control_basis_anchor_maximum")?;
+        maximum = maximum.max(candidate);
+    }
+    if !maximum.is_finite() || maximum <= margin {
+        return Err(BackendError::new(
+            ErrorCode::SingularInformation,
+            "control_basis",
+            "control-span anchor selection lost rank",
+        ));
+    }
+    let cutoff = maximum - margin * maximum.max(1.0);
+    let mut chosen = None;
+    for (row, &candidate) in score.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "control_basis_anchor_ambiguity")?;
+        if (candidate - cutoff).abs() <= uncertainty {
+            return Err(ambiguous(
+                "control-span anchor score is numerically ambiguous at the canonical tie boundary",
+            ));
+        }
+        // Only this row and its predecessors determine the first eligible
+        // anchor. The maximum above still includes every row.
+        if candidate > cutoff {
+            chosen = Some(row);
+            break;
+        }
+    }
+    chosen.ok_or_else(|| {
+        BackendError::new(
+            ErrorCode::SingularInformation,
+            "control_basis",
+            "control-span anchor selection failed",
+        )
+    })
+}
+
 fn score_uncertainty(numerical_error: f64, controls: f64) -> Result<f64> {
     let score_error =
         2.0 * numerical_error + rounding_gamma(2.0 * controls)? * (1.0 + numerical_error).powi(2);
-    Ok((1.0e-12_f64).max(4.0 * score_error))
+    Ok((1.0e-12_f64).max(bound_up(4.0 * score_error)))
 }
 
 fn rounding_gamma(operations: f64) -> Result<f64> {
@@ -1335,7 +1481,7 @@ fn rounding_gamma(operations: f64) -> Result<f64> {
     if !product.is_finite() || product >= 0.5 {
         return Err(ambiguous("canonical-control rounding bound is not finite"));
     }
-    Ok(product / (1.0 - product))
+    Ok(bound_up(product / (1.0 - product)))
 }
 
 fn ambiguous(message: &'static str) -> BackendError {
@@ -1357,6 +1503,224 @@ fn preserve_break_or(error: BackendError, code: ErrorCode, message: &'static str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn selection_certifies_only_the_decisive_prefix_but_uses_the_global_maximum() {
+        let choose =
+            |scores: &[f64], error| certified_anchor(scores, 0.1, error, &mut NeverInterrupt);
+        assert_eq!(choose(&[1.0, 0.9], 1e-12).unwrap(), 0); // late exact boundary
+        assert_eq!(choose(&[0.8, 1.0, 0.9], 1e-12).unwrap(), 1);
+        assert_eq!(
+            choose(&[0.9, 1.0], 1e-12).unwrap_err().code,
+            ErrorCode::AmbiguousControlBasis
+        );
+        assert_eq!(
+            choose(&[0.9000000000001, 1.0], 1e-12).unwrap_err().code,
+            ErrorCode::AmbiguousControlBasis
+        );
+        assert_eq!(choose(&[0.5, 1.0, 2.0], 1e-12).unwrap(), 2); // late maximum changes cutoff
+        assert_eq!(
+            choose(&[0.9001, 1.0], 0.001).unwrap_err().code,
+            ErrorCode::AmbiguousControlBasis
+        );
+    }
+
+    #[test]
+    fn compensated_products_enclose_independent_decimal_oracles() {
+        let fixtures = include_str!("../../../../fevc/tests/fixtures/control_crossproducts.txt");
+        for line in fixtures.lines().filter(|line| !line.starts_with('#')) {
+            let parts: Vec<_> = line.split(';').collect();
+            let parse = |text: &str| {
+                text.split(',')
+                    .map(|x| x.parse::<f64>().unwrap())
+                    .collect::<Vec<_>>()
+            };
+            let left = parse(parts[1]);
+            let right = parse(parts[2]);
+            let frequency: Vec<_> = parts[3]
+                .split(',')
+                .map(|x| x.parse::<u64>().unwrap())
+                .collect();
+            let product = certified_weighted_product(
+                &left,
+                &right,
+                left.len(),
+                1,
+                &frequency,
+                &mut NeverInterrupt,
+            );
+            if parts[4] == "FAIL" {
+                assert!(product.is_err(), "{}", parts[0]);
+                continue;
+            }
+            let product = product.unwrap();
+            let lo: f64 = parts[4].parse().unwrap();
+            let hi: f64 = parts[5].parse().unwrap();
+            assert!(
+                product.values[0] - product.errors[0] <= lo
+                    && product.values[0] + product.errors[0] >= hi,
+                "{}: value={} error={} [{},{}]",
+                parts[0],
+                product.values[0],
+                product.errors[0],
+                lo,
+                hi
+            );
+        }
+        let product = certified_weighted_product(
+            &[1., 1., 1.],
+            &[1e16, 1., -1e16],
+            3,
+            1,
+            &[1, 1, 1],
+            &mut NeverInterrupt,
+        )
+        .unwrap();
+        assert_eq!(product.values[0], 1.0);
+        assert!(
+            certified_weighted_product(&[1.], &[1.], 1, 1, &[u64::MAX], &mut NeverInterrupt)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn scores_anchors_and_span_enclose_independent_high_precision_oracle() {
+        let fixture = include_str!("../../../../fevc/tests/fixtures/control_scores.txt");
+        let anchors: Vec<usize> = fixture
+            .lines()
+            .next()
+            .unwrap()
+            .trim_start_matches("#anchors=")
+            .split(',')
+            .map(|x| x.parse::<usize>().unwrap() - 1)
+            .collect();
+        let oracle: Vec<Vec<f64>> = fixture
+            .lines()
+            .filter(|x| !x.starts_with('#'))
+            .map(|x| x.split(',').map(|x| x.parse().unwrap()).collect())
+            .collect();
+        let controls: Vec<Vec<f64>> = (0..2)
+            .map(|j| oracle.iter().map(|x| x[j]).collect())
+            .collect();
+        let frequency: Vec<u64> = oracle.iter().map(|x| x[2] as u64).collect();
+        let basis = canonicalize_controls(&controls, &frequency, 1e-10).unwrap();
+        let original: Vec<f64> = oracle.iter().flat_map(|x| [x[0], x[1]]).collect();
+        let mut interrupt = NeverInterrupt;
+        let gram = certified_weighted_product(
+            &original,
+            &original,
+            oracle.len(),
+            2,
+            &frequency,
+            &mut interrupt,
+        )
+        .unwrap();
+        let inverse = invert_scaled_spd(&gram.values, 2, 1e-10, &mut interrupt, "oracle").unwrap();
+        let whitener = cholesky_factor(&inverse.inverse, 2, &mut interrupt, "oracle").unwrap();
+        let u = multiply(&original, oracle.len(), 2, &whitener, 2, &mut interrupt).unwrap();
+        let mut residualized = u.clone();
+        let uncertainty = score_uncertainty(basis.receipt.forward_error, 2.).unwrap();
+        for (pivot, &chosen) in anchors.iter().enumerate() {
+            let scores = row_norm_squares(&residualized, oracle.len(), 2, &mut interrupt).unwrap();
+            assert_eq!(
+                certified_anchor(&scores, 1e-7, uncertainty, &mut interrupt).unwrap(),
+                chosen
+            );
+            for (i, &score) in scores.iter().enumerate() {
+                assert!(
+                    score - uncertainty <= oracle[i][3 + 2 * pivot]
+                        && score + uncertainty >= oracle[i][4 + 2 * pivot]
+                );
+            }
+            let anchor = select_rows(&u, 2, &[chosen], &mut interrupt).unwrap();
+            let gram = crossproduct(&anchor, 1, 2, &mut interrupt).unwrap();
+            let inverse = invert_scaled_spd(&gram, 1, 1e-10, &mut interrupt, "oracle").unwrap();
+            let projector =
+                anchor_projector(&anchor, 1, 2, &inverse.inverse, &mut interrupt).unwrap();
+            let projected = multiply(&u, oracle.len(), 2, &projector, 2, &mut interrupt).unwrap();
+            residualized = u.iter().zip(projected).map(|(x, y)| x - y).collect();
+        }
+        for (i, row) in oracle.iter().enumerate() {
+            for j in 0..2 {
+                let error = basis.receipt.forward_error * (1.0 + basis.columns[j][i].abs());
+                assert!(
+                    basis.columns[j][i] - error <= row[7 + 2 * j]
+                        && basis.columns[j][i] + error >= row[8 + 2 * j]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn adversarial_control_gram_preserves_inverse_failure_detail() {
+        let x = [
+            0.7037651560862372,
+            -0.2552775470643382,
+            -0.112896606015219,
+            -0.26212880006292877,
+            -0.08287286955710015,
+            -0.0693863854324555,
+            0.08296261314678174,
+            -0.5826882952311562,
+        ];
+        let y = [
+            -0.01213100064390886,
+            0.6559466556462534,
+            0.28729193595054625,
+            -0.15584457130166096,
+            -0.1733117487431483,
+            -0.0772968683597004,
+            -0.5616086968926074,
+            -0.33368629034981906,
+        ];
+        let mut controls = vec![vec![0.; 14]; 2];
+        for i in 0..8 {
+            controls[0][i] = 8000. * x[i];
+            controls[1][i] = x[i] + 0.000125 * y[i];
+        }
+        let error = canonicalize_controls(
+            &controls,
+            &[1, 1, 1, 1, 1, 1, 1, 1, 8, 8, 11, 14, 2, 3],
+            1e-10,
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ErrorCode::InverseResidualFailed);
+        assert_eq!(error.phase, "control_basis_gram");
+        assert!(error.message.contains("scaled="));
+        assert!(error.message.contains("original="));
+        assert!(error.message.contains("gate="));
+    }
+
+    #[test]
+    fn control_counts_through_32_match_exact_integer_arithmetic() {
+        for q in 1..=32 {
+            let n = 67;
+            let left: Vec<_> = (0..n * q)
+                .map(|i| ((i * 104729 % 67108859) as i64 - 33554429) as f64)
+                .collect();
+            let right: Vec<_> = (0..n * q)
+                .map(|i| ((i * 130363 % 67108859) as i64 - 33554429) as f64)
+                .collect();
+            let weights: Vec<_> = (0..n).map(|i| 1 + (i % 17) as u64).collect();
+            let product =
+                certified_weighted_product(&left, &right, n, q, &weights, &mut NeverInterrupt)
+                    .unwrap();
+            for a in 0..q {
+                for b in 0..q {
+                    let exact: i128 = (0..n)
+                        .map(|i| {
+                            weights[i] as i128 * left[i * q + a] as i128 * right[i * q + b] as i128
+                        })
+                        .sum();
+                    let rounded = exact as f64;
+                    assert!(
+                        (product.values[a * q + b] - rounded).abs() + rounded.abs() * f64::EPSILON
+                            <= product.errors[a * q + b]
+                    );
+                }
+            }
+        }
+    }
 
     struct BreakOnAnchor;
 

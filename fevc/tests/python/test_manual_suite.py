@@ -19,6 +19,7 @@ def test_manual_referee_files_are_complete() -> None:
         "fevc_manual_build_ado.py",
         "manual_benchmarks.do",
         "manual_validation.do",
+        "simple_AKM.do",
     }
     assert {
         path.name

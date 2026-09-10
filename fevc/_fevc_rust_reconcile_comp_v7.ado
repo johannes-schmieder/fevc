@@ -128,7 +128,7 @@ program define _fevc_rust_reconcile_comp_v7, rclass
         `maxiter'<=0 | `maxiter'!=floor(`maxiter') | `tolerance'<=0 |       ///
         `workers'<=0 | `workers'!=floor(`workers') | `firms'<=1 |          ///
         `firms'!=floor(`firms') | `rank_tolerance'<=0 |                    ///
-        `block_tolerance'<=0 | `memory_limit'<=0 |                         ///
+        `block_tolerance'<=0 | (`memory_limit'<=0 & "$VCKSS_MEMORY_PRESENT"!="0") |                         ///
         `memory_limit'!=floor(`memory_limit') | `input_copy'<0 |           ///
         `input_copy'!=floor(`input_copy') | `preparation_peak'<0 |         ///
         `preparation_peak'!=floor(`preparation_peak') |                    ///
@@ -371,7 +371,7 @@ program define _fevc_rust_reconcile_comp_v7, rclass
             `r_solve_peak'>=`r_resident'+`r_solver_setup'+              ///
                 `r_result_bytes'+max(`r_lev_phase',`r_tgt_phase') &     ///
             `r_command_peak'==max(`r_prep_peak',`r_solve_peak') &       ///
-            `r_command_peak'<=`r_mem_limit'
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `r_command_peak'<=`r_mem_limit')
         if !`ok' local detail "compressed memory V6 receipt did not reconcile"
     }
 

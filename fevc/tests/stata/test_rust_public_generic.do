@@ -1209,7 +1209,7 @@ assert r(state) == 0 & r(handle) == 0
 capture quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) memory_gib(.000001) stayers(movers) nodisplay
+    probes(4) memory_gib(.000001) memorycheck(error) stayers(movers) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',"RESOURCE_LIMIT",       ///
     "ALLOCATION_FAILED")

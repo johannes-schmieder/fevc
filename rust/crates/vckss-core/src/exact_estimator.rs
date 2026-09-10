@@ -39,6 +39,7 @@ pub struct ExactEstimatorOptions {
     pub solver_tolerance: f64,
     pub exact_limit: usize,
     pub blocksize_limit: usize,
+    pub memory_budget: crate::memory::MemoryBudget,
     pub memory_limit_bytes: u64,
     pub prepared_persistent_bytes: u64,
 }
@@ -53,6 +54,7 @@ impl Default for ExactEstimatorOptions {
             solver_tolerance: 1.0e-12,
             exact_limit: 500,
             blocksize_limit: 5_000,
+            memory_budget: crate::memory::MemoryBudget::Legacy,
             memory_limit_bytes: u64::MAX,
             prepared_persistent_bytes: 0,
         }
@@ -100,7 +102,7 @@ impl ExactEstimatorOptions {
                 "block-size limit must lie in [1, 1000000]",
             ));
         }
-        if self.memory_limit_bytes == 0 {
+        if self.memory_budget.limit(self.memory_limit_bytes) == Some(0) {
             return Err(BackendError::invalid(
                 "exact_estimator",
                 "whole-command memory limit must be positive",
@@ -517,7 +519,10 @@ fn run_exact_estimator_internal(
         full_embedding
     };
     let memory = exact_peak_forecast(problem, full_embedding, working_embedding, options)?;
-    if memory.peak > options.memory_limit_bytes {
+    if options
+        .memory_budget
+        .rejects(memory.peak, options.memory_limit_bytes)
+    {
         return Err(BackendError::new(
             ErrorCode::ResourceLimit,
             "exact_estimator",

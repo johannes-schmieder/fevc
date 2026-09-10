@@ -14,6 +14,22 @@ static int mock_cleanup_clear(void);
 
 ST_plugin *_stata_;
 
+int32_t vckss_rust_engine_memory_policy_v1(uint64_t generation, VckssMemoryPolicyV1 *output, uint32_t capacity)
+{
+    (void)generation;
+    assert(capacity == sizeof(*output));
+    *output = (VckssMemoryPolicyV1){sizeof(*output), 1u, 1u, 1u, 8192u};
+    return 0;
+}
+int32_t vckss_rust_engine_memory_forecast_v1(uint64_t generation, VckssMemoryForecastV1 *output, uint32_t capacity)
+{
+    (void)generation;
+    assert(capacity == sizeof(*output));
+    *output = (VckssMemoryForecastV1){sizeof(*output), 1u, 1024u, 1024u, 0u};
+    return 0;
+}
+
+
 static int fail_scalar;
 static int fail_plan_scalar;
 static int fail_matrix;

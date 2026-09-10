@@ -199,7 +199,8 @@ program define _fevc_rust_post_comp_v7, eclass sortpreserve
         `p_retained'==`retained_count' & `p_workers'>0 & `p_firms'>1 & ///
         `p_cells'>0 & `p_units'>0 & `p_strata'>0 &                 ///
         `p_memlimit'==`h_memlimit' & `p_inputcopy'==`expected_input_copy' & ///
-        `p_preppeak'==`expected_prep_peak' & `p_resident'>0 &       ///
+        (`p_preppeak'==`expected_prep_peak' | ///
+            ("$VCKSS_MEMORY_ACTIVE"=="1" & `p_preppeak'>=`p_inputcopy')) & `p_resident'>0 &       ///
         `g_input_rows'==`ncomplete' & `g_keep_rows'==`retained_count' & ///
         `g_input_mass'>=`g_keep_mass' & `g_keep_mass'==`retained_physical' & ///
         `g_init_comp'>0 & `g_max_comp'>=`g_init_comp' &             ///

@@ -40,6 +40,10 @@ pub struct JlaEngineOptions {
     pub rng: RngContract,
     pub rank_tolerance: f64,
     pub block_tolerance: f64,
+    /// Retained backend bytes and per-column workspace after embedded CMG setup.
+    pub embedded_cmg_memory: Option<(u64, u64)>,
+    pub full_cmg_setup: Option<crate::full_cmg::FullCmgSetupReceipt>,
+    pub memory_budget: crate::memory::MemoryBudget,
     pub memory_limit_bytes: u64,
     pub prepared_persistent_bytes: u64,
     pub solver: LinearSolverOptions,
@@ -56,6 +60,9 @@ impl Default for JlaEngineOptions {
             rng: RngContract::CounterV1,
             rank_tolerance: 1.0e-10,
             block_tolerance: 1.0e-10,
+            embedded_cmg_memory: None,
+            full_cmg_setup: None,
+            memory_budget: crate::memory::MemoryBudget::Legacy,
             memory_limit_bytes: 4_u64 << 30,
             prepared_persistent_bytes: 0,
             solver: LinearSolverOptions::default(),
@@ -64,7 +71,7 @@ impl Default for JlaEngineOptions {
 }
 
 impl JlaEngineOptions {
-    fn validate(self) -> Result<Self> {
+    fn validate(mut self) -> Result<Self> {
         if self.deletion != DeletionMode::Match {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -109,11 +116,14 @@ impl JlaEngineOptions {
                 "block tolerance must be finite and lie in [1e-14, 1)",
             ));
         }
-        if self.memory_limit_bytes == 0 {
+        if self.memory_budget.limit(self.memory_limit_bytes) == Some(0) {
             return Err(BackendError::invalid(
                 "jla_validate",
                 "whole-command memory limit must be positive",
             ));
+        }
+        if self.memory_budget != crate::memory::MemoryBudget::Legacy {
+            self.solver.cmg.memory_budget = self.memory_budget;
         }
         self.solver.validate()?;
         Ok(self)
@@ -192,6 +202,8 @@ pub struct JlaEngineResult {
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct JlaMemoryReceipt {
+    /// Peak for the ordinary solve; conditional refinement reserve is separate.
+    pub expected_peak_forecast_bytes: u64,
     pub hard_limit_bytes: u64,
     pub prepared_persistent_bytes: u64,
     pub solver_setup_forecast_bytes: u64,
@@ -400,14 +412,20 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     let full_cmg_plan = if let Some(full_cmg) = options.full_cmg {
         let maximum_width = usize::try_from(estimator.probes)
             .map_err(|_| memory_overflow("full-CMG probe count"))?
-            .min(full_cmg.maximum_batch_rhs)
+            .min(full_cmg.maximum_batch_rhs / 2)
             .max(1);
         let mut memory_estimator = estimator;
-        memory_estimator.solver.route = LinearSolverRoute::CmgPcg;
+        memory_estimator.solver.route = LinearSolverRoute::DiagonalPcg;
         memory_estimator.leverage_batch_width = maximum_width;
         memory_estimator.target_batch_width = maximum_width;
         let memory_preflight = forecast_jla_memory(problem, &plan, memory_estimator, prepared)?;
-        Some(full_cmg.with_non_cmg_command_peak(memory_preflight.solve_peak_forecast_bytes))
+        Some(
+            FullCmgPlanOptions {
+                memory_budget: estimator.memory_budget,
+                ..full_cmg
+            }
+            .with_non_cmg_command_peak(memory_preflight.solve_peak_forecast_bytes),
+        )
     } else {
         None
     };
@@ -425,6 +443,10 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     let selected_solver_route = solver_setup.selected;
     let mut forecast_estimator = estimator;
     forecast_estimator.solver.route = selected_solver_route;
+    forecast_estimator.full_cmg_setup = solver.full_cmg_receipt()?.map(|receipt| receipt.setup);
+    if estimator.memory_budget != crate::memory::MemoryBudget::Legacy {
+        forecast_estimator.embedded_cmg_memory = embedded_cmg_memory(&solver_setup)?;
+    }
     let batch = plan_compressed_batches(
         problem,
         &plan,
@@ -448,12 +470,17 @@ pub fn run_jla_no_controls_planned_with_interrupt(
         })?;
     let mut forecast_selected = selected;
     forecast_selected.solver.route = selected_solver_route;
+    forecast_selected.full_cmg_setup = forecast_estimator.full_cmg_setup;
+    forecast_selected.embedded_cmg_memory = forecast_estimator.embedded_cmg_memory;
     let memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
     if memory.solve_peak_forecast_bytes != batch.plan.selected_command_peak_bytes {
         return Err(BackendError::invariant(
             "jla_plan",
             "selected compressed batch plan and final memory forecast disagree",
         ));
+    }
+    if estimator.memory_budget != crate::memory::MemoryBudget::Legacy {
+        solver.reconcile_full_cmg_memory(memory.solve_peak_forecast_bytes)?;
     }
     let wall = wall_work_receipt(
         compressed_jla_wall_work(problem, &plan, forecast_selected)?,
@@ -567,6 +594,7 @@ fn plan_compressed_batches(
             route_width_cap: leverage_cap,
             non_batched_peak_bytes: non_batched_peak,
             hard_memory_bytes: estimator.memory_limit_bytes,
+            memory_budget: estimator.memory_budget,
         },
         |width| {
             Ok(forecast_jla_memory(
@@ -589,6 +617,7 @@ fn plan_compressed_batches(
             route_width_cap: target_cap,
             non_batched_peak_bytes: non_batched_peak,
             hard_memory_bytes: estimator.memory_limit_bytes,
+            memory_budget: estimator.memory_budget,
         },
         |_| Ok(non_batched_peak),
         |width| {
@@ -731,14 +760,22 @@ fn run_jla_no_controls_with_validated_plan(
     validate_target_geometry(problem, plan)?;
     preflight_trial_words("leverage", &plan.deletion.physical_count)?;
     preflight_trial_words("target", &plan.target.physical_count)?;
-    let memory = admit_jla_memory(
-        problem,
-        plan,
-        options,
-        prepared_problem_bytes(problem, plan)?,
-    )?;
+    let prepared = prepared_problem_bytes(problem, plan)?;
+    let legacy_memory = if options.memory_budget == crate::memory::MemoryBudget::Legacy {
+        Some(admit_jla_memory(problem, plan, options, prepared)?)
+    } else {
+        None
+    };
     interrupt.checkpoint("jla_solver_setup")?;
     let solver = PreparedTwoWaySolver::prepare_with_interrupt(problem, options.solver, interrupt)?;
+    let memory = if let Some(memory) = legacy_memory {
+        memory
+    } else {
+        let mut refined = options;
+        refined.solver.route = solver.receipt().selected;
+        refined.embedded_cmg_memory = embedded_cmg_memory(solver.receipt())?;
+        admit_jla_memory(problem, plan, refined, prepared)?
+    };
 
     run_jla_no_controls_with_prepared_solver(problem, plan, options, memory, &solver, interrupt)
 }
@@ -1078,7 +1115,10 @@ fn admit_jla_memory(
     prepared_persistent_bytes: u64,
 ) -> Result<JlaMemoryReceipt> {
     let memory = forecast_jla_memory(problem, plan, options, prepared_persistent_bytes)?;
-    if memory.solve_peak_forecast_bytes > options.memory_limit_bytes {
+    if options
+        .memory_budget
+        .rejects(memory.solve_peak_forecast_bytes, options.memory_limit_bytes)
+    {
         return Err(BackendError::new(
             ErrorCode::ResourceLimit,
             "jla_memory",
@@ -1113,9 +1153,19 @@ fn forecast_jla_memory(
         options.target_batch_width,
         "target batch width",
     )?);
-    let route = forecast_route(firms, options.solver);
+    // Full CMG owns its own hierarchy and workspace pool. The embedded CMG
+    // terminal cap and per-column workspace do not describe this solver.
+    let route = if options.full_cmg_setup.is_some() {
+        LinearSolverRoute::DiagonalPcg
+    } else {
+        forecast_route(firms, options.solver)
+    };
     let cmg_batch_workspace_per_column = if route == LinearSolverRoute::CmgPcg {
-        cmg_batch_workspace_per_column_forecast(problem, options.solver)?
+        if let Some((_, column_bytes)) = options.embedded_cmg_memory {
+            column_bytes
+        } else {
+            cmg_batch_workspace_per_column_forecast(problem, options.solver)?
+        }
     } else {
         0
     };
@@ -1133,15 +1183,24 @@ fn forecast_jla_memory(
         ],
         "operator storage",
     )?;
-    let backend_bytes = match route {
-        LinearSolverRoute::Exact => 0,
-        LinearSolverRoute::DiagonalPcg => memory_product(&[firms, 8], "diagonal preconditioner")?,
-        LinearSolverRoute::CmgPcg => cmg_setup_forecast(problem, options.solver)?,
-        LinearSolverRoute::Auto => {
-            return Err(BackendError::invariant(
-                "jla_memory",
-                "memory forecast retained an unresolved automatic route",
-            ));
+    let backend_bytes = if let Some(setup) = options.full_cmg_setup {
+        checked_memory_add(setup.actual_retained_bytes, setup.allocator_allowance_bytes)?
+    } else {
+        match route {
+            LinearSolverRoute::Exact => 0,
+            LinearSolverRoute::DiagonalPcg => {
+                memory_product(&[firms, 8], "diagonal preconditioner")?
+            }
+            LinearSolverRoute::CmgPcg => match options.embedded_cmg_memory {
+                Some((retained, _)) => retained,
+                None => cmg_setup_forecast(problem, options.solver)?,
+            },
+            LinearSolverRoute::Auto => {
+                return Err(BackendError::invariant(
+                    "jla_memory",
+                    "memory forecast retained an unresolved automatic route",
+                ));
+            }
         }
     };
     let solver_setup_forecast_bytes = checked_memory_add(operator_bytes, backend_bytes)?;
@@ -1206,7 +1265,7 @@ fn forecast_jla_memory(
     )?;
     let leverage_rng_blocks = leverage_width
         .div_ceil(u64::try_from(RNG_PROBE_BLOCK_COLUMNS).expect("RNG block columns fit u64"));
-    let leverage_phase_forecast_bytes = checked_memory_sum(&[
+    let mut leverage_phase_forecast_bytes = checked_memory_sum(&[
         memory_product(
             &[
                 deletion,
@@ -1241,7 +1300,7 @@ fn forecast_jla_memory(
             cmg_batch_workspace_per_column,
         )?,
     ])?;
-    let target_phase_forecast_bytes = target_phase_forecast(
+    let mut target_phase_forecast_bytes = target_phase_forecast(
         route,
         workers,
         firms,
@@ -1250,6 +1309,79 @@ fn forecast_jla_memory(
         target_width,
         cmg_batch_workspace_per_column,
     )?;
+    let mut expected_largest_phase = None;
+    if let Some(setup) = options.full_cmg_setup {
+        let threads = to_u64_memory(setup.threads, "full-CMG threads")?;
+        let vertices = to_u64_memory(setup.vertices, "full-CMG vertices")?;
+        let full_solve = |columns| -> Result<u64> {
+            checked_memory_sum(&[
+                memory_product(
+                    &[2 * workers + 3 * firms, columns, 8],
+                    "full-CMG returned solutions",
+                )?,
+                memory_product(
+                    &[vertices, columns, 4, 8],
+                    "full-CMG hybrid and refinement blocks",
+                )?,
+                memory_product(
+                    &[workers + 4 * firms, columns.min(threads), 8],
+                    "full-CMG extraction scratch",
+                )?,
+            ])
+        };
+        leverage_phase_forecast_bytes = checked_memory_sum(&[
+            memory_product(
+                &[
+                    deletion,
+                    to_u64_memory(size_of::<FiveMoments>(), "moment size")?,
+                ],
+                "leverage moments",
+            )?,
+            memory_product(&[deletion, leverage_width, 8], "leverage atoms")?,
+            memory_product(&[workers + firms, leverage_width, 8], "leverage RHS")?,
+            full_solve(leverage_width)?,
+        ])?;
+        // Target directions are constructed one column per active thread and
+        // freed before solving. Only the paired RHSs survive assembly.
+        let rhs = memory_product(&[workers + firms, 2 * target_width, 8], "target RHS")?;
+        let assembly = checked_memory_sum(&[
+            rhs,
+            rhs,
+            memory_product(
+                &[
+                    cells + target + 4 * workers + 4 * firms,
+                    target_width.min(threads),
+                    8,
+                ],
+                "target column assembly scratch",
+            )?,
+        ])?;
+        let solve = checked_memory_add(rhs, full_solve(2 * target_width)?)?;
+        target_phase_forecast_bytes = checked_memory_add(
+            memory_product(&[target, target_width, 8], "target atoms")?,
+            assembly.max(solve),
+        )?;
+        let ordinary_solve = |columns| -> Result<u64> {
+            let hybrid_rhs = memory_product(&[vertices, columns, 8], "full-CMG RHS")?;
+            let solutions =
+                memory_product(&[2 * workers + 3 * firms, columns, 8], "full-CMG solutions")?;
+            let extraction = memory_product(
+                &[workers + 4 * firms, columns.min(threads), 8],
+                "full-CMG extraction",
+            )?;
+            checked_memory_add(
+                hybrid_rhs,
+                hybrid_rhs.max(checked_memory_add(solutions, extraction)?),
+            )
+        };
+        let ordinary_leverage = leverage_phase_forecast_bytes - full_solve(leverage_width)?
+            + ordinary_solve(leverage_width)?;
+        let ordinary_target = checked_memory_add(
+            memory_product(&[target, target_width, 8], "target atoms")?,
+            assembly.max(checked_memory_add(rhs, ordinary_solve(2 * target_width)?)?),
+        )?;
+        expected_largest_phase = Some(full_fit_phase.max(ordinary_leverage).max(ordinary_target));
+    }
     let largest_phase = full_fit_phase
         .max(leverage_phase_forecast_bytes)
         .max(target_phase_forecast_bytes);
@@ -1265,7 +1397,14 @@ fn forecast_jla_memory(
         result_forecast_bytes,
         largest_phase,
     ])?;
+    let expected_peak_forecast_bytes = checked_memory_sum(&[
+        prepared_persistent_bytes,
+        solver_setup_forecast_bytes,
+        result_forecast_bytes,
+        expected_largest_phase.unwrap_or(largest_phase),
+    ])?;
     Ok(JlaMemoryReceipt {
+        expected_peak_forecast_bytes,
         hard_limit_bytes: options.memory_limit_bytes,
         prepared_persistent_bytes,
         solver_setup_forecast_bytes,
@@ -1417,6 +1556,26 @@ fn cmg_batch_workspace_per_column_forecast(
     ])
 }
 
+fn embedded_cmg_memory(
+    receipt: &crate::solver::PreparedSolverReceipt,
+) -> Result<Option<(u64, u64)>> {
+    receipt
+        .cmg
+        .as_ref()
+        .map(|cmg| {
+            Ok((
+                checked_memory_sum(&[
+                    cmg.structural_bytes,
+                    cmg.workspace_bytes,
+                    cmg.preconditioner_bytes,
+                    cmg.dense_factor_bytes,
+                ])?,
+                cmg.batch_workspace_bytes(1)?,
+            ))
+        })
+        .transpose()
+}
+
 fn cmg_setup_forecast(problem: &CompressedProblem, options: LinearSolverOptions) -> Result<u64> {
     let vertices = to_u64_memory(
         problem
@@ -1443,8 +1602,12 @@ fn cmg_setup_forecast(problem: &CompressedProblem, options: LinearSolverOptions)
         "CMG dense cap",
     )?;
     let dense_setup = memory_product(&[terminal, terminal, 16], "CMG dense setup")?;
-    let admitted_hierarchy =
-        checked_memory_add(hierarchy, dense_setup)?.min(options.cmg.memory_limit_bytes);
+    let hierarchy_bound = checked_memory_add(hierarchy, dense_setup)?;
+    let admitted_hierarchy = options
+        .cmg
+        .memory_budget
+        .hard_limit(options.cmg.memory_limit_bytes)
+        .map_or(hierarchy_bound, |limit| hierarchy_bound.min(limit));
     checked_memory_add(hybrid, admitted_hierarchy)
 }
 

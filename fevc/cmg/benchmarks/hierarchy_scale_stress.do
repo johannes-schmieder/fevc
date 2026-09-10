@@ -116,7 +116,7 @@ void cmgscale__run(real scalar vertices, real scalar columns,
     real scalar repetition, repetitions, timed_applications
     real scalar ordinary_seconds, workspace_seconds, workspace_time_ratio
 
-    assert(cmgtest__api_level() == 8)
+    assert(cmgtest__api_level() == 9)
     graph = cmgscale__graph(vertices)
     if (graph.status != "CONVERGED") {
         errprintf("scale graph failed: %s: %s\n",graph.status,graph.message)

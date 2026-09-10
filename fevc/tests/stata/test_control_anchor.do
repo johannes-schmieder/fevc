@@ -236,6 +236,14 @@ base = vckss__canonical_controls(Q,frequency,1e-10)
 changed = vckss__canonical_controls(QT,frequency,1e-10)
 assert(base.status == "CONVERGED")
 assert(changed.status == "AMBIGUOUS_CONTROL_BASIS")
+assert(strpos(changed.message,"INVERSE_RESIDUAL_FAILED [control_basis_gram]") > 0)
+assert(strpos(changed.message,"residual=") > 0)
+assert(strpos(changed.message,"gate=") > 0)
+kg = vckss__control_cross(QT,QT,frequency)
+ki = vckss__inverse(kg.values,1e-10)
+assert(ki.status == "INVERSE_RESIDUAL_FAILED")
+assert(ki.relres > 1e-8)
+
 end
 
 foreach nuisance_mode in joint fixedoffset {

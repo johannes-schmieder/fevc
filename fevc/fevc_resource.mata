@@ -9,12 +9,22 @@ mata set matalnum off
 
 real scalar vckss_resource__api_level()
 {
-    return(10)
+    return(12)
 }
 
 string scalar vckss_resource__build_id()
 {
-    return("vckss-resource-api10-fe-buf1-buffered")
+    return("vckss-resource-api12-control-scratch")
+}
+
+// Same control-phase allocation count as vckss__control_prep_bytes(). The
+// resource runtime also supports standalone forecasts without loading the
+// estimator runtime, so neither module depends on the other being loaded.
+real scalar vckss_resource__control_bytes(real scalar n, real scalar q)
+{
+    if (q == 0) return(0)
+    return(8*(n*(24+6*q)+(16*min((256,n))+128)*q^2+
+        8*min((256,n))*q))
 }
 
 real scalar vckss_resource__fe_buffer_bytes(
@@ -385,7 +395,7 @@ struct vckss_resource_forecast scalar vckss_resource__forecast(
             wall_forecast_upper_seconds <= 0) |
         missing(memory_headroom_fraction) |
         memory_headroom_fraction < 0 |
-        missing(out.hard_memory_bytes) | out.hard_memory_bytes <= 0 |
+        missing(out.hard_memory_bytes) | (out.hard_memory_bytes <= 0 & st_global("VCKSS_MEMORY_PRESENT")!="0") |
         (!missing(out.hard_wall_seconds) & out.hard_wall_seconds <= 0)) {
         return(out)
     }
@@ -451,7 +461,7 @@ struct vckss_resource_forecast scalar vckss_resource__forecast(
     }
 
     out.memory_admitted =
-        out.peak_bytes <= out.hard_memory_bytes
+        (st_global("VCKSS_MEMORY_ADVISORY")=="1" | out.peak_bytes <= out.hard_memory_bytes)
     if (missing(out.wall_admission_seconds) |
         missing(out.hard_wall_seconds)) out.wall_admitted = 1
     else out.wall_admitted =
@@ -465,6 +475,10 @@ struct vckss_resource_forecast scalar vckss_resource__forecast(
         }
         else out.message =
             "route direct peak fits the declared memory envelope"
+        if (st_global("VCKSS_MEMORY_PRESENT")=="0")
+            out.message = "memory forecast only; no budget supplied"
+        else if (out.peak_bytes > out.hard_memory_bytes)
+            out.message = "memory forecast exceeds budget; policy permits execution"
         out.admitted = 1
         return(out)
     }
@@ -504,7 +518,7 @@ struct vckss_resource_forecast scalar vckss_resource__route_reconcile(
     if (!(out.route == "compressed" | out.route == "generic") |
         missing(out.non_solver_numerical_bytes) |
         missing(routed_solver_peak_bytes) | routed_solver_peak_bytes <= 0 |
-        missing(out.hard_memory_bytes) | out.hard_memory_bytes <= 0 |
+        missing(out.hard_memory_bytes) | (out.hard_memory_bytes <= 0 & st_global("VCKSS_MEMORY_PRESENT")!="0") |
         (!missing(out.hard_wall_seconds) & out.hard_wall_seconds <= 0) |
         (!missing(out.wall_forecast_upper_seconds) &
             out.wall_forecast_upper_seconds <= 0)) {
@@ -549,7 +563,7 @@ struct vckss_resource_forecast scalar vckss_resource__route_reconcile(
         return(out)
     }
     out.memory_admitted =
-        out.peak_bytes <= out.hard_memory_bytes
+        (st_global("VCKSS_MEMORY_ADVISORY")=="1" | out.peak_bytes <= out.hard_memory_bytes)
     if (missing(out.wall_admission_seconds) |
         missing(out.hard_wall_seconds)) out.wall_admitted = 1
     else out.wall_admitted =
@@ -562,6 +576,10 @@ struct vckss_resource_forecast scalar vckss_resource__route_reconcile(
                 "direct routed peak fits memory; headroom or wall forecast is advisory"
         else out.message =
             "actual routed solver peak fits the declared memory envelope"
+        if (st_global("VCKSS_MEMORY_PRESENT")=="0")
+            out.message = "memory forecast only; no budget supplied"
+        else if (out.peak_bytes > out.hard_memory_bytes)
+            out.message = "memory forecast exceeds budget; policy permits execution"
         out.admitted = 1
     }
     else if (out.route == "compressed") {
@@ -659,7 +677,7 @@ struct vckss_resource_model scalar vckss_resource__model(
         leverage_rng_calls_per_probe+target_rng_calls_per_probe >
             floor((2^53-1)/probes) |
         rng_call_seconds_upper < 0 |
-        raw_stata_bytes <= 0 | hard_memory_bytes <= 0 |
+        raw_stata_bytes <= 0 | (hard_memory_bytes <= 0 & st_global("VCKSS_MEMORY_PRESENT")!="0") |
         (!missing(hard_wall_seconds) & hard_wall_seconds <= 0)) return(out)
 
     out.row_scale = n_rows/8201888
@@ -751,7 +769,9 @@ struct vckss_resource_model scalar vckss_resource__model(
     out.generic_components.phase_scratch_bytes =
         max((8*generic_batch*(14*n_rows+12*parameters+n_physical),
             vckss_resource__fe_buffer_bytes(n_physical,
-                workers,firms,generic_batch)))
+                workers,firms,generic_batch),
+            vckss_resource__control_bytes(n_rows,
+                max((0,parameters-workers-firms+1)))))
     out.generic_components.sorting_compression_bytes = 8*8*n_rows
     out.generic_components.solve_ahead_bytes = 0
     out.generic_components.output_certificate_bytes =
@@ -760,6 +780,14 @@ struct vckss_resource_model scalar vckss_resource__model(
     out.generic_components.runtime_resident_bytes =
         vckss_resource__runtime_rss()
 
+    // Command allocation forecasts do not charge historical process-RSS
+    // allowances as though they were allocations of this request. Legacy
+    // standalone diagnostics retain their source-bound residency model.
+    if (st_global("VCKSS_MEMORY_ACTIVE")=="1") {
+        out.compressed_components.runtime_resident_bytes = 0
+        out.generic_components.runtime_resident_bytes = 0
+        out.compressed_components.preservation_transition_bytes = 0
+    }
     out.compressed = vckss_resource__forecast(
         "compressed",out.compressed_components,
         out.compressed_wall_upper_seconds,0.30,
@@ -927,7 +955,7 @@ struct vckss_resource_reconciliation scalar vckss_resource__reconcile(
     out.within_wall_forecast =
         actual_wall_seconds <= forecast.wall_forecast_upper_seconds
     out.within_hard_limits =
-        out.comparison_peak_bytes <= forecast.hard_memory_bytes
+        (st_global("VCKSS_MEMORY_ADVISORY")=="1" | out.comparison_peak_bytes <= forecast.hard_memory_bytes)
     out.next_scale_allowed = 0
     if (out.within_hard_limits) {
         out.status = "RECONCILED"

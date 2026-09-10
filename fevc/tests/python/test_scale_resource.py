@@ -63,7 +63,7 @@ def test_admission_uses_direct_memory_and_advisory_headroom_before_rng() -> None
         "ceil(wall_forecast_upper_seconds*"
         "(1+vckss_resource__wall_margin()))"
     ) in compact
-    assert "out.memory_admitted=out.peak_bytes<=out.hard_memory_bytes" in compact
+    assert 'out.memory_admitted=(st_global("VCKSS_MEMORY_ADVISORY")=="1"|out.peak_bytes<=out.hard_memory_bytes)' in compact
     assert "out.admitted=out.memory_admitted" not in compact
     assert "out.before_rng=1" in compact
 
@@ -158,8 +158,8 @@ def test_final_route_admission_uses_actual_solver_peak_directly() -> None:
 def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
     source = SOLVER.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "return(26)" in source
-    assert "vckss-solver-api26-gpl-mata-cmg" in source
+    assert "return(27)" in source
+    assert "vckss-solver-api27-memory-policy" in source
     assert (
         "floor(VCKSS_SOLVER_RESOURCE_GATE.hard_memory_bytes)-"
         "VCKSS_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes"
@@ -177,8 +177,8 @@ def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
 def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     source = ADO.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "vckss_resource__api_level()==10" in compact
-    assert "vckss-resource-api10-fe-buf1-buffered" in source
+    assert "vckss_resource__api_level()==12" in compact
+    assert "vckss-resource-api12-control-scratch" in source
     assert "`N_retained',`retained_physical'" in compact
     assert "`leverage_rng_calls_per_probe'" in source
     assert "`target_rng_calls_per_probe'" in source

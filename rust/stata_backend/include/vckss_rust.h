@@ -1900,6 +1900,38 @@ _Static_assert(offsetof(VckssEngineRhsReceiptV1, reduced_residual) == 32, "unexp
 _Static_assert(offsetof(VckssEngineRhsReceiptV2, status) == 48, "unexpected V2 RHS receipt extension offset");
 #endif
 
+/* Additive policy: absent budget is represented by budget_present = 0 and
+ * budget_bytes = 0. Legacy entrypoints retain strict numeric admission. */
+typedef struct {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint32_t budget_present;
+    uint32_t check_mode; /* 1 error, 2 warn, 3 off */
+    uint64_t budget_bytes;
+} VckssMemoryPolicyV1;
+int32_t vckss_rust_engine_admit_prepare_memory_v1(
+    const VckssEnginePrepareRequestV4 *, const VckssMemoryPolicyV1 *, uint32_t);
+int32_t vckss_rust_engine_prepare_memory_interrupt_v1(
+    const VckssEnginePrepareRequestInterruptV3 *, const VckssEngineColumnsV3 *,
+    const VckssMemoryPolicyV1 *, uint64_t *, uint32_t);
+int32_t vckss_rust_engine_memory_policy_v1(uint64_t, VckssMemoryPolicyV1 *, uint32_t);
+#if !defined(__cplusplus)
+_Static_assert(sizeof(VckssMemoryPolicyV1) == 24, "unexpected memory policy size");
+_Static_assert(offsetof(VckssMemoryPolicyV1, budget_bytes) == 16, "unexpected budget offset");
+#endif
+
+typedef struct {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t expected_peak_bytes;
+    uint64_t admission_peak_bytes;
+    uint64_t conditional_reserve_bytes;
+} VckssMemoryForecastV1;
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(VckssMemoryForecastV1) == 32, "unexpected memory forecast size");
+#endif
+int32_t vckss_rust_engine_memory_forecast_v1(uint64_t, VckssMemoryForecastV1 *, uint32_t);
+
 #ifdef __cplusplus
 }
 #endif

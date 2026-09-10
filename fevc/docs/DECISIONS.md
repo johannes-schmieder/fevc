@@ -196,6 +196,15 @@
 - Explicit CMG fails closed. Automatic CMG-to-diagonal fallback is allowed only
   before RNG and must be recorded.
 - Exact plans use no iterative route, probe batch, or estimator counter range.
+- `memory_gib()` is optional. Omission forecasts and continues with no
+  memory-based batch, concurrency or route choice. An explicit budget guides
+  automatic batches and defaults to `memorycheck(warn)`; only `error`
+  enforces forecast admission. `off` suppresses warnings/rejection but does
+  not remove an explicit planning budget. Explicit batches are preserved.
+- Native preparation is measured while it runs, and CMG forecasts are refined
+  after deterministic setup before estimator RNG. Expected direct allocation
+  and conditional admission reserve are separate from process RSS. The
+  [memory guide](MEMORY.md) defines policy, timing, returns and accuracy limits.
 
 ## Scientific and numerical acceptance
 
@@ -213,8 +222,8 @@
 - Coefficient cells, deletion units, and exact target-scale strata remain
   separate.
 - Every accepted RHS passes the complete original-system residual gate, target
-  accounting identities, rank/estimability gates, direct-memory admission, and
-  finite-output checks.
+  accounting identities, rank/estimability gates, policy-aware memory admission
+  and receipt reconciliation, and finite-output checks.
 - Omitted `tolerance()` uses `1e-10` for fit/deterministic solves and `1e-6`
   for randomized probes. An explicit value overrides both; effective phase
   tolerances and residual gates are receipted.
@@ -273,8 +282,9 @@
 - CMG is a package component, not a shared library or independent release.
 - Its deterministic generator produces only the shipped `vckss_cmg` runtime
   and the checked-in `cmgtest` target.
-- CMG API 8 and generator API 5 are ownership/interface successors over the
-  numerically qualified API 6 core.
+- CMG API 9 adds command memory policy to the API 8 ownership/interface
+  successor over the numerically qualified API 6 core; generator API 5 is
+  unchanged.
 
 ## Evidence and release
 
@@ -282,8 +292,9 @@
   are immutable source-bound evidence.
 - Quick CI does not qualify the native plugin. Native claims require the
   source-local plugin profile and an exact-SHA receipt.
-- Advisory timing or headroom misses do not withhold a scientifically and
-  directly memory-safe command.
+- Advisory timing, headroom or memory-budget misses do not withhold an
+  otherwise admissible command. Actual allocation failures and malformed
+  resource receipts remain errors under every memory policy.
 - GPL-3.0-only governs covered code. The human package-boundary,
   corresponding-source, notice, provenance, and data-exclusion review was
   completed on 2026-08-29. Public tagging and release remain separate owner

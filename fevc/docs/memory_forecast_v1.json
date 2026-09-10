@@ -1,0 +1,40 @@
+{
+  "schema": "FEVC-MEMORY-FORECAST-V1",
+  "status": "REGISTERED_BEFORE_CANDIDATE_MEASUREMENT",
+  "date": "2026-09-10",
+  "source_baseline": "f3098bc1369992fccbc1d276aac5fc65ceb3f404",
+  "omitted_budget": "Forecast only; no memory-dependent execution decisions",
+  "explicit_budget_default_policy": "warn",
+  "policies": ["warn", "error", "off"],
+  "development_rows": [30720, 122880],
+  "held_out_rows": [61440, 245760],
+  "cores": [1, 4],
+  "probes": 200,
+  "seed": 8675309,
+  "allocation_gate": {
+    "must_cover_observed_owned_peak": true,
+    "maximum_excess": "max(0.05 * observed_owned_peak, 1048576)",
+    "enumerable_retained_buffers": "exact capacity and element-size identity"
+  },
+  "rss_gate": {
+    "minimum_peak_bytes": 134217728,
+    "median_absolute_percentage_error_max": 0.10,
+    "maximum_absolute_percentage_error_max": 0.20,
+    "scope": "Fresh local macOS process; calibration is platform-specific"
+  },
+  "overhead_gate": {
+    "alternating_pairs": 5,
+    "maximum_additional_median_seconds": "max(0.03 * baseline_median, 0.05)"
+  },
+  "required_regimes": [
+    "degree-three full-CMG false rejection",
+    "higher-degree auxiliary vertices",
+    "compressed and generic JLA",
+    "exact and projection",
+    "controls, weights and deletion modes",
+    "component inference",
+    "Mata policy and lifecycle"
+  ],
+  "failure_policy": "Retain and report unmet criteria; do not tune thresholds or reinterpret FAIL as PASS",
+  "release_authorized": false
+}

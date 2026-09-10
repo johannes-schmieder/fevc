@@ -35,23 +35,28 @@ def test_help_retains_scope_warning_and_both_confirmation_outcomes():
     assert "eligible q1 confirmations pass their registered gates" in text
 
 
-def test_help_cleanup_preserves_every_runnable_example():
+def test_help_preserves_weighted_and_component_inference_examples():
     old = subprocess.check_output(
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.sthlp"], cwd=ROOT, text=True
     )
     current = (ROOT / "fevc/fevc.sthlp").read_text()
-    pattern = r"\{\* example_start - .*?\{\* example_end\}\{\.\.\.\}"
-    assert len(re.findall(pattern, old, re.S)) == 5
-    assert re.findall(pattern, old, re.S) == re.findall(pattern, current, re.S)
+    pattern = r"\{\* example_start - ([^}]+)\}\{\.\.\.\}(.*?)\{\* example_end\}\{\.\.\.\}"
+    old_examples = dict(re.findall(pattern, old, re.S))
+    current_examples = dict(re.findall(pattern, current, re.S))
+    assert len(old_examples) == len(current_examples) == 5
+    assert old_examples.keys() == current_examples.keys()
+    # Revised sorting and firm-size DGPs have numerical Stata regressions.
+    for name in ("weights_targets", "component_inference"):
+        assert old_examples[name] == current_examples[name]
 
 
-def test_catalog_advertises_match_without_changing_install_inventory():
+def test_catalog_preserves_match_install_inventory():
     manifest = (ROOT / "fevc/fevc.pkg").read_text()
     old = subprocess.check_output(
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.pkg"], cwd=ROOT, text=True
     )
     assert [x for x in old.splitlines() if x.startswith("f ")] == [
-        x for x in manifest.splitlines() if x.startswith("f ")
+        x for x in manifest.splitlines() if x.startswith("f ") and x != "f _fevc_memory_options.ado"
     ]
     assert "fixed-offset match" in manifest
     assert "fixed-offset match" in (ROOT / "fevc/stata.toc").read_text()

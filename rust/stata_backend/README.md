@@ -19,7 +19,9 @@ The versioned boundary provides:
 - solve/interrupt V4;
 - exact, compressed-JLA, and generic-JLA result families;
 - detailed execution-plan and numerical receipt V7;
-- additive diagnostic performance receipt V1; and
+- additive diagnostic performance receipt V1;
+- explicit memory-budget presence/check policy V1 and expected/admission
+  forecast V1, preserving older ABI request layouts; and
 - generation-safe result, release, clear, snapshot, and typed-error handling.
 
 The Stata wrapper must reconcile the complete request, prepared generation,
@@ -35,6 +37,22 @@ their recorded source commits. The registered no-control match-JLA cell now
 selects `CMG_FULL_V2` through explicit Rust or qualified macOS/Linux automatic
 routing. Current qualification and release boundaries are recorded in
 [`../../fevc/PLAN.md`](../../fevc/PLAN.md).
+
+## Public and legacy memory policy
+
+Public `fevc` uses the additive memory-policy interface. An omitted
+`memory_gib()` carries explicit absence; it is not a 4-GiB default or an
+arbitrarily large cap. Explicit budgets warn by default, while `error` opts
+into strict forecast admission and `off` suppresses warnings/rejection.
+Budget-driven automatic planning requires an explicit budget. The old native
+and private diagnostic entrypoints retain their prior strict numeric defaults.
+
+The preparation peak measures requested heap payload while preparation runs,
+including accounted C-buffer overlap. Actual CMG setup refines the solve
+forecast before estimator RNG. The forecast receipt separates expected peak
+from admission peak and conditional reserve; it excludes total process RSS.
+Warnings do not waive structural receipt checks or actual allocation failures.
+See [the current memory contract](../../fevc/docs/MEMORY.md).
 
 ## Qualify a local macOS candidate
 

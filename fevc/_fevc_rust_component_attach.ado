@@ -28,7 +28,7 @@ program define _fevc_rust_component_attach, rclass
         r(augmentation_peak_forecast_bytes)==`expected_peak' &      ///
         r(component_persistent_bytes)==0 &                          ///
         r(total_prepared_resident_bytes)==`resident' &              ///
-        r(augmentation_peak_forecast_bytes)<=`memorylimit'
+        ("$VCKSS_MEMORY_ADVISORY"=="1" | r(augmentation_peak_forecast_bytes)<=`memorylimit')
     if !`ok' {
         capture noisily _fevc_rust_abort, rc(498) handle(`handle') ///
             phase(component_augmentation)

@@ -1,11 +1,12 @@
 version 18.0
 
-// A same-level runtime with a different semantic build token must never run.
+// The previous API 23 token must not masquerade as a current API 24 runtime.
+mata: assert(vckss__api_level() == 24)
 mata: mata drop vckss__build_id()
 mata:
 string scalar vckss__build_id()
 {
-    return("stale-test-runtime")
+    return("vckss-api23-certified-control-basis")
 }
 end
 

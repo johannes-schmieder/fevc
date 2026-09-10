@@ -25,16 +25,16 @@ def test_automatic_batch_caps_are_evidence_backed() -> None:
 
 def test_direct_cmg_guard_binds_api_and_design() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
-    expected = "gpl-cmg-mata-degree3-hybrid-v8-vckss-component"
-    assert ado.count("vckss_cmg__api_level() == 8") == 2
+    expected = "gpl-cmg-mata-degree3-hybrid-v9-memory-policy"
+    assert ado.count("vckss_cmg__api_level() == 9") == 2
     assert ado.count("vckss_cmg__design_label()") == 2
     assert ado.count(expected) == 1
 
 
 def test_help_documents_direct_memory_gate_and_disjoint_timers() -> None:
     help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
-    assert "complete direct-peak forecast is the memory" in help_text
-    assert "percentage and processor rules are" in help_text
+    assert "{cmd:memorycheck(warn)}, the default" in help_text
+    assert "assumes no memory budget" in help_text
     assert "routing trial solves" in help_text
     assert "setup and fit are disjoint" in help_text
     assert "Setup is included within fit time" not in help_text

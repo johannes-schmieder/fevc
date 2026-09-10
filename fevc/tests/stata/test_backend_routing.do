@@ -19,6 +19,10 @@ capture program drop fevc_rust
 program define fevc_rust, rclass
     global VCKSS_ROUTING_NATIVE_CALLED 1
     gettoken subcommand rest : 0, parse(" ,")
+    if "`subcommand'"=="memorycapabilities" {
+        return scalar memory_api = 1
+        exit 0
+    }
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "prepare" {
         global VCKSS_ROUTING_PREPARE_CALLED 1

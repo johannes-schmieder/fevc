@@ -174,16 +174,16 @@ quietly do "`install_root'/f/fevc_resource.mata"
 quietly do "`install_root'/f/fevc_solver.mata"
 quietly do "`install_root'/f/fevc_scale_engine.mata"
 quietly do "`install_root'/f/fevc_scale_runtime.mata"
-mata: assert(vckss__api_level() == 21)
+mata: assert(vckss__api_level() == 24)
 mata: assert(vckss_inference__api_level() == 2)
 mata: assert(vckss_graph__api_level() == 21)
-mata: assert(vckss_cmg__api_level() == 8)
-mata: assert(vckss_solver__api_level() == 26)
+mata: assert(vckss_cmg__api_level() == 9)
+mata: assert(vckss_solver__api_level() == 27)
 mata: assert(vckss_rng__api_level() == 4)
 mata: assert(vckss_scale__api_level() == 6)
 mata: assert(vckss_scale__build_id() ==                         ///
     "vckss-scale-api6-prep-sem1-mata")
-mata: assert(vckss_resource__api_level() == 10)
+mata: assert(vckss_resource__api_level() == 12)
 mata: assert(vckss_scale_engine__api_level() == 4)
 mata: assert(vckss_scale_runtime__api_level() == 3)
 

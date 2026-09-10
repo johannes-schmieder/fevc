@@ -104,7 +104,7 @@ program define _fevc_rust_capture_stayers, rclass
             `h_delgap'>`blocktol' & `h_fzero'>=0 &                 ///
             `h_fzero'<=`invgate' &                                ///
             `h_peak'==max(`h_fitpeak',`h_corrpeak') &              ///
-            `h_peak'<=`a_mem_limit' &                              ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `h_peak'<=`a_mem_limit') &                              ///
             abs(`h_acct'-`accounting_truth')<=                     ///
                 4096*c(epsdouble)*max(1,`scale') &                 ///
             abs(`h_source'-`source_truth')<=                       ///

@@ -13,8 +13,8 @@ if _rc quietly do "fevc/fevc.mata"
 capture mata: vckss_cmg__api_level()
 if _rc quietly do "fevc/fevc_cmg.mata"
 quietly do "fevc/tests/support/vckss_cmg_adapter.mata"
-mata: assert(vckss_cmg__api_level() == 8)
-mata: assert(vckss_cmg__design_label() == "gpl-cmg-mata-degree3-hybrid-v8-vckss-component")
+mata: assert(vckss_cmg__api_level() == 9)
+mata: assert(vckss_cmg__design_label() == "gpl-cmg-mata-degree3-hybrid-v9-memory-policy")
 
 local workers = 1200
 local firms = 300

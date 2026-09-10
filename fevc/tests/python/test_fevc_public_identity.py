@@ -67,7 +67,7 @@ def test_private_vckss_build_ids_cannot_be_rebranded() -> None:
     ):
         assert MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)
     for value in (
-        "vckss-api21-stayer-hybrid",
+        "vckss-api24-control-lanes256",
         "vckss-inference-api1-block-projection",
     ):
         assert not MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)

@@ -10,6 +10,10 @@ It uses 4,000 workers, 200 firms, and 24,000 observations, requires only Stata
 and `fevc`, and clears the data in memory when run. It contains no automated
 pass/fail assertions and does not request inference.
 
+`simple_AKM.do` is the owner’s editable AKM example. It requires `reghdfe`
+and `fevc`, clears the current data, and is not an automated qualification test.
+The independent automated reproduction is `../stata/test_control_akm.do`.
+
 Requirements for the referee validation and benchmark suites:
 
 - Stata 18 or newer and an installed `fevc` package;

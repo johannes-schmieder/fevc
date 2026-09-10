@@ -69,7 +69,7 @@ program define _fevc_rust_component_fetch, rclass
         `receipt'[1,3]==`referencecode' &                          ///
         `receipt'[1,4]==`simulations' & `receipt'[1,5]>0 &         ///
         `receipt'[1,6]>0 & `receipt'[1,7]>0 &                      ///
-        `receipt'[1,7]<=`memorylimit' & `receipt'[1,8]>=0 &        ///
+        ("$VCKSS_MEMORY_ADVISORY"=="1" | `receipt'[1,7]<=`memorylimit') & `receipt'[1,8]>=0 &        ///
         `receipt'[1,11]<=1e-10 & `receipt'[1,12]>=0 &              ///
         `receipt'[1,13]>=0 & `receipt'[1,14]>=0 &                  ///
         `receipt'[1,15]>0 & `receipt'[1,14]<=`receipt'[1,15] &     ///

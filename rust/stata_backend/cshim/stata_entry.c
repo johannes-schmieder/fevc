@@ -1430,9 +1430,20 @@ static int vckss_export_preparation(
     return 0;
 }
 
+static int vckss_memory_rejects(uint64_t generation, uint64_t peak, uint64_t limit)
+{
+    VckssMemoryPolicyV1 policy;
+    int status = vckss_rust_engine_memory_policy_v1(generation, &policy, sizeof(policy));
+    if (status != 0 || policy.struct_size != sizeof(policy) || policy.schema_version != 1u ||
+        policy.budget_present > 1u || policy.check_mode < 1u || policy.check_mode > 3u ||
+        policy.budget_bytes != limit) return 1;
+    return policy.budget_present == 1u && policy.check_mode == 1u && peak > limit;
+}
+
 static int vckss_prepare(int argc, char *argv[])
 {
     VckssEnginePrepareRequestInterruptV3 request;
+    VckssMemoryPolicyV1 policy = {sizeof(VckssMemoryPolicyV1), 1u, 1u, 1u, 0u};
     VckssEngineColumnsV3 columns;
     uint64_t rows = 0;
     uint64_t caller_copy_bytes = 0;
@@ -1447,7 +1458,7 @@ static int vckss_prepare(int argc, char *argv[])
     ST_int retained_variable;
     int status;
 
-    if (argc != 3 && argc != 5 && argc != 6 && argc != 7) {
+    if (argc != 3 && argc != 5 && argc != 6 && argc != 7 && argc != 9) {
         return vckss_usage(
             "Rust prepare requires cleanup, memory, and optionally deletion mode, control count, probe-order flag, and implicit-match flag"
         );
@@ -1473,7 +1484,7 @@ static int vckss_prepare(int argc, char *argv[])
             return vckss_usage("Rust prepare probe-order flag must be probeorder or noprobeorder");
         }
     }
-    if (argc == 7) {
+    if (argc >= 7) {
         if (strcmp(argv[6], "implicitmatch") == 0) {
             implicit_match = 1u;
         } else if (strcmp(argv[6], "explicitdeletion") != 0) {
@@ -1506,10 +1517,16 @@ static int vckss_prepare(int argc, char *argv[])
     request.options.v3.v2.abi_version = VCKSS_RUST_ABI_VERSION_V1;
     request.options.v3.v2.rows = rows;
     request.options.v3.v2.cleanup_abandoned = strcmp(argv[1], "cleanup") == 0 ? 1u : 0u;
+    if (argc == 9 && (vckss_parse_u32(argv[7], &policy.check_mode) != 0 ||
+        vckss_parse_u32(argv[8], &policy.budget_present) != 0 ||
+        policy.check_mode < 1u || policy.check_mode > 3u || policy.budget_present > 1u)) {
+        return vckss_usage("invalid memory policy");
+    }
     if (vckss_parse_u64(argv[2], &request.options.v3.v2.memory_limit_bytes) != 0 ||
-        request.options.v3.v2.memory_limit_bytes == 0) {
+        (policy.budget_present == 1u && request.options.v3.v2.memory_limit_bytes == 0)) {
         return vckss_usage("invalid Rust whole-command byte memory limit");
     }
+    policy.budget_bytes = request.options.v3.v2.memory_limit_bytes;
     request.options.v3.v2.caller_copy_bytes = caller_copy_bytes;
     request.options.v3.controls_count = controls_count;
     request.options.implicit_match = implicit_match;
@@ -1519,9 +1536,9 @@ static int vckss_prepare(int argc, char *argv[])
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    status = vckss_rust_engine_admit_prepare_v4(
-        &request.options, probeorder_supplied
-    );
+    status = argc == 9 ? vckss_rust_engine_admit_prepare_memory_v1(
+        &request.options, &policy, probeorder_supplied
+    ) : vckss_rust_engine_admit_prepare_v4(&request.options, probeorder_supplied);
     if (status != 0) {
         return vckss_rust_failure(status);
     }
@@ -1572,9 +1589,10 @@ static int vckss_prepare(int argc, char *argv[])
             storage + ((size_t)VCKSS_NUMERIC_COLUMNS_BASE + controls_count) * (size_t)rows;
     }
 
-    status = vckss_rust_engine_prepare_interrupt_v4(
-        &request, &columns, &generation, (uint32_t)sizeof(generation)
-    );
+    status = argc == 9 ? vckss_rust_engine_prepare_memory_interrupt_v1(
+        &request, &columns, &policy, &generation, (uint32_t)sizeof(generation)
+    ) : vckss_rust_engine_prepare_interrupt_v4(
+        &request, &columns, &generation, (uint32_t)sizeof(generation));
     free(control_pointers);
     free(storage);
     if (status != 0) {
@@ -1583,8 +1601,20 @@ static int vckss_prepare(int argc, char *argv[])
     status = vckss_export_preparation(generation, rows, retained_variable);
     if (status != 0) {
         vckss_cleanup_preserving_primary(generation);
+        return status;
     }
-    return status;
+    if (argc == 9 && policy.budget_present == 1u && policy.check_mode == 2u) {
+        VckssMemoryForecastV1 forecast;
+        status = vckss_rust_engine_memory_forecast_v1(generation, &forecast, sizeof(forecast));
+        if (status != 0) {
+            vckss_cleanup_preserving_primary(generation);
+            return vckss_rust_failure(status);
+        }
+        if (forecast.expected_peak_bytes > policy.budget_bytes) {
+            SF_display("Warning: preparation allocations exceeded memory_gib(); continuing (memorycheck(warn)).\n");
+        }
+    }
+    return 0;
 }
 
 static int vckss_export_stayer_augmentation(uint64_t generation)
@@ -1609,8 +1639,8 @@ static int vckss_export_stayer_augmentation(uint64_t generation)
             receipt.combined_workers ||
         receipt.mover_deletion_units + receipt.stayer_deletion_units !=
             receipt.combined_deletion_units ||
-        receipt.augmentation_peak_forecast_bytes > receipt.memory_limit_bytes ||
-        receipt.total_prepared_resident_bytes > receipt.memory_limit_bytes ||
+        vckss_memory_rejects(generation, receipt.augmentation_peak_forecast_bytes, receipt.memory_limit_bytes) ||
+        vckss_memory_rejects(generation, receipt.total_prepared_resident_bytes, receipt.memory_limit_bytes) ||
         receipt.augmented_resident_bytes > receipt.total_prepared_resident_bytes) {
         return vckss_c_failure(
             VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
@@ -2303,6 +2333,7 @@ static int vckss_save_components(const char *prefix, const VckssComponentVectorV
 static int vckss_result(uint64_t generation)
 {
     VckssEngineResultV1 result;
+    VckssMemoryForecastV1 memory_forecast;
     VckssEngineDetailedReceiptV7 receipt_v7;
     VckssEngineDetailedReceiptV6 receipt_v6;
     VckssEngineDetailedReceiptV5 receipt_v5;
@@ -2315,6 +2346,22 @@ static int vckss_result(uint64_t generation)
     int has_plan = 0;
     int status;
 
+    status = vckss_rust_engine_memory_forecast_v1(generation, &memory_forecast, sizeof(memory_forecast));
+    if (status != 0) return vckss_rust_failure(status);
+    if (memory_forecast.struct_size != sizeof(memory_forecast) ||
+        memory_forecast.schema_version != 1 ||
+        memory_forecast.expected_peak_bytes > memory_forecast.admission_peak_bytes ||
+        memory_forecast.conditional_reserve_bytes !=
+            memory_forecast.admission_peak_bytes - memory_forecast.expected_peak_bytes) {
+        vckss_cleanup_preserving_primary(generation);
+        return vckss_c_failure(VCKSS_ERROR_INTERNAL_INVARIANT_FAILED, "INVALID_MEMORY_FORECAST", "invalid memory forecast receipt", VCKSS_STATA_MEMORY_ERROR);
+    }
+    if ((status = vckss_save_u64("__vckss_memory_expected", memory_forecast.expected_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_memory_admission", memory_forecast.admission_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_memory_conditional", memory_forecast.conditional_reserve_bytes)) != 0) {
+        vckss_cleanup_preserving_primary(generation);
+        return status;
+    }
     memset(&result, 0, sizeof(result));
     memset(&receipt_v7, 0, sizeof(receipt_v7));
     memset(&receipt_v6, 0, sizeof(receipt_v6));
@@ -2694,7 +2741,7 @@ static int vckss_stayer_result(uint64_t generation)
         augmentation.schema_version != 1u || augmentation.generation != generation ||
         result.deletion_units != augmentation.combined_deletion_units ||
         result.topology_checksum != augmentation.topology_checksum ||
-        result.peak_forecast_bytes > augmentation.memory_limit_bytes ||
+        vckss_memory_rejects(generation, result.peak_forecast_bytes, augmentation.memory_limit_bytes) ||
         result.fit_peak_forecast_bytes > result.peak_forecast_bytes ||
         result.correction_peak_forecast_bytes > result.peak_forecast_bytes ||
         !isfinite(result.accounting_residual) || result.accounting_residual > 1.0e-10 ||
@@ -3533,6 +3580,10 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
             return vckss_usage("Rust selftest does not accept arguments");
         }
         return vckss_run_selftest();
+    }
+    if (strcmp(argv[0], "memorycapabilities") == 0) {
+        if (argc != 1) return vckss_usage("memorycapabilities does not accept arguments");
+        return vckss_save_u64("__vckss_memory_api", 1u);
     }
     if (strcmp(argv[0], "probe") == 0) {
         if (argc != 1) {

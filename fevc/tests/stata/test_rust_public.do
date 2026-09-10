@@ -107,13 +107,12 @@ assert abs(e(complete_residual_max)-scalar(__vckss_test_max_complete)) <= ///
 mata: assert(all(st_matrix("e(solver_rhs_diagnostics)")[.,6] :== 1))
 scalar drop __vckss_test_max_iterations
 scalar drop __vckss_test_max_complete
-assert e(rust_memory_receipt)[1,11] <= e(rust_memory_receipt)[1,1]
+assert e(memory_budget_supplied)==0 & missing(e(memory_gib))
+assert e(rust_memory_receipt)[1,1]==0
 assert e(rust_memory_receipt)[1,3] == 19*14*8
 assert e(rust_memory_receipt)[1,11] == e(memory_forecast_bytes)
-assert e(rust_memory_receipt)[1,4] ==                       ///
-    e(rust_memory_receipt)[1,2] + e(rust_preparation_receipt)[1,1]*768 + 4096
-assert e(rust_memory_receipt)[1,2] + e(rust_memory_receipt)[1,5] <= ///
-    e(rust_memory_receipt)[1,1]
+assert e(rust_memory_receipt)[1,4] >= ///
+    e(rust_memory_receipt)[1,2] + e(rust_memory_receipt)[1,5]
 assert e(rust_memory_receipt)[1,6] > 0
 assert e(rust_memory_receipt)[1,7] > 0
 assert e(rust_memory_receipt)[1,8] > 0
@@ -235,7 +234,7 @@ capture quietly fevc y [fw=frequency],                   ///
     targetweight(target) algorithm(jla) engine(compressed)      ///
     stayers(movers)                                             ///
     preconditioner(diagonal) batch(2) probes(6) seed(91827)     ///
-    tolerance(1e-10) maxiter(10000) memory_gib(.000001)        ///
+    tolerance(1e-10) maxiter(10000) memory_gib(.000001) memorycheck(error)        ///
     backend(rust) rng(counter_v1) nodisplay
 local preparation_failure_rc = _rc
 assert `preparation_failure_rc' == 909
@@ -454,7 +453,10 @@ foreach corruption in graph_zero_components graph_edge_mismatch       ///
     assert _rc == 498
     assert `"`e(status)'"' == "WITHHELD"
     assert `"`e(withholding_status)'"' == "INTERNAL_INVARIANT_FAILED"
-    assert `"`e(native_error_phase)'"' == "preparation_reconcile"
+    // A measured peak has no fixed row formula. A changed value must
+    // disagree with the same-generation result receipt before publication.
+    assert `"`e(native_error_phase)'"' == cond("`corruption'"== ///
+        "prepare_peak_formula","result_reconcile","preparation_reconcile")
     quietly fevc_rust snapshot
     assert r(state) == 0 & r(handle) == 0
 }

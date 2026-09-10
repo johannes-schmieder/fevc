@@ -12,6 +12,13 @@ program define fevc, eclass
     // any runtime work so an interrupted earlier command cannot leak into a
     // later typed failure.
     quietly _vckss_route_context_clear
+    foreach key in ACTIVE PRESENT CHECK MODE ADVISORY BYTES FORECAST {
+        capture macro drop VCKSS_MEMORY_`key'
+    }
+
+    foreach field in expected admission conditional {
+        capture scalar drop __vckss_memory_`field'
+    }
 
     // A cached compressed design is command-local state.  Clear a current
     // scale runtime defensively at entry so no interrupted prior invocation
@@ -75,6 +82,40 @@ program define fevc, eclass
     global VCKSS_STAGE_VALIDATION_TIMER `stage_validation_timer'
     capture noisily _vckss_impl `0'
     local command_rc = _rc
+    if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
+        if real("$VCKSS_MEMORY_FORECAST") > 0 & real("$VCKSS_MEMORY_FORECAST") < . {
+            ereturn scalar memory_forecast_bytes = max(e(memory_forecast_bytes),real("$VCKSS_MEMORY_FORECAST"))
+        }
+        ereturn scalar memory_admission_forecast_bytes = e(memory_forecast_bytes)
+        ereturn scalar memory_conditional_reserve_bytes = 0
+        capture confirm scalar __vckss_memory_expected
+        if !_rc {
+            ereturn scalar memory_forecast_bytes = scalar(__vckss_memory_expected)
+            ereturn scalar memory_admission_forecast_bytes = scalar(__vckss_memory_admission)
+            ereturn scalar memory_conditional_reserve_bytes = scalar(__vckss_memory_conditional)
+        }
+        ereturn local memory_check "$VCKSS_MEMORY_CHECK"
+        ereturn local memory_forecast_scope "command direct allocations; excludes Stata/runtime RSS"
+        if "`e(backend_selected)'" == "mata" & "`e(algorithm)'" != "exact" {
+            ereturn local memory_forecast_scope "Mata allocations plus modeled Stata working data"
+        }
+        ereturn scalar memory_budget_supplied = real("$VCKSS_MEMORY_PRESENT")
+        ereturn scalar memory_forecast_model = 1
+        if "$VCKSS_MEMORY_PRESENT" == "0" {
+            ereturn scalar memory_gib = .
+            ereturn scalar batch_memory_budget_bytes = .
+        }
+        else if "$VCKSS_MEMORY_CHECK" == "warn" & e(memory_admission_forecast_bytes) < . & ///
+            e(memory_admission_forecast_bytes) > e(memory_gib)*1024^3 {
+            di as text "Warning: forecast direct allocations exceed memory_gib(); continuing (memorycheck(warn))."
+        }
+    }
+    foreach key in ACTIVE PRESENT CHECK MODE ADVISORY BYTES FORECAST {
+        capture macro drop VCKSS_MEMORY_`key'
+    }
+    foreach field in expected admission conditional {
+        capture scalar drop __vckss_memory_`field'
+    }
     local outer_scale_reset_rc = 0
     capture mata: assert(vckss_scale__api_level() == 6 &          ///
         vckss_scale__build_id() ==                               ///
@@ -109,6 +150,8 @@ program define fevc, eclass
         !inlist("`e(status)'", "WITHHELD", "ALPHA") {
         ereturn local estat_cmd "fevc_estat"
     }
+    // UserBreak is untyped; no partial estimate or prior fit may survive it.
+    if `command_rc' == 1 ereturn clear
     if `command_rc' & `"`e(status)'"' == "WITHHELD" {
         _vckss_display_failure
     }
@@ -333,9 +376,9 @@ program define _fevc_rust_generic, eclass sortpreserve
             `p_units'>0 & `p_strata'>0 & `p_controls'==`control_count' & ///
             `p_input'==`ncomplete' & `p_retained'==`retained_count' & ///
             `p_input_copy'==`expected_input_copy' &                 ///
-            `p_prep_peak'==`expected_prep_peak' & `p_resident'>0 & ///
-            `p_input_copy'+`p_resident'<=`p_mem_limit' &            ///
-            `p_prep_peak'<=`p_mem_limit' &                          ///
+            (`p_prep_peak'==`expected_prep_peak' | ("$VCKSS_MEMORY_ACTIVE"=="1" & `p_prep_peak'>=`p_input_copy'+`p_resident')) & `p_resident'>0 & ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_input_copy'+`p_resident'<=`p_mem_limit') &            ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_prep_peak'<=`p_mem_limit') &                          ///
             `g_input_rows'==`ncomplete' & `g_keep_rows'==`retained_count' & ///
             `g_input_mass'==`input_physical' &                      ///
             `g_keep_mass'==`retained_physical' &                    ///
@@ -703,7 +746,7 @@ program define _fevc_rust_generic, eclass sortpreserve
                 `r_generic_tgt_peak',`r_maker_peak',`r_generic_result') & ///
             `r_solve_peak'==`r_generic_peak' &                     ///
             `r_command_peak'==max(`r_prep_peak',`r_generic_peak') & ///
-            `r_command_peak'<=`r_mem_limit' &                      ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `r_command_peak'<=`r_mem_limit') &                      ///
             abs(`r_actual_accounting'-`accounting_truth')<=        ///
                 `roundoff_gate'*max(1,abs(`accounting_truth')) &   ///
             abs(`r_accounting'-`r_actual_accounting')<=            ///
@@ -1188,7 +1231,7 @@ program define _vckss_proj_result_ok, rclass
         `prr_max_complete'!=`expected_max_complete' |              ///
         `prr_max_complete'>`prr_full_tol' |                        ///
         `prr_full_tol'!=`expected_full_tol' |                      ///
-        `prr_peak'!=`expected_peak' | `prr_peak'>`memory_limit' |  ///
+        `prr_peak'!=`expected_peak' | ("$VCKSS_MEMORY_ADVISORY"!="1" & `prr_peak'>`memory_limit') |  ///
         `prr_bytes'!=`expected_bytes' local ok = 0
     return scalar ok = `ok'
 end
@@ -1515,9 +1558,9 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `p_units'>0 & `p_strata'>0 & `p_controls'==`control_count' & ///
             `p_input'==`ncomplete' & `p_retained'==`retained_count' & ///
             `p_input_copy'==`expected_input_copy' &                 ///
-            `p_prep_peak'==`expected_prep_peak' & `p_resident'>0 & ///
-            `p_input_copy'+`p_resident'<=`p_mem_limit' &            ///
-            `p_prep_peak'<=`p_mem_limit' &                          ///
+            (`p_prep_peak'==`expected_prep_peak' | ("$VCKSS_MEMORY_ACTIVE"=="1" & `p_prep_peak'>=`p_input_copy'+`p_resident')) & `p_resident'>0 & ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_input_copy'+`p_resident'<=`p_mem_limit') &            ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_prep_peak'<=`p_mem_limit') &                          ///
             `g_input_rows'==`ncomplete' & `g_keep_rows'==`retained_count' & ///
             `g_input_mass'==`input_physical' &                      ///
             `g_keep_mass'==`retained_physical' &                    ///
@@ -1726,8 +1769,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 abs(`a_total_target'-`hybrid_target_mass')<=         ///
                     1e-10*max(1,abs(`hybrid_target_mass')) &          ///
                 `a_mem_limit'==`p_mem_limit' & `a_copy'==`expected_stayer_copy' & ///
-                `a_peak'<=`a_mem_limit' & `a_resident'>=0 &          ///
-                `a_resident'<=`a_prepared' & `a_prepared'<=`a_mem_limit'
+                ("$VCKSS_MEMORY_ADVISORY"=="1" | `a_peak'<=`a_mem_limit') & `a_resident'>=0 &          ///
+                `a_resident'<=`a_prepared' & ("$VCKSS_MEMORY_ADVISORY"=="1" | `a_prepared'<=`a_mem_limit')
         }
         if !`augmentation_ok' {
             capture quietly fevc_rust release `handle'
@@ -1785,7 +1828,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             2*`expected_projection_copy' +                         ///
             4*`expected_projection_persistent' +                  ///
             8*`expected_projection_square' + 4096
-        if `expected_projection_peak' > `p_mem_limit' {
+        if ("$VCKSS_MEMORY_ADVISORY"!="1" & `expected_projection_peak'>`p_mem_limit') {
             capture quietly fevc_rust release `handle'
             capture quietly fevc_rust clear
             quietly _vckss_post_failure "RESOURCE_LIMIT"          ///
@@ -1839,7 +1882,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 `pr_persistent'==`expected_projection_persistent' & ///
                 `pr_prepared'==`solve_resident'+`pr_persistent' &   ///
                 `pr_peak'==`expected_projection_peak' &            ///
-                `pr_peak'<=`p_mem_limit' & `pr_prepared'<=`p_mem_limit' & ///
+                ("$VCKSS_MEMORY_ADVISORY"=="1" | `pr_peak'<=`p_mem_limit') & ("$VCKSS_MEMORY_ADVISORY"=="1" | `pr_prepared'<=`p_mem_limit') & ///
                 `pr_gram_rcond'>`ranktol' &                        ///
                 `pr_gram_relres'<=max(1e-11,100*`ranktol') &       ///
                 `pr_gram_orig'<=max(1e-11,100*`ranktol')
@@ -2183,8 +2226,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `cmg_probe_tol'==`expected_cmg_probe_tol' &            ///
             `cmg_fit_inner'==0.01*`expected_cmg_fit_tol' &         ///
             `cmg_probe_inner'==`expected_cmg_probe_tol' &          ///
-            `cmg_admitted_peak'<=`p_mem_limit' &                   ///
-            `cmg_pre_rng_forecast'<=`p_mem_limit' &                ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `cmg_admitted_peak'<=`p_mem_limit') &                   ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `cmg_pre_rng_forecast'<=`p_mem_limit') &                ///
             `cmg_admitted_peak'<=`cmg_pre_rng_forecast' &          ///
             `cmg_prepared_bytes'<=`cmg_non_cmg_peak' &             ///
             `cmg_actual_retained'>0 &                              ///
@@ -2982,7 +3025,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_plan_mem_command'==`expected_generic_base_peak'+      ///
             `component_requested'*`ci_result_peak' &             ///
         `r_command_peak'==max(`r_prep_peak',`r_solve_peak') &    ///
-        `r_command_peak'<=`r_mem_limit'
+        ("$VCKSS_MEMORY_ADVISORY"=="1" | `r_command_peak'<=`r_mem_limit')
     local fit_receipt_ok =                                         ///
         `r_seed'==`seed' & `r_probes'==`probes' &                  ///
         `r_lev_acc'==`probes' & `r_tgt_acc'==`probes' &            ///
@@ -3822,6 +3865,7 @@ program define _vckss_mata_stayer_hybrid, rclass sortpreserve
         "hybrid_message", "`diagnostics'", "`source'")
     if _rc {
         local rc = _rc
+        if `rc' == 1 exit 1
         quietly _vckss_post_failure "MATA_RUNTIME_FAILED"           ///
             "The combined mover-stayer Mata calculation stopped unexpectedly."
         exit `rc'
@@ -3865,7 +3909,7 @@ program define _vckss_impl, eclass sortpreserve
         PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(string)                        ///
         ENGINE(string) BACKEND(string) RNG(string) WALLSeconds(string) ///
-        PREConditioner(string) MEMory_gib(real 4)                ///
+        PREConditioner(string) MEMory_gib(string) MEMorycheck(string)                ///
         SEED(integer 8675309) TOLerance(string)                  ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
         RANK_tolerance(real 1e-10) BLOCK_tolerance(real 1e-10)   ///
@@ -4166,11 +4210,14 @@ program define _vckss_impl, eclass sortpreserve
         di as error "preconditioner() must be auto, diagonal, or cmg"
         exit 198
     }
-    if `memory_gib' <= 0 | missing(`memory_gib') {
+    capture noisily _fevc_memory_options "`memory_gib'" "`memorycheck'"
+    if _rc {
+        if "`backend_requested'"=="rust" global VCKSS_ROUTE_BACKEND_REASON = cond("`algorithm'"=="exact","explicit Rust exact route rejected by memory-envelope validation","explicit strict Rust route rejected by memory-envelope validation")
         quietly _vckss_post_failure "INVALID_MEMORY_ENVELOPE"
-        di as error "memory_gib() must be positive"
         exit 198
     }
+    local memory_gib = r(memory_gib)
+    local memory_present = r(budget_present)
     if "`engine'" == "" local engine auto
     local engine_requested = lower(strtrim("`engine'"))
     if !inlist("`engine_requested'", "auto", "compressed", "generic") {
@@ -4308,7 +4355,7 @@ program define _vckss_impl, eclass sortpreserve
         // native preparation.  Mirror that validation here so malformed
         // Rust-route limits fail structurally without probing the plugin.
         local rust_memory_bytes = floor(`memory_gib' * 1073741824)
-        if `rust_memory_bytes' <= 0 |                         ///
+        if (`rust_memory_bytes' <= 0 & `memory_present') |                         ///
             `rust_memory_bytes' > 9007199254740992 {
             if "`algorithm'" == "exact" {
                 global VCKSS_ROUTE_BACKEND_REASON ///
@@ -4449,8 +4496,14 @@ program define _vckss_impl, eclass sortpreserve
             }
         }
         if `rust_public' {
+        capture quietly fevc_rust memorycapabilities
+        local memory_api_rc = _rc
+        if !`memory_api_rc' {
+            if r(memory_api) != 1 local memory_api_rc = 498
+        }
         capture quietly fevc_rust probe
         local rust_probe_rc = _rc
+        if `memory_api_rc' & !`rust_strict' local rust_probe_rc = 498
         if `rust_probe_rc' {
             if !`rust_strict' {
                 capture quietly fevc_rust clear
@@ -4538,7 +4591,7 @@ program define _vckss_impl, eclass sortpreserve
         // The frozen flat mask remains the legacy transport receipt.  Request
         // combinations are authorized only by requestcapability below.
         local rust_support_required = (`rust_support_flags' == 38)
-        if !`rust_transport_valid' | `rust_abi_compiled' != 1 | ///
+        if `memory_api_rc' | !`rust_transport_valid' | `rust_abi_compiled' != 1 | ///
             `rust_abi_runtime' != 1 | `rust_deterministic' != 1 | ///
             !`rust_core_required' | !`rust_support_required' {
             if "`algorithm'" == "exact" {
@@ -5064,10 +5117,10 @@ program define _vckss_impl, eclass sortpreserve
         `prep_mark_validate_seconds'
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
-    local expected_mata_build "vckss-api21-stayer-hybrid"
+    local expected_mata_build "vckss-api24-control-lanes256"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(vckss__api_level() == 21 &                 ///
+    capture mata: assert(vckss__api_level() == 24 &                 ///
         vckss__version() == "0.5.0-rc.1" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
@@ -5083,7 +5136,7 @@ program define _vckss_impl, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(vckss__api_level() == 21 &             ///
+        capture mata: assert(vckss__api_level() == 24 &             ///
             vckss__version() == "0.5.0-rc.1" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
@@ -5652,19 +5705,19 @@ program define _vckss_impl, eclass sortpreserve
                     6*`diagnostic_deletion_units'+                ///
                     4*`diagnostic_coefficient_cells'+3*`parameters')
                 if `candidate' <= `probes' & `candidate' <= 32 &   ///
-                    `leverage_candidate_bytes' <= `scale_batch_budget' {
+                    (!`memory_present' | `leverage_candidate_bytes' <= `scale_batch_budget') {
                     local leverage_batch = `candidate'
                 }
                 local target_candidate_bytes = 8*`candidate'*(     ///
                     2*`target_strata'+                             ///
                     8*`diagnostic_coefficient_cells'+6*`parameters')
                 if `candidate' <= `probes' & `candidate' <= 32 &   ///
-                    `target_candidate_bytes' <= `scale_batch_budget' {
+                    (!`memory_present' | `target_candidate_bytes' <= `scale_batch_budget') {
                     local target_batch = `candidate'
                 }
             }
             local batch = `leverage_batch'
-            local batch_routing_reason "separate largest cell/unit/stratum widths within the compressed 25% scratch reservation"
+            local batch_routing_reason "automatic compressed widths from probe, performance, and any explicit memory budget"
         }
         else {
             local leverage_batch = `batch'
@@ -5683,8 +5736,7 @@ program define _vckss_impl, eclass sortpreserve
                 foreach candidate in 16 32 64 {
                     if `candidate' <= `generic_processor_cap' &   ///
                         `candidate' <= `probes' &                 ///
-                        `candidate'*`generic_column_bytes' <=     ///
-                        `generic_batch_budget' local batch = `candidate'
+                        (!`memory_present' | `candidate'*`generic_column_bytes' <= `generic_batch_budget') local batch = `candidate'
                 }
             }
             local leverage_batch = `batch'
@@ -5693,9 +5745,9 @@ program define _vckss_impl, eclass sortpreserve
 
         capture mata: vckss_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_resource__api_level() == 10 &   ///
+        capture mata: assert(vckss_resource__api_level() == 12 &   ///
             vckss_resource__build_id() ==                         ///
-            "vckss-resource-api10-fe-buf1-buffered")
+            "vckss-resource-api12-control-scratch")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_RESOURCE_RUNTIME"
@@ -5709,9 +5761,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_resource__api_level() == 10 & ///
+            capture mata: assert(vckss_resource__api_level() == 12 & ///
                 vckss_resource__build_id() ==                     ///
-                "vckss-resource-api10-fe-buf1-buffered")
+                "vckss-resource-api12-control-scratch")
             if _rc {
                 quietly _vckss_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -5810,7 +5862,7 @@ program define _vckss_impl, eclass sortpreserve
             `resource_transition_peak' local resource_unavoidable_phase transition
         else if `resource_unavoidable_peak' ==                   ///
             `resource_restoration_peak' local resource_unavoidable_phase restoration
-        if `resource_unavoidable_peak' > `resource_hard_memory' {
+        if ("$VCKSS_MEMORY_ADVISORY"!="1" & `resource_unavoidable_peak'>`resource_hard_memory') {
             if `resource_row' == 1 local resource_status         ///
                 RESOURCE_ADMISSION_FAILED
             else local resource_status                           ///
@@ -5872,11 +5924,10 @@ program define _vckss_impl, eclass sortpreserve
             foreach candidate in 16 32 64 {
                 if `candidate' <= `batch_processor_cap' & ///
                     `candidate' <= `probes' & ///
-                    `candidate'*`batch_column_forecast_bytes' <= ///
-                    `batch_memory_budget_bytes' local batch = `candidate'
+                    (!`memory_present' | `candidate'*`batch_column_forecast_bytes' <= `batch_memory_budget_bytes') local batch = `candidate'
             }
             local batch_routing_reason ///
-                "largest evidence-backed width within probe, processor, and 35% memory gates"
+                "automatic width from probe, processor, and any explicit memory budget"
         }
     }
     if "`selected_algorithm'" == "jla" {
@@ -5997,6 +6048,7 @@ program define _vckss_impl, eclass sortpreserve
             "`nuisance'", `rank_tolerance', `block_tolerance',  ///
             `exact_limit', `blocksize_limit', "`raw_results'",  ///
             "mata_status", "mata_message", "`diagnostics'")
+        local mata_call_rc = _rc
     }
     else {
         local rng_call_shape                            ///
@@ -6038,8 +6090,8 @@ program define _vckss_impl, eclass sortpreserve
         capture mata: vckss_cmg__api_level()
         local cmg_runtime_loaded = (_rc == 0)
         local expected_cmg_design ///
-            "gpl-cmg-mata-degree3-hybrid-v8-vckss-component"
-        capture mata: assert(vckss_cmg__api_level() == 8 &        ///
+            "gpl-cmg-mata-degree3-hybrid-v9-memory-policy"
+        capture mata: assert(vckss_cmg__api_level() == 9 &        ///
             vckss_cmg__numeric_mode() == "off" &                 ///
             vckss_cmg__design_label() == "`expected_cmg_design'")
         if _rc {
@@ -6055,7 +6107,7 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_cmg__api_level() == 8 &    ///
+            capture mata: assert(vckss_cmg__api_level() == 9 &    ///
                 vckss_cmg__numeric_mode() == "off" &             ///
                 vckss_cmg__design_label() ==                     ///
                 "`expected_cmg_design'")
@@ -6067,10 +6119,10 @@ program define _vckss_impl, eclass sortpreserve
         }
         capture mata: vckss_solver__api_level()
         local solver_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_solver__api_level() == 26 &     ///
+        capture mata: assert(vckss_solver__api_level() == 27 &     ///
             vckss_solver__route_api() == 1 &                      ///
             vckss_solver__build_id() ==                           ///
-            "vckss-solver-api26-gpl-mata-cmg")
+            "vckss-solver-api27-memory-policy")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SOLVER_RUNTIME"
@@ -6084,10 +6136,10 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_solver__api_level() == 26 & ///
+            capture mata: assert(vckss_solver__api_level() == 27 & ///
                 vckss_solver__route_api() == 1 &                  ///
                 vckss_solver__build_id() ==                       ///
-                "vckss-solver-api26-gpl-mata-cmg")
+                "vckss-solver-api27-memory-policy")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"
@@ -6408,8 +6460,9 @@ program define _vckss_impl, eclass sortpreserve
         local rng_target_probe_last = `probes'
         if "`fallback_status'" == "" local fallback_status NOT_NEEDED
     }
-    if "`selected_algorithm'" == "jla" & `mata_call_rc' {
+    if `mata_call_rc' {
         local mata_rc = `mata_call_rc'
+        if `mata_rc' == 1 exit 1
         quietly _vckss_post_failure "MATA_RUNTIME_FAILED"
         di as error "the Mata backend stopped unexpectedly"
         exit `mata_rc'
@@ -7391,7 +7444,7 @@ program define _vckss_impl, eclass sortpreserve
             "EXPERIMENTAL_SCALE_ENGINE", "GENERAL_ENGINE")
     }
     else {
-        ereturn scalar memory_forecast_bytes = 0
+        ereturn scalar memory_forecast_bytes = real("$VCKSS_MEMORY_FORECAST")
         ereturn scalar schur_seconds = 0
         ereturn scalar preconditioner_apply_seconds = 0
         ereturn scalar pcg_seconds = 0
@@ -7785,10 +7838,10 @@ program define _vckss_rexact, eclass sortpreserve
             `p_units' > 0 & `p_strata' > 0 &                        ///
             `p_controls' == `control_count' &                       ///
             `p_input_copy' == `expected_input_copy' &               ///
-            `p_prep_peak' == `expected_prep_peak' &                 ///
+            (`p_prep_peak' == `expected_prep_peak' | ("$VCKSS_MEMORY_ACTIVE"=="1" & `p_prep_peak'>=`p_input_copy'+`p_resident')) &                 ///
             `p_resident' > 0 & `p_input' == `ncomplete' &           ///
-            `p_input_copy'+`p_resident' <= `p_mem_limit' &          ///
-            `p_prep_peak' <= `p_mem_limit' &                        ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_input_copy'+`p_resident'<=`p_mem_limit') &          ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_prep_peak'<=`p_mem_limit') &                        ///
             `g_input_rows' == `ncomplete' &                         ///
             `g_input_mass' == `input_physical' &                    ///
             `p_retained' == `retained_count' &                      ///
@@ -8008,7 +8061,7 @@ program define _vckss_rexact, eclass sortpreserve
             `r_exact_peak' == max(`r_fit_peak',`r_correction_peak') & ///
             `r_solve_peak' == `r_exact_peak' &                      ///
             `r_command_peak' == max(`r_prep_peak',`r_solve_peak') & ///
-            `r_command_peak' <= `r_mem_limit' &                    ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `r_command_peak'<=`r_mem_limit') &                    ///
             `r_top_hi' <= 4294967295 & `r_top_lo' <= 4294967295 & ///
             `r_info_rcond' > 0 & `r_info_rcond' <= 1 &             ///
             `r_inverse_relres' >= 0 &                              ///
@@ -8513,12 +8566,13 @@ program define _fevc_rust_public, eclass sortpreserve
             `p_input' > 0 & `p_retained' > 0 &                 ///
             `p_workers' > 0 & `p_firms' > 1 & `p_cells' > 0 & ///
             `p_units' > 0 & `p_strata' > 0 &                   ///
-            `p_mem_limit' > 0 &                                ///
+            (`p_mem_limit' > 0 | "$VCKSS_MEMORY_PRESENT"=="0") &                                ///
             `p_input_copy' == `p_input'*6*8 &                  ///
-            `p_prep_peak' == `p_input_copy'+`p_input'*768+4096 & ///
+            (`p_prep_peak' == `p_input_copy'+`p_input'*768+4096 | ///
+                ("$VCKSS_MEMORY_ACTIVE"=="1" & `p_prep_peak'>=`p_input_copy'+`p_resident')) & ///
             `p_resident' > 0 & `p_input' == `ncomplete' &      ///
-            `p_input_copy'+`p_resident' <= `p_mem_limit' &     ///
-            `p_prep_peak' <= `p_mem_limit' &                   ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_input_copy'+`p_resident'<=`p_mem_limit') &     ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `p_prep_peak'<=`p_mem_limit') &                   ///
             `g_input_rows' == `ncomplete' &                    ///
             `g_input_mass' == `input_physical' &               ///
             `p_retained' == `retained_count' &                 ///
@@ -8699,7 +8753,7 @@ program define _fevc_rust_public, eclass sortpreserve
             `r_solve_peak' >= `r_resident'+`r_solver_setup'+ ///
                 `r_result_bytes'+max(`r_lev_phase',`r_tgt_phase') & ///
             `r_command_peak' == max(`r_prep_peak',`r_solve_peak') & ///
-            `r_command_peak' <= `r_mem_limit' &              ///
+            ("$VCKSS_MEMORY_ADVISORY"=="1" | `r_command_peak'<=`r_mem_limit') &              ///
             `r_top_hi' <= 4294967295 & `r_top_lo' <= 4294967295 & ///
             `r_full_red' >= 0 & `r_full_red' <= `tolerance' & ///
             `r_full_complete' >= 0 &                         ///

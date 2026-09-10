@@ -188,7 +188,7 @@ void cmgtest__test_cycle()
     cmgtest__assert_close(action,dense*argument,2e-13)
 
     options = cmgtest__options_default()
-    assert(cmgtest__api_level() == 8)
+    assert(cmgtest__api_level() == 9)
     assert(options.max_levels == 96)
     resource_options = cmgtest__options_resource(56*1024^3,10000,16)
     assert(resource_options.coarse_max == 256)

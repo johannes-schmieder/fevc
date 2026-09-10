@@ -25,6 +25,7 @@ pub mod graph;
 pub mod interrupt;
 pub mod jla;
 pub mod krylov;
+pub mod memory;
 pub mod model_operator;
 pub mod model_solver;
 pub mod operator;

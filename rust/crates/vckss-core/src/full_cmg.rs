@@ -43,6 +43,7 @@ const MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS: u64 = 4;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FullCmgPlanOptions {
+    pub memory_budget: crate::memory::MemoryBudget,
     pub threads: usize,
     pub fit_tolerance: f64,
     pub probe_tolerance: f64,
@@ -55,6 +56,7 @@ pub struct FullCmgPlanOptions {
 impl FullCmgPlanOptions {
     pub fn production(threads: usize, fit_tolerance: f64, probe_tolerance: Option<f64>) -> Self {
         Self {
+            memory_budget: crate::memory::MemoryBudget::Legacy,
             threads,
             fit_tolerance,
             probe_tolerance: probe_tolerance.unwrap_or(DEFAULT_PROBE_TOLERANCE),
@@ -382,7 +384,9 @@ impl FullCmgDirectSolver {
         tolerances.fit.validate()?;
         tolerances.probe.validate()?;
         let prebuild = prebuild_memory_forecast(problem, plan)?;
-        if prebuild.whole_command_peak_bytes > memory_limit_bytes {
+        if plan.memory_budget == crate::memory::MemoryBudget::Legacy
+            && prebuild.whole_command_peak_bytes > memory_limit_bytes
+        {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
                 "cmg_full_v2_memory_preflight",
@@ -392,13 +396,18 @@ impl FullCmgDirectSolver {
                 ),
             ));
         }
-        let workspace_budget = usize::try_from(memory_limit_bytes).map_err(|_| {
-            BackendError::new(
-                ErrorCode::ResourceLimit,
-                "cmg_full_v2",
-                "CMG workspace budget is not representable on this platform",
-            )
-        })?;
+        let workspace_budget = plan
+            .memory_budget
+            .hard_limit(memory_limit_bytes)
+            .map(usize::try_from)
+            .transpose()
+            .map_err(|_| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "cmg_full_v2",
+                    "workspace budget is not representable",
+                )
+            })?;
 
         let graph_start = Instant::now();
         let hybrid = HybridGraph::from_problem_with_interrupt(problem, interrupt)?;
@@ -419,7 +428,7 @@ impl FullCmgDirectSolver {
         let solver_start = Instant::now();
         let parallel_options = ParallelOptions {
             threads: plan.threads,
-            workspace_memory_budget_bytes: Some(workspace_budget),
+            workspace_memory_budget_bytes: workspace_budget,
             ..ParallelOptions::default()
         };
         let solver = match &cancellation {
@@ -439,7 +448,14 @@ impl FullCmgDirectSolver {
             .select_batch_execution(plan.maximum_batch_rhs)
             .map_err(|error| map_setup_error(error, "batch admission"))?;
         let graph_copy_bytes = graph_storage_bytes(&graph)?;
-        let hierarchy_bytes = hierarchy_storage_bytes(&solver)?;
+        let hierarchy_bytes = if plan.memory_budget == crate::memory::MemoryBudget::Legacy {
+            hierarchy_storage_bytes(&solver)?
+        } else {
+            to_u64(
+                solver.preconditioner().retained_bytes(),
+                "retained hierarchy capacity",
+            )?
+        };
         let plan_bytes = to_u64(solver.plan().byte_len(), "standalone plan bytes")?;
         let workspace_bytes_each = to_u64(
             maximum_batch.workspace_bytes_each(),
@@ -456,11 +472,19 @@ impl FullCmgDirectSolver {
         )?;
         let full_cmg_retained = checked_sum_u64(&[
             hybrid.predicted_bytes(),
-            graph_copy_bytes,
+            if plan.memory_budget == crate::memory::MemoryBudget::Legacy {
+                graph_copy_bytes
+            } else {
+                0
+            },
             hierarchy_bytes,
             plan_bytes,
             admitted_workspace_pool_bytes,
-            batch_vectors,
+            if plan.memory_budget == crate::memory::MemoryBudget::Legacy {
+                batch_vectors
+            } else {
+                0
+            },
         ])?;
         let allocator_allowance = full_cmg_retained / ALLOCATOR_ALLOWANCE_DIVISOR;
         let full_cmg_peak = checked_sum_u64(&[full_cmg_retained, allocator_allowance])?;
@@ -481,7 +505,11 @@ impl FullCmgDirectSolver {
                 "retained full-CMG allocation exceeded its pre-RNG component forecast",
             ));
         }
-        if admitted_peak_bytes > memory_limit_bytes {
+        if plan.memory_budget == crate::memory::MemoryBudget::Legacy
+            && plan
+                .memory_budget
+                .rejects(admitted_peak_bytes, memory_limit_bytes)
+        {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
                 "cmg_full_v2",
@@ -513,7 +541,11 @@ impl FullCmgDirectSolver {
             preparation_peak_bytes: plan.preparation_peak_bytes,
             prepared_persistent_bytes: plan.prepared_persistent_bytes,
             non_cmg_command_peak_bytes: plan.non_cmg_command_peak_bytes,
-            pre_rng_forecast_bytes: prebuild.whole_command_peak_bytes,
+            pre_rng_forecast_bytes: if plan.memory_budget == crate::memory::MemoryBudget::Legacy {
+                prebuild.whole_command_peak_bytes
+            } else {
+                admitted_peak_bytes
+            },
             actual_retained_bytes: full_cmg_retained,
             allocator_allowance_bytes: allocator_allowance,
             maximum_batch_rhs: plan.maximum_batch_rhs,
@@ -557,6 +589,24 @@ impl FullCmgDirectSolver {
                     "full-CMG receipt mutex is poisoned",
                 )
             })
+    }
+
+    pub(crate) fn reconcile_memory(&self, solve_peak: u64) -> Result<()> {
+        let mut receipt = self
+            .receipt
+            .lock()
+            .map_err(|_| BackendError::invariant("cmg_full_v2", "receipt lock poisoned"))?;
+        let setup = &mut receipt.setup;
+        // The final phase forecast includes the hierarchy, pool and reserve
+        // once. Replace the preliminary maximum-width planning figure.
+        setup.non_cmg_command_peak_bytes = solve_peak
+            .checked_sub(setup.actual_retained_bytes + setup.allocator_allowance_bytes)
+            .ok_or_else(|| {
+                BackendError::invariant("cmg_full_v2", "final forecast omits retained CMG")
+            })?;
+        setup.admitted_peak_bytes = setup.preparation_peak_bytes.max(solve_peak);
+        setup.pre_rng_forecast_bytes = setup.admitted_peak_bytes;
+        Ok(())
     }
 
     pub(crate) fn maximum_complete_residual_tolerance(&self) -> f64 {

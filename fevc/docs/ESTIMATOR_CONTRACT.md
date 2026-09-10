@@ -131,13 +131,16 @@ E_{\mathrm{inv}}=\frac{\rho}{\operatorname{rcond}-\rho}.
 \]
 
 The initial envelope adds the measured whitening residual, the dimensioned
-Gram term \(k\gamma_{2n}/\operatorname{rcond}\), a Cholesky term
+certified compensated Gram term (including weighted products and underflow), a Cholesky term
 \(k\gamma_{2k+1}/\operatorname{rcond}\), control-product rounding, and
 \(E_{\mathrm{inv}}\). Every later pivot adds the anchor-inverse bound,
 matrix-product rounding, the measured projector symmetry/idempotence error,
 and the selected-anchor residual. Score and cutoff comparisons use four times
 the resulting score-error envelope, with a `1e-12` floor. The completed basis
-also checks its anchor identity and weighted-span reconstruction.
+also checks its anchor identity and weighted-span reconstruction. The complete
+[accumulation and propagation derivation](CONTROL_BASIS_CERTIFICATION.md) defines
+the outward-rounded bounds. All rows determine the maximum; only the chosen
+anchor and preceding rows require eligibility-comparison certification.
 
 Finally, the basis envelope is propagated through the reciprocal-conditioning
 margin \(r_*\) of the full fit and every relevant deletion certificate as

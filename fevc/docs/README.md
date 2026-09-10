@@ -6,6 +6,22 @@ report.
 
 ## Active package guidance
 
+- [Control-basis certification](CONTROL_BASIS_CERTIFICATION.md): compensated
+  weighted products, decisive-prefix selection and the complete error envelope.
+  The [local repair checkpoint](CONTROL_BASIS_REPAIR_2026-09-10.md) and
+  [source/binary record](control_basis_repair_v1_result.json) retain validation,
+  aggregate-gate failures and performance limits.
+  The [256-lane follow-up](CONTROL_LANES_256_2026-09-10.md) records the audit
+  repairs, expanded numerical/lifecycle/memory checks and measured comparison;
+  its [result record](control_lanes_256_v1_result.json) binds the new checkpoint.
+
+- [Memory forecasts and optional budgets](MEMORY.md): current policy,
+  examples, forecast timing and scope, returned results and accuracy limits.
+  The [September 10 implementation report](MEMORY_FORECAST_2026-09-10.md) and
+  [result record](memory_forecast_v1_result.json) retain source-bound evidence.
+  The [documentation and paper update](MEMORY_DOCUMENTATION_2026-09-10.md)
+  records current help/paper validation and documentation-only compatibility.
+
 - [Inference completion report](INFERENCE_COMPLETION_2026-09-08.md),
   [source/evidence result](inference_completion_v1_result.json), and
   [frozen registration](inference_completion_v1.json): the direct residual

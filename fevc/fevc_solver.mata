@@ -9,12 +9,12 @@ mata set matalnum off
 
 real scalar vckss_solver__api_level()
 {
-    return(26)
+    return(27)
 }
 
 string scalar vckss_solver__build_id()
 {
-    return("vckss-solver-api26-gpl-mata-cmg")
+    return("vckss-solver-api27-memory-policy")
 }
 
 real scalar vckss_solver__route_api()
@@ -132,8 +132,8 @@ real scalar vckss_solver__resource_config(
                  transition_peak_bytes,restoration_peak_bytes,
                  hard_memory_bytes)) |
         min((non_solver_numerical_bytes,selection_peak_bytes,
-             transition_peak_bytes,restoration_peak_bytes,
-             hard_memory_bytes)) <= 0 |
+             transition_peak_bytes,restoration_peak_bytes)) <= 0 |
+        (hard_memory_bytes <= 0 & st_global("VCKSS_MEMORY_PRESENT")!="0") |
         (!missing(wall_forecast_upper_seconds) &
             wall_forecast_upper_seconds <= 0) |
         (!missing(hard_wall_seconds) & hard_wall_seconds <= 0)) return(198)
@@ -171,13 +171,18 @@ real scalar vckss_solver__resource_budget(
     external struct vckss_solver_resource_gate scalar VCKSS_SOLVER_RESOURCE_GATE
     real scalar routed_budget
 
+    if (st_global("VCKSS_MEMORY_PRESENT")=="0") return(0)
     if (missing(memory_envelope_bytes) | memory_envelope_bytes <= 0) return(.)
     if (!VCKSS_SOLVER_RESOURCE_GATE.active) {
         return(memory_envelope_bytes)
     }
     routed_budget = floor(VCKSS_SOLVER_RESOURCE_GATE.hard_memory_bytes)-
         VCKSS_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes
-    if (missing(routed_budget) | routed_budget <= 0) return(.)
+    if (missing(routed_budget)) return(.)
+    if (routed_budget <= 0) {
+        if (st_global("VCKSS_MEMORY_ADVISORY")=="1") return(0)
+        return(.)
+    }
     return(min((memory_envelope_bytes,routed_budget)))
 }
 
@@ -232,8 +237,9 @@ real scalar vckss_solver__resource_apply(
     else VCKSS_SOLVER_RESOURCE_GATE.wall_admission_seconds =
         ceil(1.50*VCKSS_SOLVER_RESOURCE_GATE.wall_forecast_upper_seconds)
     VCKSS_SOLVER_RESOURCE_GATE.memory_admitted =
+        (st_global("VCKSS_MEMORY_ADVISORY")=="1" |
         VCKSS_SOLVER_RESOURCE_GATE.peak_bytes <=
-            VCKSS_SOLVER_RESOURCE_GATE.hard_memory_bytes
+            VCKSS_SOLVER_RESOURCE_GATE.hard_memory_bytes)
     if (missing(VCKSS_SOLVER_RESOURCE_GATE.hard_wall_seconds) |
         missing(VCKSS_SOLVER_RESOURCE_GATE.wall_admission_seconds)) {
         VCKSS_SOLVER_RESOURCE_GATE.wall_admitted = 1
@@ -254,6 +260,11 @@ real scalar vckss_solver__resource_apply(
         }
         else VCKSS_SOLVER_RESOURCE_GATE.message =
             "actual routed solver peak fits the declared memory envelope"
+        if (st_global("VCKSS_MEMORY_PRESENT")=="0")
+            VCKSS_SOLVER_RESOURCE_GATE.message = "memory forecast only; no budget supplied"
+        else if (VCKSS_SOLVER_RESOURCE_GATE.peak_bytes >
+            VCKSS_SOLVER_RESOURCE_GATE.hard_memory_bytes)
+            VCKSS_SOLVER_RESOURCE_GATE.message = "memory forecast exceeds budget; policy permits execution"
         return(1)
     }
     if (VCKSS_SOLVER_RESOURCE_GATE.route == "compressed") {
@@ -464,10 +475,10 @@ real scalar vckss_solver__planned_rhs(
 
 real scalar vckss_solver__cmg_runtime_ok()
 {
-    return(vckss_cmg__api_level() == 8 &
+    return(vckss_cmg__api_level() == 9 &
         vckss_cmg__numeric_mode() == "off" &
         vckss_cmg__design_label() ==
-        "gpl-cmg-mata-degree3-hybrid-v8-vckss-component")
+        "gpl-cmg-mata-degree3-hybrid-v9-memory-policy")
 }
 
 // The routing scores below are deterministic counts of scalar-equivalent
@@ -757,7 +768,7 @@ struct vckss_solver_cmg_context scalar vckss_solver__cmg_context(
     if (hierarchy == NULL | (*hierarchy).status != "CONVERGED" |
         missing(batch_capacity) | batch_capacity < 1 |
         batch_capacity != floor(batch_capacity) |
-        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0 |
+        missing(memory_envelope_bytes) | (memory_envelope_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1") |
         !(enable_workspace == 0 | enable_workspace == 1)) {
         return(out)
     }
@@ -765,12 +776,13 @@ struct vckss_solver_cmg_context scalar vckss_solver__cmg_context(
     workspace_cap = memory_envelope_bytes-
         (*hierarchy).structural_bytes-(*hierarchy).dense_factor_bytes-
         (*hierarchy).options.action_scratch_bytes
-    if (missing(workspace_cap) | workspace_cap <= 0) return(out)
+    if (missing(workspace_cap) | (workspace_cap <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) return(out)
     out.workspace = vckss_cmg__workspace_init(
         *hierarchy,batch_capacity,workspace_cap)
     out.use_workspace = (out.workspace.status == "CONVERGED" &
+        (st_global("VCKSS_MEMORY_ADVISORY")=="1" |
         out.workspace.predicted_peak_bytes+
-            (*hierarchy).dense_factor_bytes <= memory_envelope_bytes)
+            (*hierarchy).dense_factor_bytes <= memory_envelope_bytes))
     return(out)
 }
 
@@ -875,7 +887,7 @@ struct vckss_cmg__hierarchy scalar vckss_solver__hierarchy_cells(
 
     out = vckss_cmg__empty_hierarchy()
     if (cells.status != "CONVERGED" |
-        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0 |
+        missing(memory_envelope_bytes) | (memory_envelope_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1") |
         missing(planned_rhs) | planned_rhs < 1 |
         planned_rhs != floor(planned_rhs)) {
         out.message = "validated CMG cells and resources are required"
@@ -1027,13 +1039,12 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
         !(requested_route == "AUTO" | requested_route == "DIAGONAL" |
           requested_route == "CMG") |
         missing(memory_envelope_bytes) |
-        memory_envelope_bytes < 1024^3 |
-        memory_envelope_bytes > 56*1024^3) return(out)
+        (memory_envelope_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) return(out)
     if (requested_route != "DIAGONAL" &
         !vckss_solver__cmg_runtime_ok()) {
         out.estimator = vckss__failure(
             "CMG_VERSION_MISMATCH",
-            "CMG API 8 GPL Mata component runtime is required")
+            "CMG API 9 GPL Mata component runtime is required")
         out.status = out.estimator.status
         out.message = out.estimator.message
         return(out)
@@ -1044,7 +1055,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
     // route reconciliation below remains authoritative.
     solver_memory_bytes =
         vckss_solver__resource_budget(memory_envelope_bytes)
-    if (missing(solver_memory_bytes) | solver_memory_bytes <= 0) {
+    if (missing(solver_memory_bytes) | (solver_memory_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) {
         out.estimator = vckss__failure(
             "SOLVER_MEMORY_LIMIT",
             "whole-command allocations leave no positive solver budget")
@@ -1068,7 +1079,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
     setup_seconds = vckss__timer_seconds(88)
     base_bytes = 8*(8*base.n+
         5*(base.worker_levels+base.firm_levels))
-    hierarchy_memory_bytes = solver_memory_bytes-base_bytes
+    hierarchy_memory_bytes = max((0,solver_memory_bytes-base_bytes))
     hierarchy = vckss_cmg__empty_hierarchy()
     diagonal_backend = vckss__diagonal_backend()
     backend = diagonal_backend
@@ -1095,7 +1106,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
     }
     else {
         if (missing(hierarchy_memory_bytes) |
-            hierarchy_memory_bytes <= 0) {
+            (hierarchy_memory_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) {
             out.estimator = vckss__failure(
                 "SOLVER_MEMORY_LIMIT",
                 "persistent FE design exhausts the solver memory reservation")
@@ -1141,8 +1152,9 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
             out.message = preflight.message
             return(out)
         }
-        if (preflight.predicted_structural_bytes+
-            preflight.predicted_scratch_bytes > hierarchy_memory_bytes) {
+        if (st_global("VCKSS_MEMORY_ADVISORY")!="1" &
+            preflight.predicted_structural_bytes+
+                preflight.predicted_scratch_bytes > hierarchy_memory_bytes) {
             timer_off(90)
             out.estimator = vckss__failure(
                 "SOLVER_MEMORY_LIMIT",
@@ -1471,7 +1483,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
         out.reason = out.estimator.message
         return(out)
     }
-    if (forecast_peak > solver_memory_bytes) {
+    if (st_global("VCKSS_MEMORY_ADVISORY")!="1" & forecast_peak > solver_memory_bytes) {
         out.estimator = vckss__failure(
             "SOLVER_MEMORY_LIMIT",
             "solver forecast exceeds its routed memory budget")
@@ -1564,13 +1576,13 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
     if (missing(planned_rhs) |
         !(requested_route == "AUTO" | requested_route == "DIAGONAL" |
           requested_route == "CMG") |
-        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0) {
+        missing(memory_envelope_bytes) | (memory_envelope_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) {
         return(out)
     }
 
     solver_memory_bytes =
         vckss_solver__resource_budget(memory_envelope_bytes)
-    if (missing(solver_memory_bytes) | solver_memory_bytes <= 0) {
+    if (missing(solver_memory_bytes) | (solver_memory_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1")) {
         out.estimator = vckss__failure(
             "SOLVER_MEMORY_LIMIT",
             "whole-command allocations leave no positive solver budget")
@@ -1600,7 +1612,7 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
         out.message = out.estimator.message
         return(out)
     }
-    hierarchy_memory_bytes = solver_memory_bytes-base_bytes
+    hierarchy_memory_bytes = max((0,solver_memory_bytes-base_bytes))
 
     hierarchy = vckss_cmg__empty_hierarchy()
     preflight = vckss_cmg__empty_preflight()
@@ -1624,10 +1636,10 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
 
     if (attempt_cmg & !vckss_solver__cmg_runtime_ok()) {
         cmg_failure_status = "CMG_VERSION_MISMATCH"
-        cmg_failure_message = "CMG API 8 GPL Mata component runtime is unavailable"
+        cmg_failure_message = "CMG API 9 GPL Mata component runtime is unavailable"
     }
     if (attempt_cmg & cmg_failure_status == "" &
-        (missing(hierarchy_memory_bytes) | hierarchy_memory_bytes <= 0)) {
+        (missing(hierarchy_memory_bytes) | (hierarchy_memory_bytes <= 0 & st_global("VCKSS_MEMORY_ADVISORY")!="1"))) {
         cmg_failure_status = "SOLVER_MEMORY_LIMIT"
         cmg_failure_message =
             "persistent FE design leaves no memory for a CMG hierarchy"
@@ -1663,9 +1675,9 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
             }
         }
         if (cmg_failure_status == "" &
+            st_global("VCKSS_MEMORY_ADVISORY")!="1" &
             preflight.predicted_structural_bytes+
-                preflight.predicted_scratch_bytes >
-                hierarchy_memory_bytes) {
+                preflight.predicted_scratch_bytes > hierarchy_memory_bytes) {
             cmg_failure_status = "SOLVER_MEMORY_LIMIT"
             cmg_failure_message =
                 "CMG construction forecast exceeds the available solver memory"
@@ -1773,7 +1785,7 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
         out.reason = out.estimator.message
         return(out)
     }
-    if (forecast_peak > solver_memory_bytes) {
+    if (st_global("VCKSS_MEMORY_ADVISORY")!="1" & forecast_peak > solver_memory_bytes) {
         out.estimator = vckss__failure(
             "SOLVER_MEMORY_LIMIT",
             "solver forecast exceeds its direct memory budget")

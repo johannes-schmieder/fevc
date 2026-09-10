@@ -19,6 +19,7 @@ pub const ENGINE_NUMERIC_COLUMNS: u64 = 6;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct PreparationMemoryReceipt {
+    pub budget: vckss_core::memory::MemoryBudget,
     pub hard_limit_bytes: u64,
     pub caller_copy_bytes: u64,
     pub preparation_peak_forecast_bytes: u64,
@@ -27,6 +28,7 @@ pub struct PreparationMemoryReceipt {
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct StayerAugmentationMemoryReceipt {
+    pub budget: vckss_core::memory::MemoryBudget,
     pub hard_limit_bytes: u64,
     pub caller_copy_bytes: u64,
     pub augmentation_peak_forecast_bytes: u64,
@@ -138,6 +140,7 @@ pub fn admit_prepare_memory(
         ));
     }
     Ok(PreparationMemoryReceipt {
+        budget: vckss_core::memory::MemoryBudget::Legacy,
         hard_limit_bytes,
         caller_copy_bytes,
         preparation_peak_forecast_bytes,
@@ -185,10 +188,28 @@ pub fn admit_prepare_memory_with_controls_probe_order_and_implicit_match(
     hard_limit_bytes: u64,
     caller_copy_bytes: u64,
 ) -> Result<PreparationMemoryReceipt> {
-    if controls == 0 && !probeorder_supplied && !implicit_match {
-        return admit_prepare_memory(rows, hard_limit_bytes, caller_copy_bytes);
-    }
-    if rows == 0 || hard_limit_bytes == 0 {
+    admit_prepare_memory_with_budget(
+        rows,
+        controls,
+        probeorder_supplied,
+        implicit_match,
+        hard_limit_bytes,
+        caller_copy_bytes,
+        vckss_core::memory::MemoryBudget::Legacy,
+    )
+}
+
+pub fn admit_prepare_memory_with_budget(
+    rows: u64,
+    controls: u32,
+    probeorder_supplied: bool,
+    implicit_match: bool,
+    hard_limit_bytes: u64,
+    caller_copy_bytes: u64,
+    budget: vckss_core::memory::MemoryBudget,
+) -> Result<PreparationMemoryReceipt> {
+    budget.validate(hard_limit_bytes)?;
+    if rows == 0 {
         return Err(vckss_core::error::BackendError::invalid(
             "engine_memory",
             "row count and whole-command memory limit must be positive",
@@ -239,7 +260,16 @@ pub fn admit_prepare_memory_with_controls_probe_order_and_implicit_match(
     let preparation_peak_forecast_bytes = caller_copy_bytes
         .checked_add(rust_prepare_bytes)
         .ok_or_else(|| memory_error("simultaneous C/Rust preparation peak overflow"))?;
-    if preparation_peak_forecast_bytes > hard_limit_bytes {
+    // New callers get the exact observed preparation peak after this stage.
+    // Before copying, reject only the unavoidable simultaneous C/Rust columns.
+    let admission = if budget == vckss_core::memory::MemoryBudget::Legacy {
+        preparation_peak_forecast_bytes
+    } else {
+        caller_copy_bytes
+            .checked_mul(2)
+            .ok_or_else(|| memory_error("input copies overflow"))?
+    };
+    if budget.rejects(admission, hard_limit_bytes) {
         return Err(vckss_core::error::BackendError::new(
             vckss_core::error::ErrorCode::ResourceLimit,
             "engine_memory",
@@ -249,6 +279,7 @@ pub fn admit_prepare_memory_with_controls_probe_order_and_implicit_match(
         ));
     }
     Ok(PreparationMemoryReceipt {
+        budget,
         hard_limit_bytes,
         caller_copy_bytes,
         preparation_peak_forecast_bytes,
@@ -264,7 +295,28 @@ pub fn admit_stayer_augmentation_memory(
     prepared_resident_bytes: u64,
     caller_copy_bytes: u64,
 ) -> Result<StayerAugmentationMemoryReceipt> {
-    if mover_rows == 0 || hard_limit_bytes == 0 || prepared_resident_bytes == 0 {
+    admit_stayer_augmentation_memory_with_budget(
+        mover_rows,
+        stayer_rows,
+        controls,
+        hard_limit_bytes,
+        prepared_resident_bytes,
+        caller_copy_bytes,
+        vckss_core::memory::MemoryBudget::Legacy,
+    )
+}
+
+pub fn admit_stayer_augmentation_memory_with_budget(
+    mover_rows: u64,
+    stayer_rows: u64,
+    controls: u32,
+    hard_limit_bytes: u64,
+    prepared_resident_bytes: u64,
+    caller_copy_bytes: u64,
+    budget: vckss_core::memory::MemoryBudget,
+) -> Result<StayerAugmentationMemoryReceipt> {
+    budget.validate(hard_limit_bytes)?;
+    if mover_rows == 0 || prepared_resident_bytes == 0 {
         return Err(vckss_core::error::BackendError::invalid(
             "stayer_augmentation_memory",
             "mover rows, memory limit, and prepared resident bytes must be positive",
@@ -301,7 +353,7 @@ pub fn admit_stayer_augmentation_memory(
         .checked_add(caller_copy_bytes)
         .and_then(|value| value.checked_add(rust_build_bytes))
         .ok_or_else(|| memory_error("stayer augmentation peak overflow"))?;
-    if augmentation_peak_forecast_bytes > hard_limit_bytes {
+    if budget.rejects(augmentation_peak_forecast_bytes, hard_limit_bytes) {
         return Err(vckss_core::error::BackendError::new(
             vckss_core::error::ErrorCode::ResourceLimit,
             "stayer_augmentation_memory",
@@ -311,6 +363,7 @@ pub fn admit_stayer_augmentation_memory(
         ));
     }
     Ok(StayerAugmentationMemoryReceipt {
+        budget,
         hard_limit_bytes,
         caller_copy_bytes,
         augmentation_peak_forecast_bytes,

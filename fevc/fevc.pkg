@@ -41,3 +41,4 @@ f _fevc_rust_component_fetch.ado
 f _fevc_rust_component_post.ado
 f _fevc_failure_guidance.ado
 f fevc.sthlp
+f _fevc_memory_options.ado

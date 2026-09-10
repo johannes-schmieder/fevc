@@ -1,5 +1,48 @@
 # Pending changes
 
+## Control preparation with 256 lanes — 2026-09-10
+
+- Register the owner AKM example in the manual inventory, restore the frozen
+  historical README bytes, and regenerate parity wording from its JSON source.
+- Increase only Mata's compensated control-product block to 256 lanes; retain
+  the error coefficient, estimator, tolerances, selection and native arithmetic.
+- Price control preparation before allocation and in the generic solver's
+  overlapping resource forecast. Advance the Mata runtime to API 24 and the
+  resource runtime to API 12 so older loaded implementations are rejected.
+- Preserve real control-preparation UserBreak as return code 1, clear estimates
+  and run ordinary caller-state cleanup; do not report a runtime mismatch.
+  Preserve the captured ordinary exact-Mata return code as well as JLA's.
+- The [follow-up validation](docs/CONTROL_LANES_256_2026-09-10.md) records
+  passing audits, arithmetic/invariance/lifecycle/memory gates, integrated
+  Stata checks, Rosetta coverage and measured 64/256-lane comparisons.
+
+## Certified control basis — 2026-09-10
+
+- Certify the selected anchor and its predecessors while preserving the global
+  maximum, semantic order, eligibility rule and all numerical gates.
+- Retain Rust Neumaier sums; add compensated Mata canonical cross products and
+  explicit product, second-order summation and underflow error bounds.
+- Preserve control-Gram inverse failures as public control-basis ambiguity with
+  measured cause detail; add specific troubleshooting and independent oracles.
+- Advance only Mata runtime identity to API 23,
+  `vckss-api23-certified-control-basis`; command and native layouts are unchanged.
+- Validate the original 50,000-row AKM example through Mata, Rust and automatic
+  routing, with local arm64/Rosetta qualification. The
+  [checkpoint report](docs/CONTROL_BASIS_REPAIR_2026-09-10.md) records unrelated
+  aggregate-audit failures and remaining large-control Mata performance cost.
+
+
+## Optional memory budgets and measured preparation — 2026-09-10
+
+- Remove the public 4-GiB default. Omission forecasts without memory-based
+  execution changes; explicit budgets default to warning and support error/off.
+- Refine CMG forecasts from the constructed solver and selected phase batches;
+  separate expected allocations from conditional refinement reserve.
+- Measure Rust preparation allocations, remove duplicate/wrong-solver CMG
+  charges, and remove fixed historical RSS allowances from public Mata forecasts.
+- Add versioned native policy/forecast transport and bump changed Mata runtime
+  identities. Legacy native entrypoints keep their strict numeric behavior.
+
 ## Direct residual Gram candidate — 2026-09-08
 
 - Use half the centered residual-probe moment covariance for the current Gram

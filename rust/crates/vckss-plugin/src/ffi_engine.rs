@@ -50,6 +50,10 @@ use vckss_core::exact_estimator::{
     run_exact_stayer_hybrid_with_interrupt, ExactEstimatorOptions, ExactEstimatorResult,
     ExactExecutionReceipt, ExactStayerHybridResult, PlannedExactEstimatorOptions,
 };
+use vckss_core::memory::{MemoryBudget, MemoryCheck};
+#[path = "memory_api.rs"]
+mod memory_api;
+pub use memory_api::*;
 use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
@@ -81,12 +85,10 @@ use vckss_core::ABI_VERSION;
 use crate::context::{ContextHandle, ContextPayloadRef, ContextRegistry, ContextStateTag};
 use crate::session::{
     admit_prepare_memory, admit_prepare_memory_with_controls_and_probe_order,
-    admit_prepare_memory_with_controls_probe_order_and_implicit_match,
-    admit_stayer_augmentation_memory, PreparationMemoryReceipt, PreparationReceipt,
-    StayerAugmentationMemoryReceipt,
+    PreparationMemoryReceipt, PreparationReceipt, StayerAugmentationMemoryReceipt,
 };
 use crate::session_retained::{
-    bit_packed_capacity_bytes, duration_ns, NativePhaseTimings, PreparedProblemWithMask,
+    duration_ns, retained_mask_capacity_bytes, NativePhaseTimings, PreparedProblemWithMask,
 };
 
 pub const VCKSS_DELETION_MATCH: u32 = 1;
@@ -3338,6 +3340,9 @@ fn prepare_columns_value(
         ));
     }
     let rows = to_usize(request.rows, "engine_prepare", "row count")?;
+    clear_abandoned_before_replacement(request.cleanup_abandoned)?;
+    let measured = (memory.budget != MemoryBudget::Legacy)
+        .then(crate::allocation_meter::PreparationPeak::begin);
     let ingest_start = Instant::now();
     let probe_order = if columns.probeorder_supplied == 1 {
         Some(copy_finite_column(
@@ -3355,7 +3360,6 @@ fn prepare_columns_value(
         }
         None
     };
-    clear_abandoned_before_replacement(request.cleanup_abandoned)?;
     let input = copy_columns_v2_with_identifier_mode_and_interrupt(
         &columns.v2,
         rows,
@@ -3372,6 +3376,25 @@ fn prepare_columns_value(
             memory,
             interrupt,
         )?;
+    if let Some(measured) = measured {
+        let peak = measured
+            .bytes()
+            .checked_add(memory.caller_copy_bytes)
+            .and_then(|bytes| bytes.checked_add(request.rows))
+            .ok_or_else(|| {
+                resource_error("engine_prepare", "measured preparation peak overflow")
+            })?;
+        // The C mask export follows preparation while retained Rust state lives.
+        let peak = peak.max(
+            memory.caller_copy_bytes
+                + prepared.receipt.memory.prepared_resident_bytes
+                + request.rows,
+        );
+        memory
+            .budget
+            .admit(peak, memory.hard_limit_bytes, "engine_prepare_measured")?;
+        prepared.receipt.memory.preparation_peak_forecast_bytes = peak;
+    }
     prepared.performance.ingest_ns = ingest_ns;
     interrupt.checkpoint("engine_prepare_final")?;
 
@@ -3884,13 +3907,14 @@ fn augment_stayers_value(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_stayer_augmentation")?;
     state.registry.augment_prepared(handle, |prepared| {
-        let memory = admit_stayer_augmentation_memory(
+        let memory = crate::session::admit_stayer_augmentation_memory_with_budget(
             prepared.receipt.retained_rows,
             request.rows,
             request.controls_count,
             prepared.receipt.memory.hard_limit_bytes,
             prepared.receipt.memory.prepared_resident_bytes,
             request.caller_copy_bytes,
+            prepared.receipt.memory.budget,
         )?;
         prepared.augment_stayers_with_memory_and_interrupt(input, memory, interrupt)
     })
@@ -4474,7 +4498,9 @@ fn solve_engine_v4(
                 "retained physical mass exceeds physical_limit()",
             ));
         }
-        let memory_limit_bytes = if prepared.receipt.memory.hard_limit_bytes == 0 {
+        let memory_limit_bytes = if prepared.receipt.memory.budget == MemoryBudget::Legacy
+            && prepared.receipt.memory.hard_limit_bytes == 0
+        {
             u64::MAX
         } else {
             prepared.receipt.memory.hard_limit_bytes
@@ -4504,8 +4530,11 @@ fn solve_engine_v4(
             )
         });
         let retained_mask_bytes = to_u64(
-            bit_packed_capacity_bytes(prepared.retained.capacity()),
-            "bit-packed retained-mask capacity",
+            retained_mask_capacity_bytes(
+                prepared.retained.capacity(),
+                prepared.receipt.memory.budget,
+            ),
+            "retained-mask capacity",
         )?;
         let solve_start = Instant::now();
         let (result, execution_plan, leverage_active, target_active, stayer_hybrid, full_cmg) =
@@ -4523,6 +4552,7 @@ fn solve_engine_v4(
                         ));
                     }
                     let exact_options = ExactEstimatorOptions {
+                        memory_budget: prepared.receipt.memory.budget,
                         deletion,
                         nuisance,
                         rank_tolerance: request.v3.v2.v1.rank_tolerance,
@@ -4577,6 +4607,7 @@ fn solve_engine_v4(
                         estimator_request.target_batch_width = 1;
                     }
                     let mut estimator = options_from_request(estimator_request)?;
+                    estimator.memory_budget = prepared.receipt.memory.budget;
                     apply_prepared_memory_admission(
                         &mut estimator,
                         memory_limit_bytes,
@@ -4635,6 +4666,7 @@ fn solve_engine_v4(
                         plan_problem,
                         GenericJlaExecutionOptions {
                             estimator: GenericJlaOptions {
+                                memory_budget: prepared.receipt.memory.budget,
                                 seed: request.v3.v2.v1.seed,
                                 probes: request.v3.v2.v1.probes,
                                 leverage_batch_width: 1,
@@ -4859,7 +4891,7 @@ fn solve_engine_v3(
                 "retained physical mass exceeds physical_limit()",
             ));
         }
-        let memory_limit_bytes = if prepared.receipt.memory.hard_limit_bytes == 0 {
+        let memory_limit_bytes = if prepared.receipt.memory.budget == MemoryBudget::Legacy && prepared.receipt.memory.hard_limit_bytes == 0 {
             u64::MAX
         } else {
             prepared.receipt.memory.hard_limit_bytes
@@ -4867,13 +4899,14 @@ fn solve_engine_v3(
         let (_, rhs_export_bytes) =
             generic_rhs_export_memory(controls_count, request.v2.v1.probes, nuisance, 0)?;
         let retained_mask_bytes = to_u64(
-            bit_packed_capacity_bytes(prepared.retained.capacity()),
-            "bit-packed retained-mask capacity",
+            retained_mask_capacity_bytes(prepared.retained.capacity(), prepared.receipt.memory.budget),
+            "retained-mask capacity",
         )?;
         let solve_start = Instant::now();
         let result = run_generic_jla_with_interrupt(
             &prepared.problem,
             GenericJlaOptions {
+            memory_budget: prepared.receipt.memory.budget,
                 seed: request.v2.v1.seed,
                 probes: request.v2.v1.probes,
                 leverage_batch_width: usize::try_from(request.v2.v1.leverage_batch_width).map_err(
@@ -5016,6 +5049,7 @@ fn solve_engine_v2(
             let exact = run_exact_estimator_with_interrupt(
                 &prepared.problem,
                 ExactEstimatorOptions {
+                    memory_budget: prepared.receipt.memory.budget,
                     deletion: prepared.deletion,
                     nuisance,
                     rank_tolerance: request.v1.rank_tolerance,
@@ -5023,7 +5057,9 @@ fn solve_engine_v2(
                     solver_tolerance: request.v1.pcg_tolerance,
                     exact_limit,
                     blocksize_limit,
-                    memory_limit_bytes: if prepared.receipt.memory.hard_limit_bytes == 0 {
+                    memory_limit_bytes: if prepared.receipt.memory.budget == MemoryBudget::Legacy
+                        && prepared.receipt.memory.hard_limit_bytes == 0
+                    {
                         u64::MAX
                     } else {
                         prepared.receipt.memory.hard_limit_bytes
@@ -5042,7 +5078,10 @@ fn solve_engine_v2(
                 ));
             }
             let mut options = options_from_request(request.v1)?;
-            if prepared.receipt.memory.hard_limit_bytes != 0 {
+            options.memory_budget = prepared.receipt.memory.budget;
+            if prepared.receipt.memory.budget != MemoryBudget::Legacy
+                || prepared.receipt.memory.hard_limit_bytes != 0
+            {
                 options.memory_limit_bytes = prepared.receipt.memory.hard_limit_bytes;
                 options.prepared_persistent_bytes = prepared.receipt.memory.prepared_resident_bytes;
             }
@@ -5123,7 +5162,10 @@ fn solve_engine(
             resource_error("engine_solve", "control count is not representable as u32")
         })?;
         let mut admitted_options = options;
-        if prepared.receipt.memory.hard_limit_bytes != 0 {
+        admitted_options.memory_budget = prepared.receipt.memory.budget;
+        if prepared.receipt.memory.budget != MemoryBudget::Legacy
+            || prepared.receipt.memory.hard_limit_bytes != 0
+        {
             admitted_options.memory_limit_bytes = prepared.receipt.memory.hard_limit_bytes;
             admitted_options.prepared_persistent_bytes =
                 prepared.receipt.memory.prepared_resident_bytes;
@@ -5135,7 +5177,9 @@ fn solve_engine(
             admitted_options.prepared_persistent_bytes = 0;
         }
         let solve_start = Instant::now();
-        let result = if prepared.receipt.memory.hard_limit_bytes == 0 {
+        let result = if prepared.receipt.memory.budget == MemoryBudget::Legacy
+            && prepared.receipt.memory.hard_limit_bytes == 0
+        {
             run_jla_no_controls_with_interrupt(&prepared.problem, admitted_options, interrupt)?
         } else {
             let plan = prepared.plan.as_ref().ok_or_else(|| {
@@ -6331,6 +6375,7 @@ fn options_from_request(request: VckssEngineSolveRequestV1) -> Result<JlaEngineO
         allow_automatic_cmg_setup_fallback: request.allow_automatic_cmg_setup_fallback == 1,
         pcg,
         cmg: CmgOptions {
+            memory_budget: vckss_core::memory::MemoryBudget::Legacy,
             terminal_vertices: to_usize(
                 request.cmg_terminal_vertices,
                 "engine_solve",
@@ -6362,6 +6407,9 @@ fn options_from_request(request: VckssEngineSolveRequestV1) -> Result<JlaEngineO
         full_residual_tolerance: (10.0 * request.pcg_tolerance).max(1.0e-11),
     };
     Ok(JlaEngineOptions {
+        embedded_cmg_memory: None,
+        full_cmg_setup: None,
+        memory_budget: vckss_core::memory::MemoryBudget::Legacy,
         seed: request.seed,
         probes: request.probes,
         leverage_batch_width: usize::try_from(request.leverage_batch_width)
@@ -6438,6 +6486,14 @@ fn validate_prepare_request_v4(
     request: VckssEnginePrepareRequestV4,
     probeorder_supplied: bool,
 ) -> Result<(DeletionMode, bool, PreparationMemoryReceipt)> {
+    validate_prepare_request_v4_with_budget(request, probeorder_supplied, MemoryBudget::Legacy)
+}
+
+fn validate_prepare_request_v4_with_budget(
+    request: VckssEnginePrepareRequestV4,
+    probeorder_supplied: bool,
+    budget: MemoryBudget,
+) -> Result<(DeletionMode, bool, PreparationMemoryReceipt)> {
     require_abi(request.v3.v2.abi_version)?;
     if request.v3.v2.struct_size < struct_size_u32::<VckssEnginePrepareRequestV4>()? {
         return Err(abi_error(
@@ -6472,13 +6528,14 @@ fn validate_prepare_request_v4(
             "implicit-match preparation requires match deletion, no controls, and an explicit probe order",
         ));
     }
-    let memory = admit_prepare_memory_with_controls_probe_order_and_implicit_match(
+    let memory = crate::session::admit_prepare_memory_with_budget(
         request.v3.v2.rows,
         request.v3.controls_count,
         probeorder_supplied,
         implicit_match,
         request.v3.v2.memory_limit_bytes,
         request.v3.v2.caller_copy_bytes,
+        budget,
     )?;
     Ok((deletion, implicit_match, memory))
 }
@@ -7061,8 +7118,8 @@ fn detailed_receipt_v6(
         projection_columns,
     )?;
     let expected_mask_bytes = to_u64(
-        bit_packed_capacity_bytes(solved.retained.capacity()),
-        "bit-packed retained-mask capacity",
+        retained_mask_capacity_bytes(solved.retained.capacity(), solved.preparation.memory.budget),
+        "retained-mask capacity",
     )?;
     if rhs_rows != expected_rows
         || receipt.rhs_export_bytes != expected_export_bytes
@@ -7425,7 +7482,9 @@ fn batch_phase_receipt(
     Ok(VckssBatchPhasePlanReceiptV1 {
         request_mode,
         selection_reason: match receipt.reason {
-            BatchSelectionReason::LargestAdmissibleCandidate => VCKSS_BATCH_SELECTION_AUTO,
+            BatchSelectionReason::LargestAdmissibleCandidate
+            | BatchSelectionReason::NoBudgetPerformanceChoice
+            | BatchSelectionReason::MinimumMemoryOverBudget => VCKSS_BATCH_SELECTION_AUTO,
             BatchSelectionReason::ExplicitWidth => VCKSS_BATCH_SELECTION_EXPLICIT,
         },
         applicability,
@@ -9452,6 +9511,7 @@ fn model_routing_from_request(request: VckssEngineSolveRequestV1) -> Result<Mode
             rank_tolerance: request.rank_tolerance,
         },
         cmg: CmgOptions {
+            memory_budget: vckss_core::memory::MemoryBudget::Legacy,
             terminal_vertices: to_usize(
                 request.cmg_terminal_vertices,
                 "engine_solve",

@@ -195,7 +195,7 @@ local cmg_rng_before `"`c(rngstate)'"'
 capture noisily fevc y c1 [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic)          ///
     backend(rust) rng(counter_v1) preconditioner(cmg)             ///
-    batch(8) probes(600) tolerance(1e-12) memory_gib(.00001)     ///
+    batch(8) probes(600) tolerance(1e-12) memory_gib(.00001) memorycheck(error)     ///
     project(z) projecteffect(firm) projectweight(frequency) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',                         ///
@@ -209,7 +209,7 @@ local weighted_rng_before `"`c(rngstate)'"'
 capture noisily fevc y c1 [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic)          ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)        ///
-    batch(8) probes(600) tolerance(1e-12) memory_gib(.00001)     ///
+    batch(8) probes(600) tolerance(1e-12) memory_gib(.00001) memorycheck(error)     ///
     project(z) projecteffect(firm) projectweight(frequency) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',                         ///

@@ -13,12 +13,12 @@ string scalar vckss__version()
 
 real scalar vckss__api_level()
 {
-    return(21)
+    return(24)
 }
 
 string scalar vckss__build_id()
 {
-    return("vckss-api21-stayer-hybrid")
+    return("vckss-api24-control-lanes256")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -469,6 +469,158 @@ struct vckss_maker_result scalar vckss__low_rank_maker(
     return(out)
 }
 
+// Outward inflation for short positive bound expressions (<=16 operations).
+// The additive minimum subnormal also rounds subnormal bounds outward.
+real scalar vckss__control_bound_up(real scalar value)
+{
+    return(value*(1+64*2.2204460492503131e-16)+4.9406564584124654e-324)
+}
+
+struct vckss_control_product
+{
+    real matrix values
+    real matrix errors
+}
+
+void vckss__control_sum_step(real matrix total, real matrix correction,
+    real matrix term)
+{
+    real matrix next, recovered
+
+    // TwoSum obtains the same exact residual as magnitude-ordered FastTwoSum
+    // without allocating comparison masks for every element. Correction
+    // accumulation and final rounding remain Neumaier compensated arithmetic.
+    next = total+term
+    recovered = next-total
+    correction = correction + ((total-(next-recovered))+(term-recovered))
+    total = next
+}
+
+// Control preparation includes six row-by-control slots and a conservative
+// live-temporary bound for the four lane accumulators, products and TwoSum.
+// Keep this count aligned with vckss_resource__control_bytes(): the latter
+// prices overlap with the already prepared generic solver.
+real scalar vckss__control_prep_bytes(real scalar n, real scalar q)
+{
+    if (q == 0) return(0)
+    return(8*(n*(24+6*q)+(16*min((256,n))+128)*q^2+
+        8*min((256,n))*q))
+}
+
+real scalar vckss__control_memory_check(real scalar n, real scalar q)
+{
+    real scalar forecast, previous
+
+    if (st_global("VCKSS_MEMORY_ACTIVE")!="1") return(1)
+    forecast = vckss__control_prep_bytes(n,q)
+    previous = strtoreal(st_global("VCKSS_MEMORY_FORECAST"))
+    st_global("VCKSS_MEMORY_FORECAST",strofreal(max((previous,forecast)),"%21.0f"))
+    return(st_global("VCKSS_MEMORY_ADVISORY")=="1" |
+        forecast <= strtoreal(st_global("VCKSS_MEMORY_BYTES")))
+}
+
+// Fixed 256 x Q^2 scratch bounds memory. The two multiplications and the
+// compensated summation certificate match Rust; ordinary matrix products cannot retain deep
+// cancellation. Mata's break handling remains active in this bounded loop.
+struct vckss_control_product scalar vckss__control_cross(
+    real matrix left, real matrix right, real colvector frequency)
+{
+    struct vckss_control_product scalar out
+    real matrix total, correction, absolute, absolute_correction, term
+    real matrix value, value_correction, magnitude_sum, magnitude_correction
+    real scalar row, column, q, rho, products, coefficient, underflow, magnitude
+    real scalar lanes, first, last, count, lane
+
+    q = cols(left)
+    out.values = out.errors = J(q,q,.)
+    if (rows(left) != rows(right) | cols(right) != q |
+        rows(frequency) != rows(left) |
+        missing(vckss__exact_physical_total(frequency))) return(out)
+    rho = vckss__control_bound_up(2.2204460492503131e-16 +
+        vckss__rounding_gamma(4*rows(left))^2)
+    products = vckss__control_bound_up(vckss__rounding_gamma(2))
+    if (missing(rho) | rho >= .25) return(out)
+    coefficient = vckss__control_bound_up(rho+products/(1-products))
+    underflow = vckss__control_bound_up(rows(left)*4.9406564584124654e-324/(1-products))
+    // Independent compensated lanes over all Q^2 entries amortize the
+    // interpreter without rounding intermediate lane results. The fixed
+    // 256 x Q^2 scratch is independent of the observation count.
+    lanes = min((256,rows(left)))
+    total = correction = absolute = absolute_correction = J(lanes,q*q,0)
+    for (first=1; first<=rows(left); first=first+lanes) {
+        last = min((rows(left),first+lanes-1))
+        count = last-first+1
+        term = J(lanes,q*q,0)
+        term[|1,1 \ count,q*q|] =
+            ((frequency[|first\last|]:*left[|first,1\last,q|]) # J(1,q,1)) :*
+                (J(1,q,1) # right[|first,1\last,q|])
+        if (hasmissing(term)) return(out)
+        vckss__control_sum_step(total,correction,term)
+        term = abs(term)
+        vckss__control_sum_step(absolute,absolute_correction,term)
+    }
+    value = value_correction = magnitude_sum = magnitude_correction = J(1,q*q,0)
+    for (lane=1; lane<=lanes; lane++) {
+        vckss__control_sum_step(value,value_correction,total[lane,.])
+        vckss__control_sum_step(value,value_correction,correction[lane,.])
+        vckss__control_sum_step(magnitude_sum,magnitude_correction,absolute[lane,.])
+        vckss__control_sum_step(magnitude_sum,magnitude_correction,absolute_correction[lane,.])
+    }
+    out.values = rowshape(value+value_correction,q)
+    for (row=1; row<=q; row++) {
+        for (column=1; column<=q; column++) {
+            magnitude = vckss__control_bound_up(
+                (magnitude_sum[(row-1)*q+column]+magnitude_correction[(row-1)*q+column])/(1-rho))
+            out.errors[row,column] = vckss__control_bound_up(coefficient*magnitude+underflow)
+        }
+    }
+    if (hasmissing(out.values) | hasmissing(out.errors)) {
+        out.values = out.errors = J(q,q,.)
+    }
+    return(out)
+}
+
+real scalar vckss__control_product_error(struct vckss_control_product scalar product)
+{
+    return(vckss__control_bound_up(cols(product.values)*max(product.errors)))
+}
+
+real scalar vckss__control_gram_error(
+    struct vckss_control_product scalar product, real scalar rcond)
+{
+    real scalar a, b, q, norm, row_sum, error
+
+    q = cols(product.values)
+    norm = 0
+    for (a=1; a<=q; a++) {
+        row_sum = 0
+        for (b=1; b<=q; b++) {
+            error = max((product.errors[a,b],product.errors[b,a]))
+            row_sum = vckss__control_bound_up(row_sum +
+                vckss__control_bound_up(
+                    vckss__control_bound_up(error/sqrt(product.values[a,a])) /
+                    sqrt(product.values[b,b])))
+        }
+        norm = max((norm,row_sum))
+    }
+    return(vckss__control_bound_up(2*norm/rcond))
+}
+
+real scalar vckss__control_anchor(real colvector score,
+    real scalar cutoff, real scalar uncertainty)
+{
+    real colvector eligible
+    real scalar chosen
+
+    eligible = selectindex(score :> cutoff)
+    if (length(eligible) == 0) return(.)
+    chosen = eligible[1]
+    // All rows determine the supplied cutoff; only this prefix can change
+    // the first eligible anchor. Equality remains uncertifiable.
+    if (sum(abs(score[1..chosen]:-cutoff) :<= uncertainty) > 0) return(0)
+    return(chosen)
+}
+
 struct vckss_control_basis_result
 {
     string scalar status
@@ -485,13 +637,14 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
 {
     struct vckss_control_basis_result scalar out
     struct vckss_inverse_result scalar gram_inverse, anchor_inverse
+    struct vckss_control_product scalar gram_product, checked_product
     real scalar n, control_count, pivot, chosen, maximum, margin
     real scalar whitening_error, anchor_error, cutoff, uncertainty
     real scalar numerical_error, summation_error, inverse_forward_error
     real scalar cholesky_error, basis_product_error, score_error
     real scalar anchor_forward_error, product_error, canonical_error
     real scalar projection_error, selected_zero_error, span_error
-    real colvector selected, score, eligible, boundary
+    real colvector selected, score
     real matrix gram, whitener, orthonormal, checked
     real matrix anchor, anchor_gram, residualized, projector
 
@@ -519,23 +672,43 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
         return(out)
     }
 
+    if (!vckss__control_memory_check(n,control_count)) {
+        out.status = "RESOURCE_LIMIT"
+        out.message = "control preparation allocation forecast exceeds memory_gib()"
+        return(out)
+    }
+
     // First form an arbitrary weighted-orthonormal basis for the requested
     // control span.  Any invertible input-basis transformation changes this
     // basis only by an orthogonal rotation in exact arithmetic.
-    gram = controls' * (frequency :* controls)
+    gram_product = vckss__control_cross(controls,controls,frequency)
+    gram = gram_product.values
+    if (hasmissing(gram) | hasmissing(gram_product.errors)) {
+        out.status = "AMBIGUOUS_CONTROL_BASIS"
+        out.message = "nonfinite compensated weighted control product or certificate"
+        return(out)
+    }
     gram_inverse = vckss__inverse(gram,rank_tolerance)
     if (gram_inverse.status != "CONVERGED") {
         out.message = "requested controls are singular before FE absorption"
+        if (gram_inverse.status == "INVERSE_RESIDUAL_FAILED") {
+            out.status = "AMBIGUOUS_CONTROL_BASIS"
+            out.message = sprintf("INVERSE_RESIDUAL_FAILED [control_basis_gram]: residual=%21.17e, gate=%21.17e",
+                gram_inverse.relres,max((1e-10,100*rank_tolerance)))
+        }
         return(out)
     }
+    summation_error = vckss__control_gram_error(gram_product,gram_inverse.rcond)
     whitener = cholesky(gram_inverse.inverse)
     if (hasmissing(whitener)) {
         out.message = "control-span whitening failed"
         return(out)
     }
     orthonormal = controls * whitener
-    checked = orthonormal' * (frequency :* orthonormal)
-    whitening_error = vckss__norm2(checked-I(control_count))
+    checked_product = vckss__control_cross(orthonormal,orthonormal,frequency)
+    checked = checked_product.values
+    whitening_error = vckss__control_bound_up(vckss__norm2(checked-I(control_count)) +
+        vckss__control_product_error(checked_product))
     margin = max((1e-10,1000*rank_tolerance))
     if (hasmissing(orthonormal) | hasmissing(whitening_error) |
         whitening_error > margin) {
@@ -548,8 +721,6 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
     // column residual to an operator residual and then uses the denominator
     // in the inverse-perturbation inequality.  The public k<=32 range keeps
     // these bounds finite and explicit.
-    summation_error = control_count * vckss__rounding_gamma(2*n) /
-        gram_inverse.rcond
     cholesky_error = control_count *
         vckss__rounding_gamma(2*control_count+1) /
         gram_inverse.rcond
@@ -557,14 +728,14 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
         (1+1/gram_inverse.rcond)
     inverse_forward_error = vckss__inverse_forward_error(
         gram_inverse.relres,gram_inverse.rcond,control_count)
-    numerical_error = whitening_error + summation_error + cholesky_error +
-        basis_product_error + inverse_forward_error
+    numerical_error = vckss__control_bound_up(whitening_error + summation_error +
+        cholesky_error + basis_product_error + inverse_forward_error)
     if (hasmissing(numerical_error) | numerical_error >= 0.25) {
         out.status = "AMBIGUOUS_CONTROL_BASIS"
         out.message = "control-span whitening error has no certified forward bound"
         return(out)
     }
-    numerical_error = numerical_error/(1-numerical_error)
+    numerical_error = vckss__control_bound_up(numerical_error/(1-numerical_error))
     score_error = 2*numerical_error +
         vckss__rounding_gamma(2*control_count) *
         (1+numerical_error)^2
@@ -572,7 +743,7 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
     // parameterizations, the computed maximum used by the cutoff, and the
     // final subtraction/comparison rounding.  The 1e-12 floor preserves the
     // registered exact-boundary fail-closed behavior.
-    uncertainty = max((1e-12,4*score_error))
+    uncertainty = max((1e-12,vckss__control_bound_up(4*score_error)))
     if (uncertainty >= margin/4) {
         out.status = "AMBIGUOUS_CONTROL_BASIS"
         out.message = "control-span whitening error is too large to certify a canonical anchor"
@@ -596,18 +767,16 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
             return(out)
         }
         cutoff = maximum-margin*max((1,maximum))
-        boundary = selectindex(abs(score:-cutoff) :<= uncertainty)
-        if (rows(boundary) > 0) {
+        chosen = vckss__control_anchor(score,cutoff,uncertainty)
+        if (chosen == 0) {
             out.status = "AMBIGUOUS_CONTROL_BASIS"
             out.message = "control-span anchor score is numerically ambiguous at the canonical tie boundary"
             return(out)
         }
-        eligible = selectindex(score :> cutoff)
-        if (rows(eligible) == 0) {
+        if (missing(chosen)) {
             out.message = "control-span anchor selection failed"
             return(out)
         }
-        chosen = eligible[1]
         selected[pivot] = chosen
         anchor = orthonormal[selected[1..pivot],.]
         anchor_gram = anchor * anchor'
@@ -626,8 +795,8 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
         residualized = orthonormal-orthonormal*projector
         selected_zero_error = vckss__norm2(
             residualized[selected[1..pivot],.])
-        numerical_error = numerical_error + anchor_forward_error +
-            product_error + projection_error + selected_zero_error
+        numerical_error = vckss__control_bound_up(numerical_error + anchor_forward_error +
+            product_error + projection_error + selected_zero_error)
         if (hasmissing(numerical_error) | numerical_error >= 0.25) {
             out.status = "AMBIGUOUS_CONTROL_BASIS"
             out.message = "control-span anchor update has no certified forward bound"
@@ -636,7 +805,7 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
         score_error = 2*numerical_error +
             vckss__rounding_gamma(2*control_count) *
             (1+numerical_error)^2
-        uncertainty = max((1e-12,4*score_error))
+        uncertainty = max((1e-12,vckss__control_bound_up(4*score_error)))
         if (uncertainty >= margin/4) {
             out.status = "AMBIGUOUS_CONTROL_BASIS"
             out.message = "control-span anchor error is too large to certify a canonical basis"
@@ -652,16 +821,18 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
     }
     out.controls = orthonormal * anchor' * anchor_inverse.inverse
     anchor_error = vckss__norm2(out.controls[selected,.]-I(control_count))
-    checked = orthonormal' * (frequency :* out.controls)
-    span_error = vckss__norm2(out.controls-orthonormal*checked) /
-        max((1,vckss__norm2(out.controls)))
+    checked_product = vckss__control_cross(orthonormal,out.controls,frequency)
+    checked = checked_product.values
+    span_error = vckss__control_bound_up((vckss__norm2(out.controls-orthonormal*checked) +
+        vckss__control_product_error(checked_product)*sqrt(control_count*(1+whitening_error))) /
+        max((1,vckss__norm2(out.controls))))
     anchor_forward_error = vckss__inverse_forward_error(
         anchor_inverse.relres,anchor_inverse.rcond,control_count)
     product_error = vckss__rounding_gamma(8*control_count) *
         (1+control_count/max((anchor_inverse.rcond,rank_tolerance)))
     canonical_error = anchor_error + span_error + anchor_forward_error +
         product_error
-    numerical_error = numerical_error+canonical_error
+    numerical_error = vckss__control_bound_up(numerical_error+canonical_error)
     if (hasmissing(out.controls) | hasmissing(anchor_error) |
         hasmissing(span_error) | hasmissing(numerical_error) |
         numerical_error >= 0.25 |
@@ -766,6 +937,22 @@ real colvector vckss__target_diagonal(
     return(rowsum((design_inverse * target) :* design_inverse))
 }
 
+// Dense exact phases have no batch knob. Price the material matrices before
+// constructing the design; the largest realized deletion block is known here.
+real scalar vckss__exact_memory_check(real scalar n, real scalar p,
+    real scalar q, real scalar block)
+{
+    real scalar forecast, limit, previous
+
+    forecast = 8*(3*n*p + 14*p^2 + 3*block*p + 6*min((block,p))^2 +
+        n*(24+4*q) + 16*p)
+    if (st_global("VCKSS_MEMORY_ACTIVE")!="1") return(1)
+    previous = strtoreal(st_global("VCKSS_MEMORY_FORECAST"))
+    st_global("VCKSS_MEMORY_FORECAST",strofreal(max((previous,forecast)),"%21.0f"))
+    limit = strtoreal(st_global("VCKSS_MEMORY_BYTES"))
+    return(st_global("VCKSS_MEMORY_ADVISORY")=="1" | forecast <= limit)
+}
+
 struct vckss_result scalar vckss__exact(
     real colvector y,
     real colvector worker,
@@ -789,7 +976,7 @@ struct vckss_result scalar vckss__exact(
     struct vckss_target_matrices scalar targets
     real scalar n, worker_levels, firm_levels, controls_count
     real scalar full_parameters, parameters, group, groups, begin, finish
-    real scalar max_leverage, eigmax, minimum_maker
+    real scalar max_leverage, eigmax, minimum_maker, memory_block
     real scalar inverse_forward_bound, rank_verification_margin, row
     real scalar control_downstream_bound, block_solver_residual
     real matrix full_design, design, information, A, design_inverse
@@ -889,6 +1076,12 @@ struct vckss_result scalar vckss__exact(
     }
     else {
         groups = sum(frequency)
+    }
+
+    memory_block = 1
+    if (deletion=="match") memory_block = max(panel[.,2]-panel[.,1]:+1)
+    if (!vckss__exact_memory_check(n,full_parameters,controls_count,memory_block)) {
+        return(vckss__failure("RESOURCE_LIMIT", "exact allocation forecast exceeds memory_gib()"))
     }
 
     full_design = vckss__design(
@@ -1262,6 +1455,10 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
     timer_clear(91)
     timer_clear(92)
     timer_on(91)
+    if (!vckss__exact_memory_check(n,full_parameters,controls_count,
+        max(panel[.,2]-panel[.,1]:+1))) {
+        return(vckss__failure("RESOURCE_LIMIT", "exact hybrid allocation forecast exceeds memory_gib()"))
+    }
     full_design = vckss__design(
         worker, firm, controls, worker_levels, firm_levels)
     information = full_design' * (frequency :* full_design)

@@ -600,8 +600,13 @@ The internal oracle layer and public structured-variance attachment support gene
 observation deletion, mover-only samples, independent rows, unit frequency,
 joint nuisance treatment, low-dimensional controls, and explicit diagonal-PCG
 or generic-CMG routes. It preserves atomic generation, cancellation,
-Counter-V1 addressing, exactly-once prepared-session release, memory admission
-and reconciliation, and complete-original-system residual receipts.
+Counter-V1 addressing, exactly-once prepared-session release, policy-aware
+memory admission and receipt reconciliation, and complete-original-system
+residual receipts. The current public command assumes no memory budget and
+warns by default when an explicit budget is exceeded; only
+`memorycheck(error)` enforces forecast admission. The inference allocation
+bounds remain conservative. See [MEMORY.md](MEMORY.md); historical strict
+admission tests and source-bound evidence retain their original semantics.
 
 The public Stata surface requires the separately named inference model and
 the following supported effective tuple. Backend, RNG, algorithm, deletion,

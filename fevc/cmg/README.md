@@ -4,12 +4,14 @@ This directory contains the GPL-3.0-only CMG numerical component used by the
 `fevc` Stata/Mata package. It is not a shared library, separate Stata
 package, or public command.
 
-CMG API 8 is an ownership and interface-only successor to the numerically
-qualified API 6 implementation. The numerical hierarchy, symmetric V-cycle,
-resource model, deterministic aggregation, terminal cap, and package residual
-gates are unchanged. API 8 retains the package-only surface and records the
-`fevc` generated-target identity; API 7 removed the unused non-KSS pullback
-and gave the component a package-owned runtime identity.
+CMG API 9 propagates the public optional memory budget and warning/error/off
+policy. With no budget, memory forecasts do not change execution; only an
+explicit strict budget enables forecast rejection. The numerical hierarchy,
+symmetric V-cycle, deterministic aggregation, terminal cap and complete
+residual gates remain unchanged from the qualified API 6 core. API 8 recorded
+the `fevc` generated-target identity; API 7 removed the unused non-KSS pullback
+and established the package-owned runtime identity. See the
+[current memory guide](../docs/MEMORY.md) for timing, scope and returns.
 
 The canonical template is `src/cmg_core.mata.in`. The deterministic generator
 has exactly two targets:
@@ -30,7 +32,7 @@ Run the component gates from the repository root:
 ```
 
 The source-informed API-6 qualification remains recorded verbatim in
-`benchmarks/reports/CMG_MATA_1_2026-08-18.md`. API 8 does not claim new
+`benchmarks/reports/CMG_MATA_1_2026-08-18.md`. API 9 does not turn that historical report into new
 numerical qualification. Current ownership and release status are in
 `STATUS.md`; mathematical, API, and provenance boundaries are in `docs/`.
 
