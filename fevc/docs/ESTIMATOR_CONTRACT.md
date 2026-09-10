@@ -181,7 +181,7 @@ treats distinct declared matches as independent. It does not permit arbitrary
 dependence across all matches belonging to one worker.
 
 With match deletion, `stayers(both)` is the default so that the target
-population matches the maintained MATLAB package. Let M denote the final
+population matches the KSS Matlab package. Let M denote the final
 mover rows. Eligible stayers are workers who were one-firm stayers in the
 frozen complete-case sample, are attached to a retained mover firm, and have
 at least two literal physical observations. The command fits M and those

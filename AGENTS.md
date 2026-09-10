@@ -136,3 +136,9 @@ versions, seeds, tolerances, failures, and skipped external gates.
 Follow `CODE_LICENSE.md` and the source-provenance records. GPL-3.0-only
 governs covered code. Public tagging and release remain separate owner
 decisions and require the recorded human and exact-artifact checks.
+
+Use “KSS Matlab package” or “KSS Matlab code” for the comparator; distinguish
+the Econometrica replication code explicitly. The default is GitHub commit
+`8b957ffe` (October 17, 2024; latest version verified September 10, 2026).
+Preserve historical wording and frozen evidence; change display labels through
+publication overlays. See the active source-provenance documentation.

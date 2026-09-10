@@ -35,7 +35,7 @@ Preserve:
 - point estimation as the default, with econometric covariance posted only for
   an explicit capability-gated inference request;
 - match deletion as the default, `deletionid()` independent of coefficient
-  cells, and the MATLAB-compatible combined mover/eligible-stayer target by
+  cells, and the KSS Matlab-compatible combined mover/eligible-stayer target by
   default, with `stayers(movers)` as the explicit mover-only opt-out;
 - positive integer frequency weights as literal physical copies and explicit
   target weights as stored-row mass;
@@ -106,3 +106,9 @@ Postestimation changes must keep the help, package manifest, clean-install
 checks, default display, and focused `estat` regressions synchronized.
 Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and the CMG
 provenance records; public release remains a separate owner decision.
+
+Use “KSS Matlab package” or “KSS Matlab code” for the comparator; distinguish
+the Econometrica replication code explicitly. The default is GitHub commit
+`8b957ffe` (October 17, 2024; latest version verified September 10, 2026).
+Preserve historical wording and frozen evidence; change display labels through
+publication overlays. See the active source-provenance documentation.

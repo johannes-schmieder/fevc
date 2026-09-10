@@ -3,7 +3,7 @@
 This harness is the source-bound follow-up to the qualified forced-CMG
 `project()` implementation. It does not alter the accepted diagonal comparison
 or any paper performance claim. It compares VCkss Rust/generic-JLA/Counter-V1
-with forced generic CMG against maintained MATLAB JLA plus `lincom_KSS` on
+with forced generic CMG against KSS Matlab JLA plus `lincom_KSS` on
 deterministic AKM-shaped mover graphs.
 
 The registered feasibility grid is:
@@ -23,7 +23,7 @@ sequentially on the same host with deterministic order rotation. The wrapper
 always attempts the second role after a first-role scientific failure or
 timeout. A role stopped at its registered cap is recorded as
 `RIGHT_CENSORED`; it is not converted into a failure time or used in a ratio.
-Maintained MATLAB's exact, reason-coded grounded-fit nonconvergence is also
+KSS Matlab's exact, reason-coded grounded-fit nonconvergence is also
 recorded as `RIGHT_CENSORED` with
 `censor_reason=MATLAB_FIT_NONCONVERGENCE`. Its observed failed-command time is
 retained diagnostically but is never treated as a completion time, imputed to
@@ -50,10 +50,10 @@ censored-task count; no MATLAB completion time or paired speed ratio is
 created for those tasks.
 
 The preparation stage builds the exact-commit Linux plugin with Rust 1.85.1,
-builds the maintained MATLAB MEX boundary, checks the two maintained source
+builds the KSS Matlab MEX boundary, checks the two maintained source
 hashes, requires at least 100 GiB of free project filesystem space, and
 generates all four inputs (including the 6,000-row gate). A 6,000-row exact
-Mata/forced-CMG/maintained-MATLAB gate must pass before feasibility work.
+Mata/forced-CMG/KSS Matlab gate must pass before feasibility work.
 Sizes are then released in ascending order, and a larger size is not submitted
 unless both core cells at the preceding size pass complete accounting,
 application, residual, convergence, conditioning, PSD, memory, coefficient,
@@ -98,7 +98,7 @@ and the 6,000-row gate job `7374823` with clean accounting and passing receipts.
 Both tasks in array `7374830` also have `failed=0` and `exit_status=0`, but the
 stage is `COMPLETE_NONPASS`: VCkss reached `PCG_MAXITER` after 40,000 model
 iterations at reduced residual `4.412307557090175e-10` in both core cells.
-Maintained MATLAB independently produced the registered grounded-fit failure
+KSS Matlab independently produced the registered grounded-fit failure
 and is recorded as `RIGHT_CENSORED/MATLAB_FIT_NONCONVERGENCE` in both cells.
 
 No VCkss completion time, MATLAB completion time, coefficient/covariance

@@ -1,6 +1,6 @@
 # Direct full-CMG architectural spike
 
-This source-bound harness compares, on one registered maintained-MATLAB-
+This source-bound harness compares, on one registered KSS Matlab-
 compatible hard problem:
 
 - A: the VCkss performance baseline at `4124b34f3ca216dcc3aae27e4b31bbac9e011f11`;
@@ -22,7 +22,7 @@ complete-system residual, accounting, sample, data, RNG, and sort gates. A/C
 use common Counter-V1 draws; the four corrected targets pass at
 `max(1e-8*scale, 0.1*max(reported MCSE))` under the active development policy.
 Plug-in, correction, MCSE, iteration, and reduction-order differences remain
-diagnostics. The maintained MATLAB result remains descriptive here: it uses
+diagnostics. The KSS Matlab result remains descriptive here: it uses
 its own RNG, JLA PCG tolerance, and correction formulas, so this runner makes
 no cross-language corrected-estimate equality claim.
 
@@ -48,14 +48,14 @@ python3 fevc/benchmarks/full_cmg_spike/run_local.py \
 ```
 
 This is a private decision experiment, not release qualification. The runner
-does not submit SCC jobs, alter the maintained MATLAB source, install plugins,
+does not submit SCC jobs, alter the KSS Matlab source, install plugins,
 or promote raw logs into the repository.
 
 The completed architectural result is recorded in
 [`DECISION_REPORT.md`](DECISION_REPORT.md) and the compact machine-readable
 [`decision_receipt.json`](decision_receipt.json). Direct full CMG is rejected
 for promotion: on the accepted same-node SCC run it is 32.20% faster than the
-matched VCkss baseline but 29.99% slower than maintained MATLAB, and the
+matched VCkss baseline but 29.99% slower than KSS Matlab, and the
 historical A/C gate misses in two covariance fields. The latter difference is
 statistically equivalent under the subsequent active development policy; the
 route remains rejected on end-to-end MATLAB performance.
@@ -102,8 +102,7 @@ Two failed deployments are retained as evidence: job `7306618` identified an
 incomplete SCC Cargo cache, and job `7306623` identified the wrong installed
 Linux plugin filename. Accepted job `7306628` ran on `scc-h30` with four
 granted slots and ended with `failed=0`, `exit_status=0`. It measured 329.260
-seconds for A, 223.232 seconds for C, and 171.733 seconds for maintained
-MATLAB R2025b. The source-bound receipt records the then-active parity failure;
+seconds for A, 223.232 seconds for C, and 171.733 seconds for KSS Matlab running in MATLAB R2025b. The source-bound receipt records the then-active parity failure;
 the current policy treats it as nonblocking. Because C still failed the MATLAB
 performance gate, the registered warm matrix and fixed CZ18 case were not run.
 
@@ -159,7 +158,7 @@ retaining final complete-system certification.
 
 The fixed-CZ18 P200 matrix is accepted at SCC job `7317771`. Across five
 position-balanced warm rounds on `scc-tb4`, candidate median complete command
-time is 33.942 seconds versus 70.147118 seconds for maintained MATLAB R2025b:
+time is 33.942 seconds versus 70.147118 seconds for KSS Matlab running in MATLAB R2025b:
 VCkss is 2.0667 times as fast. Candidate median peak RSS is 2,530,940 KiB
 versus MATLAB's 4,310,024 KiB. All complete residual, common-probe corrected-
 target, repeatability, application/state, process-tree, wrapper, and qacct
@@ -169,7 +168,7 @@ compact JSON receipt.
 
 The registered synthetic P200 matrix is accepted at SCC job `7318114` but is
 not promoted. Its five warm medians are 490.209 seconds for A, 123.633 seconds
-for C, and 183.017703 seconds for maintained MATLAB R2025b. C is 3.9650 times
+for C, and 183.017703 seconds for KSS Matlab running in MATLAB R2025b. C is 3.9650 times
 as fast as A and 1.4803 times as fast as MATLAB, but its C/MATLAB ratio is
 `0.6755` rather than the required `<=0.5`. Candidate maximum peak RSS is
 4,134,164 KiB versus MATLAB's 3,847,076 KiB, so the memory gate also fails.

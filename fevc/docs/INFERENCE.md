@@ -34,14 +34,14 @@ prevent the command from silently changing the dependence model, deletion
 unit, or randomized approximation.
 
 The implementation follows the high-rank and rank-one procedures described by
-Kline, Saggio, and Sølvsten (2020) and the maintained MATLAB package's
+Kline, Saggio, and Sølvsten (2020) and the KSS Matlab package's
 observable behavior. It is repository-authored GPL-3.0-only source. No MATLAB
 source, critical-value table, or binary data are included.
 
 ## Variance proxy and smoothing
 
 There are two distinct implemented variance-model families. The default exact
-Mata family below is target-specific and MATLAB-compatible. It is not the
+Mata family below is target-specific and KSS Matlab-compatible. It is not the
 paper's unrestricted heteroskedastic variance-product construction. The
 explicit Rust family fits one common positive variance vector. For either
 deletion unit, the new candidate solves the residual-moment equations
@@ -244,7 +244,7 @@ lincom worker_variance + firm_variance + 2*worker_firm_covariance
 ```
 
 reproduces the posted `total_variance` estimate and standard error. This is
-distinct from the maintained MATLAB function `lincom_KSS`, whose purpose is
+distinct from the KSS Matlab function `lincom_KSS`, whose purpose is
 fixed-effect projection inference and whose FEVC counterpart is `project()`.
 
 ## Rank-one weak-identification intervals
@@ -286,7 +286,7 @@ with independent square roots of chi-squared-one variables. The
 \(\chi_2\). FEVC simulates at least 100,000 critical-value draws and maps the
 resulting two-dimensional confidence ellipsoid through the rank-one quadratic
 by a global angular grid followed by bounded refinement. It does not ship or
-interpolate the maintained MATLAB package's unlicensed critical-value table.
+interpolate the KSS Matlab package's unlicensed critical-value table.
 This critical value is based on the maximal-curvature circle and gives the KSS
 uniform asymptotic guarantee of coverage at least at the nominal level. It is
 not an exact finite-sample quantile of the shortest distance to a particular
@@ -368,8 +368,8 @@ matrix. For observation deletion it reduces to the uncentered identity
 \(y_i\widehat e_{i,-i}\). Subtracting a sample mean from \(y_i\) is not
 valid under unrestricted heteroskedasticity and is not part of the FEVC
 estimator. A separately isolated test diagnostic reproduces the centered
-expression in the newer maintained MATLAB pipeline when comparator attribution
-requires it. The original Econometrica `lincom_KSS` instead used this same
+expression in the KSS Matlab pipeline when comparator attribution
+requires it. The KSS Matlab Econometrica replication code (`lincom_KSS`) instead used this same
 uncentered, symmetrized block identity.
 
 For stored row \(i\) representing positive integer frequency \(f_i\), define
@@ -499,14 +499,14 @@ returns are `e(projection_diagnostics)`,
 The focused public-route test compares small sparse results with the dense
 Mata oracle for both firm/frequency and worker/target projections, including
 nonunit compressed weights against literal expansion. The
-committed 1,002-observation maintained-MATLAB fixture is exercised by
-the archived maintained-MATLAB projection fixture: coefficient
+committed 1,002-observation KSS Matlab fixture is exercised by
+the archived KSS Matlab projection fixture: coefficient
 solves must agree with exact FEVC, the complete covariance must lie within a
 registered deterministic JLA tolerance of the exact oracle, and the reported
 `z1`/`z2` standard errors must remain within the registered Monte Carlo band
 around maintained `lincom_KSS`.
 
-The weighted 1,002-row maintained-MATLAB oracle agrees with compressed exact
+The weighted 1,002-row KSS Matlab oracle agrees with compressed exact
 FEVC to `1.78e-15` maximum absolute error under literal expansion, within
 `4.39e-8` absolute for the independent dense same-formula calculation, and
 within `1.17e-6` relative for official `lincom_KSS` standard errors. Rust with
@@ -514,13 +514,13 @@ within `1.17e-6` relative for official `lincom_KSS` standard errors. Rust with
 
 The
 [focused scaling comparison](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
-runs separate, source-bound FEVC and MATLAB processes so wall time and peak
-RSS cover MATLAB's JLA-plus-`lincom_KSS` path rather than only `lincom_KSS`.
+runs separate, source-bound FEVC and KSS Matlab processes so wall time and peak
+RSS cover KSS Matlab's JLA-plus-`lincom_KSS` path rather than only `lincom_KSS`.
 Source `96e7a66` passes all coefficient, covariance-diagonal, SE, residual, PSD,
 and memory gates at 6,000 and 24,000 rows, but explicit diagonal PCG is not a
-qualified large-data route: it becomes 18.97 times slower than MATLAB on the
+qualified large-data route: it becomes 18.97 times slower than KSS Matlab on the
 24,000-row command and fails to converge at 96,000 rows. The strict harness
-also rejects MATLAB's independently reconstructed 96,000-row grounded fit, so
+also rejects KSS Matlab's independently reconstructed 96,000-row grounded fit, so
 no paired 96,000-row speed, covariance, or accepted RSS-growth result exists.
 
 The forced-CMG composition was then exercised locally on the same deterministic
@@ -531,7 +531,7 @@ reported projection memory forecasts of 2.8, 10.1, and 39.6 MB. On the
 6,000-row common Counter-V1 fixture, forced CMG and diagonal PCG differed by at
 most `2.28e-11` across projection coefficients and covariance entries. These
 local observations establish convergence and formula-path invariance, not a
-same-host MATLAB speed comparison or new cross-platform performance claim.
+same-host KSS Matlab speed comparison or new cross-platform performance claim.
 
 ## RNG and failure behavior
 
@@ -557,14 +557,14 @@ including the default mixed mover-match/stayer-observation population. On the
 scalable projection route, JLA approximates the leverage and block-deleted
 residual used by the covariance estimator; probe dispersion itself is not
 reported as an econometric standard error. The binned local-linear
-calculation for component inference is the maintained-MATLAB-compatible
+calculation for component inference is the KSS Matlab-compatible
 high-rank approximation; it is not the separately derived fully unbiased
 leave-three-out variance estimator.
 
 The source-bound comparison in
-[archived inference/MATLAB qualification record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
+[archived inference/KSS Matlab qualification record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
 separates exact projection validation from descriptive component-SE evidence.
-The maintained MATLAB interface returns only three marginal component standard
+The additional KSS Matlab routine `leave_out_COMPLETE.m` returns only three marginal component standard
 errors, not the joint covariance or total-target uncertainty. It also retains
 materially negative local-fit predictions that FEVC rejects, so its component
 standard errors are not treated as a parity gate.

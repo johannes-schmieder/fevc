@@ -28,6 +28,8 @@ The companion working paper is maintained separately in the sibling
 `fevc-paper` repository. Its active repository and PDF filenames use the
 `fevc` identity; frozen predecessor and migration records retain old names.
 
+Comparator naming and the two code versions are documented in the [KSS Matlab source and version note](fevc/docs/SOURCE_PROVENANCE.md#kss-matlab-package-terminology-and-version).
+
 ## Repository map
 
 - [`fevc/`](fevc/README.md): installable command, Mata runtime,

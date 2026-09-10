@@ -96,7 +96,7 @@
   selection. It is not the specialized compressed `CMG_FULL_V2` route.
   Automatic projection routing remains withheld so no existing projection
   request silently changes solver.
-- The maintained MATLAB package is a behavioral reference only. Its source and
+- The KSS Matlab package is a behavioral reference only. Its source and
   critical-value table are not licensed for copying and are not included.
   The implementation follows the published formulas and ships as
   GPL-3.0-only repository-authored source.
@@ -107,13 +107,13 @@
 ## Comparative-scaling right-censoring
 
 - On 29 August 2026, the owner accepted the largest `strong_d2` one-core
-  MATLAB cell as right-censored rather than authorizing another long rerun.
-  Maintained MATLAB reached the registered 10,800-second estimator limit in
+  KSS Matlab cell as right-censored rather than authorizing another long rerun.
+  KSS Matlab reached the registered 10,800-second estimator limit in
   all three position-balanced repetitions in both immutable production
   generations. The affected historical task IDs are 61, 62, and 63
   (`scale_strong_d2_n1966080_c1_r1` through `r3`).
 - The accepted study therefore contains 297 complete same-host tasks and 891
-  successful estimator calls. The three MATLAB lower bounds remain in a
+  successful estimator calls. The three KSS Matlab lower bounds remain in a
   separate source-bound censor ledger. Partial Mata and Rust results from
   those sequential tasks do not enter the accepted call ledger.
 - The entire graph--size--core cell is excluded from route rankings, paired
@@ -125,9 +125,8 @@
 
 ## Development priority and equivalence
 
-- The primary product objective is a fast Stata alternative to maintained
-  MATLAB KSS that returns the same statistical result on compatible problems.
-  Corrected-result equivalence is first, end-to-end MATLAB competitiveness is
+- The primary product objective is a fast Stata alternative to KSS Matlab that returns the same statistical result on compatible problems.
+  Corrected-result equivalence is first, end-to-end KSS Matlab competitiveness is
   second, and pathwise/backend-internal parity is secondary.
 - The machine-readable policy is
   [`development_acceptance_v1.json`](development_acceptance_v1.json). For a
@@ -159,8 +158,8 @@
   memory admission, typed failure/UserBreak, and caller-state/lifecycle
   restoration.
 - A candidate is speed-competitive when its registered median complete-command
-  time is no slower than maintained MATLAB on the compatible comparison. The
-  development target remains approximately one-half MATLAB time. Kernel-only
+  time is no slower than KSS Matlab on the compatible comparison. The
+  development target remains approximately one-half KSS Matlab time. Kernel-only
   or solver-only wins are diagnostic rather than sufficient.
 
 ## Package identity
@@ -184,7 +183,7 @@
 - Omitted `rng()` and `rng(auto)` select Counter-V1 for Rust or Stata RNG for
   Mata. `rng(counter_v1)` is strict Rust consent; `rng(stata)` selects Mata and
   conflicts with strict Rust.
-- Omitted `algorithm()` selects MATLAB-like JLA with 200 probes. Explicit
+- Omitted `algorithm()` selects KSS Matlab-like JLA with 200 probes. Explicit
   `algorithm(auto)` retains exact-small/JLA-large structural planning.
 
 ## Automatic planning
@@ -206,7 +205,7 @@
 - Omitted `deletion()` on a `project()` request therefore remains match
   deletion; projection inference never silently changes that default to
   observation deletion. Explicit observation deletion remains supported.
-- Match deletion defaults to the maintained-MATLAB combined population:
+- Match deletion defaults to the KSS Matlab combined population:
   declared match blocks for movers and physical-observation deletion for
   eligible attached stayers. `stayers(movers)` is the mover-only opt-out.
 - Frequency weights are literal positive integer copies; explicit target

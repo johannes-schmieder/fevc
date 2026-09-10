@@ -2,7 +2,7 @@
 
 This harness implements the registered six-cell comparison in
 `qualification/inference_matlab/SCALABLE_PROJECTION.md`. It is deliberately
-limited to VCkss Rust/JLA/diagonal `project()` and maintained MATLAB
+limited to VCkss Rust/JLA/diagonal `project()` and KSS Matlab
 JLA-plus-`lincom_KSS` at 6,000, 24,000, and 96,000 rows, with three paired
 repetitions per size.
 
@@ -44,7 +44,7 @@ The first registered run used source
 job `7368471`, and paired array `7368481`. Preparation and the 6,000-row gate
 passed. All six paired repetitions at 6,000 and 24,000 rows passed every
 scientific and application gate. Their maximum covariance-diagonal differences
-from maintained MATLAB were 0.4785% and 0.4403%, and maximum standard-error
+from KSS Matlab were 0.4785% and 0.4403%, and maximum standard-error
 differences were 0.2395% and 0.2204%.
 
 At 6,000 rows, median VCkss/MATLAB command times were 32.494/78.743 seconds. At

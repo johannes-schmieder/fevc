@@ -377,7 +377,7 @@ The following dated registrations describe their original decisions and sources.
 
 - [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md): package source ledger.
 - [Archived MATLAB package comparison](../../docs/history/VCKSS_ARCHIVE.md#development-result-reports):
-  publication-era versus maintained MATLAB package comparison and the exact
+  publication-era versus KSS Matlab package comparison and the exact
   current VCkss benchmark pin.
 - [`../../CODE_LICENSE.md`](../../CODE_LICENSE.md): repository licensing and
   release boundary.
@@ -407,7 +407,7 @@ The renewed route's registered hard-case decisions are the accepted
 [`fixed-CZ18 P200 checkpoint`](../benchmarks/full_cmg_spike/CZ18_P200_MATRIX_CHECKPOINT.md)
 and the non-promoted
 [`synthetic P200 decision`](../benchmarks/full_cmg_spike/SYNTHETIC_P200_MATRIX_DECISION.md).
-CZ18 clears the 2x target, while synthetic is 1.4803x MATLAB and modestly above
+CZ18 clears the 2x target, while synthetic is 1.4803x KSS Matlab and modestly above
 MATLAB peak RSS. The latter identifies official full-CMG repeated solves as
 the next performance boundary and explicitly defers hardening and the
 benchmark PDF.

@@ -96,17 +96,17 @@ withheld. Its affected-surface gate requires:
    phase-6 RHS and complete-residual, PSD, lifecycle, and existing
    `e(projection_*)` schema checks;
 4. the immutable 1,002-row inference fixture with deterministic coefficient
-   and covariance gates plus maintained-MATLAB `lincom_KSS` standard-error
+   and covariance gates plus KSS Matlab `lincom_KSS` standard-error
    gates; and
 5. pre-RNG CMG memory failure and lifecycle restoration, plus a pre-native
    failure test proving that automatic solver routing is not admitted by the
    public projection tuple; and
 6. focused 6,000-, 24,000-, and 96,000-row convergence probes before any
-   MATLAB-relative or cross-platform performance claim.
+   KSS Matlab-relative or cross-platform performance claim.
 
 These local gates do not substitute for a source-bound `plugin-build` release
 profile or establish large-data performance. The next performance evidence is
-the focused six-cell FEVC/MATLAB protocol in
+the focused six-cell FEVC/KSS Matlab protocol in
 the [archived scalable-projection protocol](../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference), not a broad
 SCC or platform matrix.
 
@@ -457,7 +457,7 @@ tests the already-qualified public route without changing it. Local tests
 freeze the 300-task manifest, graph/input hashes, strict Rust and Mata request
 strings, omitted `tolerance()`, CPU-affinity selection, dynamic MATLAB worker
 monitoring, estimator-phase memory markers, timeout/failure preservation,
-independent-probe MCSE gate, maintained MATLAB PCG convergence/rejection,
+independent-probe MCSE gate, KSS Matlab PCG convergence/rejection,
 FEVC and full-CMG phase timers, estimator/full-process RSS, 900-row
 aggregation, and a headless vector-report build. The report builder has passed
 a warning-free synthetic cardinality/layout exercise; real claims remain
@@ -517,36 +517,36 @@ higher runtime, so the difference is retained as a nonblocking diagnosis.
 
 Accepted same-host SCC job `7306628` is the original decision gate. The synthetic
 headline takes 329.260 seconds for A, 223.232 seconds for C, and 171.733
-seconds for maintained MATLAB R2025b. C is 32.20% faster than A but 29.99%
-slower than MATLAB. Its two covariance fields fail the historical receipt's
+seconds for KSS Matlab running in MATLAB R2025b. C is 32.20% faster than A but 29.99%
+slower than KSS Matlab. Its two covariance fields fail the historical receipt's
 fixed A/C threshold, but under the active policy it is
 statistically equivalent; the original route was rejected because it was
-slower than MATLAB. Preserve the local and SCC receipts.
+slower than KSS Matlab. Preserve the local and SCC receipts.
 
 The owner-authorized renewed direct-route wave is source-bound at `598a08d`.
 Packed/ordered-parallel Counter-V1 generation, direct leverage RHSs,
 independent target preparation, parallel moment accumulation, and parallel
 recovery/certification reduce one clean macOS headline to 81.145 seconds,
-0.473 times the registered MATLAB comparator. The corrected targets remain
+0.473 times the registered KSS Matlab comparator. The corrected targets remain
 bit-identical to the preceding source-bound checkpoint; the maximum complete
 residual is `6.97e-6` under the `1e-5` probe gate. This crosses the 2x target
 only as a single development run. Do not harden or expose the route until one
-cold plus five alternating warm A/C/MATLAB runs and the fixed CZ18 P200 gate
+cold plus five alternating warm A/C/KSS Matlab runs and the fixed CZ18 P200 gate
 both pass. SCC synthetic job `7311964` measures 156.455 seconds versus
-MATLAB's 260.928 seconds. Accepted same-host job `7312041` keeps direct at
+KSS Matlab's 260.928 seconds. Accepted same-host job `7312041` keeps direct at
 151.351 seconds and disables fused f64 after its 239.610-second regression.
-Direct is 1.669x MATLAB and misses the 2x threshold by 25.079 seconds; the
+Direct is 1.669x KSS Matlab and misses the 2x threshold by 25.079 seconds; the
 official full-CMG repeated solve is the dominant cost. Fixed-CZ18 P20
 job `7314745` now passes all 61 numerical solves, result reconciliation and
 posting, state restoration, scheduler accounting, and the pinned validator at
 maximum complete residual `7.993e-6`. It remains smoke only: candidate command
-time is 91.596 seconds versus MATLAB's 47.154 seconds. The scalar pass-fusion
+time is 91.596 seconds versus KSS Matlab's 47.154 seconds. The scalar pass-fusion
 lane at `08565be` passes deterministic CMG tests and unchanged scientific
 gates, but its favorable clean local observation is only about 2% faster and
 private admitted memory is 2.6% higher. Preserve it behind explicit private
 consent and keep it disabled; no SCC matrix is justified. The first CZ18 P200
 attempt, job `7314843` at `c1ae402`, correctly fails the unchanged `1e-5`
-complete residual gate on target probe 56 (`1.563e-5`) before MATLAB. The next
+complete residual gate on target probe 56 (`1.563e-5`) before KSS Matlab. The next
 attempt pre-registers private inner tolerance `1e-9` for P200 while P20 remains
 `1e-8`; effective probe tolerance stays `1e-6`. It must pass wrapper,
 application, qacct, and the pinned validator before any interpretation. It is still a
@@ -554,10 +554,10 @@ single-run decision, not qualification. Do not return to the simplified
 hierarchy.
 
 Fixed-CZ18 P200 SCC job `7317771` at source `3daa465` passes one cold and five
-position-balanced warm A/C/MATLAB rounds. Warm medians are 253.771 seconds for
-A, 33.942 seconds for C, and 70.147118 seconds for maintained MATLAB R2025b;
-C is 2.0667x MATLAB. Candidate median peak RSS is 2,530,940 KiB versus
-MATLAB's 4,310,024 KiB. Complete residual, common-probe corrected-target,
+position-balanced warm A/C/KSS Matlab rounds. Warm medians are 253.771 seconds for
+A, 33.942 seconds for C, and 70.147118 seconds for KSS Matlab running in MATLAB R2025b;
+C is 2.0667x KSS Matlab. Candidate median peak RSS is 2,530,940 KiB versus
+KSS Matlab's 4,310,024 KiB. Complete residual, common-probe corrected-target,
 repeatability, application/state, MATLAB process-tree, wrapper, and qacct
 gates all pass. The pinned validator initially stopped on blank optional
 legacy phase diagnostics; commit `5a6daaf` changes only the parser and adds a
@@ -569,9 +569,9 @@ Synthetic P200 SCC job `7318114` at source `787327f` passes the complete six-
 round application, common-probe corrected-target, complete-residual,
 repeatability, caller-state, MATLAB process-tree, wrapper, and qacct suite.
 Warm medians are 490.209 seconds for A, 123.633 seconds for C, and 183.017703
-seconds for MATLAB. Record this as
-`SYNTHETIC_P200_WARM_MEDIAN_NOT_PROMOTED`: C/MATLAB is `0.6755`, not `<=0.5`,
-and candidate maximum process RSS is 4,134,164 KiB versus MATLAB's 3,847,076
+seconds for KSS Matlab. Record this as
+`SYNTHETIC_P200_WARM_MEDIAN_NOT_PROMOTED`: C/KSS Matlab is `0.6755`, not `<=0.5`,
+and candidate maximum process RSS is 4,134,164 KiB versus KSS Matlab's 3,847,076
 KiB. The official repeated solve is 98.664913 seconds across 601 RHSs and must
 fall materially before another full matrix. Preserve the full run and compact
 decision and, at that source, kept the route private. The later scalar

@@ -1,7 +1,7 @@
 # Paper Stata--MATLAB scaling benchmark
 
 This harness measures command-boundary runtime for the current
-`fevc` Stata implementation and the maintained MATLAB
+`fevc` Stata implementation and the KSS Matlab
 `LeaveOutTwoWay` implementation.  It is a descriptive P=200 comparison, not
 an equality test for corrected estimates: the implementations retain their own
 random-number streams, PCG tolerances, and correction formulas.
@@ -21,7 +21,7 @@ random-number streams, PCG tolerances, and correction formulas.
 
 `generate_input.do` creates the literal CSV once inside each job.  Both
 applications consume those bytes, and validation binds the input hash, task
-hash, source bundle, source commit, maintained MATLAB source identity, process
+hash, source bundle, source commit, KSS Matlab source identity, process
 tree, application receipts, and `qacct` receipt.  The timed boundary is the
 estimator command only; import, MATLAB pool startup, and MEX compilation are
 reported separately.

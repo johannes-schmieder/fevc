@@ -18,7 +18,7 @@ The package-owned Mata implementation records its source-informed provenance
 in `fevc/cmg/docs/SOURCE_PROVENANCE.md` and its upstream file identities in
 `fevc/cmg/docs/UPSTREAM_SOURCE_MANIFEST.yaml`.
 
-## Maintained MATLAB comparator
+## KSS Matlab comparator
 
 The maintained `LeaveOutTwoWay` MATLAB repository is an external behavioral
 and scientific comparator. Its inspected source tree has no root software

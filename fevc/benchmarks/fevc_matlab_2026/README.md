@@ -1,7 +1,6 @@
 # FEVC--MATLAB 2026 SCC campaign
 
-This directory implements the referee-facing FEVC Rust versus maintained
-MATLAB R2026a benchmark.  The registered 240-cell scientific matrix is
+This directory implements the referee-facing FEVC Rust versus KSS Matlab R2026a benchmark.  The registered 240-cell scientific matrix is
 unchanged; this harness keeps development testing separate from publication
 evidence.
 

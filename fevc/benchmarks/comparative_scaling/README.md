@@ -1,7 +1,7 @@
 # VCkss three-way comparative scaling benchmark
 
 This active benchmark compares the current `fevc` Mata and qualified
-`CMG_FULL_V2` Rust routes with maintained MATLAB `LeaveOutTwoWay`. It is a new
+`CMG_FULL_V2` Rust routes with KSS Matlab `LeaveOutTwoWay`. It is a new
 source-bound study and does not modify or reinterpret the frozen historical
 Stata--MATLAB scaling matrix.
 
@@ -108,7 +108,7 @@ only when its finite-target, identity, retained-row, and numerical-status gates
 pass. Failures and timeouts remain results and are never silently dropped.
 Registered right-censored calls live in a separate machine-readable ledger and
 do not enter complete-cell performance summaries.
-The validator parses maintained MATLAB's own logged PCG termination. A
+The validator parses KSS Matlab's own logged PCG termination. A
 nonconverged PCG keeps its time and memory evidence but marks the call
 `NUMERICAL_REJECTED`, preventing its cell from being ranked.
 
@@ -197,7 +197,7 @@ The harness is deliberately separate from historical evidence:
 - `deploy_scc.sh` creates a new run-scoped SCC directory and verifies the
   extracted exact source;
 - `prepare_artifacts.sge` proves the four-processor Stata entitlement, builds
-  and hashes the canonical normal Rust 1.85.1 plugin and maintained MATLAB
+  and hashes the canonical normal Rust 1.85.1 plugin and KSS Matlab
   R2024b MEX set once, or verifies and imports those exact bytes into a
   measurement run, then independently receipts the benchmark-only Ado adapter;
 - `verify_artifact_source.py` rejects any canonical source, accounting,

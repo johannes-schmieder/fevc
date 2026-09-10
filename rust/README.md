@@ -130,7 +130,7 @@ parameter design or full inverse is constructed. Covariance accumulation uses
 the uncentered observation identity or symmetrized mover-match block identity,
 with physical-observation stayer blocks. The CMG composition has
 focused local exact/diagonal and 6,000/24,000/96,000 convergence evidence; it
-does not yet add a same-host MATLAB speed or new cross-platform performance
+does not yet add a same-host KSS Matlab speed or new cross-platform performance
 claim. Projection CMG is the planned generic preconditioner, not the
 specialized compressed `CMG_FULL_V2` route.
 
@@ -294,9 +294,9 @@ their original identifier and deletion semantics.
 
 The accepted alpha production gate is source-bound to runtime source
 `4b6874e`. On macOS, five alternating warm runs take a median 74.774 seconds
-versus 104.489 seconds for MATLAB R2024b Update 5 and 81.145 seconds for the
+versus 104.489 seconds for KSS Matlab running in MATLAB R2024b Update 5 and 81.145 seconds for the
 private winner. On SCC's fixed CZ18 case, the corresponding medians are 19.097
-seconds versus 33.058 seconds for MATLAB R2024b Update 3 and 33.942 seconds for
+seconds versus 33.058 seconds for KSS Matlab running in MATLAB R2024b Update 3 and 33.942 seconds for
 the private winner. Both cases pass the corrected-target, complete-residual,
 memory, wrapper, and process gates. Commit `61dba32` admits the same effective
 cell through the automatic backend on qualified platforms; all other
@@ -318,25 +318,25 @@ the prior backend by 12.35%. Its approximately `2.22e-12` covariance difference
 failed the legacy pathwise gate but passes the active development-equivalence
 policy and is not a scientific blocker. Accepted SCC job `7306628` measured
 223.232 seconds for the candidate versus 329.260 seconds for the matched
-baseline and 171.733 seconds for maintained MATLAB on the same node. C is
-29.99% slower than MATLAB; its 153.432-second direct solve is the dominant
+baseline and 171.733 seconds for KSS Matlab on the same node. C is
+29.99% slower than KSS Matlab; its 153.432-second direct solve is the dominant
 phase. That original route was rejected for performance, not numerical parity.
 
 The owner-authorized renewed direct-route wave preserves that evidence and
 adds ordered parallel Counter-V1 generation, direct leverage RHSs, independent
 target preparation, parallel moment accumulation, and bounded parallel
 recovery and complete-residual certification. Clean source `598a08d` completes
-the same macOS headline in 81.145 seconds, or 0.473 times the registered MATLAB
+the same macOS headline in 81.145 seconds, or 0.473 times the registered KSS Matlab
 command, with bit-identical corrected targets and a `6.97e-6` maximum complete
 residual. This first 2.12x single run is a development checkpoint only.
 Alternating warm medians and the checksum-bound fixed CZ18 SCC case remain
 mandatory before vendoring, hardening, or exposing the route. Further
 optimization of the simplified embedded hierarchy remains stopped.
 
-On SCC, synthetic job `7311964` reaches 156.455 seconds versus MATLAB's
+On SCC, synthetic job `7311964` reaches 156.455 seconds versus KSS Matlab's
 260.928 seconds, while accepted direct-versus-fused job `7312041` reaches
 151.351 seconds for direct and 239.610 seconds for fused f64. Direct is kept;
-fused f64 is disabled. The direct result is 1.669x faster than MATLAB but
+fused f64 is disabled. The direct result is 1.669x faster than KSS Matlab but
 25.079 seconds short of the 2x threshold, with bit-identical direct/fused
 targets and a `6.971259e-6` maximum complete residual. The official full-CMG
 repeated solve is the dominant remaining cost. Fixed-CZ18 P20 completes its
@@ -344,13 +344,13 @@ repeated solve is the dominant remaining cost. Fixed-CZ18 P20 completes its
 repairs private fit receipt reconciliation without weakening the independent
 complete-system gate. SCC job `7314745` passes posting, state restoration,
 qacct, and final validation, but remains a P20 smoke: candidate command time is
-91.596 seconds versus MATLAB's 47.154 seconds. Private scalar pass fusion at
+91.596 seconds versus KSS Matlab's 47.154 seconds. Private scalar pass fusion at
 `08565be` retains the official hierarchy, independent recurrence, and final
 certification, yet its favorable clean local observation improves command and
 solve time by only about 2% and raises private admitted memory 2.6%. It is
 preserved and disabled without an SCC matrix. The first CZ18 P200 attempt,
 job `7314843` at exact source `c1ae402`, correctly fails the unchanged `1e-5`
-complete residual gate on target probe 56 (`1.563e-5`) before MATLAB. The next
+complete residual gate on target probe 56 (`1.563e-5`) before KSS Matlab. The next
 attempt keeps effective probe tolerance `1e-6` and pre-registers a tighter
 private P200 inner solve at `1e-9`; P20 remains `1e-8`. It is not qualification
 or promotion evidence until wrapper, qacct, and the pinned validator pass.
@@ -358,8 +358,8 @@ or promotion evidence until wrapper, qacct, and the pinned validator pass.
 Fixed-CZ18 P200 SCC job `7317771` at source `3daa465` supplies the required
 alternating hard-case checkpoint. Across five position-balanced warm rounds,
 candidate command median is 33.942 seconds versus 70.147118 seconds for
-maintained MATLAB R2025b, or 2.0667x MATLAB. Candidate median peak RSS is
-2,530,940 KiB versus MATLAB's 4,310,024 KiB. All complete residual, corrected-
+KSS Matlab running in MATLAB R2025b, or 2.0667x KSS Matlab. Candidate median peak RSS is
+2,530,940 KiB versus KSS Matlab's 4,310,024 KiB. All complete residual, corrected-
 target, repeatability, state, process-tree, wrapper, and qacct gates pass. The
 initial post-job validator failure was limited to blank optional legacy phase
 diagnostics; repair `5a6daaf` validates the unchanged evidence and records its
@@ -368,10 +368,10 @@ subsequent alternating synthetic decision below controls promotion.
 
 The alternating synthetic matrix is accepted at SCC job `7318114`, source
 `787327f`, but is not promoted. Warm medians are 490.209 seconds for A,
-123.633 seconds for C, and 183.017703 seconds for MATLAB. C is 3.9650x A and
-1.4803x MATLAB, with all statistical, complete-residual, caller-state,
+123.633 seconds for C, and 183.017703 seconds for KSS Matlab. C is 3.9650x A and
+1.4803x KSS Matlab, with all statistical, complete-residual, caller-state,
 process-tree, wrapper, and qacct gates passing. It misses the 2x threshold by
-32.124 seconds and its maximum process RSS is 4,134,164 KiB versus MATLAB's
+32.124 seconds and its maximum process RSS is 4,134,164 KiB versus KSS Matlab's
 3,847,076 KiB. The official full-CMG repeated solve is the bottleneck at
 98.664913 seconds across 601 RHSs. At that source the route remained private
 and vendoring, hardening, public admission, default-auto, and report work were

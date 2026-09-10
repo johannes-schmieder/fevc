@@ -35,7 +35,7 @@ vertex hybrid hierarchy in 35.478 seconds, while the four-cell case retains
 640,625 hybrid vertices and spends 8,755.873 seconds in setup. The latter
 still converges in 15 iterations with a passing complete residual, so the
 dominant problem is hierarchy construction rather than repeated-RHS PCG.
-The maintained MATLAB implementation completes the paired four-cell task in
+The KSS Matlab implementation completes the paired four-cell task in
 84.951 seconds and converges, providing an independent algorithmic benchmark
 for a future firm-Schur/degree-four CMG setup specialization. Optimization III
 does not change routing semantics or introduce that new hierarchy algorithm;

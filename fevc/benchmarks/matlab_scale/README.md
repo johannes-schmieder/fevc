@@ -1,4 +1,4 @@
-# Maintained MATLAB descriptive scale benchmark
+# KSS Matlab descriptive scale benchmark
 
 This package benchmarks the checksum-bound maintained LeaveOutTwoWay MATLAB
 implementation at the KSS-SCALE fixture sizes. It does not modify, copy, or

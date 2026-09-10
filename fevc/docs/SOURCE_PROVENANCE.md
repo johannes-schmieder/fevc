@@ -21,7 +21,22 @@ references as provenance; they are not current governing specifications.
 - Published supplementary appendix:
   `https://eml.berkeley.edu/~pkline/papers/KSS2020_SUPP.pdf`.
 
-## Maintained MATLAB oracle
+## KSS Matlab package: terminology and version
+
+Use **KSS Matlab package** or **KSS Matlab code** for the comparator.
+Two versions must be distinguished: the **KSS Matlab Econometrica replication
+code**, accompanying Kline, Saggio, and Sølvsten (2020), and the subsequently
+updated GitHub `LeaveOutTwoWay` package. Unless explicitly stated otherwise,
+KSS Matlab means the GitHub snapshot pinned below, dated **October 17, 2024**
+and verified as the latest GitHub version on **September 10, 2026**.
+
+The **KSS Matlab main interface** (`codes/leave_out_KSS.m`) and
+**Additional KSS Matlab routines** (including `leave_out_COMPLETE.m` and
+`lincom_KSS.m`) belong to that same snapshot. These labels distinguish entry
+points, not the two versions. Identify the Econometrica replication code
+explicitly when discussing it. MATLAB software releases and the original CMG
+MATLAB/C implementation retain their own names. Frozen reports, comparator
+fields, source identifiers and evidence retain their original wording.
 
 - Repository: `https://github.com/rsaggio87/LeaveOutTwoWay`
 - Pinned commit: `8b957ffeb10b8465a3584fceb0265cccc48379e1`
@@ -34,19 +49,19 @@ references as provenance; they are not current governing specifications.
 - License status: the repository contains no root license and issue 14,
   “Choose a license,” remains open. No source is copied into this package.
 
-The maintained MATLAB source is a behavior and scientific reference only.
+The KSS Matlab source is a behavior and scientific reference only.
 Its missing license means that neither its source nor its binary
 `tabulation_10K.mat` critical-value table may be copied into FEVC. Inference
 code and any critical-value table generator are repository-authored from the
 published KSS formulas and distributed under GPL-3.0-only.
 
 The shipped `fevc_inference.mata` runtime is an independent implementation.
-The maintained files `leave_out_COMPLETE.m`,
+The KSS Matlab files `leave_out_COMPLETE.m`,
 `leave_out_estimation_two_way.m`, `llr_fit.m`, `AM_CI.m`, `lincom_KSS.m`, and
 `leave_out_KSS.m` were inspected only to establish option and return behavior.
 No text, table entries, or binary assets from those files are distributed.
 
-The maintained code uses coefficient two on the mixed fourth moment. The
+The KSS Matlab code uses coefficient two on the mixed fourth moment. The
 authors' final raw-moment display, independent Hessian calculation, and
 simulation use coefficient one. This package implements coefficient one and
 retains coefficient two only as a legacy expected-value fixture.

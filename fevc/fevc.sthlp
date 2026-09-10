@@ -206,8 +206,7 @@ the covariance as the sorting contribution so that its components add to the
 total.
 
 {pstd}
-With match deletion, {cmd:stayers(both)} is the default, matching the current
-MATLAB package.  It uses one pooled mover-stayer fit and target normalization,
+With match deletion, {cmd:stayers(both)} is the default, matching the KSS Matlab package.  It uses one pooled mover-stayer fit and target normalization,
 deletes retained mover matches as blocks, and deletes eligible stayer
 observations one literal physical copy at a time.  Thus the mover part uses
 the declared match-dependence convention, while the stayer part is explicitly
@@ -654,7 +653,7 @@ memory gates are fail closed.
 {pstd}
 The leave-out point estimator and reference-distribution formulas follow the
 published KSS analysis, and the exact target-specific smoother follows
-maintained MATLAB behavior. The structured common variance regression is a
+KSS Matlab behavior. The structured common variance regression is a
 pragmatic FEVC extension with additional conditional-mean assumptions; it is
 not unrestricted KSS inference. All code is independently authored
 GPL-3.0-only source. No MATLAB source or critical-value table is distributed.

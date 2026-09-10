@@ -14,3 +14,9 @@ The extraction retained `kss_bc/`, `shared/`, KSS/CMG root plans and licenses,
 and the KSS/CMG review records. It excluded the PPML proof, manuscript,
 application, software, and unrelated review histories. The KSS paper was moved
 to a separate fresh-history repository named `varcomp_kss_paper`.
+
+Terminology note: active documentation now uses **KSS Matlab package/code**.
+Unless explicitly identified as **KSS Matlab Econometrica replication code**,
+it refers to GitHub `LeaveOutTwoWay`, commit `8b957ffe` (October 17, 2024;
+latest version verified September 10, 2026). Historical records below retain
+their original wording, source identities and results.

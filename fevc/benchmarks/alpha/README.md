@@ -52,7 +52,7 @@ pointing at that output. The SCC wrapper and validator use the same row schema
 and analyzer. Scheduler jobs must be accepted by both `qacct` (`failed=0`,
 `exit_status=0`) and the application receipt before their rows enter a report.
 
-Performance promotion is based on maintained MATLAB KSS, not Mata. On a
+Performance promotion is based on KSS Matlab, not Mata. On a
 compatible registered hard problem, the Rust/MATLAB warm-median complete-
 command ratio must be at most `1.0`; the development target is `0.5`, or about
 twice as fast as MATLAB. Mata timings remain useful secondary diagnostics.

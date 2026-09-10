@@ -44,7 +44,7 @@ The benchmark writes exactly two combined timing figures. The first varies
 dataset size at eight cores; the second varies requested cores from 1 through
 16 at the medium dataset size. Each has side-by-side panels for the two-way
 dense, two-way sparse, and two-way bottleneck designs. Every panel has three
-lines: fevc's Mata backend, fevc's Rust backend, and maintained MATLAB. A Mata
+lines: fevc's Mata backend, fevc's Rust backend, and KSS Matlab. A Mata
 point above the local Stata processor cap is recorded as `capped` and omitted.
 Rust is not constrained by the Stata license: its native worker pool and the
 corresponding MATLAB pool are measured at every requested core count through
@@ -70,7 +70,7 @@ For automated smoke runs, the benchmark also honors `FEVC_MANUAL_SIZES`,
 
 `algorithm_settings` defaults to `default`, which leaves all three estimator
 arms' algorithm, tolerances, and iteration ceiling at their command defaults.
-The shipped sizes all exceed the maintained MATLAB package's 10,000-row threshold,
+The shipped sizes all exceed the KSS Matlab package's 10,000-row threshold,
 so the defaults select 200-probe JLA. Set it to `harmonized` to request JLA
 explicitly in all three arms and align the maintained implementation's 200
 probes, `1e-10` fit tolerance, `1e-6` probe tolerance, and 1,000-iteration

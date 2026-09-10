@@ -1,4 +1,4 @@
-# PREP-BND-1 maintained-MATLAB comparison
+# PREP-BND-1 KSS Matlab comparison
 
 This is an isolated validation harness, not part of the installed estimator.
 It compares one source-bound `fevc` candidate with the checksum-bound
@@ -15,7 +15,7 @@ one MATLAB process sequentially on the same host. Source order is reversed for
 every seed. Stata must expose exactly four processors; MATLAB must expose four
 distinct pool workers with single-threaded numerical libraries.
 
-Maintained MATLAB remains a descriptive JLA comparator. Its legacy
+KSS Matlab remains a descriptive JLA comparator. Its legacy
 finite-projection expression, parallel random schedule, and solver contract
 differ from `fevc`. Therefore corrected estimates have no equality
 gate. A MATLAB result contributes to numerical-similarity summaries only when
@@ -172,7 +172,7 @@ detail files, compiled MEX objects, or licensed MATLAB source.
 
 ## SCC clean-room dense-oracle gate
 
-Run this first, before the two-job F64/P20 maintained-MATLAB smoke. The same
+Run this first, before the two-job F64/P20 KSS Matlab smoke. The same
 content-addressed source bundle contains both
 `benchmarks/oracle/vckss_dense_oracle.m` and
 `benchmarks/oracle/stata_oracle.do`. `run_dense_oracle.sge` is deliberately

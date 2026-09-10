@@ -12,6 +12,8 @@ sparse Rust/JLA observation-or-match block covariance.
 `fevc` is the only public command and package identity. No predecessor
 alias is installed.
 
+Comparator naming and the two code versions are documented in the [KSS Matlab source and version note](docs/SOURCE_PROVENANCE.md#kss-matlab-package-terminology-and-version).
+
 ## Estimator surface
 
 The command targets:
@@ -25,7 +27,7 @@ The established Mata implementation supports exact and improved-JLA
 calculation, match or observation deletion, joint or fixed-offset controls,
 positive integer frequency weights, separate target weights, explicit
 deletion IDs, structural B1/CMG routing, and the registered Stata RNG
-contracts. Match deletion defaults to the current MATLAB population:
+contracts. Match deletion defaults to the KSS Matlab population:
 retained movers plus eligible attached one-firm stayers in one pooled fit and
 target. Movers use match deletion; stayers use physical-observation deletion
 and are never presented as match-cluster robust. `stayers(movers)` is the
@@ -52,7 +54,7 @@ and caller-state restoration gates.
 Omitted `rng()` means `rng(auto)`: Counter-V1 on Rust and Stata RNG on Mata.
 Explicit `rng(counter_v1)` pins strict Rust behavior; explicit `rng(stata)`
 selects Mata and conflicts with `backend(rust)`. The omitted algorithm is
-MATLAB-like JLA with 200 probes. Explicit `algorithm(auto)` retains the
+KSS Matlab-like JLA with 200 probes. Explicit `algorithm(auto)` retains the
 exact-small/JLA-large native plan.
 
 The Rust backend now contains three result families:
@@ -177,7 +179,7 @@ as passed. See the [RC scope decision](docs/fixed_offset_match_interface_v1.json
 Only accepted component inference posts the four-target `e(V)`. Projection
 coefficients and covariances are stored separately under `e(projection_*)`.
 Stata's standard `lincom` works on the posted component `e(b)`/`e(V)`; the
-maintained MATLAB routine `lincom_KSS` instead corresponds to FEVC
+KSS Matlab routine `lincom_KSS` instead corresponds to FEVC
 `project()` and is not the same postestimation operation.
 The implementation, formulas, diagnostics, and interpretation boundary are in
 [`docs/INFERENCE.md`](docs/INFERENCE.md).
@@ -331,8 +333,8 @@ public release.
 The historical alpha full-CMG decision, exact platform summaries, compact
 receipts, and CMG-style benchmark PDF are under
 [`benchmarks/full_cmg_production/`](benchmarks/full_cmg_production/). Runtime
-source `4b6874e` is 1.397x matched MATLAB on the registered macOS headline and
-1.731x MATLAB on SCC's fixed CZ18 case. These pass the selected alpha gate but
+source `4b6874e` is 1.397x matched KSS Matlab on the registered macOS headline and
+1.731x KSS Matlab on SCC's fixed CZ18 case. These pass the selected alpha gate but
 do not establish the longer-run 2x target as achieved.
 
 ## License and release status

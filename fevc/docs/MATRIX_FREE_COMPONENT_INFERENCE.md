@@ -39,7 +39,7 @@ this current interface decision. No new statistical formula is introduced.
 
 The statistical reference is Kline, Saggio, and Sølvsten (2020, henceforth
 KSS), especially Sections 5--7 and the supplement. The maintained
-`LeaveOutTwoWay` MATLAB repository and the package-owned exact Mata code are
+KSS Matlab repository and the package-owned exact Mata code are
 implementation comparators, not substitutes for the paper's statistical
 contract. Source identities are recorded in `SOURCE_PROVENANCE.md`.
 
@@ -77,7 +77,7 @@ formula is unchanged and registered numerical-equivalence checks apply.
 ### Unrestricted KSS
 
 The strict unrestricted-heteroskedastic construction is the one in KSS
-Section 5. It is not the LOWESS procedure in the MATLAB code. For independent
+Section 5. It is not the LOWESS procedure in the KSS Matlab code. For independent
 observations it constructs two unbiased predictions of `x_i'beta`, both
 independent of `y_i` and supported on disjoint observations, and uses them to
 estimate `sigma_i^2`. Products `sigma_i^2 sigma_l^2` require additional pair
@@ -99,7 +99,7 @@ structured extension from inheriting the paper's stronger claim by shorthand.
 
 ### Target-specific LOWESS comparator
 
-The maintained and legacy KSS MATLAB code smooths the raw leave-out proxy
+The KSS Matlab main interface and additional routines smooth the raw leave-out proxy
 
 ```text
 s_i = y_i e_{i,-i}

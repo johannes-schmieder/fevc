@@ -52,8 +52,7 @@ There is no factor two on the mixed raw fourth moment in `B_i`. Symbolic
 substitution makes the residual from the displayed bias formula exactly zero.
 For a rank-one projection with `P=.2` and `M=.8`, the coefficient-one
 prediction for `R(E[bar M]-M)` is `-.07872`; a fixed-seed 600,000-replication
-simulation at `R=25` gives `-.078956` with MCSE `.001860`. The maintained
-MATLAB coefficient-two expression predicts `-.02208`.
+simulation at `R=25` gives `-.078956` with MCSE `.001860`. The KSS Matlab coefficient-two expression predicts `-.02208`.
 
 ## Literal-frequency probe aggregation
 

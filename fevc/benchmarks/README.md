@@ -2,8 +2,7 @@
 
 Active candidate promotion follows
 [`../docs/development_acceptance_v1.json`](../docs/development_acceptance_v1.json):
-the four corrected targets must be statistically equivalent, and maintained
-MATLAB KSS complete-command time is the primary performance comparison. Mata
+the four corrected targets must be statistically equivalent, and KSS Matlab complete-command time is the primary performance comparison. Mata
 speed and pathwise numerical identity are secondary diagnostics. Older
 sections below document source-bound protocols whose descriptive fields and
 historical statuses are intentionally unchanged.
@@ -26,12 +25,11 @@ tasks supplement rather than reinterpret the older replicated-CZ harness.
 selects among locally calibrated 1/2/4/8/16 batches under the structural
 memory contract, and emits a hashed measurement table, coefficients, and
 target forecasts.
-`summarize_numopt2_matlab.py` pairs externally validated KSS and maintained
-MATLAB receipts for identical synthetic task shapes. It compares time and
+`summarize_numopt2_matlab.py` pairs externally validated KSS and KSS Matlab receipts for identical synthetic task shapes. It compares time and
 resources, and places both sets of corrected targets and their absolute gaps
 in explicitly descriptive columns. No corrected-value equality gate is
 allowed because the target-weight, RNG, and tolerance contracts differ.
-The summary parses the maintained MATLAB command's own PCG termination line;
+The summary parses the KSS Matlab command's own PCG termination line;
 timing and process-tree RSS remain reported when MATLAB hits its iteration
 cap, but that corrected result is explicitly marked not numerically accepted.
 MATLAB tasks are admitted from the measured smallest-rung process-tree RSS,
@@ -163,7 +161,7 @@ RHS residual, identical sample and tuning, timing, RSS, and SCC accounting.
 It also requires `--oracle-run-dir` and `--oracle-label` and revalidates the
 source-bound small exact result; omission cannot be asserted without stored
 oracle evidence.
-With `--include-matlab`, the validator also checks the maintained MATLAB and
+With `--include-matlab`, the validator also checks the KSS Matlab and
 CMG source hashes, seed, probes, four-target identity, projection, timing, RSS,
 SCC accounting, input dimensions, and exact retained-match overlap with B1.
 The MATLAB values remain descriptive because its legacy finite projection and
@@ -241,7 +239,7 @@ logs, outputs, resource reports, and qacct records remain run-scoped.
 - a public automatic-selector smoke;
 - pure-Stata preparation of CZ24, CZ25, and CZ18 from checksum-bound raw wage
   DTAs, followed by exact CZ24/CZ25 retained-match comparisons with the
-  maintained MATLAB detail artifacts;
+  KSS Matlab detail artifacts;
 - cold and warm automatic CZ24/CZ25 replications plus fixed-seed forced B1
   and CMG equality runs;
 - an automatic-CMG CZ18 preflight followed by concurrent forced-CMG and public
@@ -482,10 +480,10 @@ creates a checksum inventory without `--delete`. Never collect
 wall time plus the cold estimator-process wall time; warm estimator time begins
 after the shared prepared DTA is available.
 
-## Maintained MATLAB phase profiling
+## KSS Matlab phase profiling
 
 `separations_matlab_phase_profile.m` is a source-bound descriptive profiler
-for the unmodified maintained MATLAB workflow. It runs one cold call, one
+for the unmodified KSS Matlab workflow. It runs one cold call, one
 profiled warm call, and one unprofiled warm call in the same R2025b process.
 It restores captured client and parallel-worker RNG states before each call,
 but the upstream `parfor` schedule is not fixed and R2025b profiling can change
