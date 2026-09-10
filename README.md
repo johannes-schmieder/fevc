@@ -8,7 +8,8 @@ fixed-effect projection inference, including explicit fixed-offset match
 q0/q1 component inference. An optional Rust estimation and inference backend
 and the package-owned CMG numerical component are included.
 
-The source repository is prepared for public development. The package remains
+Public-source preparation is recorded in the
+[readiness note](fevc/docs/PUBLIC_SOURCE_READINESS.md). The package remains
 a prerelease: no public tag, release archive, or native binary distribution has
 been issued.
 
@@ -105,6 +106,20 @@ capabilities, and optional native-backend details.
 The CMG implementation and a distributed KSS package containing it are
 GPL-3.0-only as recorded in [`CODE_LICENSE.md`](CODE_LICENSE.md). The human
 review of the package boundary, upstream notices, corresponding source, and
-third-party/data exclusions was completed on 29 August 2026. The repository
-is ready for public source development, but no public package release, tag, or
-native binary distribution has yet been issued.
+third-party/data exclusions was completed on 29 August 2026. The current tree and reachable history are reviewed in the
+[public-source preparation record](fevc/docs/PUBLIC_SOURCE_READINESS.md).
+Public visibility and exact-artifact distribution remain separate owner decisions.
+
+## Workspace cleanup
+
+Preview disposable ignored artifacts with:
+
+```bash
+./.venv/bin/python fevc/tools/clean_workspace.py --dry-run
+```
+
+Use `--apply` after reviewing the list. The cleaner preserves tracked files,
+qualification evidence, local diagnostics, generated research outputs and
+installed plugins. Rust build caches require the additional `--build-caches`
+flag. Keep new run outputs under ignored `.local/` or `output/`; retain durable,
+sanitized evidence under the established source-bound evidence directories.

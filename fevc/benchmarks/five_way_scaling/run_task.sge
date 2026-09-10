@@ -1,0 +1,125 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N fevc5way
+
+set -euo pipefail
+for name in FW_RUN_DIR FW_MANIFEST FW_STAGE SGE_TASK_ID NSLOTS TMPDIR JOB_ID HOSTNAME; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+[[ "$FW_RUN_DIR" == /projectnb/welfgr/vckss/five_way_scaling/runs/* ]]
+[[ "$FW_STAGE" =~ ^(smoke|pilot|exact|confirmation)$ ]]
+harness=$FW_RUN_DIR/code
+artifacts=$FW_RUN_DIR/artifacts
+test -d "$harness" && test -d "$artifacts" && test -f "$FW_MANIFEST"
+
+module purge
+module load python3/3.12.4
+system_python=$(command -v python3)
+IFS=$'\t' read -r task_id cell_id sweep rows workers firms cores repeat seed probes algorithm role_order < <(
+  "$system_python" "$harness/read_task.py" "$FW_MANIFEST" "$SGE_TASK_ID")
+test "$task_id" = "$SGE_TASK_ID"
+(( cores <= NSLOTS ))
+role_cpu_list=$("$system_python" "$harness/cpu_subset.py" --count "$cores")
+command_memory=$((NSLOTS*8))
+task_dir=$(printf '%s/output/%s/task-%03d' "$FW_RUN_DIR" "$FW_STAGE" "$task_id")
+test ! -e "$task_dir"
+mkdir -p "$task_dir"
+record_wrapper_failure() {
+  local rc=$?
+  if (( rc != 0 )) && test ! -e "$task_dir/wrapper.fail"; then
+    printf 'FEVC_FIVE_WAY_TASK_FAIL %s %s wrapper_rc=%d\n' \
+      "$FW_STAGE" "$cell_id" "$rc" > "$task_dir/wrapper.fail"
+  fi
+}
+trap record_wrapper_failure EXIT
+"$system_python" "$harness/read_task.py" "$FW_MANIFEST" "$SGE_TASK_ID" --json-output "$task_dir/task.json" >/dev/null
+
+scratch=$TMPDIR/fevc-five-way-$JOB_ID-$SGE_TASK_ID
+mkdir -p "$scratch/input"
+"$system_python" "$harness/generate_input.py" --rows "$rows" \
+  --output "$scratch/input/input.csv" --receipt "$task_dir/input.json" \
+  > "$task_dir/input.application.txt" 2>&1
+input_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+test "$input_sha" = "$("$system_python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["sha256"])' "$task_dir/input.json")"
+
+export FW_INPUT=$scratch/input/input.csv FW_ROWS=$rows FW_CORES=$cores FW_PROBES=$probes FW_SEED=$seed FW_ALGORITHM=$algorithm
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
+export MALLOC_ARENA_MAX=2
+
+if test "$algorithm" = exact; then
+  "$artifacts/python-env/bin/python" "$harness/exact_oracle.py" \
+    --input "$FW_INPUT" --output "$task_dir/oracle.json" \
+    > "$task_dir/oracle.application.txt" 2>&1
+fi
+
+failures=0
+run_role() {
+  local role=$1 role_dir=$task_dir/$role
+  mkdir -p "$role_dir" "$scratch/$role"
+  export FW_OUTPUT=$role_dir/result.json FW_PHASE_START=$role_dir/phase.start FW_PHASE_END=$role_dir/phase.end FW_SCRATCH=$scratch/$role
+  rm -f "$FW_PHASE_START" "$FW_PHASE_END"
+  unset FEVC_FIVE_WAY_THREAD_CONTRACT FEVC_FIVE_WAY_RUST_THREADS FEVC_FIVE_WAY_ACTIVE_CORES FEVC_FIVE_WAY_ASSIGNED_SLOTS JULIA_NUM_THREADS JULIA_DEPOT_PATH R_LIBS_USER STATATMP
+  module purge
+  local -a command
+  case "$role" in
+    fevc)
+      module load stata-mp/19
+      export FW_OUTPUT=$role_dir/result.csv STATATMP=$scratch/fevc/stata
+      mkdir -p "$STATATMP"
+      export FEVC_FIVE_WAY_THREAD_CONTRACT=FEVC-FIVE-WAY-THREADS-V1
+      export FEVC_FIVE_WAY_RUST_THREADS=$cores FEVC_FIVE_WAY_ACTIVE_CORES=$cores FEVC_FIVE_WAY_ASSIGNED_SLOTS=$NSLOTS
+      command=(stata-mp -q do "$harness/fevc_run.do" "$artifacts/package" "$FW_INPUT" "$FW_OUTPUT" "$FW_PHASE_START" "$FW_PHASE_END" "$algorithm" "$rows" "$cores" "$probes" "$seed" "$command_memory") ;;
+    matlab)
+      module load matlab/2024b
+      export FW_MATLAB_ROOT=$artifacts/sources/matlab FW_MEX_DIR=$artifacts/mex
+      command=(matlab -batch "addpath('$harness'); matlab_run") ;;
+    julia)
+      module load julia/1.9.1
+      export JULIA_NUM_THREADS=$cores JULIA_DEPOT_PATH=$artifacts/julia-depot
+      command=(julia --startup-file=no --project="$artifacts/sources/julia" "$harness/julia_run.jl") ;;
+    r)
+      export R_LIBS_USER=$artifacts/r-library
+      command=("$artifacts/r-env/bin/Rscript" --vanilla "$harness/r_run.R") ;;
+    pytwoway)
+      command=("$artifacts/python-env/bin/python" "$harness/pytwoway_run.py") ;;
+    *) return 198 ;;
+  esac
+  set +e
+  /usr/bin/time -v -o "$role_dir/resources.txt" \
+    /usr/bin/timeout --signal=TERM --kill-after=60 10800 \
+    taskset -c "$role_cpu_list" "${command[@]}" > "$role_dir/application.txt" 2>&1 &
+  local root_pid=$!
+  "$system_python" "$harness/monitor_process_tree.py" --root-pid "$root_pid" \
+    --interval-seconds 0.1 --phase-start "$FW_PHASE_START" --phase-end "$FW_PHASE_END" \
+    --output "$role_dir/process_tree.json" > "$role_dir/monitor.txt" 2>&1
+  local monitor_rc=$?
+  wait "$root_pid"; local app_rc=$?
+  set -e
+  local passed=0
+  if (( app_rc==0 && monitor_rc==0 )) && test -s "$FW_OUTPUT" && \
+     grep -Fq "FEVC_FIVE_WAY_ROLE_PASS $role $algorithm rows=$rows cores=$cores" "$role_dir/application.txt"; then
+    passed=1
+  else
+    failures=$((failures+1))
+  fi
+  "$system_python" "$harness/write_status.py" --output "$role_dir/status.json" \
+    --role "$role" --app-rc "$app_rc" --monitor-rc "$monitor_rc" --passed "$passed"
+}
+
+IFS=',' read -r -a ordered_roles <<< "$role_order"
+set -e
+for role in "${ordered_roles[@]}"; do run_role "$role"; done
+
+if (( failures==0 )); then
+  "$system_python" "$harness/validate_task.py" --task-dir "$task_dir" \
+    --output "$task_dir/validation.json" > "$task_dir/validation.application.txt" 2>&1
+  printf 'FEVC_FIVE_WAY_TASK_PASS %s %s\n' "$FW_STAGE" "$cell_id" > "$task_dir/wrapper.pass"
+  printf 'FEVC_FIVE_WAY_TASK_PASS %s %s\n' "$FW_STAGE" "$cell_id"
+  exit 0
+fi
+printf 'FEVC_FIVE_WAY_TASK_FAIL %s %s failures=%d\n' "$FW_STAGE" "$cell_id" "$failures" > "$task_dir/wrapper.fail"
+exit 1

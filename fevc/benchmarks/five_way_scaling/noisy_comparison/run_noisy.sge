@@ -1,0 +1,23 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -N fevc5noise
+#$ -j y
+#$ -m n
+set -euo pipefail
+: "${FW_RUN_DIR:?}" "${NSLOTS:?}" "${JOB_ID:?}" "${TMPDIR:?}"
+cd "$FW_RUN_DIR"
+sha256sum -c bundle.sha256 > bundle.verify.txt
+export FW_MANIFEST=$FW_RUN_DIR/input/tasks.tsv FW_STAGE=smoke
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+# Bundle four short diagnostic calls per role in one reservation. The existing
+# launcher uses SGE_TASK_ID as a task key; these are scalar-job subtask keys.
+for SGE_TASK_ID in 1 2 3 4; do
+    export SGE_TASK_ID
+    bash -l "$FW_RUN_DIR/code/run_task.sge"
+done
+module purge
+export MPLCONFIGDIR=$TMPDIR/matplotlib
+/projectnb/welfgr/vckss/five_way_scaling/runs/20260909T112050Z-f3098bc/artifacts/python-env/bin/python \
+    "$FW_RUN_DIR/code/summarize.py" --run "$FW_RUN_DIR"
+printf 'FEVC_NOISY_COMPARISON_EXECUTION_PASS job=%s\n' "$JOB_ID"

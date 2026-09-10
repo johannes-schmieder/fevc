@@ -52,6 +52,9 @@ Thumbs.db
 
 # Local configuration and scratch
 .local/
+# Generated research figures and local scratch; source belongs under benchmarks/.
+/output/
+/tmp/
 local.env
 .env
 .env.*

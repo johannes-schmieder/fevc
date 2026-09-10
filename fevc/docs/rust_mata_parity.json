@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-05",
-  "release_target": "0.5.0-alpha.1",
+  "updated": "2026-09-10",
+  "release_target": "0.5.0-rc.1",
+  "qualification_scope": "Qualified rows record capability evidence only for the cited sources and regimes. The latest macOS checkpoint is the API-24 local control-lanes result bound to 929a1d7. Linux passed the earlier f3098bc inference source; current-runtime Linux qualification or compatibility review remains outstanding. Windows qualification and the complete five-binary archive remain pending. The retained alpha_required field describes the prior alpha gates, not authorization to release the current RC.",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
     {
@@ -90,7 +91,7 @@
       "mata": "deferred",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "corrected-source observation confirmation FAIL: one q1 firm SE ratio 1.1012 exceeds 1.10; existing-output review finds a calibration limitation, not a waiver; match integration separately authorized"
+      "evidence": "direct residual Gram with 2,048 probes and unified residual-moment fit implemented; bounded local Mac/replay checks in INFERENCE_COMPLETION_2026-09-08.md. Prior observation confirmation FAIL (q1 firm SE ratio 1.1012 > 1.10) and subsequent calibration failures remain limitations, not waived gates"
     },
     {
       "id": "fixedoffset-match-component-inference",
@@ -114,7 +115,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "thin and universal source-local plugin-build profile at c199bf0, including exact stayer hybrid"
+      "evidence": "API-24 local checkpoint bound to 929a1d7: thin and universal qualified binaries, arm64/Rosetta, Stata/install and real interruption checks; CONTROL_LANES_256_2026-09-10.md and control_lanes_256_v1_result.json. No all-platform release claim"
     },
     {
       "id": "linux-scc",
@@ -122,15 +123,15 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Stata MP 19 full suite and isolated clean installation on SGE job 7305794; exact source 86e0711, candidate and scheduler receipts under M4-LINUX-SCC"
+      "evidence": "prior alpha exact source 86e0711 under M4-LINUX-SCC; later inference source f3098bc PASS on job 7493136 in inference_linux_qualification_20260908_result.json. Neither receipt qualifies subsequent memory/control runtime changes"
     },
     {
       "id": "windows",
       "surface": "Windows qualification",
       "mata": "implemented",
-      "rust": "deferred",
+      "rust": "pending",
       "alpha_required": false,
-      "evidence": "not an alpha release gate and no Windows binary will be shipped"
+      "evidence": "requested for the complete RC payload; exact-source smoke failed with STATA_DRIVER_FAILED, cleanup/stopped state passed. Authorized collector extension awaits maintenance-profile authentication; Windows qualification and final-archive installation remain pending (INFERENCE_PLATFORM_FOLLOWUP_2026-09-08.md)"
     }
   ]
 }

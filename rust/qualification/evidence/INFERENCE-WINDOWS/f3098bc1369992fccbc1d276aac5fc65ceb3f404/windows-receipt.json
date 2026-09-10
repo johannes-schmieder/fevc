@@ -1,0 +1,22 @@
+{
+    "schema_version":  1,
+    "run_id":  "win-20260908T153447Z-26c5c40c",
+    "project":  "fevc",
+    "profile":  "stata-do",
+    "source_revision":  "commit-f3098bc1369992fccbc1d276aac5fc65ceb3f404",
+    "source_sha256":  "2be19cc707f5f8329dfdd24e6a06b02cbe0b4bf61a2cf6d7d5a1805475cdc287",
+    "windows_target":  "x86_64",
+    "execution_identity":  "SYSTEM",
+    "status":  "FAIL",
+    "error_code":  "STATA_DRIVER_FAILED",
+    "checks":  {
+                   "execution_identity":  true,
+                   "source_hash":  true,
+                   "archive_paths":  true,
+                   "source_manifest":  true,
+                   "shutdown_backstop":  true,
+                   "stata":  false,
+                   "project_test":  false
+               },
+    "completed_at_utc":  "2026-09-08T15:50:54.7912735Z"
+}

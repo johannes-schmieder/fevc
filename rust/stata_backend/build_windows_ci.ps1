@@ -7,6 +7,7 @@ $statusPath = Join-Path $projectRoot 'windows-build.status'
 if (Test-Path $statusPath) { throw 'Build status already exists' }
 $backend = Join-Path $projectRoot 'rust/stata_backend'
 $spi = Join-Path $backend 'stata-spi'
+'build_spi' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
 New-Item -ItemType Directory -Path $spi -ErrorAction Stop | Out-Null
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 foreach ($line in Get-Content (Join-Path $backend 'stata-spi.sha256')) {
@@ -28,9 +29,11 @@ $env:CARGO_BUILD_JOBS = '2'
 $env:VCKSS_STATA_SPI_DIR = $spi
 $buildLog = Join-Path $projectRoot 'windows-build.log'
 # Install only the project's pinned public compiler; never install licensed tools.
+'build_toolchain' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
 & rustup toolchain install 1.85.1 --profile minimal --no-self-update *> $buildLog
 if ($LASTEXITCODE -ne 0) { throw 'Pinned Rust toolchain unavailable' }
 $command = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 build --release --locked --manifest-path rust/stata_backend/Cargo.toml"' -f $devcmd
+'build_native' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
 & cmd.exe /d /s /c $command *>> $buildLog
 if ($LASTEXITCODE -ne 0) { throw 'Native build failed; preserve bounded compiler diagnostics' }
 $candidate = Join-Path $backend 'target/release/vckss_stata.dll'
@@ -41,7 +44,18 @@ if ($pe -lt 64 -or $pe + 26 -gt $bytes.Length -or
     [BitConverter]::ToUInt32($bytes, $pe) -ne 0x00004550 -or
     [BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664 -or
     [BitConverter]::ToUInt16($bytes, $pe + 24) -ne 0x20b) { throw 'Not an x86-64 PE32+ candidate' }
+'pe_import_export' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
+& python.exe -E -s 'C:\WindowsCI\pe_audit.py' --binary $candidate --exports 'C:\WindowsCI\required_exports.json' *>> $buildLog
+if ($LASTEXITCODE -ne 0) { throw 'PE import/export audit failed' }
+foreach ($test in @(@('rust_workspace','rust/Cargo.toml'), @('rust_backend','rust/stata_backend/Cargo.toml'))) {
+    $test[0] | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
+    $testCommand = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 test --workspace --all-targets --locked --manifest-path {1}"' -f $devcmd, $test[1]
+    & cmd.exe /d /s /c $testCommand *>> $buildLog
+    if ($LASTEXITCODE -ne 0) { throw 'Locked Rust test gate failed' }
+}
+'build_package' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
 $plugin = 'fevc_rust_windows_x64.plugin'
+Copy-Item $candidate (Join-Path $projectRoot $plugin)
 Copy-Item $candidate (Join-Path $projectRoot "fevc/$plugin")
 $stage = Join-Path $projectRoot 'windows-package'
 New-Item -ItemType Directory -Path $stage -ErrorAction Stop | Out-Null

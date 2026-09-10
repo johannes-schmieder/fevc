@@ -1,0 +1,5 @@
+Exact-source application failure, not Windows qualification.
+Receipt preserved byte-for-byte. Wrapper output omits only machine-local receipt path.
+No raw Stata/compiler logs, credentials, cloud identifiers or restricted row-level data collected.
+Wrapper confirms final stopped state, transient-object deletion and lock release.
+No compiled Windows candidate or detailed failure stage available through accepted collector.

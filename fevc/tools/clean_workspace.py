@@ -8,7 +8,9 @@ Tracked files and source-bound evidence trees are never eligible.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
+import os
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
@@ -19,6 +21,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 PROTECTED_PREFIXES = (
     ".git/",
     ".venv/",
+    ".local/",
+    "output/",
     ".ci/stata/results/",
     "docs/history/",
     "reviews/",
@@ -30,17 +34,15 @@ PROTECTED_PREFIXES = (
     "fevc/docs/",
     "fevc/qualification/",
 )
-PROTECTED_EXACT = {".git", ".venv"}
+PROTECTED_EXACT = {".git", ".venv", ".local", "output"}
 PROTECTED_PARTS = {"evidence"}
 DISPOSABLE_DIRS = {
     ".ci/stata/run",
     ".hypothesis",
     ".pytest_cache",
     ".ruff_cache",
-    "rust/fuzz/target",
-    "rust/stata_backend/target",
-    "rust/target",
 }
+BUILD_CACHE_DIRS = {"rust/fuzz/target", "rust/stata_backend/target", "rust/target"}
 DISPOSABLE_DIR_NAMES = {
     ".ipynb_checkpoints",
     ".mypy_cache",
@@ -102,6 +104,9 @@ def is_protected(relative: str) -> bool:
     parts = Path(normalized).parts
     return (
         normalized in PROTECTED_EXACT
+        # Installed plugins may be the exact binaries named by a qualification
+        # receipt. Ignored does not mean disposable.
+        or (len(parts) == 2 and parts[0] == "fevc" and parts[1].endswith(".plugin"))
         or any(part in PROTECTED_PARTS for part in parts)
         or any(
             normalized == prefix.rstrip("/") or normalized.startswith(prefix)
@@ -110,24 +115,28 @@ def is_protected(relative: str) -> bool:
     )
 
 
-def _candidate_paths() -> set[Path]:
-    candidates = {
-        REPO_ROOT / relative
-        for relative in DISPOSABLE_DIRS
-        if (REPO_ROOT / relative).exists()
-    }
-    candidates.update(
-        path for path in REPO_ROOT.rglob("__pycache__") if path.is_dir()
-    )
-    for name in DISPOSABLE_DIR_NAMES:
-        candidates.update(path for path in REPO_ROOT.rglob(name) if path.is_dir())
-    for pattern in DISPOSABLE_DIR_GLOBS:
-        candidates.update(path for path in REPO_ROOT.rglob(pattern) if path.is_dir())
-    for pattern in (".DS_Store", *DISPOSABLE_FILE_GLOBS):
-        candidates.update(path for path in REPO_ROOT.rglob(pattern) if path.is_file())
-    candidates.update(
-        path for path in (REPO_ROOT / "fevc").glob("*.plugin") if path.is_file()
-    )
+def _candidate_paths(*, build_caches: bool = False) -> set[Path]:
+    candidates: set[Path] = set()
+    # Pruning avoids traversing local evidence, toolchains and build caches.
+    # These can be much larger than the source tree.
+    for directory, dirs, files in os.walk(REPO_ROOT, followlinks=False):
+        parent = Path(directory)
+        for name in dirs[:]:
+            path = parent / name
+            relative = _relative(path)
+            if (path.is_symlink() or is_protected(relative)
+                    or (relative in BUILD_CACHE_DIRS and not build_caches)):
+                dirs.remove(name)
+                continue
+            if (relative in DISPOSABLE_DIRS or relative in BUILD_CACHE_DIRS
+                    or name == "__pycache__" or name in DISPOSABLE_DIR_NAMES
+                    or any(fnmatch.fnmatchcase(name, pattern)
+                           for pattern in DISPOSABLE_DIR_GLOBS)):
+                candidates.add(path)
+        for name in files:
+            if any(fnmatch.fnmatchcase(name, pattern)
+                   for pattern in (".DS_Store", *DISPOSABLE_FILE_GLOBS)):
+                candidates.add(parent / name)
     return candidates
 
 
@@ -143,16 +152,28 @@ def _file_totals(path: Path) -> tuple[int, int]:
     return files, size
 
 
-def collect() -> tuple[Path, ...]:
+def collect(*, build_caches: bool = False) -> tuple[Path, ...]:
     tracked = _git_lines("ls-files")
+    retained = tracked | _git_lines("ls-files", "--others", "--exclude-standard")
     selected: list[Path] = []
-    for path in sorted(_candidate_paths()):
+    for path in sorted(_candidate_paths(build_caches=build_caches)):
         relative = _relative(path)
         if is_protected(relative):
             continue
-        if relative in tracked or any(
-            tracked_path.startswith(f"{relative.rstrip('/')}/")
-            for tracked_path in tracked
+        if not build_caches and any(relative == name or relative.startswith(name + "/")
+                                    for name in BUILD_CACHE_DIRS):
+            continue
+        # Do not recurse through a directory symlink into another workspace.
+        if path.is_symlink() or any(parent.is_symlink() for parent in path.parents
+                                    if parent != REPO_ROOT):
+            continue
+        # A disposable-looking ancestor must not swallow protected evidence.
+        if path.is_dir() and any(is_protected(_relative(child))
+                                 for child in path.rglob("*")):
+            continue
+        if relative in retained or any(
+            retained_path.startswith(f"{relative.rstrip('/')}/")
+            for retained_path in retained
         ):
             continue
         ignored = subprocess.run(
@@ -167,8 +188,8 @@ def collect() -> tuple[Path, ...]:
     return tuple(selected)
 
 
-def clean(*, apply: bool) -> CleanupReport:
-    selected = collect()
+def clean(*, apply: bool, build_caches: bool = False) -> CleanupReport:
+    selected = collect(build_caches=build_caches)
     file_count = 0
     byte_count = 0
     for path in selected:
@@ -195,8 +216,10 @@ def main() -> int:
     mode.add_argument("--dry-run", action="store_true", help="print only (default)")
     mode.add_argument("--apply", action="store_true", help="remove eligible artifacts")
     parser.add_argument("--json", action="store_true", help="emit machine-readable output")
+    parser.add_argument("--build-caches", action="store_true",
+                        help="also remove ignored Rust build caches (requires rebuilding)")
     args = parser.parse_args()
-    report = clean(apply=args.apply)
+    report = clean(apply=args.apply, build_caches=args.build_caches)
     if args.json:
         print(json.dumps(asdict(report), indent=2, sort_keys=True))
     else:

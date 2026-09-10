@@ -1,0 +1,77 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N fevc5prep
+#$ -pe omp 4
+#$ -l h_rt=04:00:00
+#$ -l mem_per_core=8G
+
+set -euo pipefail
+: "${FW_RUN_DIR:?}"; : "${TMPDIR:?}"; : "${JOB_ID:?}"; : "${NSLOTS:?}"
+[[ "$FW_RUN_DIR" == /projectnb/welfgr/vckss/five_way_scaling/runs/* ]]
+test "$NSLOTS" = 4
+harness=$FW_RUN_DIR/code; input=$FW_RUN_DIR/input; artifacts=$FW_RUN_DIR/artifacts; receipts=$FW_RUN_DIR/receipts/preparation
+test -d "$harness" && test -d "$input/comparators" && test ! -e "$artifacts"
+mkdir -p "$artifacts/sources" "$receipts"
+trap 'printf "FEVC_FIVE_WAY_PREPARE_FAIL rc=%s\n" "$?" > "$receipts/wrapper.fail"' EXIT
+
+check_archive() { test "$(sha256sum "$input/comparators/$1" | awk '{print $1}')" = "$2"; }
+check_archive matlab.tar.gz d8b48ae7f994d8f9b007b9d6b2c750f82499d4e3e5279e05fbe8a2945548c417
+check_archive julia.tar.gz 9ad42cdaa88c47eee66729c99b1ef86f57fd97ce83a28755bc081270af76e571
+check_archive r.tar.gz f70360b6d880dba0f87ddc2604fe289cc9a731b1d1f98dd5e2291fc8333d5d33
+check_archive python.tar.gz b3a221e0f145b6f1b5f66b6073d98dd9297ea0ab80008e670fab3a2e18d13675
+check_archive sanic_0.0.2.tar.gz 998041c3303f63c3651070c49d9d991118223a8ba4d7e8199ea6c3ce3e38175e
+for role in matlab julia r python; do
+  mkdir "$artifacts/sources/$role.unpack"
+  tar -xzf "$input/comparators/$role.tar.gz" -C "$artifacts/sources/$role.unpack"
+  root=$(find "$artifacts/sources/$role.unpack" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+  test -n "$root"; mv "$root" "$artifacts/sources/$role"; rmdir "$artifacts/sources/$role.unpack"
+done
+
+qualification=/projectnb/welfgr/vckss/runs/20260908T160000Z-inference-f3098bc
+test "$(tr -d '[:space:]' < "$qualification/source/SOURCE_COMMIT.txt")" = f3098bc1369992fccbc1d276aac5fc65ceb3f404
+mkdir -p "$artifacts/package"; cp -R "$qualification/source/fevc" "$artifacts/package/fevc"
+chmod -R u+w "$artifacts/package/fevc"
+cp "$qualification/artifacts/candidate/fevc_rust_linux_x64.plugin" "$artifacts/package/fevc/fevc_rust_linux_x64.plugin"
+test "$(sha256sum "$artifacts/package/fevc/fevc_rust_linux_x64.plugin" | awk '{print $1}')" = e731932f5d85c9fb16b7d260aff7934d3445142312adf0ca04003a1a0b2e98f1
+module purge; module load python3/3.12.4
+python3 "$harness/build_benchmark_ado.py" --source "$artifacts/package/fevc/fevc.ado" \
+  --output "$artifacts/package/fevc/fevc.benchmark.ado" --receipt "$receipts/benchmark_ado.json"
+mv "$artifacts/package/fevc/fevc.benchmark.ado" "$artifacts/package/fevc/fevc.ado"
+
+module purge; module load matlab/2024b
+matlab -batch "addpath('$harness'); prepare_matlab_mex('$artifacts/sources/matlab','$artifacts/mex')" \
+  > "$receipts/matlab_mex.application.txt" 2>&1
+grep -Fq FEVC_FIVE_WAY_MATLAB_MEX_PASS "$receipts/matlab_mex.application.txt"
+
+module purge; module load miniconda/25.3.1
+conda create -y -p "$artifacts/python-env" -c conda-forge \
+  python=3.10 pip numpy=1.26.4 pandas=2.0.3 scipy=1.13.1 > "$receipts/python_conda.txt" 2>&1
+"$artifacts/python-env/bin/python" -m pip install "$artifacts/sources/python" > "$receipts/python_pip.txt" 2>&1
+"$artifacts/python-env/bin/python" -m pip freeze > "$receipts/python_freeze.txt"
+"$artifacts/python-env/bin/python" -c 'import pytwoway,bipartitepandas,numpy,pandas,scipy; from importlib.metadata import version; assert version("pytwoway")=="0.3.21"; assert version("numpy")=="1.26.4"; assert version("pandas")=="2.0.3"; assert version("scipy")=="1.13.1"; print("pytwoway="+version("pytwoway")+" numpy="+version("numpy")+" pandas="+version("pandas")+" scipy="+version("scipy"))' > "$receipts/python_import.txt"
+
+conda create -y -p "$artifacts/r-env" -c conda-forge \
+  r-base=4.4 r-data.table r-matrix r-igraph r-doparallel r-foreach r-jsonlite \
+  r-rcpp r-rcppeigen cxx-compiler make > "$receipts/r_conda.txt" 2>&1
+mkdir "$artifacts/r-library"
+R_LIBS_USER=$artifacts/r-library conda run -p "$artifacts/r-env" \
+  R CMD INSTALL "$input/comparators/sanic_0.0.2.tar.gz" > "$receipts/r_sanic_install.txt" 2>&1
+R_LIBS_USER=$artifacts/r-library conda run -p "$artifacts/r-env" \
+  R CMD INSTALL "$artifacts/sources/r" > "$receipts/r_install.txt" 2>&1
+R_LIBS_USER=$artifacts/r-library conda run -p "$artifacts/r-env" \
+  Rscript --vanilla -e 'library(LeaveOutKSS); stopifnot(as.character(packageVersion("LeaveOutKSS"))=="0.1.0"); stopifnot(as.character(packageVersion("sanic"))=="0.0.2"); write.csv(installed.packages()[,c("Package","Version")],stdout())' > "$receipts/r_packages.csv"
+
+module purge; module load julia/1.9.1
+export JULIA_DEPOT_PATH=$artifacts/julia-depot JULIA_NUM_THREADS=4
+julia --startup-file=no --project="$artifacts/sources/julia" -e 'using Pkg; @assert VERSION==v"1.9.1"; Pkg.instantiate(); using VarianceComponentsHDFE; @assert pkgversion(VarianceComponentsHDFE)==v"0.1.0"; Pkg.status(;mode=Pkg.PKGMODE_MANIFEST); println("FEVC_FIVE_WAY_JULIA_PREP_PASS")' > "$receipts/julia_environment.txt" 2>&1
+grep -Fq FEVC_FIVE_WAY_JULIA_PREP_PASS "$receipts/julia_environment.txt"
+
+(cd "$artifacts" && find package mex sources -type f -print0 | sort -z | xargs -0 sha256sum) > "$receipts/artifact_files.sha256"
+printf 'job_id=%s\nhost=%s\nslots=%s\n' "$JOB_ID" "$HOSTNAME" "$NSLOTS" > "$receipts/resources.txt"
+printf 'FEVC_FIVE_WAY_PREPARE_PASS\n' > "$receipts/wrapper.pass"
+rm -f "$receipts/wrapper.fail"; trap - EXIT
+printf 'FEVC_FIVE_WAY_PREPARE_PASS\n'

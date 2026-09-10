@@ -1,0 +1,40 @@
+{
+  "schema": "FEVC-INFERENCE-LINUX-QUALIFICATION-V1",
+  "status": "PASS",
+  "source_commit": "f3098bc1369992fccbc1d276aac5fc65ceb3f404",
+  "job_id": "7493136",
+  "source_bundle_sha256": "af7ec8588f837639aa07c736f230fbf37cd380f8c47453d6dd1ab2b91b0f3287",
+  "candidate_sha256": "e731932f5d85c9fb16b7d260aff7934d3445142312adf0ca04003a1a0b2e98f1",
+  "source_files_manifest_sha256": "0efbaedd8b4b94d9256a205cd477611afd253fa6e85252a009bae4c2508c2180",
+  "qualification_source_manifest_sha256": "20cbd8fe85cef00c520b77fc3ad193e5f459d80102191aed01a6b9dc1c375f64",
+  "failed": 0,
+  "exit_status": 0,
+  "wall_seconds": 547,
+  "maxvmem": "8.287G",
+  "verified_remote_file_count": 20,
+  "explicit_stata_markers": [
+    "FEVC TEST SUITE PASS: full",
+    "PASS test_rust_public_install.do",
+    "PASS test_rust_component_inference.do",
+    "PASS test_rust_match_component_inference.do",
+    "FEVC INDIVIDUAL INFERENCE PASS"
+  ],
+  "binary_path": ".local/diagnostics/platform-followup-20260908/linux/artifacts/candidate/fevc_rust_linux_x64.plugin",
+  "evidence": {
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/stata-full-suite__run_all.log.sanitized.log": "7f7bbcc506c234123f53a5ec57eee135f72f57b5b9726bc6ffd220868e3d7935",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/stata-clean-install__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/SANITIZED_EVIDENCE.txt": "44e4e8d5a46c9ec4508c3484b373b05c0573285897142bad55dfbb0f3008c4cd",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/wrapper.txt": "4ace408132859fe1fa3bb6a60c6092a9d8e073ea57528c6469f94ecdd7ef9e98",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/collected-files.sha256": "8325892cc45e6a24db31252ca10c2294993e6dc4a2c3ee4d6738ec5f002bc18a",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/stata-full-suite__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/qualification-source.sha256": "20cbd8fe85cef00c520b77fc3ad193e5f459d80102191aed01a6b9dc1c375f64",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/qacct.txt": "97756d8153c19ddabfbfe6eb880fe523c1658fc797c091d69d8c6579f3710a1f",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/linux-qualification.txt": "029e1d7d45e269ca0f70ca021501755737f3e9b3b2073355c910c8ade01df642",
+    "rust/qualification/evidence/INFERENCE-LINUX-SCC/f3098bc1369992fccbc1d276aac5fc65ceb3f404/stata-clean-install__stata.log.sanitized.log": "5c0c9742b28c785fde0576e5198015d6ee8b9713c21bd44bb131eda8e13a43b5"
+  },
+  "limitations": [
+    "source-local Linux candidate, not final five-binary archive installation",
+    "no new coverage or representative-scale claim",
+    "Windows qualification failed separately"
+  ]
+}
