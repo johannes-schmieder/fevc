@@ -1,5 +1,16 @@
 # Pending changes
 
+## Exact degree-four full CMG — 2026-09-11
+
+- Eliminate degree-four workers through their exact weighted Schur clique in
+  the full-CMG route; retain generic/inference routing and higher-degree stars.
+- Charge a checked conservative edge bound before construction and preserve
+  optional-memory, residual, RNG, cancellation and lifecycle contracts.
+- Add independent weighted Schur and edge-forecast regressions. Selected
+  1.6m/6.4m SCC checks pass; see the [development report](docs/DEGREE_FOUR_CMG_2026-09-11.md).
+- Leave scheduling, smaller aligned batches and fused RHS experimental rather
+  than assuming their earlier gains compose with the reduced graph.
+
 ## Control preparation with 256 lanes — 2026-09-10
 
 - Register the owner AKM example in the manual inventory, restore the frozen

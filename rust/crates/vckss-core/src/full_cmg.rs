@@ -410,7 +410,7 @@ impl FullCmgDirectSolver {
             })?;
 
         let graph_start = Instant::now();
-        let hybrid = HybridGraph::from_problem_with_interrupt(problem, interrupt)?;
+        let hybrid = HybridGraph::from_problem_degree_four_with_interrupt(problem, interrupt)?;
         let graph = Laplacian::from_edges(
             hybrid.vertices(),
             hybrid.edges().iter().map(|edge| {
@@ -1374,10 +1374,20 @@ fn prebuild_memory_forecast_counts(
             "hybrid vertex upper bound overflow",
         )
     })?;
-    // Every worker contributes at most one hybrid edge per compressed cell:
-    // degrees two and three contribute one and three clique edges, while
-    // higher degrees contribute one auxiliary edge per incident cell.
-    let edges = cells;
+    // Degree four contributes six clique edges for four compressed cells;
+    // all other degrees contribute no more than one edge per cell. Retain a
+    // checked conservative upper bound before constructing the graph or RNG.
+    let edges = cells
+        .checked_mul(3)
+        .and_then(|n| n.checked_add(1))
+        .ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "cmg_full_v2_memory_preflight",
+                "degree-four edge bound overflow",
+            )
+        })?
+        / 2;
     let hybrid_bytes = checked_sum_u64(&[
         checked_product_u64(&[vertices, 48])?,
         checked_product_u64(&[edges, 40])?,
@@ -1641,6 +1651,20 @@ mod tests {
     fn memory_forecast_overflow_is_typed_before_allocation() {
         let error = prebuild_memory_forecast_counts(u64::MAX, 1, 1, test_plan())
             .expect_err("overflow must fail");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "cmg_full_v2_memory_preflight");
+    }
+
+    #[test]
+    fn degree_four_edge_forecast_rounds_up_and_rejects_overflow() {
+        for (cells, edges) in [(0, 0), (1, 2), (2, 3), (3, 5), (4, 6), (5, 8)] {
+            let forecast = prebuild_memory_forecast_counts(5, 1, cells, test_plan())
+                .expect("bounded degree-four forecast");
+            assert_eq!(forecast.graph_bytes, edges * 16 + 6 * 8);
+            assert_eq!(forecast.hybrid_bytes, 6 * 48 + edges * 40 + 4);
+        }
+        let error = prebuild_memory_forecast_counts(5, 1, u64::MAX / 3 + 1, test_plan())
+            .expect_err("degree-four edge multiplication must be checked");
         assert_eq!(error.code, ErrorCode::ResourceLimit);
         assert_eq!(error.phase, "cmg_full_v2_memory_preflight");
     }

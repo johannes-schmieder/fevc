@@ -1,4 +1,17 @@
-# Current objective and checkpoint — 2026-09-10
+# Current objective and checkpoint — 2026-09-11
+
+Integrate measured FEVC performance wins from bounded diagnostic testing.
+The exact degree-four full-CMG candidate passes selected 1.6m and 6.4m
+paired SCC checks and is now in the working source. Source-local arm64/Rosetta
+native checks and the integrated package/Stata quick/full/install gates pass;
+the tested local plugins are installed. The owner authorized committing and
+pushing this source change on September 11. Qualification was performed on
+the uncommitted source snapshot, not a clean commit; this is not a release.
+The [implementation and evidence report](docs/DEGREE_FOUR_CMG_2026-09-11.md)
+records scope, validation, source compatibility and unpromoted queue/fused-RHS
+experiments. No full figure campaign or public release is authorized.
+
+## Preserved source-readiness objective
 
 Prepare the repository for public source development: keep current guidance
 concise, separate historical evidence, remove disposable local clutter, and

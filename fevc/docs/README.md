@@ -25,6 +25,10 @@ registrations, including failed campaigns and superseded implementation plans.
 
 ## Latest source-bound checkpoints
 
+- [Degree-four full CMG](DEGREE_FOUR_CMG_2026-09-11.md): selected same-host
+  performance evidence, preserved statistical/resource contracts, source
+  compatibility and local qualification status. Other scheduling and upstream
+  candidates remain experimental.
 - [256-lane control preparation](CONTROL_LANES_256_2026-09-10.md) and
   [result record](control_lanes_256_v1_result.json): repaired audit discrepancies,
   numerical/lifecycle/memory tests and measured performance at Mata API 24.
