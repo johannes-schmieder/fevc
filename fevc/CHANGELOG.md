@@ -10,6 +10,9 @@
   probe RNG; preserve omitted/explicit memory policy and frozen ABI layouts.
 - Keep fused RHS experimental and outside normal builds. Other solver routes,
   public options, statistical targets and default tolerances are unchanged.
+- Qualify exact runtime source on Mac arm64/Rosetta and SCC Linux, plus the
+  integrated package and clean installs. Record evidence and limitations in
+  the [integration report](docs/BATCH_QUEUE_2026-09-12.md).
 
 ## Exact degree-four full CMG — 2026-09-11
 

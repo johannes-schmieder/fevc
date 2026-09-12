@@ -7,11 +7,15 @@ scales with permitted thread count and retains explicit-budget planning,
 input-order results/errors, cancellation and original-system residual gates.
 The owner authorized integration, commit and push on September 12.
 
-Rust workspace tests, strict Clippy, formatting and Python tests pass.
-Fresh integrated native/package qualification is pending at this source
-checkpoint; previous binary receipts do not qualify the new runtime.
-See the [integration record](docs/BATCH_QUEUE_2026-09-12.md) for scope,
-accepted performance evidence and updated qualification results. The
+Rust workspace tests (554 passed, one existing ignored diagnostic), strict
+Clippy, formatting, 805 Python tests, CMG component checks and integrated
+Stata quick/full/install gates pass. Fresh native qualification passes on
+arm64, Rosetta and SCC Linux at exact runtime source `0ec6f3f`; the tested Mac
+plugins are staged locally. Later changes are documentation, evidence and the
+tested source-inventory audit only; all 181 native inputs rehash unchanged.
+See the [integration record](docs/BATCH_QUEUE_2026-09-12.md) and
+[source/binary result](docs/batch_queue_v1_result.json) for scope, accepted
+performance evidence and qualification results. The
 [degree-four report](docs/DEGREE_FOUR_CMG_2026-09-11.md) remains historical.
 No full figure campaign or public binary release is authorized.
 
@@ -51,13 +55,15 @@ calibration failures and memory-forecast limits remain applicable.
 ## Outstanding work preserved
 
 - The [platform follow-up](docs/INFERENCE_PLATFORM_FOLLOWUP_2026-09-08.md)
-  records Linux PASS at the older `f3098bc` source and the Windows
+  records historical Linux PASS at `f3098bc` and the Windows
   `STATA_DRIVER_FAILED` smoke. The approved Windows collector extension awaits
   authentication to the existing maintenance profile after sign-in timed out.
   Its deployment, Windows qualification, and complete five-binary archive
   installation tests remain pending. The published-text citation checks are
   complete. Later runtime changes need appropriate platform compatibility or
   qualification evidence; old receipts do not establish that automatically.
+  The current batching/queue runtime now has its own Linux full/install PASS
+  at `0ec6f3f` (job 7536791); Windows remains unqualified for this checkpoint.
 - The owner's [five-way scaling harness](benchmarks/five_way_scaling/README.md),
   Windows harness changes, and platform evidence remain unfinished work in this
   worktree. Generated local outputs are retained and ignored. Cleanup does not

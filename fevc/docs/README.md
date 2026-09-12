@@ -28,7 +28,9 @@ registrations, including failed campaigns and superseded implementation plans.
 - [Thread-aware batching and ordered queue](BATCH_QUEUE_2026-09-12.md):
   approved integration over degree-four FEVC, mixed-degree 2–8 evidence at
   1.6m/6.4m, allocation/accounting safeguards and native qualification status.
-  Fusion and upstream algorithm changes remain experimental.
+  [Source/binary result](batch_queue_v1_result.json) records passing Mac/Linux
+  qualification and integrated package checks. Fusion and upstream algorithm
+  changes remain experimental.
 - [Degree-four full CMG](DEGREE_FOUR_CMG_2026-09-11.md): selected same-host
   performance evidence, preserved statistical/resource contracts, source
   compatibility and local qualification status at the preceding checkpoint.

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +38,24 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def cargo_manifests(root: Path) -> tuple[Path, ...]:
+    """Audit source files, not ignored local dependency/experiment snapshots."""
+    if not (root / ".git").exists():
+        # Source distributions have no Git metadata and contain only payload.
+        return tuple(sorted((root / "rust").glob("**/Cargo.toml")))
+    completed = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others",
+         "--exclude-standard", "--", "rust"],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    paths = {Path(item.decode("utf-8")) for item in completed.stdout.split(b"\0") if item}
+    return tuple(sorted(
+        root / path for path in paths
+        if path.name == "Cargo.toml" and (root / path).is_file()
+    ))
+
+
 def main() -> int:
     errors: list[str] = []
     if not CANONICAL.is_file():
@@ -63,8 +82,7 @@ def main() -> int:
         if entry not in package.splitlines():
             errors.append(f"fevc.pkg: missing package entry {entry!r}")
 
-    cargo_files = tuple((ROOT / "rust").glob("**/Cargo.toml"))
-    for path in cargo_files:
+    for path in cargo_manifests(ROOT):
         if "vendor/cmg" in path.as_posix():
             continue
         text = path.read_text(encoding="utf-8")
