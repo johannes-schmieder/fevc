@@ -98,8 +98,10 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 // Odd probe counts and omitted budgets use the fixed thread-aware policy.
-quietly fevc outcome, worker(worker) firm(firm) stayers(movers) ///
-    probeorder(observation_key) backend(rust) probes(65) seed(81227) ///
+quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
+    nuisance(joint) stayers(movers) probeorder(observation_key) ///
+    backend(rust) rng(counter_v1) algorithm(jla) engine(auto) ///
+    preconditioner(auto) batch(auto) probes(65) seed(81227) ///
     maxiter(10000) nodisplay
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
 assert e(memory_budget_supplied) == 0

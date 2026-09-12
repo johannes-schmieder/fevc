@@ -101,6 +101,17 @@ def test_macos_qualifier_hashes_vendored_cmg_runtime() -> None:
         assert f'"${{repo_root}}/{relative}"' in inputs
 
 
+def test_public_full_cmg_reconciles_selected_rhs_capacity() -> None:
+    ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
+    assert "local native_selected_lev_batch = r(leverage_batch_width)" in ado
+    assert "local native_selected_tgt_batch = r(target_batch_width)" in ado
+    assert "`cmg_max_batch_rhs'==max(`native_selected_lev_batch'," in ado
+    assert "2*`native_selected_tgt_batch')" in ado
+    assert "`cmg_max_batch_rhs'==64" not in ado
+    assert "`cmg_workspace_count'<=`cmg_threads_used'" in ado
+    assert "`cmg_rhs_count'==1+3*`probes'" in ado
+
+
 def test_version_identifiers_agree() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
     mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")

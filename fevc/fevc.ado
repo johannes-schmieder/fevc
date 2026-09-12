@@ -2073,6 +2073,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
 
     local native_result_engine = r(selected_engine_code)
+    local native_selected_lev_batch = r(leverage_batch_width)
+    local native_selected_tgt_batch = r(target_batch_width)
     local native_result_rhs_schema = r(rhs_receipt_schema)
     local native_perf_schema = r(performance_schema)
     local native_perf_flags = r(performance_flags)
@@ -2235,7 +2237,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `cmg_admitted_peak'==max(`cmg_prep_peak',              ///
                 `cmg_non_cmg_peak'+`cmg_actual_retained'+          ///
                 `cmg_allocator_allowance') &                       ///
-            `cmg_max_batch_rhs'==64 &                              ///
+            `cmg_max_batch_rhs'==max(`native_selected_lev_batch', ///
+                2*`native_selected_tgt_batch') &                   ///
             `cmg_workspace_count'>0 &                              ///
             `cmg_workspace_count'<=`cmg_threads_used' &            ///
             `cmg_rhs_count'==1+3*`probes' &                        ///

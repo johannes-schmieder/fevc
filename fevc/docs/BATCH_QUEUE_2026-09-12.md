@@ -115,6 +115,20 @@ deleting evidence, and all 800 tests then passed. The new provenance regression
 also passes. The owner's unrelated local `KSS_Veneto_replication/` checkout is
 preserved and locally excluded from the source qualification inventory.
 
+The first native qualification at source `e4186dc` stopped at the public
+full-CMG receipt check: the integration had omitted the accepted snapshot's
+Stata wrapper change and still required exactly 64 RHS slots. The estimate
+itself completed; trace evidence identifies the stale capacity assertion.
+The narrow repair restores the snapshot's exact cross-check against selected
+leverage/target widths, with a Python regression. No solver or tolerance
+changes were made. The failed transcript and unsubmitted SCC source bundle
+are retained; fresh native qualification must use the repaired source.
+The focused retest passed the original estimate and capacity assertions, then
+identified a test-setup mistake in the added 65-probe case: it omitted the
+qualified full-CMG routing tuple. That test now specifies the same explicit
+tuple as the original case, while still omitting the memory budget. This is
+a test correction, not a widening of automatic solver selection.
+
 No fused port, upstream optional kernel, CMG branch update or timing-based
 routing is integrated. Windows qualification and public binary distribution
 remain separate outstanding work; historical receipts do not qualify this
