@@ -6,6 +6,11 @@ use core::fmt;
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum CmgError {
+    /// A checked caller-owned workspace or result allocation failed.
+    AllocationFailed {
+        /// Allocation being attempted.
+        context: &'static str,
+    },
     /// A vector or matrix dimension did not match the expected dimension.
     DimensionMismatch {
         /// Context in which the mismatch occurred.
@@ -178,6 +183,7 @@ impl CmgError {
 impl fmt::Display for CmgError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::AllocationFailed { context } => write!(formatter, "allocation failed: {context}"),
             Self::DimensionMismatch {
                 context,
                 expected,

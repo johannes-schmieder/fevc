@@ -25,10 +25,13 @@ registrations, including failed campaigns and superseded implementation plans.
 
 ## Latest source-bound checkpoints
 
+- [Thread-aware batching and ordered queue](BATCH_QUEUE_2026-09-12.md):
+  approved integration over degree-four FEVC, mixed-degree 2–8 evidence at
+  1.6m/6.4m, allocation/accounting safeguards and native qualification status.
+  Fusion and upstream algorithm changes remain experimental.
 - [Degree-four full CMG](DEGREE_FOUR_CMG_2026-09-11.md): selected same-host
   performance evidence, preserved statistical/resource contracts, source
-  compatibility and local qualification status. Other scheduling and upstream
-  candidates remain experimental.
+  compatibility and local qualification status at the preceding checkpoint.
 - [256-lane control preparation](CONTROL_LANES_256_2026-09-10.md) and
   [result record](control_lanes_256_v1_result.json): repaired audit discrepancies,
   numerical/lifecycle/memory tests and measured performance at Mata API 24.

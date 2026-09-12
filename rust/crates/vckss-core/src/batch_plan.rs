@@ -168,9 +168,59 @@ where
     L: Fn(usize) -> Result<u64>,
     T: Fn(usize) -> Result<u64>,
 {
+    plan_batches_with_width_policy(
+        leverage_request,
+        target_request,
+        caps,
+        leverage_forecast,
+        target_forecast,
+        false,
+    )
+}
+
+/// Full-CMG automatic widths include the desired cap; other routes keep V1.
+pub(crate) fn plan_full_cmg_batches_with_forecasts<L, T>(
+    leverage_request: BatchRequest,
+    target_request: BatchRequest,
+    caps: BatchPlannerCaps,
+    leverage_forecast: L,
+    target_forecast: T,
+) -> Result<BatchPlanReceipt>
+where
+    L: Fn(usize) -> Result<u64>,
+    T: Fn(usize) -> Result<u64>,
+{
+    plan_batches_with_width_policy(
+        leverage_request,
+        target_request,
+        caps,
+        leverage_forecast,
+        target_forecast,
+        true,
+    )
+}
+
+fn plan_batches_with_width_policy<L, T>(
+    leverage_request: BatchRequest,
+    target_request: BatchRequest,
+    caps: BatchPlannerCaps,
+    leverage_forecast: L,
+    target_forecast: T,
+    full_cmg: bool,
+) -> Result<BatchPlanReceipt>
+where
+    L: Fn(usize) -> Result<u64>,
+    T: Fn(usize) -> Result<u64>,
+{
     let caps = caps.validate()?;
-    let leverage = plan_phase(leverage_request, caps, leverage_forecast, "leverage")?;
-    let target = plan_phase(target_request, caps, target_forecast, "target")?;
+    let leverage = plan_phase(
+        leverage_request,
+        caps,
+        leverage_forecast,
+        "leverage",
+        full_cmg,
+    )?;
+    let target = plan_phase(target_request, caps, target_forecast, "target", full_cmg)?;
     Ok(BatchPlanReceipt {
         schema_version: BATCH_PLAN_SCHEMA_VERSION,
         deterministic: true,
@@ -193,6 +243,7 @@ fn plan_phase<F>(
     caps: ValidatedCaps,
     forecast: F,
     phase: &'static str,
+    full_cmg: bool,
 ) -> Result<BatchPhaseReceipt>
 where
     F: Fn(usize) -> Result<u64>,
@@ -242,10 +293,25 @@ where
         BatchRequest::Auto => {
             let mut selected = None;
             let mut previous = None;
-            for width in BATCH_WIDTH_CANDIDATES {
-                if width > caps.effective_width_cap {
-                    break;
+            // Fixed-size iteration uses no allocation and cannot overflow at
+            // usize::MAX. The final desired width is essential without a budget.
+            let widths = (0..=usize::BITS as usize).filter_map(|index| {
+                if full_cmg {
+                    if index == usize::BITS as usize {
+                        Some(caps.effective_width_cap)
+                    } else {
+                        1_usize
+                            .checked_shl(index as u32)
+                            .filter(|width| *width <= caps.effective_width_cap)
+                    }
+                } else {
+                    BATCH_WIDTH_CANDIDATES
+                        .get(index)
+                        .copied()
+                        .filter(|width| *width <= caps.effective_width_cap)
                 }
+            });
+            for width in widths {
                 let bytes = if width == 1 {
                     width_one_forecast_bytes
                 } else {

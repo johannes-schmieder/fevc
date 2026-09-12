@@ -23,6 +23,23 @@ pub struct PcgWorkspace {
 }
 
 impl PcgWorkspace {
+    /// Fallibly allocate a pre-admitted scalar workspace.
+    pub fn try_new(preconditioner: &CmgPreconditioner) -> Result<Self, CmgError> {
+        use crate::components::try_filled;
+        let n = preconditioner.hierarchy().levels()[0]
+            .graph()
+            .vertex_count();
+        Ok(Self {
+            projected_rhs: try_filled(n, 0.0, "scalar PCG rhs")?,
+            solution: try_filled(n, 0.0, "scalar PCG solution")?,
+            residual: try_filled(n, 0.0, "scalar PCG residual")?,
+            preconditioned: try_filled(n, 0.0, "scalar PCG preconditioned")?,
+            direction: try_filled(n, 0.0, "scalar PCG direction")?,
+            matrix_direction: try_filled(n, 0.0, "scalar PCG matrix direction")?,
+            component: preconditioner.finest_components().try_workspace()?,
+            cmg: preconditioner.try_workspace()?,
+        })
+    }
     #[cfg(feature = "parallel")]
     pub(crate) fn required_bytes(preconditioner: &CmgPreconditioner) -> usize {
         let dimension = preconditioner.hierarchy().levels()[0]

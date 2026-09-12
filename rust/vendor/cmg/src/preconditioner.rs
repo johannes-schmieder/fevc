@@ -673,6 +673,16 @@ impl CmgPreconditioner {
     }
 
     /// Apply the preconditioner using a newly allocated workspace.
+    pub fn try_workspace(&self) -> Result<CmgWorkspace, CmgError> {
+        CmgWorkspace::try_new(
+            &self.hierarchy,
+            self.direct_terminal.as_ref(),
+            &self.finest_components,
+            &self.coarse_centering,
+        )
+    }
+
+    /// Apply the preconditioner using a newly allocated workspace.
     pub fn apply(&self, rhs: &[f64]) -> Result<Vec<f64>, CmgError> {
         let mut workspace = self.workspace();
         let mut output = vec![0.0; self.hierarchy.levels()[0].graph().vertex_count()];

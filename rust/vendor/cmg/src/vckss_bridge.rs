@@ -6,7 +6,8 @@
 //! `Vec<Vec<f64>>` allocation and copy.
 
 use rayon::prelude::*;
-use std::sync::atomic::AtomicBool;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::{
     CmgError, ParallelPcgExecution, ParallelPcgSolver, PcgOptions, PcgResult, PcgWorkspace,
@@ -19,6 +20,43 @@ use crate::{
 };
 
 impl ParallelPcgSolver {
+    /// Heap metadata retained by the ordered queue and its returned result list.
+    /// Solution payloads are charged separately by the caller's batch forecast.
+    pub fn vckss_queue_metadata_bytes(columns: usize) -> Result<usize, CmgError> {
+        columns
+            .checked_mul(
+                std::mem::size_of::<OnceLock<Result<PcgResult, CmgError>>>()
+                    + std::mem::size_of::<PcgResult>(),
+            )
+            .ok_or(CmgError::AllocationFailed {
+                context: "contiguous queue metadata overflow",
+            })
+    }
+
+    /// Empty pool for a two-phase, pre-RNG capacity admission.
+    pub fn vckss_empty_contiguous_workspace(&self) -> VckssContiguousPcgWorkspace {
+        VckssContiguousPcgWorkspace {
+            workspaces: Vec::new(),
+        }
+    }
+
+    /// Fallibly allocate the selected scalar workspace pool before RNG.
+    pub fn vckss_prepared_contiguous_workspace(
+        &self,
+        count: usize,
+    ) -> Result<VckssContiguousPcgWorkspace, CmgError> {
+        let mut workspaces = Vec::new();
+        workspaces
+            .try_reserve_exact(count)
+            .map_err(|_| CmgError::AllocationFailed {
+                context: "prepared scalar pool",
+            })?;
+        for _ in 0..count {
+            workspaces.push(PcgWorkspace::try_new(self.preconditioner())?);
+        }
+        Ok(VckssContiguousPcgWorkspace { workspaces })
+    }
+
     /// Run an indexed operation on the solver-owned pool and preserve order.
     pub fn vckss_map_ordered<Input, Output, Operation>(
         &self,
@@ -160,7 +198,7 @@ impl ParallelPcgSolver {
         }
 
         let report = self.select_batch_execution(columns)?;
-        workspace.ensure_count(report.concurrency().max(1), self);
+        workspace.ensure_count(report.concurrency().max(1), self)?;
         let solve_one = |rhs: &[f64],
                          initial_guess: Option<&[f64]>,
                          pcg_workspace: &mut PcgWorkspace| {
@@ -268,39 +306,79 @@ impl ParallelPcgSolver {
                     solve_one(rhs, initial_guess, &mut workspace.workspaces[0])
                 })
                 .collect(),
-            ParallelPcgExecution::AcrossRightHandSides => {
-                let mut results = Vec::with_capacity(columns);
-                for (chunk_index, rhs_chunk) in right_hand_sides
-                    .chunks(dimension * report.concurrency())
-                    .enumerate()
-                {
-                    crate::cancel::checkpoint(cancellation, "vckss_batch_chunk")?;
-                    let chunk_columns = rhs_chunk.len() / dimension;
-                    let first_column = chunk_index * report.concurrency();
-                    let chunk_results: Vec<Result<PcgResult, CmgError>> =
-                        self.executor().install(|| {
-                            workspace.workspaces[..chunk_columns]
-                                .par_iter_mut()
-                                .enumerate()
-                                .map(|(offset, pcg_workspace)| {
-                                    let rhs_begin = offset * dimension;
-                                    let rhs = &rhs_chunk[rhs_begin..rhs_begin + dimension];
-                                    let initial_begin = (first_column + offset) * dimension;
-                                    let initial_guess = initial_guesses.map(|guesses| {
-                                        &guesses[initial_begin..initial_begin + dimension]
-                                    });
-                                    solve_one(rhs, initial_guess, pcg_workspace)
-                                })
-                                .collect()
-                        });
-                    for result in chunk_results {
-                        results.push(result?);
-                    }
-                }
-                Ok(results)
-            }
+            ParallelPcgExecution::AcrossRightHandSides => self.executor().install(|| {
+                map_workspace_queue(
+                    &mut workspace.workspaces[..report.concurrency()],
+                    columns,
+                    |column, pcg_workspace| {
+                        let begin = column * dimension;
+                        let rhs = &right_hand_sides[begin..begin + dimension];
+                        let initial_guess =
+                            initial_guesses.map(|guesses| &guesses[begin..begin + dimension]);
+                        solve_one(rhs, initial_guess, pcg_workspace)
+                    },
+                )
+            }),
         }
     }
+}
+
+/// Each admitted workspace drains a common queue. Only the small result slots
+/// are shared; numerical state and arithmetic stay local to one RHS. A failed
+/// column stops later claims, while earlier in-flight columns finish so errors
+/// remain ordered by input position rather than worker completion time.
+fn map_workspace_queue<Workspace, Output, Operation>(
+    workspaces: &mut [Workspace],
+    columns: usize,
+    operation: Operation,
+) -> Result<Vec<Output>, CmgError>
+where
+    Workspace: Send,
+    Output: Send + Sync,
+    Operation: Fn(usize, &mut Workspace) -> Result<Output, CmgError> + Sync,
+{
+    if columns > 0 && workspaces.is_empty() {
+        return Err(CmgError::InvalidHierarchy {
+            context: "empty contiguous queue workspace pool",
+        });
+    }
+    let mut slots = Vec::new();
+    slots
+        .try_reserve_exact(columns)
+        .map_err(|_| CmgError::AllocationFailed {
+            context: "contiguous queue result slots",
+        })?;
+    slots.resize_with(columns, OnceLock::new);
+    // Reserve both lists before numerical work, so allocation failure cannot
+    // replace an already observed input-ordered solver error.
+    let mut results = Vec::new();
+    results
+        .try_reserve_exact(columns)
+        .map_err(|_| CmgError::AllocationFailed {
+            context: "contiguous queue ordered results",
+        })?;
+    let next = AtomicUsize::new(0);
+    let first_failure = AtomicUsize::new(columns);
+    workspaces.par_iter_mut().for_each(|workspace| {
+        loop {
+            let column = next.fetch_add(1, Ordering::Relaxed);
+            if column >= columns || column >= first_failure.load(Ordering::Acquire) {
+                break;
+            }
+            let result = operation(column, workspace);
+            if result.is_err() {
+                first_failure.fetch_min(column, Ordering::AcqRel);
+            }
+            // Unique monotonically claimed indices have exactly one writer.
+            let _ = slots[column].set(result);
+        }
+    });
+    for slot in slots {
+        results.push(slot.into_inner().ok_or(CmgError::InvalidHierarchy {
+            context: "missing contiguous queue result before first failure",
+        })??);
+    }
+    Ok(results)
 }
 
 /// Reusable official-CMG workspaces for contiguous VCkss batches.
@@ -316,10 +394,17 @@ impl VckssContiguousPcgWorkspace {
         }
     }
 
-    fn ensure_count(&mut self, count: usize, solver: &ParallelPcgSolver) {
-        self.workspaces.extend(
-            (self.workspaces.len()..count).map(|_| PcgWorkspace::new(solver.preconditioner())),
-        );
+    fn ensure_count(&mut self, count: usize, solver: &ParallelPcgSolver) -> Result<(), CmgError> {
+        self.workspaces
+            .try_reserve_exact(count.saturating_sub(self.workspaces.len()))
+            .map_err(|_| CmgError::AllocationFailed {
+                context: "contiguous workspace growth",
+            })?;
+        while self.workspaces.len() < count {
+            self.workspaces
+                .push(PcgWorkspace::try_new(solver.preconditioner())?);
+        }
+        Ok(())
     }
 
     /// Return the retained workspace count.
@@ -340,6 +425,118 @@ mod tests {
     use super::*;
     use crate::{CmgOptions, Laplacian, ParallelOptions};
     use std::sync::atomic::AtomicBool;
+
+    #[test]
+    fn queued_columns_are_ordered_across_odd_and_partial_batches() {
+        for workers in [1, 2, 3, 4, 7, 14, 28, 64] {
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(workers)
+                .build()
+                .unwrap();
+            for columns in [0, 1, 2, 5, 8, 31, 32, 33, 65] {
+                let mut scratch = vec![0_usize; workers];
+                let result = pool
+                    .install(|| {
+                        map_workspace_queue(&mut scratch, columns, |index, count| {
+                            *count += 1;
+                            Ok(index * 3)
+                        })
+                    })
+                    .unwrap();
+                assert_eq!(
+                    result,
+                    (0..columns).map(|index| index * 3).collect::<Vec<_>>()
+                );
+                assert_eq!(scratch.iter().sum::<usize>(), columns);
+            }
+        }
+    }
+
+    #[test]
+    fn queue_does_not_wait_for_a_slow_previous_wave() {
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(2)
+            .build()
+            .unwrap();
+        let later_started = AtomicBool::new(false);
+        let mut scratch = [(), ()];
+        pool.install(|| {
+            map_workspace_queue(&mut scratch, 4, |index, _| {
+                if index == 0 {
+                    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+                    while !later_started.load(Ordering::Acquire)
+                        && std::time::Instant::now() < deadline
+                    {
+                        std::thread::yield_now();
+                    }
+                    assert!(
+                        later_started.load(Ordering::Acquire),
+                        "later work blocked on the previous wave"
+                    );
+                } else if index == 2 {
+                    later_started.store(true, Ordering::Release);
+                }
+                Ok(index)
+            })
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn queue_allocation_overflow_is_typed() {
+        assert_eq!(ParallelPcgSolver::vckss_queue_metadata_bytes(0).unwrap(), 0);
+        assert!(ParallelPcgSolver::vckss_queue_metadata_bytes(usize::MAX).is_err());
+        let each = std::mem::size_of::<OnceLock<Result<PcgResult, CmgError>>>()
+            + std::mem::size_of::<PcgResult>();
+        assert_eq!(
+            ParallelPcgSolver::vckss_queue_metadata_bytes(33).unwrap(),
+            33 * each
+        );
+        let error = map_workspace_queue(&mut [()], usize::MAX, |index, _| Ok(index)).unwrap_err();
+        assert!(matches!(error, CmgError::AllocationFailed { .. }));
+        assert!(map_workspace_queue::<(), usize, _>(&mut [], 1, |index, _| Ok(index)).is_err());
+    }
+
+    #[test]
+    fn queue_returns_first_input_error_not_first_completed_error() {
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(3)
+            .build()
+            .unwrap();
+        let later_failed = AtomicBool::new(false);
+        let mut scratch = [(), (), ()];
+        let error = pool
+            .install(|| {
+                map_workspace_queue(&mut scratch, 12, |index, _| {
+                    if index == 0 {
+                        let deadline =
+                            std::time::Instant::now() + std::time::Duration::from_secs(3);
+                        while !later_failed.load(Ordering::Acquire)
+                            && std::time::Instant::now() < deadline
+                        {
+                            std::thread::yield_now();
+                        }
+                        return Err(CmgError::InvalidHierarchy {
+                            context: "first input error",
+                        });
+                    }
+                    if index == 1 {
+                        later_failed.store(true, Ordering::Release);
+                        return Err(CmgError::InvalidHierarchy {
+                            context: "later input error",
+                        });
+                    }
+                    Ok(index)
+                })
+            })
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            CmgError::InvalidHierarchy {
+                context: "first input error"
+            }
+        ));
+    }
 
     fn path_solver(threads: usize) -> ParallelPcgSolver {
         let edges = (0..127)
@@ -416,6 +613,18 @@ mod tests {
                 phase: "vckss_batch_entry"
             }
         );
+        cancellation.store(false, Ordering::Release);
+        let result = solver
+            .vckss_solve_contiguous_columns_with_workspace_cancellable(
+                &[0.0; 128 * 7],
+                7,
+                PcgOptions::default(),
+                &mut workspace,
+                &cancellation,
+            )
+            .expect("reuse after cancellation");
+        assert_eq!(result.len(), 7);
+        assert_eq!(workspace.workspace_count(), 4);
     }
 
     #[test]

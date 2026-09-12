@@ -335,6 +335,7 @@ pub(crate) struct FullCmgDirectSolver {
     solver: ParallelPcgSolver,
     workspace: Mutex<VckssContiguousPcgWorkspace>,
     setup: FullCmgSetupReceipt,
+    pools_deferred: bool,
     receipt: Mutex<FullCmgReceipt>,
     compatibility_receipt: CmgReceipt,
     tolerances: FullCmgTolerances,
@@ -355,12 +356,24 @@ impl FullCmgDirectSolver {
         self.solver.vckss_map_ordered(input, operation)
     }
 
+    #[cfg(test)]
     pub(crate) fn prepare_with_interrupt(
         problem: &CompressedProblem,
         pcg: PcgOptions,
         memory_limit_bytes: u64,
         plan: FullCmgPlanOptions,
         interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        Self::prepare_with_pool_policy(problem, pcg, memory_limit_bytes, plan, interrupt, false)
+    }
+
+    pub(crate) fn prepare_with_pool_policy(
+        problem: &CompressedProblem,
+        pcg: PcgOptions,
+        memory_limit_bytes: u64,
+        plan: FullCmgPlanOptions,
+        interrupt: &mut dyn InterruptCheck,
+        defer_pools: bool,
     ) -> Result<Self> {
         interrupt.checkpoint("cmg_full_v2_prepare")?;
         let cancellation = interrupt.cancellation_token();
@@ -558,13 +571,18 @@ impl FullCmgDirectSolver {
             solver_nanoseconds,
         };
         let compatibility_receipt = compatibility_receipt(&solver, &setup)?;
-        let workspace = Mutex::new(solver.vckss_contiguous_workspace());
+        let workspace = Mutex::new(if defer_pools {
+            solver.vckss_empty_contiguous_workspace()
+        } else {
+            solver.vckss_contiguous_workspace()
+        });
         let receipt = Mutex::new(FullCmgReceipt::new(setup));
         let prepared = Self {
             hybrid,
             solver,
             workspace,
             setup,
+            pools_deferred: defer_pools,
             receipt,
             compatibility_receipt,
             tolerances,
@@ -572,6 +590,70 @@ impl FullCmgDirectSolver {
         };
         pcg.validate()?;
         Ok(prepared)
+    }
+
+    /// Freeze selected capacity while the scalar solve pool is still unallocated.
+    pub(crate) fn configure_capacity(&mut self, maximum_rhs: usize) -> Result<()> {
+        if !self.pools_deferred || maximum_rhs == 0 || maximum_rhs > self.setup.maximum_batch_rhs {
+            return Err(BackendError::invariant(
+                "cmg_capacity",
+                "invalid pre-allocation capacity change",
+            ));
+        }
+        let execution = self
+            .solver
+            .select_batch_execution(maximum_rhs)
+            .map_err(|error| map_setup_error(error, "selected capacity"))?;
+        let old_pool = self.setup.admitted_workspace_pool_bytes;
+        let new_pool = to_u64(execution.workspace_pool_bytes(), "selected scalar pool")?;
+        self.setup.actual_retained_bytes = self
+            .setup
+            .actual_retained_bytes
+            .checked_sub(old_pool)
+            .and_then(|bytes| bytes.checked_add(new_pool))
+            .ok_or_else(|| BackendError::invariant("cmg_capacity", "pool accounting mismatch"))?;
+        self.setup.maximum_batch_rhs = maximum_rhs;
+        self.setup.workspace_count = execution.concurrency();
+        self.setup.admitted_workspace_pool_bytes =
+            to_u64(execution.workspace_pool_bytes(), "selected scalar pool")?;
+        self.refresh_capacity_receipts()
+    }
+
+    fn refresh_capacity_receipts(&mut self) -> Result<()> {
+        self.setup.allocator_allowance_bytes =
+            self.setup.actual_retained_bytes / ALLOCATOR_ALLOWANCE_DIVISOR;
+        self.setup.admitted_peak_bytes =
+            self.setup.preparation_peak_bytes.max(checked_sum_u64(&[
+                self.setup.non_cmg_command_peak_bytes,
+                self.setup.actual_retained_bytes,
+                self.setup.allocator_allowance_bytes,
+            ])?);
+        self.setup.pre_rng_forecast_bytes = self.setup.admitted_peak_bytes;
+        self.compatibility_receipt = compatibility_receipt(&self.solver, &self.setup)?;
+        self.receipt
+            .get_mut()
+            .map_err(|_| BackendError::invariant("cmg_capacity", "receipt poisoned"))?
+            .setup = self.setup;
+        Ok(())
+    }
+
+    /// Called only after the complete selected command forecast is admitted.
+    pub(crate) fn allocate_deferred_pools(&mut self) -> Result<()> {
+        if !self.pools_deferred {
+            return Err(BackendError::invariant(
+                "cmg_capacity",
+                "pool allocation called twice",
+            ));
+        }
+        *self
+            .workspace
+            .get_mut()
+            .map_err(|_| BackendError::invariant("cmg_capacity", "workspace poisoned"))? = self
+            .solver
+            .vckss_prepared_contiguous_workspace(self.setup.workspace_count)
+            .map_err(|error| map_setup_error(error, "selected scalar pool allocation"))?;
+        self.pools_deferred = false;
+        self.refresh_capacity_receipts()
     }
 
     pub(crate) fn compatibility_receipt(&self) -> &CmgReceipt {
@@ -1468,7 +1550,19 @@ fn admitted_batch_vector_bytes(
     } else {
         0
     };
-    checked_sum_u64(&[live_blocks, parallel_rhs_workers])
+    checked_sum_u64(&[
+        live_blocks,
+        parallel_rhs_workers,
+        queue_metadata_bytes(plan.maximum_batch_rhs)?,
+    ])
+}
+
+pub(crate) fn queue_metadata_bytes(columns: usize) -> Result<u64> {
+    to_u64(
+        ParallelPcgSolver::vckss_queue_metadata_bytes(columns)
+            .map_err(|error| map_setup_error(error, "queue metadata forecast"))?,
+        "queue metadata bytes",
+    )
 }
 
 fn hierarchy_storage_bytes(solver: &ParallelPcgSolver) -> Result<u64> {
@@ -1569,6 +1663,7 @@ fn checked_add_receipt(left: u64, right: u64, context: &'static str) -> Result<u
 
 fn map_setup_error(error: CmgError, context: &'static str) -> BackendError {
     let code = match error {
+        CmgError::AllocationFailed { .. } => ErrorCode::AllocationFailed,
         CmgError::Cancelled { .. } => ErrorCode::UserBreak,
         CmgError::MemoryBudgetExceeded { .. } => ErrorCode::ResourceLimit,
         _ => ErrorCode::CmgSetupFailed,
@@ -1578,6 +1673,7 @@ fn map_setup_error(error: CmgError, context: &'static str) -> BackendError {
 
 fn map_solve_error(error: CmgError, context: &'static str) -> BackendError {
     let code = match error {
+        CmgError::AllocationFailed { .. } => ErrorCode::AllocationFailed,
         CmgError::Cancelled { .. } => ErrorCode::UserBreak,
         CmgError::MaximumIterations { .. } => ErrorCode::PcgMaxIterations,
         CmgError::PcgBreakdown { .. } => ErrorCode::PcgCurvatureBreakdown,
@@ -1681,6 +1777,7 @@ mod tests {
                 * u64::try_from(plan.maximum_batch_rhs).unwrap()
                 * 8
                 * MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS
+                + queue_metadata_bytes(plan.maximum_batch_rhs).unwrap()
         );
         let pcg = PcgOptions {
             tolerance: 1.0e-10,
@@ -1736,7 +1833,9 @@ mod tests {
             u64::try_from(problem.workers()).unwrap() * u64::try_from(plan.threads).unwrap() * 8;
         assert_eq!(
             forecast.batch_vectors_bytes,
-            live_blocks + worker_temporaries
+            live_blocks
+                + worker_temporaries
+                + queue_metadata_bytes(plan.maximum_batch_rhs).unwrap()
         );
     }
 

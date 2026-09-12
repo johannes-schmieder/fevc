@@ -1,15 +1,19 @@
-# Current objective and checkpoint — 2026-09-11
+# Current objective and checkpoint — 2026-09-12
 
-Integrate measured FEVC performance wins from bounded diagnostic testing.
-The exact degree-four full-CMG candidate passes selected 1.6m and 6.4m
-paired SCC checks and is now in the working source. Source-local arm64/Rosetta
-native checks and the integrated package/Stata quick/full/install gates pass;
-the tested local plugins are installed. The owner authorized committing and
-pushing this source change on September 11. Qualification was performed on
-the uncommitted source snapshot, not a clean commit; this is not a release.
-The [implementation and evidence report](docs/DEGREE_FOUR_CMG_2026-09-11.md)
-records scope, validation, source compatibility and unpromoted queue/fused-RHS
-experiments. No full figure campaign or public release is authorized.
+Integrate the approved thread-aware batching and ordered scalar work queue
+over degree-four baseline `82be182`. Mixed-degree 2–8 paired SCC checks at
+1.6m and 6.4m support adoption; fusion stays experimental. The fixed policy
+scales with permitted thread count and retains explicit-budget planning,
+input-order results/errors, cancellation and original-system residual gates.
+The owner authorized integration, commit and push on September 12.
+
+Rust workspace tests, strict Clippy, formatting and Python tests pass.
+Fresh integrated native/package qualification is pending at this source
+checkpoint; previous binary receipts do not qualify the new runtime.
+See the [integration record](docs/BATCH_QUEUE_2026-09-12.md) for scope,
+accepted performance evidence and updated qualification results. The
+[degree-four report](docs/DEGREE_FOUR_CMG_2026-09-11.md) remains historical.
+No full figure campaign or public binary release is authorized.
 
 ## Preserved source-readiness objective
 

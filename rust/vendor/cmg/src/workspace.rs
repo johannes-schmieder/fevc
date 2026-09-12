@@ -23,6 +23,60 @@ pub struct CmgWorkspace {
 }
 
 impl CmgWorkspace {
+    pub(crate) fn try_new(
+        hierarchy: &CmgHierarchy,
+        direct_terminal: Option<&GroundedLdl>,
+        finest_components: &Components,
+        coarse_centering: &[CenteringPlan],
+    ) -> Result<Self, CmgError> {
+        use crate::components::try_filled;
+        let mut dimensions = try_filled(hierarchy.levels().len(), 0, "scalar level dimensions")?;
+        for (dimension, level) in dimensions.iter_mut().zip(hierarchy.levels()) {
+            *dimension = level.graph().vertex_count();
+        }
+        let mut levels = Vec::new();
+        levels
+            .try_reserve_exact(dimensions.len())
+            .map_err(|_| CmgError::AllocationFailed {
+                context: "scalar levels",
+            })?;
+        for (index, &dimension) in dimensions.iter().enumerate() {
+            let coarse = dimensions.get(index + 1).copied().unwrap_or(0);
+            let factor = if index + 1 == dimensions.len() {
+                direct_terminal.map_or(0, GroundedLdl::active_dimension)
+            } else {
+                0
+            };
+            levels.push(LevelWorkspace {
+                residual: try_filled(dimension, 0.0, "scalar level residual")?,
+                coarse_rhs: try_filled(coarse, 0.0, "scalar coarse rhs")?,
+                coarse_correction: try_filled(coarse, 0.0, "scalar coarse correction")?,
+                factor_forward: try_filled(factor, 0.0, "scalar factor forward")?,
+                factor_solution: try_filled(factor, 0.0, "scalar factor solution")?,
+            });
+        }
+        let mut centering_workspaces = Vec::new();
+        centering_workspaces
+            .try_reserve_exact(coarse_centering.len())
+            .map_err(|_| CmgError::AllocationFailed {
+                context: "scalar centering levels",
+            })?;
+        for plan in coarse_centering {
+            centering_workspaces.push(plan.try_workspace()?);
+        }
+        Ok(Self {
+            projected_rhs: try_filled(
+                dimensions.first().copied().unwrap_or(0),
+                0.0,
+                "scalar projected rhs",
+            )?,
+            levels,
+            dimensions,
+            centering_workspaces,
+            component_workspace: finest_components.try_workspace()?,
+        })
+    }
+
     #[cfg(feature = "parallel")]
     pub(crate) fn required_bytes(
         hierarchy: &CmgHierarchy,

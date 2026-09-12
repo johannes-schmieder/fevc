@@ -40,7 +40,14 @@ FEVC modifications are kept narrow and source-visible:
    admission and lifecycle contract; and
 6. add certified caller-supplied initial guesses to the scalar/planned PCG and
    contiguous-column bridge so same-route FEVC residual refinement can reuse
-   an already certified solution without changing the frozen tolerance ladder.
+   an already certified solution without changing the frozen tolerance ladder;
+7. replace barrier-separated contiguous RHS waves with an ordered work queue
+   on September 12, 2026. Each admitted scalar workspace independently claims
+   the next RHS; output and error order remain input order. Add fallible pool
+   construction and checked queue-metadata accounting. Changes are confined
+   to `vckss_bridge.rs`, `pcg.rs`, `workspace.rs`, `components.rs`,
+   `preconditioner.rs` and `error.rs`; scalar arithmetic is unchanged. This is
+   a FEVC integration patch, not an upstream CMG update or fused-RHS port.
 
 The standalone `/Users/johannes/Git/CMG` checkout is not a build dependency
 and is never modified by FEVC builds.

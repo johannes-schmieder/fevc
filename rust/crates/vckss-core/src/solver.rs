@@ -162,16 +162,42 @@ impl<'a> PreparedTwoWaySolver<'a> {
         options: LinearSolverOptions,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        Self::prepare_impl(problem, options, interrupt, None)
+        Self::prepare_impl(problem, options, interrupt, None, false)
     }
 
+    #[cfg(test)]
     pub(crate) fn prepare_full_cmg_v2_with_interrupt(
         problem: &'a CompressedProblem,
         options: LinearSolverOptions,
         plan: FullCmgPlanOptions,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        Self::prepare_impl(problem, options, interrupt, Some(plan))
+        Self::prepare_impl(problem, options, interrupt, Some(plan), false)
+    }
+
+    pub(crate) fn prepare_full_cmg_deferred(
+        problem: &'a CompressedProblem,
+        options: LinearSolverOptions,
+        plan: FullCmgPlanOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        Self::prepare_impl(problem, options, interrupt, Some(plan), true)
+    }
+
+    pub(crate) fn configure_full_cmg_capacity(&mut self, maximum_rhs: usize) -> Result<()> {
+        if let PreparedSolverBackend::FullCmg(solver) = &mut self.backend {
+            solver.configure_capacity(maximum_rhs)?;
+            self.receipt.cmg = Some(solver.compatibility_receipt().clone());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn allocate_full_cmg_pools(&mut self) -> Result<()> {
+        if let PreparedSolverBackend::FullCmg(solver) = &mut self.backend {
+            solver.allocate_deferred_pools()?;
+            self.receipt.cmg = Some(solver.compatibility_receipt().clone());
+        }
+        Ok(())
     }
 
     fn prepare_impl(
@@ -179,6 +205,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
         options: LinearSolverOptions,
         interrupt: &mut dyn InterruptCheck,
         full_cmg: Option<FullCmgPlanOptions>,
+        defer_pools: bool,
     ) -> Result<Self> {
         interrupt.checkpoint("solver_prepare_entry")?;
         let options = options.validate()?;
@@ -220,12 +247,13 @@ impl<'a> PreparedTwoWaySolver<'a> {
             }
             LinearSolverRoute::CmgPcg => {
                 if let Some(full_cmg) = full_cmg {
-                    let direct = FullCmgDirectSolver::prepare_with_interrupt(
+                    let direct = FullCmgDirectSolver::prepare_with_pool_policy(
                         problem,
                         options.pcg,
                         options.cmg.memory_limit_bytes,
                         full_cmg,
                         interrupt,
+                        defer_pools,
                     )?;
                     let receipt = direct.compatibility_receipt().clone();
                     let receipt = PreparedSolverReceipt {

@@ -4864,7 +4864,9 @@ fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
         receipt.allocator_allowance_bytes,
         receipt.actual_retained_bytes / 5
     );
-    assert_eq!(receipt.maximum_batch_rhs, 64);
+    // Selected automatic capacity: this fixture has five probes and
+    // each target probe produces two RHSs. The public field/layout is fixed.
+    assert_eq!(receipt.maximum_batch_rhs, 10);
     assert!(receipt.workspace_count > 0);
 }
 

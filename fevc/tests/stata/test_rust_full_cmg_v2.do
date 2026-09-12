@@ -75,7 +75,8 @@ assert e(memory_admission_forecast_bytes) == e(full_cmg_receipt)[1,42]
 assert e(memory_forecast_bytes) <= e(memory_admission_forecast_bytes)
 assert e(full_cmg_receipt)[1,43] > 0
 assert e(full_cmg_receipt)[1,44] == floor(e(full_cmg_receipt)[1,43]/5)
-assert e(full_cmg_receipt)[1,45] == 64
+assert e(full_cmg_receipt)[1,45] == max(e(leverage_batch),2*e(target_batch))
+assert e(full_cmg_receipt)[1,45] == 8
 assert e(full_cmg_receipt)[1,46] > 0
 assert e(rust_probeorder_supplied) == 1
 assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
@@ -93,6 +94,26 @@ assert `"`c(rngstate)'"' == `"`caller_state'"'
 assert `"`c(sortrngstate)'"' == `"`caller_sort_state'"'
 local restored_sortedby : sortedby
 assert `"`restored_sortedby'"' == `"`caller_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
+// Odd probe counts and omitted budgets use the fixed thread-aware policy.
+quietly fevc outcome, worker(worker) firm(firm) stayers(movers) ///
+    probeorder(observation_key) backend(rust) probes(65) seed(81227) ///
+    maxiter(10000) nodisplay
+assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
+assert e(memory_budget_supplied) == 0
+assert e(leverage_batch) == min(65,max(32,8*e(cmg_threads_used)))
+assert e(target_batch) == min(65,max(32,4*e(cmg_threads_used)))
+assert e(full_cmg_receipt)[1,45] == max(e(leverage_batch),2*e(target_batch))
+assert e(full_cmg_receipt)[1,46] <= e(cmg_threads_used)
+assert e(full_cmg_receipt)[1,25] >= 1+3*e(probes)
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(complete_residual_max) <= e(residual_acceptance_tolerance)
+quietly fevc_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+assert `"`c(sortrngstate)'"' == `"`caller_sort_state'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 

@@ -24,6 +24,13 @@ rust/stata_backend/target/
 rust/stata_backend/stata-spi/
 fevc/*.plugin
 
+# Local performance source snapshots, installed fixtures and raw evidence.
+# Promoted runtime/tests and compact reports live in the ordinary source tree.
+/rust/experiments/performance_20260911/
+/rust/experiments/batching_fused_20260911/
+/rust/experiments/mixed_degree_20260912/
+/rust/experiments/bq_integration_20260912/
+
 # Editors and operating systems
 .DS_Store
 Thumbs.db

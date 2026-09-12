@@ -1,5 +1,16 @@
 # Pending changes
 
+## Thread-aware full-CMG batching and queue — 2026-09-12
+
+- Integrate the tested k=2 automatic batching policy for full CMG, scaling
+  leverage/target widths with permitted native threads and probe counts.
+- Drain independent scalar RHSs through an ordered workspace queue. Preserve
+  output/error order, cancellation, complete residuals and scalar refinement.
+- Admit selected fallible workspace pools and checked queue storage before
+  probe RNG; preserve omitted/explicit memory policy and frozen ABI layouts.
+- Keep fused RHS experimental and outside normal builds. Other solver routes,
+  public options, statistical targets and default tolerances are unchanged.
+
 ## Exact degree-four full CMG — 2026-09-11
 
 - Eliminate degree-four workers through their exact weighted Schur clique in

@@ -88,6 +88,19 @@ def test_macos_qualifier_reports_stayer_hybrid_coverage() -> None:
             assert command in qualifier
 
 
+def test_macos_qualifier_hashes_vendored_cmg_runtime() -> None:
+    qualifier = (
+        ROOT.parent / "rust" / "stata_backend" / "qualify_macos.sh"
+    ).read_text(encoding="utf-8")
+    inputs = qualifier.split("source_inputs=(", 1)[1].split("\n)", 1)[0]
+    for relative in (
+        "rust/vendor/cmg/Cargo.toml",
+        "rust/vendor/cmg/src",
+        "rust/vendor/cmg/VENDOR.md",
+    ):
+        assert f'"${{repo_root}}/{relative}"' in inputs
+
+
 def test_version_identifiers_agree() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
     mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")

@@ -34,6 +34,17 @@ or scheduler limits remain errors under every policy.
 
 ## What is forecast, and when
 
+The specialized `CMG_FULL_V2` route uses thread-aware automatic probe widths:
+`min(P, max(32, 8*T))` for leverage and `min(P, max(32, 4*T))` for targets,
+where `P` is the probe count and `T` the permitted native thread count. Each
+target probe creates two RHSs. This fixed policy has no tuning option;
+other routes retain their existing width rules. Explicit batches still do
+not select full CMG. With an explicit budget, the planner may reduce the
+automatic widths. Without a budget, it uses the desired widths without a
+memory-based reduction. The selected scalar workspace capacity, queue result
+slots and overlapping batch/refinement buffers are admitted before probe RNG.
+Wider batches increase real memory use; forecasts are not physical RSS.
+
 The native forecast describes direct command allocation payload, including
 Rust working storage and accounted overlapping C input/export buffers. It
 excludes the original Stata dataset, allocator-retained pages, libraries and

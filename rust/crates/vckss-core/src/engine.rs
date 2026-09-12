@@ -27,6 +27,9 @@ use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkRec
 const ROUNDOFF_GATE: f64 = 4096.0 * f64::EPSILON;
 const LEVERAGE_MOMENT_BLOCK_GROUPS: usize = 4_096;
 const RNG_PROBE_BLOCK_COLUMNS: usize = 4;
+#[cfg(test)]
+#[path = "full_cmg_batch_tests.rs"]
+mod full_cmg_batch_tests;
 pub const COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1: usize = 32;
 pub const COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION: u32 = 2;
 
@@ -409,15 +412,18 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, &plan)?;
     interrupt.checkpoint("jla_solver_setup")?;
-    let full_cmg_plan = if let Some(full_cmg) = options.full_cmg {
-        let maximum_width = usize::try_from(estimator.probes)
-            .map_err(|_| memory_overflow("full-CMG probe count"))?
-            .min(full_cmg.maximum_batch_rhs / 2)
-            .max(1);
+    let full_cmg_plan = if let Some(mut full_cmg) = options.full_cmg {
+        let (leverage_cap, target_cap, maximum_rhs) = crate::full_cmg_batch_policy::caps(
+            usize::try_from(estimator.probes)
+                .map_err(|_| memory_overflow("full-CMG probe count"))?,
+            full_cmg.threads,
+            crate::full_cmg_batch_policy::SELECTED_K,
+        )?;
+        full_cmg.maximum_batch_rhs = maximum_rhs;
         let mut memory_estimator = estimator;
         memory_estimator.solver.route = LinearSolverRoute::DiagonalPcg;
-        memory_estimator.leverage_batch_width = maximum_width;
-        memory_estimator.target_batch_width = maximum_width;
+        memory_estimator.leverage_batch_width = leverage_cap;
+        memory_estimator.target_batch_width = target_cap;
         let memory_preflight = forecast_jla_memory(problem, &plan, memory_estimator, prepared)?;
         Some(
             FullCmgPlanOptions {
@@ -429,8 +435,8 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     } else {
         None
     };
-    let solver = if let Some(full_cmg) = full_cmg_plan {
-        PreparedTwoWaySolver::prepare_full_cmg_v2_with_interrupt(
+    let mut solver = if let Some(full_cmg) = full_cmg_plan {
+        PreparedTwoWaySolver::prepare_full_cmg_deferred(
             problem,
             estimator.solver,
             full_cmg,
@@ -439,7 +445,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     } else {
         PreparedTwoWaySolver::prepare_with_interrupt(problem, estimator.solver, interrupt)?
     };
-    let solver_setup = solver.receipt().clone();
+    let mut solver_setup = solver.receipt().clone();
     let selected_solver_route = solver_setup.selected;
     let mut forecast_estimator = estimator;
     forecast_estimator.solver.route = selected_solver_route;
@@ -447,7 +453,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     if estimator.memory_budget != crate::memory::MemoryBudget::Legacy {
         forecast_estimator.embedded_cmg_memory = embedded_cmg_memory(&solver_setup)?;
     }
-    let batch = plan_compressed_batches(
+    let mut batch = plan_compressed_batches(
         problem,
         &plan,
         forecast_estimator,
@@ -472,7 +478,34 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     forecast_selected.solver.route = selected_solver_route;
     forecast_selected.full_cmg_setup = forecast_estimator.full_cmg_setup;
     forecast_selected.embedded_cmg_memory = forecast_estimator.embedded_cmg_memory;
+    if forecast_selected.full_cmg_setup.is_some() {
+        let maximum_rhs = selected
+            .target_batch_width
+            .checked_mul(2)
+            .ok_or_else(|| memory_overflow("selected target RHS capacity"))?
+            .max(selected.leverage_batch_width)
+            .max(1);
+        solver.configure_full_cmg_capacity(maximum_rhs)?;
+        forecast_selected.full_cmg_setup = solver.full_cmg_receipt()?.map(|receipt| receipt.setup);
+    }
+    // Freeze and admit widths, the scalar pool and complete transient memory before
+    // allocating solve pools. No RNG or numerical solves have happened yet.
+    let preallocation_memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
+    if forecast_selected.full_cmg_setup.is_some() {
+        interrupt.checkpoint("cmg_full_v2_pools_admitted")?;
+        solver.allocate_full_cmg_pools()?;
+        interrupt.checkpoint("cmg_full_v2_pools_allocated")?;
+        solver_setup = solver.receipt().clone();
+        forecast_selected.full_cmg_setup = solver.full_cmg_receipt()?.map(|receipt| receipt.setup);
+        refresh_frozen_batch_forecasts(problem, &plan, forecast_selected, prepared, &mut batch)?;
+    }
     let memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
+    if memory.solve_peak_forecast_bytes > preallocation_memory.solve_peak_forecast_bytes {
+        return Err(BackendError::invariant(
+            "jla_plan",
+            "retained pools exceed pre-allocation admission",
+        ));
+    }
     if memory.solve_peak_forecast_bytes != batch.plan.selected_command_peak_bytes {
         return Err(BackendError::invariant(
             "jla_plan",
@@ -536,6 +569,42 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     })
 }
 
+/// Reconcile forecasts after allocating a frozen capacity; never reselect widths.
+fn refresh_frozen_batch_forecasts(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    estimator: JlaEngineOptions,
+    prepared: u64,
+    batch: &mut CompressedJlaBatchReceipt,
+) -> Result<()> {
+    let forecast = |leverage, target| {
+        forecast_jla_memory(
+            problem,
+            plan,
+            JlaEngineOptions {
+                leverage_batch_width: leverage,
+                target_batch_width: target,
+                ..estimator
+            },
+            prepared,
+        )
+    };
+    let one = forecast(1, 1)?;
+    batch.plan.non_batched_peak_bytes = one.non_batched_phase_forecast_bytes;
+    batch.plan.leverage.width_one_forecast_bytes = one.solve_peak_forecast_bytes;
+    batch.plan.target.width_one_forecast_bytes = one.solve_peak_forecast_bytes;
+    batch.plan.leverage.selected_forecast_bytes =
+        forecast(batch.leverage_active_width, 1)?.solve_peak_forecast_bytes;
+    batch.plan.target.selected_forecast_bytes =
+        forecast(1, batch.target_active_width)?.solve_peak_forecast_bytes;
+    batch.plan.selected_command_peak_bytes = batch
+        .plan
+        .non_batched_peak_bytes
+        .max(batch.plan.leverage.selected_forecast_bytes)
+        .max(batch.plan.target.selected_forecast_bytes);
+    Ok(())
+}
+
 fn plan_compressed_batches(
     problem: &CompressedProblem,
     plan: &JlaPlan,
@@ -564,12 +633,25 @@ fn plan_compressed_batches(
     )?;
     let non_batched_peak = width_one.non_batched_phase_forecast_bytes;
 
-    let phase_cap = |request| match request {
-        BatchRequest::Auto => COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1.min(probes),
+    let auto_caps = if let Some(setup) = estimator.full_cmg_setup {
+        let (l, t, _) = crate::full_cmg_batch_policy::caps(
+            probes,
+            setup.threads,
+            crate::full_cmg_batch_policy::SELECTED_K,
+        )?;
+        (l, t)
+    } else {
+        (
+            COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1.min(probes),
+            COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1.min(probes),
+        )
+    };
+    let phase_cap = |request, cap| match request {
+        BatchRequest::Auto => cap,
         BatchRequest::Explicit(width) => width,
     };
-    let leverage_cap = phase_cap(leverage_active_request);
-    let target_cap = phase_cap(target_active_request);
+    let leverage_cap = phase_cap(leverage_active_request, auto_caps.0);
+    let target_cap = phase_cap(target_active_request, auto_caps.1);
     let leverage_options = |width| JlaEngineOptions {
         leverage_batch_width: width,
         target_batch_width: 1,
@@ -584,7 +666,31 @@ fn plan_compressed_batches(
     // The common planner has one route cap for both phases. Run it once per
     // independent request so compressed auto retains its registered max-32
     // ladder even when the other phase has an explicit width above 32.
-    let leverage_plan = plan_batches_with_forecasts(
+    let full_cmg_batches = estimator.full_cmg_setup.is_some();
+    let phase_planner = |leverage,
+                         target,
+                         caps,
+                         left: &dyn Fn(usize) -> Result<u64>,
+                         right: &dyn Fn(usize) -> Result<u64>| {
+        if full_cmg_batches {
+            crate::batch_plan::plan_full_cmg_batches_with_forecasts(
+                leverage, target, caps, left, right,
+            )
+        } else {
+            plan_batches_with_forecasts(leverage, target, caps, left, right)
+        }
+    };
+    let leverage_forecast = |width| {
+        Ok(forecast_jla_memory(
+            problem,
+            plan,
+            leverage_options(width),
+            prepared_persistent_bytes,
+        )?
+        .solve_peak_forecast_bytes)
+    };
+    let idle_forecast = |_| Ok(non_batched_peak);
+    let leverage_plan = phase_planner(
         leverage_active_request,
         BatchRequest::Explicit(1),
         BatchPlannerCaps {
@@ -596,18 +702,19 @@ fn plan_compressed_batches(
             hard_memory_bytes: estimator.memory_limit_bytes,
             memory_budget: estimator.memory_budget,
         },
-        |width| {
-            Ok(forecast_jla_memory(
-                problem,
-                plan,
-                leverage_options(width),
-                prepared_persistent_bytes,
-            )?
-            .solve_peak_forecast_bytes)
-        },
-        |_| Ok(non_batched_peak),
+        &leverage_forecast,
+        &idle_forecast,
     )?;
-    let target_plan = plan_batches_with_forecasts(
+    let target_forecast = |width| {
+        Ok(forecast_jla_memory(
+            problem,
+            plan,
+            target_options(width),
+            prepared_persistent_bytes,
+        )?
+        .solve_peak_forecast_bytes)
+    };
+    let target_plan = phase_planner(
         BatchRequest::Explicit(1),
         target_active_request,
         BatchPlannerCaps {
@@ -619,16 +726,8 @@ fn plan_compressed_batches(
             hard_memory_bytes: estimator.memory_limit_bytes,
             memory_budget: estimator.memory_budget,
         },
-        |_| Ok(non_batched_peak),
-        |width| {
-            Ok(forecast_jla_memory(
-                problem,
-                plan,
-                target_options(width),
-                prepared_persistent_bytes,
-            )?
-            .solve_peak_forecast_bytes)
-        },
+        &idle_forecast,
+        &target_forecast,
     )?;
     let mut leverage = leverage_plan.leverage;
     leverage.requested = leverage_requested;
@@ -1315,6 +1414,9 @@ fn forecast_jla_memory(
         let vertices = to_u64_memory(setup.vertices, "full-CMG vertices")?;
         let full_solve = |columns| -> Result<u64> {
             checked_memory_sum(&[
+                crate::full_cmg::queue_metadata_bytes(
+                    usize::try_from(columns).map_err(|_| memory_overflow("queue columns"))?,
+                )?,
                 memory_product(
                     &[2 * workers + 3 * firms, columns, 8],
                     "full-CMG returned solutions",
@@ -1369,10 +1471,13 @@ fn forecast_jla_memory(
                 &[workers + 4 * firms, columns.min(threads), 8],
                 "full-CMG extraction",
             )?;
-            checked_memory_add(
+            checked_memory_sum(&[
                 hybrid_rhs,
                 hybrid_rhs.max(checked_memory_add(solutions, extraction)?),
-            )
+                crate::full_cmg::queue_metadata_bytes(
+                    usize::try_from(columns).map_err(|_| memory_overflow("queue columns"))?,
+                )?,
+            ])
         };
         let ordinary_leverage = leverage_phase_forecast_bytes - full_solve(leverage_width)?
             + ordinary_solve(leverage_width)?;
