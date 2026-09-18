@@ -1,5 +1,5 @@
 *! version 0.4.0-alpha.1 24aug2026
-program define _fevc_rust_capture_stayers, rclass
+program define fevc__rust_capture_stayers, rclass
     version 18.0
     args handle controls nuisance tolerance ranktol blocktol augctx
 
@@ -11,7 +11,7 @@ program define _fevc_rust_capture_stayers, rclass
         exit
     }
 
-    capture noisily _fevc_rust_public_call stayerresult `handle'
+    capture noisily fevc__rust_public_call stayerresult `handle'
     if _rc exit _rc
     matrix `raw' = r(result)
     matrix `source' = r(correction_source)

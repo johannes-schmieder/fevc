@@ -1,4 +1,4 @@
-program define _fevc_exact_inference_model_post, eclass
+program define fevc__exact_inference_model_post, eclass
     version 18.0
     args inference supplied
     if "`inference'"!="none" {

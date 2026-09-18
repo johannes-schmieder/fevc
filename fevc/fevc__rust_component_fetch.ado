@@ -1,4 +1,4 @@
-program define _fevc_rust_component_fetch, rclass
+program define fevc__rust_component_fetch, rclass
     version 18.0
     args handle reference model simulations memorylimit posted level      ///
         outprimitive outcovariance outmcse outspectrum outq1raw           ///
@@ -6,7 +6,7 @@ program define _fevc_rust_component_fetch, rclass
         outunits deletion expectedunits expectedgramprobes
     local modelcode = cond("`model'"=="structured_common",1,2)
     local referencecode = ("`reference'"=="q1")
-    capture noisily _fevc_rust_public_call componentresultv5 `handle', reference(`reference')
+    capture noisily fevc__rust_public_call componentresultv5 `handle', reference(`reference')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///

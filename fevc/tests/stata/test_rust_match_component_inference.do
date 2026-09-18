@@ -149,8 +149,8 @@ foreach change in joint both autoengine omittedengine omitteddeletion omittednui
     assert r(state)==0
 }
 // A valid-looking but inconsistent unit receipt must not reach e(V).
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     gettoken command rest : 0
     fevc_rust `command' `rest'
@@ -174,7 +174,7 @@ foreach fault in count deletion omission schema ordering {
     assert r(state)==0
 }
 macro drop FEVC_TEST_UNIT_FAULT
-program drop _fevc_rust_public_call
+program drop fevc__rust_public_call
 quietly datasignature
 assert `"`r(datasignature)'"'==`"`caller_data'"'
 di as result "PASS test_rust_match_component_inference.do"

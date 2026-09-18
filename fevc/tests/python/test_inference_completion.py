@@ -112,5 +112,5 @@ def test_frozen_recipe_and_additive_abi():
     adapter = RUN.B.adapt((RUN.B.PREVIOUS.LEGACY / 'public_api.rs').read_text())
     assert 'interrupt_v4(generation,&attachment,2048)' in adapter
     assert 'inference_interface_version(), 4' in adapter
-    for filename in ('fevc/fevc.ado', 'fevc/_fevc_component_model_route.ado'):
+    for filename in ('fevc/fevc.ado', 'fevc/fevc__component_model_route.ado'):
         assert 'inferencegramprobes' in (ROOT / filename).read_text().lower()

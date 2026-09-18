@@ -546,7 +546,7 @@ quietly fevc_rust solve `xhandle', algorithm(auto) deletion(match) ///
     frequencyused(1) signaturehi(`xsighi') signaturelo(`xsiglo')       ///
     fallback(1) wallseconds(0)
 quietly fevc_rust result `xhandle'
-quietly _fevc_rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
+quietly fevc__rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
     1e-10 1e-10 1e-12 500 `xmem' `xcopy' `xprep' `xresident'        ///
     `xsighi' `xsiglo' 50000000 0 0 1 2 1 1 15
 local exact_reconcile_ok = r(ok)
@@ -593,7 +593,7 @@ forvalues col=1/4 {
     assert abs(`xresult'[1,`col']-`xresult'[2,`col']-                ///
         `xresult'[3,`col']) <= 1e-10
 }
-quietly _fevc_rust_post_exact_v7 `xhandle' outcome frequency ///
+quietly fevc__rust_post_exact_v7 `xhandle' outcome frequency ///
     target_weight `xkeep' 96 96 0 0 7 8 81227 1e-12 10000 1 auto auto ///
     1 1 counter_v1 1 1 1 1 1 0 `xcore' `xsupport' "nodisplay" match ///
     joint 1e-10 1e-10 500 50000000 auto auto 1                     ///

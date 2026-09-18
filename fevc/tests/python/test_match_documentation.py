@@ -56,15 +56,18 @@ def test_catalog_preserves_match_install_inventory():
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.pkg"], cwd=ROOT, text=True
     )
     additive_helpers = {
-        "f _fevc_memory_options.ado",
-        "f _fevc_observation_population.ado",
-        "f _fevc_stayer_population_post.ado",
-        "f _fevc_rust_cmg_model.ado",
-        "f _fevc_rust_comp_batch_receipt.ado",
-        "f _fevc_rust_core_ready.ado",
+        "f fevc__memory_options.ado",
+        "f fevc__observation_population.ado",
+        "f fevc__stayer_population_post.ado",
+        "f fevc__rust_cmg_model.ado",
+        "f fevc__rust_comp_batch_receipt.ado",
+        "f fevc__rust_core_ready.ado",
     }
     assert additive_helpers <= set(manifest.splitlines())
-    assert [x for x in old.splitlines() if x.startswith("f ")] == [
+    # Compare the historical inventory under the current helper filename convention.
+    previous = [x.replace("f _fevc", "f fevc_", 1)
+                for x in old.splitlines() if x.startswith("f ")]
+    assert previous == [
         x for x in manifest.splitlines() if x.startswith("f ") and x not in additive_helpers
     ]
     assert "fixed-offset match" in manifest

@@ -38,9 +38,9 @@ capture findfile fevc_scale_engine.mata
 assert _rc == 0
 capture findfile fevc_scale_runtime.mata
 assert _rc == 0
-capture findfile _fevc_display.ado
+capture findfile fevc__display.ado
 assert _rc == 0
-capture findfile _fevc_lifecycle.ado
+capture findfile fevc__lifecycle.ado
 assert _rc == 0
 capture findfile fevc_estat.ado
 assert _rc == 0

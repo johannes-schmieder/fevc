@@ -84,10 +84,29 @@ def package_files(package_root: Path) -> tuple[PackageFile, ...]:
         PurePosixPath("fevc.pkg"),
         *listed,
     )
-    return tuple(
+    files = tuple(
         PackageFile(relative, _read_regular(package_root, relative))
         for relative in sorted(relatives, key=str)
     )
+    ado_names: set[str] = set()
+    for item in files:
+        if item.relative.suffix != ".ado":
+            continue
+        name = item.relative.stem
+        if name.startswith("_fevc"):
+            raise ValueError(f"legacy underscore helper filename: {item.relative}")
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]{0,31}", name):
+            raise ValueError(f"invalid Stata program name: {name}")
+        if name.lower() in ado_names:
+            raise ValueError(f"duplicate installed ado basename: {item.relative.name}")
+        ado_names.add(name.lower())
+        definition = re.compile(
+            r"(?m)^\s*(?:capture\s+)?program\s+(?:define\s+)?"
+            + re.escape(name) + r"(?=\s|,|$)"
+        )
+        if not definition.search(item.data.decode("utf-8")):
+            raise ValueError(f"ado filename has no matching program entrypoint: {item.relative}")
+    return files
 
 
 def build_archive(package_root: Path = PACKAGE_ROOT) -> tuple[bytes, tuple[PackageFile, ...]]:

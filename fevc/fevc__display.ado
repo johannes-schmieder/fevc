@@ -1,10 +1,10 @@
 *! fevc display 0.5.0-rc.1 05sep2026
 
-program define _fevc_display
+program define fevc__display
     version 18.0
     syntax [, DECOMPOSITIONonly FULL INFERENCEdiagnosticsonly]
 
-    quietly _fevc_stayer_population_post
+    quietly fevc__stayer_population_post
 
     if "`inferencediagnosticsonly'" != "" {
         _fevc_display_structured

@@ -1,5 +1,5 @@
 *! version 0.4.0-alpha.1 31aug2026
-program define _fevc_rust_post_stayer_hybrid, eclass sortpreserve
+program define fevc__rust_post_stayer_hybrid, eclass sortpreserve
     version 18.0
     args depvar frequency target hybridtouse nuisance nhystayers    ///
         nhystayerrows ///
@@ -221,5 +221,5 @@ program define _fevc_rust_post_stayer_hybrid, eclass sortpreserve
     ereturn matrix stayer_hybrid_sample_accounting = `accounting'
     ereturn matrix rust_stayer_augmentation_receipt = `aug'
     ereturn matrix rust_stayer_exact_memory_receipt = `memory'
-    if "`nodisplay'"=="" _fevc_display
+    if "`nodisplay'"=="" fevc__display
 end

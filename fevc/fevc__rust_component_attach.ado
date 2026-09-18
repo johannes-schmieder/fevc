@@ -1,4 +1,4 @@
-program define _fevc_rust_component_attach, rclass
+program define fevc__rust_component_attach, rclass
     version 18.0
     args handle rows resident memorylimit model reference simulations batch ///
         inferenceseed level ranktol receiptout deletion gramprobes batchauto
@@ -14,7 +14,7 @@ program define _fevc_rust_component_attach, rclass
         local selector augmentcomponentv5
         local attachment_batch = 0
     }
-    capture noisily _fevc_rust_public_call `selector' `handle', model(`model') ///
+    capture noisily fevc__rust_public_call `selector' `handle', model(`model') ///
         reference(`reference') probes(`simulations') batch(`attachment_batch') ///
         spectrumprobes(128) spectrumiterations(`spectrum_iterations') seed(`inferenceseed') ///
         psdtolerance(1e-8) spectrumtolerance(.002) confidence(`=`level'/100') ///

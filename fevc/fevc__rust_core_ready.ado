@@ -1,5 +1,5 @@
 *! Reconcile additive native readiness and independent C transport versions.
-program define _fevc_rust_core_ready, rclass
+program define fevc__rust_core_ready, rclass
     version 18.0
     args flags platform fullcmg execution componentauto resolved project autoexact exactstayer ///
         algorithm stayers executionapi

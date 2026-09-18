@@ -1315,8 +1315,8 @@ assert r(state) == 0 & r(handle) == 0
 
 // Missing/corrupt capability receipts fail before prepare; a corrupted V6
 // echo fails after result export and still releases to idle.
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     gettoken subcommand rest : 0, parse(" ,")
     local subcommand = lower(strtrim("`subcommand'"))
@@ -1488,7 +1488,7 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`reconcile_signature'"'
 global VCKSS_GENERIC_FAULT
 global VCKSS_GENERIC_PREPARE_CALLED
-capture program drop _fevc_rust_public_call
+capture program drop fevc__rust_public_call
 
 assert `q32_rc' == 0
 

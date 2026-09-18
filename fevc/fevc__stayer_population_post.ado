@@ -1,4 +1,4 @@
-program define _fevc_stayer_population_post, eclass
+program define fevc__stayer_population_post, eclass
     version 18.0
     if "${VCKSS_ROUTE_STAYERS_REQUESTED}"=="" | "`e(cmd)'"!="fevc" exit
     if inlist("`e(status)'","WITHHELD","ALPHA") exit

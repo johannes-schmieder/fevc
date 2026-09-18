@@ -1,5 +1,5 @@
 *! version 0.4.0-alpha.1 23aug2026
-program define _fevc_rust_solve_v4, rclass
+program define fevc__rust_solve_v4, rclass
     version 18.0
     args plugin handle seed probes leveragebatch targetbatch route tolerance_arg ///
         maxiter algorithm deletion nuisance exactlimit blocksizelimit            ///
@@ -130,7 +130,7 @@ program define _fevc_rust_solve_v4, rclass
         exit 198
     }
 
-    _fevc_rust_plugin_call `plugin', `solve_selector' `handle' `seed' `probes' ///
+    fevc__rust_plugin_call `plugin', `solve_selector' `handle' `seed' `probes' ///
         `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
         `algorithm' `deletion' `nuisance' `exactlimit' `blocksizelimit' ///
         `rank_tolerance_arg' `block_tolerance_arg' `engine' `batchmode'  ///

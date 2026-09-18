@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def test_candidate_context_is_narrow_and_covers_both_dispatchers():
     original = (ROOT/'fevc/fevc.ado').read_text()
-    component = (ROOT/'fevc/_fevc_rust_comp_batch_receipt.ado').read_text()
+    component = (ROOT/'fevc/fevc__rust_comp_batch_receipt.ado').read_text()
     adapted, checked = adapter.transform(original, component, 'candidate')
     assert adapted.count('_fevc_pipeline_threads native_threads') == 2
     assert adapted.count('active_processors = c(processors)') == original.count('active_processors = c(processors)')
@@ -55,7 +55,7 @@ def test_readonly_snapshot_stages_identical_writable_adapter_copies(tmp_path):
     source=tmp_path/'source/fevc'
     source.mkdir(parents=True)
     inventory={}
-    for name in ('fevc.ado','_fevc_rust_comp_batch_receipt.ado','_fevc_rust_public_call.ado','fevc.pkg'):
+    for name in ('fevc.ado','fevc__rust_comp_batch_receipt.ado','fevc__rust_public_call.ado','fevc.pkg'):
         path=source/name
         path.write_bytes((ROOT/'fevc'/name).read_bytes())
         inventory[f'fevc/{name}']=adapter.sha(path)

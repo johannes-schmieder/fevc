@@ -1,7 +1,6 @@
 # KSS-PROD-1 SCC bundle allowlist. Paths are repository-relative, tracked,
 # regular files. Keep this list explicit: the builder never archives the full
 # repository and never follows symlinks.
-fevc/_fevc_display.ado
 fevc/benchmarks/prod_bundle_allowlist.txt
 fevc/benchmarks/prod_experiments.tsv
 fevc/benchmarks/prod_hierarchy_stress.do
@@ -29,6 +28,7 @@ fevc/fevc.ado
 fevc/fevc.mata
 fevc/fevc.pkg
 fevc/fevc.sthlp
+fevc/fevc__display.ado
 fevc/fevc_cmg.mata
 fevc/fevc_graph.mata
 fevc/fevc_run.ado

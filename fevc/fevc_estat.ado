@@ -37,8 +37,8 @@ end
 program define _fevc_estat_decomposition
     version 18.0
     syntax [, FULL]
-    if "`full'" != "" _fevc_display, decompositiononly full
-    else _fevc_display, decompositiononly
+    if "`full'" != "" fevc__display, decompositiononly full
+    else fevc__display, decompositiononly
 end
 
 program define _fevc_estat_sample
@@ -266,7 +266,7 @@ program define _fevc_estat_diagnostics
         di as txt "These quantify randomized numerical error, not sampling uncertainty."
     }
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
-        _fevc_display, inferencediagnosticsonly
+        fevc__display, inferencediagnosticsonly
     }
     di as txt _newline "Type " as result "ereturn list" as txt ///
         " for the complete machine-readable diagnostic record."

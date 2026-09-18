@@ -1,9 +1,9 @@
 *! execution-only component batch reconciliation
-program define _fevc_rust_comp_batch_receipt, rclass
+program define fevc__rust_comp_batch_receipt, rclass
     version 18.0
     args handle covariance_probes gram_probes work native_threads
     if "`native_threads'"=="" local native_threads = c(processors)
-    capture noisily _fevc_rust_public_call componentbatchreceipt `handle'
+    capture noisily fevc__rust_public_call componentbatchreceipt `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///

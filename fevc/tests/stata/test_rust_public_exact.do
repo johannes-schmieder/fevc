@@ -239,8 +239,8 @@ assert mreldif(e(results),`rust_order') <= 1e-10
 
 // A corrupted detailed-V5 accounting receipt is rejected after result export
 // and before any failure is posted; cleanup still leaves the engine idle.
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     gettoken rust_subcommand rust_rest : 0, parse(" ,")
     fevc_rust `0'
@@ -270,8 +270,8 @@ assert `"`e(backend_selected)'"' == ""
 assert `"`e(rng_selected)'"' == ""
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     fevc_rust `0'
     return add

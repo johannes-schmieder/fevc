@@ -1,5 +1,16 @@
 # Pending changes
 
+## Package-prefixed helper filenames — 2026-09-18
+
+- Rename all 28 shipped `_fevc*.ado` helpers and their entrypoints to
+  `fevc__*.ado`, keeping SSC runtime files in the package's `f/` directory.
+- Preserve public commands, numerical code, private backend identities and
+  native plugin filenames. Update maintained callers, package inventories,
+  tests and qualification tooling together; ship no old-name wrappers.
+- Before upgrading an older development installation, uninstall its registered
+  package, install the current package, and restart Stata. `replace` alone
+  leaves obsolete helper files behind. See the installation guide.
+
 ## Symmetric stayer population options — 2026-09-12
 
 - Default to `stayers(both)` for observation and match deletion. Observation

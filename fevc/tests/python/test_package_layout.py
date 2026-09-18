@@ -37,37 +37,37 @@ def test_package_manifest_is_complete() -> None:
         "fevc_resource.mata",
         "fevc_scale_engine.mata",
         "fevc_scale_runtime.mata",
-        "_fevc_display.ado",
-        "_fevc_lifecycle.ado",
-        "_fevc_memory_options.ado",
+        "fevc__display.ado",
+        "fevc__lifecycle.ado",
+        "fevc__memory_options.ado",
         "fevc_estat.ado",
         "fevc_run.ado",
         "fevc_rust.ado",
-        "_fevc_rust_plugin_call.ado",
-        "_fevc_rust_solve_v4.ado",
-        "_fevc_rust_solve_v5.ado",
-        "_fevc_rust_cmg_model.ado",
-        "_fevc_rust_plan_receipt.ado",
-        "_fevc_rust_reconcile_comp_v7.ado",
-        "_fevc_rust_reconcile_exact_v7.ado",
-        "_fevc_rust_post_comp_v7.ado",
-        "_fevc_rust_post_exact_v7.ado",
-        "_fevc_rust_capture_stayers.ado",
-        "_fevc_rust_post_stayer_hybrid.ado",
-        "_fevc_rust_macos.ado",
-        "_fevc_rust_windows.ado",
-        "_fevc_rust_linux.ado",
-        "_fevc_rust_public_call.ado",
-        "_fevc_rust_core_ready.ado",
-        "_fevc_component_model_route.ado",
-        "_fevc_observation_population.ado",
-        "_fevc_stayer_population_post.ado",
-        "_fevc_exact_inference_model_post.ado",
-        "_fevc_rust_component_attach.ado",
-        "_fevc_rust_comp_batch_receipt.ado",
-        "_fevc_rust_component_fetch.ado",
-        "_fevc_rust_component_post.ado",
-        "_fevc_failure_guidance.ado",
+        "fevc__rust_plugin_call.ado",
+        "fevc__rust_solve_v4.ado",
+        "fevc__rust_solve_v5.ado",
+        "fevc__rust_cmg_model.ado",
+        "fevc__rust_plan_receipt.ado",
+        "fevc__rust_reconcile_comp_v7.ado",
+        "fevc__rust_reconcile_exact_v7.ado",
+        "fevc__rust_post_comp_v7.ado",
+        "fevc__rust_post_exact_v7.ado",
+        "fevc__rust_capture_stayers.ado",
+        "fevc__rust_post_stayer_hybrid.ado",
+        "fevc__rust_macos.ado",
+        "fevc__rust_windows.ado",
+        "fevc__rust_linux.ado",
+        "fevc__rust_public_call.ado",
+        "fevc__rust_core_ready.ado",
+        "fevc__component_model_route.ado",
+        "fevc__observation_population.ado",
+        "fevc__stayer_population_post.ado",
+        "fevc__exact_inference_model_post.ado",
+        "fevc__rust_component_attach.ado",
+        "fevc__rust_comp_batch_receipt.ado",
+        "fevc__rust_component_fetch.ado",
+        "fevc__rust_component_post.ado",
+        "fevc__failure_guidance.ado",
         "fevc.sthlp",
     }
     for relative in shipped:
@@ -114,13 +114,13 @@ def test_public_full_cmg_reconciles_selected_rhs_capacity() -> None:
     assert "2*`native_selected_tgt_batch')" in ado
     assert "`cmg_max_batch_rhs'==64" not in ado
     assert "`cmg_workspace_count'<=`cmg_threads_used'" in ado
-    assert "_fevc_rust_cmg_model `handle' `control_count'" in ado
-    model = (ROOT / "_fevc_rust_cmg_model.ado").read_text(encoding="utf-8")
+    assert "fevc__rust_cmg_model `handle' `control_count'" in ado
+    model = (ROOT / "fevc__rust_cmg_model.ado").read_text(encoding="utf-8")
     assert "`controls'+1+(`controls'>0 & `nuisance'==2)+3*`probes'" in model
     assert "`cmg_rhs'!=`logical'+r(control_refinement_rhs_count)" in model
     assert "r(explicit_options_rhs_count)!=`controls'" in model
-    assert "_fevc_rust_core_ready `rust_core_flags'" in ado
-    ready = (ROOT / "_fevc_rust_core_ready.ado").read_text(encoding="utf-8")
+    assert "fevc__rust_core_ready `rust_core_flags'" in ado
+    ready = (ROOT / "fevc__rust_core_ready.ado").read_text(encoding="utf-8")
     assert "mod(floor(`flags'/2048),2)==1" in ready
 
 
@@ -233,9 +233,9 @@ def test_runtime_has_no_external_language_dependency() -> None:
             "fevc_resource.mata",
             "fevc_scale_engine.mata",
             "fevc_scale_runtime.mata",
-            "_fevc_display.ado",
-            "_fevc_lifecycle.ado",
-        "_fevc_memory_options.ado",
+            "fevc__display.ado",
+            "fevc__lifecycle.ado",
+        "fevc__memory_options.ado",
             "fevc_estat.ado",
             "fevc_run.ado",
         )
@@ -289,7 +289,7 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
 
 
 def test_compact_display_and_postestimation_surface_are_documented() -> None:
-    display = (ROOT / "_fevc_display.ado").read_text(encoding="utf-8")
+    display = (ROOT / "fevc__display.ado").read_text(encoding="utf-8")
     estat = (ROOT / "fevc_estat.ado").read_text(encoding="utf-8")
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
     for text in (
@@ -308,14 +308,14 @@ def test_compact_display_and_postestimation_surface_are_documented() -> None:
     for subcommand in ("decomposition", "sample", "computation", "diagnostics"):
         assert f'"{subcommand}"' in estat
     assert 'ereturn local estat_cmd "fevc_estat"' in ado
-    assert "_fevc_display, inferencediagnosticsonly" in estat
+    assert "fevc__display, inferencediagnosticsonly" in estat
 
 
 def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None:
-    route = (ROOT / "_fevc_component_model_route.ado").read_text(
+    route = (ROOT / "fevc__component_model_route.ado").read_text(
         encoding="utf-8"
     )
-    post = (ROOT / "_fevc_rust_component_post.ado").read_text(
+    post = (ROOT / "fevc__rust_component_post.ado").read_text(
         encoding="utf-8"
     )
     help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")

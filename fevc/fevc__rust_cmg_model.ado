@@ -1,5 +1,5 @@
 *! version 0.4.0-alpha.1 13sep2026
-program define _fevc_rust_cmg_model, rclass
+program define fevc__rust_cmg_model, rclass
     version 18.0
     args handle controls nuisance probes cmg_rhs
     // Separate additive model accounting from the frozen 46-field FE receipt.

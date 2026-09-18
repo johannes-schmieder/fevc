@@ -41,5 +41,21 @@ binaries. Rust-only features require a matching native build. See the
 
 Restart Stata after replacing a loaded native plugin. After a source update,
 restart Stata or run `discard` to clear cached programs and Mata definitions.
-An installation from an older development package with renamed runtime files
-should first be removed with `ado uninstall fevc`.
+
+## Upgrading an older development installation
+
+The September 18 prerelease cleanup renamed the 28 `_fevc*.ado` helper files
+to `fevc__*.ado`. The public `fevc` command and plugin filenames are unchanged;
+old helper aliases are not installed. Helpers are internal interfaces.
+
+Before installing this source over an earlier development installation:
+
+1. Run `ado uninstall fevc` while the old installation is still registered.
+2. Install the current package from your chosen source using the commands above.
+3. Restart Stata to clear cached ado/Mata programs and loaded native plugins.
+
+Using `net install ..., replace` alone leaves the old helper files behind.
+If files were copied manually or multiple installations exist, inspect `which
+fevc` and `adopath` and remove only the identified obsolete package files;
+the installer does not delete files by wildcard. Other packages can also
+have underscore-prefixed filenames.

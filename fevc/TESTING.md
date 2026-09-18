@@ -92,6 +92,12 @@ A successful suite prints its explicit terminal PASS marker. Stata 18 batch
 launchers can return shell status zero after a do-file error, so the marker and
 machine-readable `stata_rc` are authoritative.
 
+The integrated checker also tests helper migration from a legacy underscore
+installation: uninstall the registered old package, install the renamed
+package through ordinary and SSC-shaped source layouts, verify all helper
+locations and obsolete-file removal, and execute both deletion modes. These
+fixtures use temporary PLUS directories and do not modify the user's installation.
+
 The quick suite is the ordinary source gate. The full suite is required for a
 substantial package or numerical change. Both include routing, sample,
 restoration, result-equivalence, and typed-failure coverage appropriate to

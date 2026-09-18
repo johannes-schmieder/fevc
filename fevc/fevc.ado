@@ -82,7 +82,7 @@ program define fevc, eclass
     global VCKSS_STAGE_VALIDATION_TIMER `stage_validation_timer'
     capture noisily _vckss_impl `0'
     local command_rc = _rc
-    if !`command_rc' quietly _fevc_stayer_population_post
+    if !`command_rc' quietly fevc__stayer_population_post
     if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
         if real("$VCKSS_MEMORY_FORECAST") > 0 & real("$VCKSS_MEMORY_FORECAST") < . {
             ereturn scalar memory_forecast_bytes = max(e(memory_forecast_bytes),real("$VCKSS_MEMORY_FORECAST"))
@@ -201,7 +201,7 @@ program define _fevc_rust_generic, eclass sortpreserve
         exit _rc
     }
 
-    capture quietly _fevc_rust_public_call requestcapability,       ///
+    capture quietly fevc__rust_public_call requestcapability,       ///
         algorithm(jla) deletion(`deletionmode') nuisance(`nuisance') ///
         route(diagonal) rngcontract(counter_v1)                      ///
         controls(`control_count') frequencyused(`frequency_code')    ///
@@ -308,7 +308,7 @@ program define _fevc_rust_generic, eclass sortpreserve
     }
 
     tempvar rust_keep
-    capture noisily _fevc_rust_public_call prepare `worker' `firm' ///
+    capture noisily fevc__rust_public_call prepare `worker' `firm' ///
         `deletionvar' `depvar' `frequency' `target' `controls'      ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
         deletion(`deletionmode')
@@ -438,7 +438,7 @@ program define _fevc_rust_generic, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _fevc_rust_public_call solve `handle',         ///
+    capture noisily fevc__rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`batch')         ///
         targetbatch(`batch') route(diagonal) tolerance(`tolerance') ///
         maxiter(`maxiter') algorithm(jla) deletion(`deletionmode')  ///
@@ -458,7 +458,7 @@ program define _fevc_rust_generic, eclass sortpreserve
             handle(`handle') phase(solve)
         exit _rc
     }
-    capture noisily _fevc_rust_public_call result `handle'
+    capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
@@ -789,7 +789,7 @@ program define _fevc_rust_generic, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _fevc_rust_public_call release `handle'
+    capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
@@ -1178,7 +1178,7 @@ program define _fevc_rust_generic, eclass sortpreserve
     ereturn local rust_capability_profile "JLA_GENERIC_COUNTER_V1"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end
 
 program define _vckss_proj_result_ok, rclass
@@ -1383,7 +1383,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         exit _rc
     }
 
-    capture quietly _fevc_rust_public_call requestcapability,       ///
+    capture quietly fevc__rust_public_call requestcapability,       ///
         algorithm(`algorithm_requested') deletion(`deletionmode') nuisance(`nuisance') ///
         route(`preconditioner_requested') rngcontract(`native_rng_contract') ///
         controls(`control_count') frequencyused(`frequency_code')    ///
@@ -1532,7 +1532,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `probeorder_supplied_code' local probeorder_option probeorder(`probeorder')
     local implicit_match_option
     if `implicit_match' local implicit_match_option implicitmatch
-    capture noisily _fevc_rust_public_call prepare `worker' `firm' ///
+    capture noisily fevc__rust_public_call prepare `worker' `firm' ///
         `deletionvar' `depvar' `frequency' `target' `controls'      ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
         deletion(`deletionmode') `probeorder_option' `implicit_match_option'
@@ -1730,7 +1730,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `N_hybrid_stayers'+`p_firms'-1+`control_count'
         if "`algorithm_requested'"=="exact" &                       ///
             `hybrid_exact_dimension'>`exactlimit' {
-            capture quietly _fevc_rust_public_call release `handle'
+            capture quietly fevc__rust_public_call release `handle'
             local failure_rc = _rc
             if `failure_rc' {
                 capture noisily _fevc_rust_abort, rc(`failure_rc') ///
@@ -1754,7 +1754,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             exit 198
         }
 
-        capture noisily _fevc_rust_public_call augmentstayers     ///
+        capture noisily fevc__rust_public_call augmentstayers     ///
             `hybrid_firm' `hybrid_stayer_worker' `depvar'          ///
             `frequency' `target' `controls' if `hybrid_stayer',    ///
             handle(`handle')
@@ -1886,7 +1886,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         }
         if `stayers_code'==2 sort `hybrid_stayer' `native_input_order'
         else sort `native_input_order'
-        capture noisily _fevc_rust_public_call augmentprojection `project' ///
+        capture noisily fevc__rust_public_call augmentprojection `project' ///
             if `result_touse', handle(`handle') projecteffect(`projecteffect') ///
             projectweight(`projectweight') ranktolerance(`ranktol')
         if _rc {
@@ -1960,7 +1960,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `component_requested' {
         local component_model = lower(strtrim("`inferencemodel'"))
         local component_reference = cond("`inference'"=="q1","q1","q0")
-        capture noisily _fevc_rust_component_attach `handle' `result_stored' ///
+        capture noisily fevc__rust_component_attach `handle' `result_stored' ///
             `solve_resident' `p_mem_limit' `component_model'              ///
             `component_reference' `inferencesimulations' `batch'          ///
             `inferenceseed' `level' `ranktol' `component_aug_ctx' `deletionmode' `inferencegramprobes' `component_batch_auto'
@@ -2083,7 +2083,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             engine_deferred
     }
 
-    capture noisily _fevc_rust_public_call solve `handle',         ///
+    capture noisily fevc__rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
         targetbatch(`solve_batch') route(`preconditioner_requested') ///
         tolerance(`tolerance') maxiter(`maxiter') algorithm(`algorithm_requested')    ///
@@ -2118,7 +2118,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname generic_work generic_max_complete
     local resolved_execution = (`generic_execution'==3)
     if `generic_execution' & !`resolved_execution' {
-        capture noisily _fevc_rust_public_call executionreceipt `handle'
+        capture noisily fevc__rust_public_call executionreceipt `handle'
         if _rc {
             local failure_rc = _rc
             capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
@@ -2129,7 +2129,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname component_batch_receipt
     local selected_inference_width = 0
     if `component_batch_auto' {
-        capture noisily _fevc_rust_comp_batch_receipt `handle' ///
+        capture noisily fevc__rust_comp_batch_receipt `handle' ///
             `inferencesimulations' `inferencegramprobes' `generic_work' `native_threads'
         if _rc exit _rc
         matrix `component_batch_receipt' = r(receipt)
@@ -2140,7 +2140,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `component_requested' local component_result_probes = `inferencesimulations'
     if `component_requested' local component_gram_probes = `inferencegramprobes'
     local result_execution = cond(`resolved_execution',0,`generic_execution')
-    capture noisily _fevc_rust_public_call result `handle',          ///
+    capture noisily fevc__rust_public_call result `handle',          ///
         componentinference(`component_requested')                    ///
         execution(`result_execution')                                ///
         exactexecution(`exact_execution') exactthreads(`native_threads') ///
@@ -2175,7 +2175,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 inrange(`exact_work_ctx'[1,10],0,r(full_residual_tolerance))
         }
         if !`work_ok' {
-            capture quietly _fevc_rust_public_call release `handle'
+            capture quietly fevc__rust_public_call release `handle'
             capture quietly fevc_rust clear
             quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
                 "The exact execution receipt does not match the resolved public request."
@@ -2208,7 +2208,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
     if `resolved_execution' {
         if `native_result_engine'==2 {
-            capture noisily _fevc_rust_public_call executionreceipt `handle'
+            capture noisily fevc__rust_public_call executionreceipt `handle'
             if _rc {
                 local failure_rc = _rc
                 capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
@@ -2231,7 +2231,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     // generic receipt reconciliation.  Component inference performs its own
     // refresh below after fetching component results.
     if `resolved_execution' & `generic_execution'==1 & !`component_requested' {
-        capture noisily _fevc_rust_public_call result `handle',          ///
+        capture noisily fevc__rust_public_call result `handle',          ///
             componentinference(0) execution(`generic_execution')         ///
             componentprobes(0) componentgramprobes(0)
         if _rc {
@@ -2249,7 +2249,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     matrix `component_inference_receipt' = J(1,21,0)
     local ci_result_peak = 0
     if `component_requested' {
-        capture noisily _fevc_rust_component_fetch `handle'             ///
+        capture noisily fevc__rust_component_fetch `handle'             ///
             `component_reference' `component_model' `inferencesimulations' ///
             `p_mem_limit' `component_point_snapshot' `level'              ///
             `component_V_primitive' `component_V' `component_trace_mcse'  ///
@@ -2262,7 +2262,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local ci_result_peak = r(peak)
         // componentresult replaces r(). Re-export the immutable solved
         // result before any generic-result reconciliation or posting.
-        capture noisily _fevc_rust_public_call result `handle',           ///
+        capture noisily fevc__rust_public_call result `handle',           ///
             componentinference(1) execution(`generic_execution') componentprobes(`inferencesimulations') ///
             componentgramprobes(`component_gram_probes')
         if _rc {
@@ -2284,7 +2284,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             ereturn local native_error_phase "full_cmg_result_family"
             exit 498
         }
-        capture quietly _fevc_rust_reconcile_comp_v7 `probes' `seed' ///
+        capture quietly fevc__rust_reconcile_comp_v7 `probes' `seed' ///
             `maxiter' `tolerance' `p_workers' `p_firms' `ranktol'    ///
             `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code' ///
             `fallback_allowed' `phase_batch_code' `solve_batch'     ///
@@ -2311,7 +2311,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
     tempname full_cmg_receipt full_cmg_model_receipt
     if `full_cmg_active' {
-        capture noisily _fevc_rust_public_call fullcmgreceipt `handle'
+        capture noisily fevc__rust_public_call fullcmgreceipt `handle'
         local full_cmg_receipt_rc = _rc
         if `full_cmg_receipt_rc' {
             local failure_rc = `full_cmg_receipt_rc'
@@ -2365,7 +2365,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local expected_cmg_probe_tol = cond(`tolerancesupplied' | `control_count'>0 | ///
             `generic_execution'==2,`tolerance',1e-6)
         if `generic_execution'==0 {
-            capture noisily _fevc_rust_cmg_model `handle' `control_count' ///
+            capture noisily fevc__rust_cmg_model `handle' `control_count' ///
                 `nuisance_code' `probes' `cmg_rhs_count'
             if _rc {
                 local failure_rc = _rc
@@ -2474,7 +2474,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_support_flags = `rustsupportflags'
             exit 498
         }
-        capture quietly _fevc_rust_reconcile_exact_v7              ///
+        capture quietly fevc__rust_reconcile_exact_v7              ///
             `algorithm_expected_code' `engine_expected_code'         ///
             `deletion_code' `nuisance_code' `p_workers' `p_firms'    ///
             `control_count' `ranktol' `blocktol' `tolerance'         ///
@@ -2519,7 +2519,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         }
         tempname hybrid_result_ctx hybrid_raw_ctx hybrid_source_ctx
         if `stayers_code'==2 {
-            capture noisily _fevc_rust_capture_stayers             ///
+            capture noisily fevc__rust_capture_stayers             ///
                 `handle' `control_count' `nuisance' `tolerance'      ///
                 `ranktol' `blocktol' `stayer_aug_ctx'
             local stayer_capture_rc = _rc
@@ -2547,7 +2547,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         }
         local exact_nodisplay `"`nodisplay'"'
         if `stayers_code'==2 local exact_nodisplay nodisplay
-        capture noisily _fevc_rust_post_exact_v7 `handle' `depvar' ///
+        capture noisily fevc__rust_post_exact_v7 `handle' `depvar' ///
             `frequency' `target' `touse' `nscope' `ncomplete'       ///
             `nstayers' `nstayerrows' `probes' `batch' `seed'        ///
             `tolerance' `maxiter' `memorygib' `algorithm_requested' ///
@@ -2564,7 +2564,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `stayers_mode' `exact_plan_complexity' `exact_execution' `native_threads'
         local exact_post_rc = _rc
         if !`exact_post_rc' & `stayers_code'==2 {
-            capture noisily _fevc_rust_post_stayer_hybrid `depvar' ///
+            capture noisily fevc__rust_post_stayer_hybrid `depvar' ///
                 `frequency' `target' `hybrid_touse' `nuisance'       ///
                 `N_hybrid_stayers' ///
                 `N_hybrid_stayer_rows' `N_hyb_singleton_drop'       ///
@@ -2606,7 +2606,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         // so the compressed reconciler remains immediately adjacent to its
         // poster, exactly as on every legacy compressed path.
         if `full_cmg_active' {
-            capture noisily _fevc_rust_public_call result `handle'
+            capture noisily fevc__rust_public_call result `handle'
             local full_cmg_result_refresh_rc = _rc
             if `full_cmg_result_refresh_rc' {
                 local failure_rc = `full_cmg_result_refresh_rc'
@@ -2616,7 +2616,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             }
         }
         if `full_cmg_active' | !`full_cmg_pre_reconciled' {
-            capture quietly _fevc_rust_reconcile_comp_v7 `probes' `seed' ///
+            capture quietly fevc__rust_reconcile_comp_v7 `probes' `seed' ///
                 `maxiter' `tolerance' `p_workers' `p_firms' `ranktol' ///
                 `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code' ///
                 `fallback_allowed' `phase_batch_code' `solve_batch' ///
@@ -2657,7 +2657,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_support_flags = `rustsupportflags'
             exit 498
         }
-        capture noisily _fevc_rust_post_comp_v7 `handle' `depvar'   ///
+        capture noisily fevc__rust_post_comp_v7 `handle' `depvar'   ///
             `frequency' `target' `touse' `nscope' `ncomplete'       ///
             `nstayers' `nstayerrows' `tolerance' `maxiter'          ///
             `memorygib' `engine_requested' `backendsupplied'        ///
@@ -2786,7 +2786,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         exit `compressed_post_rc'
     }
     if `full_cmg_active' {
-        capture noisily _fevc_rust_public_call result `handle', ///
+        capture noisily fevc__rust_public_call result `handle', ///
             componentinference(`component_requested') execution(`generic_execution') componentprobes(`component_result_probes') ///
             componentgramprobes(`component_gram_probes')
         if _rc {
@@ -2916,7 +2916,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local prr_`value' = 0
     }
     if `projection_requested' {
-        capture noisily _fevc_rust_public_call projectionresult `handle', ///
+        capture noisily fevc__rust_public_call projectionresult `handle', ///
             columns(`projection_columns')
         if _rc {
             local failure_rc = _rc
@@ -3365,7 +3365,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _fevc_rust_public_call release `handle'
+    capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
@@ -4056,7 +4056,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     ereturn local status = cond(`projection_requested',               ///
         "KSS_PROJECTION_INFERENCE","KSS_POINT_ESTIMATES_ONLY")
     if `component_requested' {
-        quietly _fevc_rust_component_post `component_model' `inference' ///
+        quietly fevc__rust_component_post `component_model' `inference' ///
             `inferencesimulations' `inferenceseed' `level'               ///
             `component_V_primitive' `component_inference_results'        ///
             `component_trace_mcse' `component_spectrum'                  ///
@@ -4066,7 +4066,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_unit_receipt' `deletionmode'
         ereturn scalar inference_joint_posted = `component_joint_posted'
     }
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end
 
 program define _vckss_descriptive_variances, rclass
@@ -4195,7 +4195,7 @@ program define _vckss_impl, eclass sortpreserve
     else local tolerance = real(strtrim(`"`tolerance'"'))
 
     /* Preflight is split out to keep Stata's compiled-program limit stable. */
-    _fevc_component_model_route `"`inference'"' `"`inferencemodel'"' ///
+    fevc__component_model_route `"`inference'"' `"`inferencemodel'"' ///
         `"`project'"' `"`projecteffect'"' `"`projectweight'"'      ///
         `inferencesimulations' `inferencebins' `inferenceseed'       ///
         `"`backend'"' `"`rng'"' `"`algorithm'"' `"`engine'"'     ///
@@ -4466,7 +4466,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "preconditioner() must be auto, diagonal, or cmg"
         exit 198
     }
-    capture noisily _fevc_memory_options "`memory_gib'" "`memorycheck'"
+    capture noisily fevc__memory_options "`memory_gib'" "`memorycheck'"
     if _rc {
         if "`backend_requested'"=="rust" global VCKSS_ROUTE_BACKEND_REASON = cond("`algorithm'"=="exact","explicit Rust exact route rejected by memory-envelope validation","explicit strict Rust route rejected by memory-envelope validation")
         quietly _vckss_post_failure "INVALID_MEMORY_ENVELOPE"
@@ -4817,7 +4817,7 @@ program define _vckss_impl, eclass sortpreserve
         local rust_support_flags = r(support_flags)
         local rust_deterministic = r(deterministic_parallelism)
         local rust_execution_api = r(execution_api)
-        quietly _fevc_rust_core_ready `rust_core_flags' `rust_full_cmg_platform' ///
+        quietly fevc__rust_core_ready `rust_core_flags' `rust_full_cmg_platform' ///
             `rust_full_cmg_eligible' `rust_execution_eligible' ///
             `rust_comp_auto_eligible' `rust_exec_resolve_ok' ///
             `scalable_project_requested' ///
@@ -5177,7 +5177,7 @@ program define _vckss_impl, eclass sortpreserve
         local N_stayers = 0
         local N_stayer_rows = 0
     }
-    _fevc_observation_population `deletion' `stayers_population' `touse' ///
+    fevc__observation_population `deletion' `stayers_population' `touse' ///
         `original_stayer' `worker' `firm' `initial_worker' `initial_firm' ///
         `N_complete' `implicit_match' `pair_first' `firm_count' `worker_tag' ///
         `prep_sort_calls'
@@ -5719,10 +5719,10 @@ program define _vckss_impl, eclass sortpreserve
         // stage separately from transition, numerical, and restoration use.
         capture program list _fevc_lifecycle_memory
         if _rc {
-            capture findfile _fevc_lifecycle.ado
+            capture findfile fevc__lifecycle.ado
             if _rc {
                 quietly _vckss_post_failure "LIFECYCLE_RUNTIME_NOT_FOUND"
-                di as error "_fevc_lifecycle.ado was not found on the Stata adopath"
+                di as error "fevc__lifecycle.ado was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -7738,7 +7738,7 @@ program define _vckss_impl, eclass sortpreserve
             "exact block cross-fit projection",                  ///
             "not requested"),                                  ///
         "MATLAB-compatible target-specific binned local-linear variance approximation")
-    _fevc_exact_inference_model_post `inference' `inferencemodel_supplied'
+    fevc__exact_inference_model_post `inference' `inferencemodel_supplied'
     ereturn local inference_deletion = cond(`inference_requested', ///
         cond(`project_supplied',                                  ///
             "exact `deletion' deletion; stayers `stayers'",      ///
@@ -7782,7 +7782,7 @@ program define _vckss_impl, eclass sortpreserve
     ereturn scalar sample_selection_seconds = `sample_selection_seconds'
     ereturn scalar validation_seconds = `validation_seconds'
 
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end
 
 program define _fevc_rust_abort, eclass
@@ -7998,7 +7998,7 @@ program define _vckss_rexact, eclass sortpreserve
     }
 
     tempvar rust_keep
-    capture noisily _fevc_rust_public_call prepare `worker' `firm'    ///
+    capture noisily fevc__rust_public_call prepare `worker' `firm'    ///
         `deletionvar' `depvar' `frequency' `target' `controls'        ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
         deletion(`deletionmode')
@@ -8137,7 +8137,7 @@ program define _vckss_rexact, eclass sortpreserve
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
     }
-    capture noisily _fevc_rust_public_call solve `handle',          ///
+    capture noisily fevc__rust_public_call solve `handle',          ///
         seed(`seedrequested') probes(`probesrequested')              ///
         leveragebatch(`batchnumeric') targetbatch(`batchnumeric')    ///
         route(exact) tolerance(`tolerancerequested')                 ///
@@ -8153,7 +8153,7 @@ program define _vckss_rexact, eclass sortpreserve
         exit _rc
     }
 
-    capture noisily _fevc_rust_public_call result `handle'
+    capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
@@ -8388,7 +8388,7 @@ program define _vckss_rexact, eclass sortpreserve
     }
     tempname exact_work
     if `exact_legacy' {
-        capture noisily _fevc_rust_public_call exactexecutionreceipt `handle'
+        capture noisily fevc__rust_public_call exactexecutionreceipt `handle'
         if _rc {
             local failure_rc = _rc
             capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
@@ -8430,7 +8430,7 @@ program define _vckss_rexact, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _fevc_rust_public_call release `handle'
+    capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
@@ -8747,7 +8747,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn local numerical_error "deterministic dense numerical backend"
     ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end
 
 program define _fevc_rust_public, eclass sortpreserve
@@ -8770,7 +8770,7 @@ program define _fevc_rust_public, eclass sortpreserve
     }
 
     tempvar rust_keep
-    capture noisily _fevc_rust_public_call prepare `worker' `firm' `deletion' ///
+    capture noisily fevc__rust_public_call prepare `worker' `firm' `deletion' ///
         `depvar' `frequency' `target' if `touse', cleanup             ///
         generate(`rust_keep') memorygib(`memorygib')
     if _rc {
@@ -8916,7 +8916,7 @@ program define _fevc_rust_public, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _fevc_rust_public_call solve `handle', seed(`seed') ///
+    capture noisily fevc__rust_public_call solve `handle', seed(`seed') ///
         probes(`probes') leveragebatch(`batch') targetbatch(`batch') ///
         route(diagonal) tolerance(`tolerance') maxiter(`maxiter')
     if _rc {
@@ -8926,7 +8926,7 @@ program define _fevc_rust_public, eclass sortpreserve
         exit _rc
     }
 
-    capture noisily _fevc_rust_public_call result `handle'
+    capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
@@ -9180,7 +9180,7 @@ program define _fevc_rust_public, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _fevc_rust_public_call release `handle'
+    capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
@@ -9499,13 +9499,13 @@ program define _fevc_rust_public, eclass sortpreserve
     ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
     ereturn local route_api "VCKSS-NATIVE-ROUTE-V1"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end
 
 program define _vckss_post_failure, eclass
     version 18.0
     args failure_status failure_detail
-    quietly _fevc_failure_guidance "`failure_status'"
+    quietly fevc__failure_guidance "`failure_status'"
     local failure_reason `"`r(reason)'"'
     local failure_suggestion `"`r(suggestion)'"'
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'

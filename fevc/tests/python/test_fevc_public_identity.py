@@ -41,10 +41,10 @@ def test_legacy_distributed_runtime_filenames_are_rejected() -> None:
         assert MODULE.LEGACY_DISTRIBUTED_BASENAME.fullmatch(value)
     for value in (
         "fevc.mata",
-        "_fevc_display.ado",
-        "_fevc_lifecycle.ado",
+        "fevc__display.ado",
+        "fevc__lifecycle.ado",
         "fevc_estat.ado",
-        "_fevc_rust_public_call.ado",
+        "fevc__rust_public_call.ado",
         "fevc_rust_macos.plugin",
     ):
         assert not MODULE.LEGACY_DISTRIBUTED_BASENAME.fullmatch(value)

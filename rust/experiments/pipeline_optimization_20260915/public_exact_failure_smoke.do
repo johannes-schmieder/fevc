@@ -15,8 +15,8 @@ local rng `"`c(rngstate)'"'
 local sortrng `"`c(sortrngstate)'"'
 quietly _datasignature
 local signature `"`r(datasignature)'"'
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     gettoken command rest : 0
     if "`command'"=="solve" & "$FEVC_EXACT_FAULT"=="break" exit 1

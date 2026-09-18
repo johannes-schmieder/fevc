@@ -1,5 +1,5 @@
 *! version 0.5.0-rc.1 05sep2026
-program define _fevc_rust_post_comp_v7, eclass sortpreserve
+program define fevc__rust_post_comp_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers  ///
         nstayerrows tolerance maxiter memorygib engine_requested       ///
@@ -89,7 +89,7 @@ program define _fevc_rust_post_comp_v7, eclass sortpreserve
         rowsof(`graph_receipt')==1 & colsof(`graph_receipt')==18 &  ///
         rowsof(`cap_all')==1 & colsof(`cap_all')==24
     if !`context_ok' {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "The compressed V7 poster did not receive a complete validated context."
@@ -230,7 +230,7 @@ program define _fevc_rust_post_comp_v7, eclass sortpreserve
         `cap_physical'==`physicallimit' & `cap_sighi'==`h_sighi' &  ///
         `cap_siglo'==`h_siglo' & `cap_engdefer'==1
     if !`context_ok' {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "Compressed V7 public context did not reconcile with the validated result family."
@@ -243,7 +243,7 @@ program define _fevc_rust_post_comp_v7, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _fevc_rust_public_call release `handle'
+    capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
@@ -655,5 +655,5 @@ program define _fevc_rust_post_comp_v7, eclass sortpreserve
     ereturn local execution_plan_schema "`h_exec_schema'"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end

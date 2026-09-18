@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -65,6 +66,42 @@ def run_stata(
     print(completed.stdout, end="", flush=True)
     if completed.returncode != 0 or pass_marker not in completed.stdout:
         raise subprocess.CalledProcessError(completed.returncode or 1, command)
+
+
+def stage_helper_install_fixtures(output: Path) -> tuple[Path, Path]:
+    """Build test-only legacy and SSC layouts from the portable inventory."""
+    package = ROOT / "fevc"
+    manifest = (package / "fevc.pkg").read_text()
+    listed = [line[2:] for line in manifest.splitlines() if line.startswith("f ")]
+    helpers = [Path(name).stem for name in listed if name.startswith("fevc__")]
+    legacy_names = {name: "_fevc" + name[5:] for name in helpers}
+    pattern = re.compile(
+        r"(?<![A-Za-z0-9_])(?:" + "|".join(map(re.escape, helpers))
+        + r")(?![A-Za-z0-9_])"
+    )
+    legacy = output / "legacy"
+    legacy.mkdir()
+    ssc = output / "ssc" / "f"
+    ssc.mkdir(parents=True)
+    for filename in ["fevc.pkg", "stata.toc", *listed]:
+        data = (package / filename).read_text()
+        (legacy / pattern.sub(lambda m: legacy_names[m.group()], filename)).write_text(
+            pattern.sub(lambda m: legacy_names[m.group()], data)
+        )
+        target = ssc / filename if filename in {"fevc.pkg", "stata.toc"} else (
+            ssc.parent / filename[0].lower() / filename
+        )
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(data)
+    ssc_lines = []
+    for line in manifest.splitlines():
+        if line.startswith("f "):
+            filename = line[2:]
+            if filename[0].lower() != "f":
+                line = "f ../" + filename[0].lower() + "/" + filename
+        ssc_lines.append(line)
+    (ssc / "fevc.pkg").write_text("\n".join(ssc_lines) + "\n")
+    return legacy, ssc
 
 
 def validate_benchmark(output: Path) -> None:
@@ -306,6 +343,20 @@ def main() -> int:
             "FEVC INSTALL TEST PASS",
             Path(temporary),
         )
+    with tempfile.TemporaryDirectory(prefix="fevc-helper-migration-") as temporary:
+        output = Path(temporary)
+        legacy, ssc = stage_helper_install_fixtures(output)
+        for layout, source in (("repository", ROOT / "fevc"), ("ssc", ssc)):
+            plus = output / (layout + "-plus")
+            plus.mkdir()
+            run_stata(
+                f"FEVC helper migration and {layout} installation",
+                stata,
+                ROOT / "fevc/tests/stata/test_helper_migration.do",
+                [str(legacy), str(source), str(plus)],
+                "FEVC HELPER MIGRATION PASS",
+                output,
+            )
     with tempfile.TemporaryDirectory(prefix="fevc-benchmark-") as temporary:
         output = Path(temporary)
         run_stata(

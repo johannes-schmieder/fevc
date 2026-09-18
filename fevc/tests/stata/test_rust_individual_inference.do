@@ -103,8 +103,8 @@ foreach options in "" "inference(highrank) algorithm(exact)" "project(control) p
 
 // Inject only transport changes into a real solved result. This is a boundary
 // regression, not a claim that this fixture has an indefinite joint matrix.
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     gettoken command rest : 0
     tempname target spectrum
@@ -164,7 +164,7 @@ foreach fault in count gram gramcount target spectrum version {
     assert r(state)==0
 }
 macro drop FEVC_TEST_INDIVIDUAL_FAULT
-program drop _fevc_rust_public_call
+program drop fevc__rust_public_call
 quietly datasignature
 assert `"`r(datasignature)'"'==`"`data_before'"'
 

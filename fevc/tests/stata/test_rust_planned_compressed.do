@@ -66,7 +66,7 @@ quietly fevc_rust solve `handle', algorithm(jla) deletion(match) ///
     wallsecondssupplied(0) wallseconds(0)
 
 quietly fevc_rust result `handle'
-quietly _fevc_rust_reconcile_comp_v7 `probes' 81227 10000 1e-12 ///
+quietly fevc__rust_reconcile_comp_v7 `probes' 81227 10000 1e-12 ///
     `prepared_workers' `prepared_firms' 1e-10 1e-10 2 1 2 0 1 2 2 1 2 1 ///
     `prepared_memory_limit' `prepared_input_copy' `prepared_peak'       ///
     `prepared_resident' `signature_hi' `signature_lo' 50000000 0 0 0

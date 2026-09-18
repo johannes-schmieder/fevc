@@ -1,4 +1,4 @@
-program define _fevc_rust_component_post, eclass
+program define fevc__rust_component_post, eclass
     version 18.0
     args model inference simulations inferenceseed level primitive results ///
         mcse spectrum summaries folds cv receipt augmentation q1results q1raw ///

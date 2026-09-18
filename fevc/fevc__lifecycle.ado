@@ -5,7 +5,7 @@
 // numerical callback runs while the Stata dataset is empty; compressed Mata
 // state, named Stata matrices, and scalars survive clear and may carry the
 // numerical inputs and outputs.
-program define _fevc_lifecycle, rclass
+program define fevc__lifecycle, rclass
     version 18.0
     syntax, METHOD(string) SAMPLE(varname numeric) CALLBACK(name) [ ///
         CALLBACKOptions(string asis) CERTIFY FORCEDISK ]

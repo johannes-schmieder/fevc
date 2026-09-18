@@ -20,27 +20,27 @@ quietly net install fevc, from(`"`source_dir'"') replace
 local installed_dir `"`install_root'/f"'
 local installed_plugin_dir `"`install_root'/f"'
 foreach required in fevc.ado fevc_rust.ado ///
-    _fevc_rust_plugin_call.ado _fevc_rust_solve_v4.ado ///
-    _fevc_rust_solve_v5.ado ///
-    _fevc_rust_cmg_model.ado ///
-    _fevc_rust_plan_receipt.ado                         ///
-    _fevc_rust_reconcile_comp_v7.ado                    ///
-    _fevc_rust_reconcile_exact_v7.ado                   ///
-    _fevc_rust_post_comp_v7.ado                         ///
-    _fevc_rust_post_exact_v7.ado                        ///
-    _fevc_rust_capture_stayers.ado                      ///
-    _fevc_rust_post_stayer_hybrid.ado _fevc_rust_macos.ado ///
-    _fevc_rust_windows.ado _fevc_rust_linux.ado        ///
-    _fevc_rust_public_call.ado                         ///
-    _fevc_rust_core_ready.ado                          ///
-    _fevc_component_model_route.ado                    ///
-    _fevc_observation_population.ado _fevc_stayer_population_post.ado ///
-    _fevc_exact_inference_model_post.ado                ///
-    _fevc_rust_component_attach.ado                    ///
-    _fevc_rust_comp_batch_receipt.ado                  ///
-    _fevc_rust_component_fetch.ado                     ///
-    _fevc_rust_component_post.ado                      ///
-    _fevc_failure_guidance.ado {
+    fevc__rust_plugin_call.ado fevc__rust_solve_v4.ado ///
+    fevc__rust_solve_v5.ado ///
+    fevc__rust_cmg_model.ado ///
+    fevc__rust_plan_receipt.ado                         ///
+    fevc__rust_reconcile_comp_v7.ado                    ///
+    fevc__rust_reconcile_exact_v7.ado                   ///
+    fevc__rust_post_comp_v7.ado                         ///
+    fevc__rust_post_exact_v7.ado                        ///
+    fevc__rust_capture_stayers.ado                      ///
+    fevc__rust_post_stayer_hybrid.ado fevc__rust_macos.ado ///
+    fevc__rust_windows.ado fevc__rust_linux.ado        ///
+    fevc__rust_public_call.ado                         ///
+    fevc__rust_core_ready.ado                          ///
+    fevc__component_model_route.ado                    ///
+    fevc__observation_population.ado fevc__stayer_population_post.ado ///
+    fevc__exact_inference_model_post.ado                ///
+    fevc__rust_component_attach.ado                    ///
+    fevc__rust_comp_batch_receipt.ado                  ///
+    fevc__rust_component_fetch.ado                     ///
+    fevc__rust_component_post.ado                      ///
+    fevc__failure_guidance.ado {
     local install_subdir = lower(substr("`required'",1,1))
     confirm file `"`install_root'/`install_subdir'/`required'"'
 }

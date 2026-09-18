@@ -5,6 +5,15 @@ installation with native binaries, maintained source and regression tests,
 and historical output outside the active tree. GPT Pro review packets,
 responses, and adjudications are removed at the owner's request.
 
+## Helper naming cleanup — September 18
+
+The owner authorized the prerelease rename of the 28 shipped `_fevc*.ado`
+helpers to `fevc__*.ado`. Keep native binaries and their original qualification
+identities unchanged. Installation migration requires uninstalling the old
+registered package before reinstalling, followed by a Stata restart.
+Local evidence belongs in `.local/helper-rename-20260918/`; this change does
+not publish a release or establish new Linux/Windows qualification.
+
 ## Preserved implementation work
 
 The uncommitted optimization and symmetric deletion/stayer work remains in

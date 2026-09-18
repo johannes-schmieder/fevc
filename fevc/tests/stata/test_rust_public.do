@@ -280,8 +280,8 @@ assert r(state) == 0
 // Replace only the public-call dispatcher with a test proxy.  Cleanup and
 // lasterror continue to use the real helper, so injected faults cannot defeat
 // the outer finally guard.
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     local arguments `"`0'"'
     gettoken subcommand rest : 0, parse(" ,")
@@ -477,8 +477,8 @@ foreach corruption in raw_missing corrected_algebra solver_dimension ///
     assert r(state) == 0 & r(handle) == 0
 }
 
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     fevc_rust `0'
     return add

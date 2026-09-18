@@ -1,4 +1,4 @@
-program define _fevc_rust_plugin_call, rclass
+program define fevc__rust_plugin_call, rclass
     version 18.0
     gettoken plugin 0 : 0
     local parsed = strtrim(subinstr(`"`0'"', ",", "", 1))

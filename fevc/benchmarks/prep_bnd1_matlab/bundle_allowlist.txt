@@ -1,7 +1,5 @@
 CODE_LICENSE.md
 LICENSES/GPL-3.0-only.txt
-fevc/_fevc_display.ado
-fevc/_fevc_lifecycle.ado
 fevc/benchmarks/matlab_scale/common.py
 fevc/benchmarks/matlab_scale/monitor_process_tree.py
 fevc/benchmarks/matlab_scale/source_contract.json
@@ -38,6 +36,8 @@ fevc/fevc.ado
 fevc/fevc.mata
 fevc/fevc.pkg
 fevc/fevc.sthlp
+fevc/fevc__display.ado
+fevc/fevc__lifecycle.ado
 fevc/fevc_cmg.mata
 fevc/fevc_graph.mata
 fevc/fevc_resource.mata

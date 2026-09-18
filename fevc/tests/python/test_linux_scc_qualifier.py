@@ -147,12 +147,12 @@ def test_planned_v4_raw_receipt_test_uses_the_active_platform_plugin() -> None:
     source = (
         ROOT / "fevc/tests/stata/test_rust_planned_v4.do"
     ).read_text(encoding="utf-8")
-    assert "local rust_plugin _fevc_rust_macos" in source
-    assert "local rust_plugin _fevc_rust_linux" in source
-    assert "local rust_plugin _fevc_rust_windows" in source
-    assert "_fevc_rust_plugin_call `rust_plugin', result" in source
-    assert "_fevc_rust_plugin_call `rust_plugin', rhsresult" in source
-    assert "_fevc_rust_plugin_call _fevc_rust_macos," not in source
+    assert "local rust_plugin fevc__rust_macos" in source
+    assert "local rust_plugin fevc__rust_linux" in source
+    assert "local rust_plugin fevc__rust_windows" in source
+    assert "fevc__rust_plugin_call `rust_plugin', result" in source
+    assert "fevc__rust_plugin_call `rust_plugin', rhsresult" in source
+    assert "fevc__rust_plugin_call fevc__rust_macos," not in source
 
 
 def test_scale_fixture_does_not_require_user_written_egen_extensions() -> None:
@@ -222,7 +222,7 @@ def test_dirty_bundle_binds_current_source_without_private_veneto() -> None:
         }
     assert files["SOURCE_SNAPSHOT_KIND.txt"] == b"DIRTY_WORKTREE_SNAPSHOT_V1\n"
     assert files["SOURCE_COMMIT.txt"] == f"{commit}\n".encode()
-    assert "fevc/_fevc_rust_comp_batch_receipt.ado" in files
+    assert "fevc/fevc__rust_comp_batch_receipt.ado" in files
     assert "rust/crates/vckss-plugin/src/generic_execution_api.rs" in files
     assert "rust/experiments/optimization_parity_20260913/run_development_smoke.sge" in files
     assert "rust/experiments/optimization_parity_20260913/run_development_cell.sge" in files

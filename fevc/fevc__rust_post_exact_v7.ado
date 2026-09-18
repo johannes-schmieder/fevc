@@ -1,5 +1,5 @@
 *! version 0.5.0-rc.1 05sep2026
-program define _fevc_rust_post_exact_v7, eclass sortpreserve
+program define fevc__rust_post_exact_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers ///
         nstayerrows probesrequested batchnumeric seedrequested         ///
@@ -25,7 +25,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         rowsof(`graph')==1 & colsof(`graph')==18 &                    ///
         rowsof(`cap')==1 & colsof(`cap')==33
     if !`context_ok' {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "The planned exact poster received an invalid context shape."
@@ -141,7 +141,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         ((`wallsup'==0 & `wallvalue'==0) |                          ///
             (`wallsup'==1 & `wallvalue'>0))
     if !`tuple_ok' {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "The planned exact poster received an invalid expected tuple."
@@ -150,7 +150,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _fevc_rust_public_call result `handle', ///
+    capture noisily fevc__rust_public_call result `handle', ///
         exactexecution(`exactexecution') exactthreads(`nativethreads')
     if _rc {
         local failure_rc = _rc
@@ -158,7 +158,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
             handle(`handle') phase(exact_result_export)
         exit _rc
     }
-    capture quietly _fevc_rust_reconcile_exact_v7 `algreq' `engreq' ///
+    capture quietly fevc__rust_reconcile_exact_v7 `algreq' `engreq' ///
         `delcode' `nuiscode' `p_workers' `p_firms' `p_controls'      ///
         `ranktol' `blocktol' `tolerancerequested' `exactlimit'       ///
         `p_mem_limit'                                                 ///
@@ -168,7 +168,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         `plancomplexity'
     local reconcile_rc = _rc
     if `reconcile_rc' {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "The planned exact V7 reconciler was unavailable."
@@ -182,7 +182,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
     matrix `validated_results' = r(result)
     if `reconcile_ok'!=1 | `"`r(result_family)'"'!="exact" |        ///
         `"`r(execution_plan_schema)'"'!="VCKSS-EXECUTION-PLAN-V1" {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "Planned exact V7 reconciliation failed: `reconcile_detail'."
@@ -191,7 +191,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _fevc_rust_public_call result `handle', ///
+    capture noisily fevc__rust_public_call result `handle', ///
         exactexecution(`exactexecution') exactthreads(`nativethreads')
     if _rc {
         local failure_rc = _rc
@@ -202,7 +202,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
     tempname raw_results
     matrix `raw_results' = r(result)
     if mreldif(`raw_results',`validated_results') != 0 {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "The immutable exact generation changed between reconciliation and posting."
@@ -355,7 +355,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
             `g_bridge_units'==0 & `g_bridge_rows'==0 & `g_bridge_iters'==0
     }
     if !`context_ok' {
-        capture quietly _fevc_rust_public_call release `handle'
+        capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
             "The planned exact public context did not reconcile with the validated V7 result."
@@ -364,7 +364,7 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _fevc_rust_public_call release `handle'
+    capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
@@ -737,5 +737,5 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
     ereturn local numerical_error "deterministic dense numerical backend"
     ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
-    if "`nodisplay'" == "" _fevc_display
+    if "`nodisplay'" == "" fevc__display
 end

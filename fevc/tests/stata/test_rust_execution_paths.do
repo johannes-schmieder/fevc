@@ -106,8 +106,8 @@ assert `"`c(sortrngstate)'"'==`"`sortstate'"'
 
 // Corrupt every work-receipt field after native validation; the public layer
 // must still withhold and restore the prepared lifecycle and caller state.
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     gettoken command rest : 0
     tempname work
@@ -135,8 +135,8 @@ foreach fault in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 bre
     assert `"`r(datasignature)'"'==`"`signature'"'
 }
 macro drop FEVC_EXECUTION_FAULT
-capture program drop _fevc_rust_public_call
-program define _fevc_rust_public_call, rclass
+capture program drop fevc__rust_public_call
+program define fevc__rust_public_call, rclass
     version 18.0
     fevc_rust `0'
     return add

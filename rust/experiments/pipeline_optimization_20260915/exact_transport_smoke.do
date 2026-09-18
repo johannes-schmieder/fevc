@@ -7,9 +7,9 @@ confirm file `"`package_dir'/fevc.ado"'
 adopath ++ `"`package_dir'"'
 quietly fevc_rust probe
 local original_flags = r(core_ready_flags)
-local plugin _fevc_rust_linux
-if strpos("`c(machine_type)'", "Mac")==1 local plugin _fevc_rust_macos
-_fevc_rust_plugin_call `plugin', exactexecutioncapability
+local plugin fevc__rust_linux
+if strpos("`c(machine_type)'", "Mac")==1 local plugin fevc__rust_macos
+fevc__rust_plugin_call `plugin', exactexecutioncapability
 assert __vckss_exact_execution_api==1
 set processors 4
 set obs 99
@@ -68,16 +68,16 @@ foreach deletion in observation match {
                 if "`trace'"=="1" set trace on
                 // Raw plugin arguments must not contain bare negative
                 // exponents: Stata's plugin parser turns 1e-12 into 1e.
-                _fevc_rust_plugin_call `plugin', `selector' `handle' 81227 7 0 0 auto .000000000001 10000 ///
+                fevc__rust_plugin_call `plugin', `selector' `handle' 81227 7 0 0 auto .000000000001 10000 ///
                     exact `deletion' `nuisance' 500 5000 .0000000001 .0000000001 auto auto `native_stayers' ///
                     explicit `deletion_source' 0 0 50000000 3 4 1 `hi' `lo' auto auto 1 0 `thread_argument'
                 set trace off
                 // Read the raw result and separate opt-in receipt. Ordinary
                 // Stata exact reconciliation must continue to reject schema 2.
-                _fevc_rust_plugin_call `plugin', result `handle'
+                fevc__rust_plugin_call `plugin', result `handle'
                 local prefix corrected
                 if `hybrid' {
-                    _fevc_rust_plugin_call `plugin', stayerresult `handle'
+                    fevc__rust_plugin_call `plugin', stayerresult `handle'
                     local prefix hyb_corrected
                 }
                 matrix current = (__vckss_`prefix'_worker,__vckss_`prefix'_firm, ///
@@ -88,7 +88,7 @@ foreach deletion in observation match {
                     assert __vckss_plan_threads_used==1 & __vckss_plan_threads_req==1
                 }
                 else {
-                    _fevc_rust_plugin_call `plugin', exactexecutionreceipt `handle'
+                    fevc__rust_plugin_call `plugin', exactexecutionreceipt `handle'
                     assert __vckss_eex_threads==`threads'
                     assert __vckss_eex_workers>0 & __vckss_eex_workers<=`threads'
                     assert __vckss_eex_passes==1+`hybrid'

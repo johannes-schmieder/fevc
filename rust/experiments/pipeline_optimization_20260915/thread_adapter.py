@@ -17,13 +17,13 @@ CONTRACT = 'FEVC-PIPELINE-THREADS-V1'
 BASELINE_SNAPSHOT = '1d9968830ee27d5e801b7a4f27181a2fa240e1a9a84578fa2c8e53e464fb0a7e'
 BASELINE_LINUX = '6937b0b1045383b2f1c6b7b7840d7f33f7f54b1dc580ba3f0a1c819b8e540a2a'
 
-PUBLIC_CALL = '''program define _fevc_rust_public_call, rclass
+PUBLIC_CALL = '''program define fevc__rust_public_call, rclass
     version 18.0
     fevc_rust `0'
     return add
 end
 '''
-TIMED_CALL = r'''program define _fevc_rust_public_call, rclass
+TIMED_CALL = r'''program define fevc__rust_public_call, rclass
     version 18.0
     gettoken operation remainder : 0, parse(" ,")
     local clock = 0
@@ -147,8 +147,8 @@ def build(snapshot: Path, expected_snapshot: str, plugin: Path,
         if path.is_symlink() or not path.is_file() or sha(path) != digest:
             raise ValueError(f'source mismatch: {name}')
     ado, component = transform((root/'fevc/fevc.ado').read_text(),
-        (root/'fevc/_fevc_rust_comp_batch_receipt.ado').read_text(), variant)
-    if (root/'fevc/_fevc_rust_public_call.ado').read_text()!=PUBLIC_CALL:
+        (root/'fevc/fevc__rust_comp_batch_receipt.ado').read_text(), variant)
+    if (root/'fevc/fevc__rust_public_call.ado').read_text()!=PUBLIC_CALL:
         raise ValueError('stale public-call timer anchor')
     output.mkdir(parents=True)
     for name in inventory:
@@ -157,8 +157,8 @@ def build(snapshot: Path, expected_snapshot: str, plugin: Path,
             # Deployed sources are read-only; edits belong only to fresh copies.
             shutil.copyfile(root/name, output/path.name)
     (output/'fevc.ado').write_text(ado)
-    (output/'_fevc_rust_comp_batch_receipt.ado').write_text(component)
-    (output/'_fevc_rust_public_call.ado').write_text(TIMED_CALL)
+    (output/'fevc__rust_comp_batch_receipt.ado').write_text(component)
+    (output/'fevc__rust_public_call.ado').write_text(TIMED_CALL)
     shutil.copy2(plugin, output/plugin.name)
     receipt = dict(schema=SCHEMA, variant=variant, source_snapshot_sha256=expected_snapshot,
         plugin_sha256=expected_plugin, contract=CONTRACT, stata_processors='min(4,T)',

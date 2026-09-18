@@ -1,4 +1,4 @@
-program define _fevc_observation_population
+program define fevc__observation_population
     version 18.0
     args deletion population touse original_stayer worker firm ///
         dense_worker dense_firm complete implicit_match pair_first firm_count ///

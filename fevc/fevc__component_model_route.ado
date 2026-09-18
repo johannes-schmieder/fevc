@@ -1,4 +1,4 @@
-program define _fevc_component_model_route, rclass
+program define fevc__component_model_route, rclass
     version 18.0
     args inference inferencemodel project projecteffect projectweight ///
         inferencesimulations inferencebins inferenceseed backend rng  ///
@@ -127,7 +127,7 @@ program define _fevc_component_model_route, rclass
         exit 498
     }
     if `scalable' {
-        capture quietly _fevc_rust_public_call componentversion
+        capture quietly fevc__rust_public_call componentversion
         local interface_rc = _rc
         if !`interface_rc' local interface_rc = (r(interface_version)!=4)
         if `interface_rc' {

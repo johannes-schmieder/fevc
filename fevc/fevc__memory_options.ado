@@ -1,5 +1,5 @@
 *! Command-local memory policy
-program define _fevc_memory_options, rclass
+program define fevc__memory_options, rclass
     version 18.0
     args memory_gib memorycheck
     local memory_present = strtrim("`memory_gib'") != ""

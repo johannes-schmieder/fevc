@@ -1,5 +1,5 @@
 *! version 0.4.0-alpha.1 23aug2026
-program define _fevc_rust_plan_receipt, rclass
+program define fevc__rust_plan_receipt, rclass
     version 18.0
 
     args component_inference component_probes component_gram_probes execution ///
