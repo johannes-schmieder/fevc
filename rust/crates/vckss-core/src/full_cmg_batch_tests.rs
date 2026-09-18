@@ -306,3 +306,216 @@ fn cancellation_at_admitted_pool_boundary_precedes_rng_and_allows_reuse() {
     assert_eq!(error.code, ErrorCode::UserBreak);
     assert!(run_jla_no_controls_planned(&problem, options(33, 7)).is_ok());
 }
+
+#[test]
+fn compressed_statistics_poll_inside_work_on_the_original_caller() {
+    struct BreakInside {
+        phase: &'static str,
+        owner: std::thread::ThreadId,
+    }
+    impl InterruptCheck for BreakInside {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            assert_eq!(std::thread::current().id(), self.owner);
+            if phase == self.phase {
+                Err(BackendError::new(
+                    ErrorCode::UserBreak,
+                    phase,
+                    "inside compressed work",
+                ))
+            } else {
+                Ok(())
+            }
+        }
+    }
+    let problem = fixture(true, None);
+    for phase in [
+        "jla_leverage_rhs",
+        "jla_leverage_moment_column",
+        "jla_target_direction_strata",
+        "jla_target_balance",
+        "jla_target_prepare_copy",
+        "jla_target_contraction",
+    ] {
+        let mut check = BreakInside {
+            phase,
+            owner: std::thread::current().id(),
+        };
+        let result =
+            run_jla_no_controls_planned_with_interrupt(&problem, options(33, 7), &mut check);
+        assert!(
+            matches!(&result, Err(error) if error.code == ErrorCode::UserBreak),
+            "phase={phase}, error={:?}",
+            result.as_ref().err()
+        );
+        assert!(run_jla_no_controls_planned(&problem, options(33, 7)).is_ok());
+    }
+}
+
+#[test]
+fn retained_plan_is_reused_without_rng_memory_or_result_changes() {
+    struct RejectBuild;
+    impl InterruptCheck for RejectBuild {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == "jla_plan_entry" {
+                Err(BackendError::new(
+                    ErrorCode::UserBreak,
+                    phase,
+                    "unexpected plan rebuild",
+                ))
+            } else {
+                Ok(())
+            }
+        }
+    }
+    for weighted in [false, true] {
+        let problem = fixture(weighted, None);
+        let plan = JlaPlan::build_no_controls(&problem).unwrap();
+        for threads in [1, 4, 7] {
+            let baseline = run_jla_no_controls_planned(&problem, options(33, threads)).unwrap();
+            let reused = run_jla_no_controls_planned_with_plan_and_interrupt(
+                &problem,
+                &plan,
+                options(33, threads),
+                &mut RejectBuild,
+            )
+            .unwrap();
+            assert_eq!(
+                format!("{:?}", baseline.estimator),
+                format!("{:?}", reused.estimator)
+            );
+            assert_eq!(
+                format!("{:?}", baseline.execution.counter),
+                format!("{:?}", reused.execution.counter)
+            );
+            assert_eq!(
+                baseline.execution.memory.solve_peak_forecast_bytes,
+                reused.execution.memory.solve_peak_forecast_bytes
+            );
+        }
+        let mut invalid = plan.clone();
+        invalid.deletion.physical_count[0] = 0;
+        assert!(run_jla_no_controls_planned_with_plan_and_interrupt(
+            &problem,
+            &invalid,
+            options(33, 7),
+            &mut RejectBuild
+        )
+        .is_err());
+    }
+}
+
+#[test]
+fn compressed_statistical_pool_preserves_order_cancellation_and_inert_parallelism() {
+    use crate::interrupt::{CancellationInterrupt, CancellationToken};
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    };
+    let problem = fixture(true, None);
+    let plan = JlaPlan::build_no_controls(&problem).unwrap();
+    for threads in [1, 2, 3, 4, 7, 14, 28, 64] {
+        let mut cmg = FullCmgPlanOptions::production(threads, 1e-10, None);
+        cmg.maximum_batch_rhs = 66;
+        let solver = PreparedTwoWaySolver::prepare_full_cmg_v2_with_interrupt(
+            &problem,
+            options(33, threads).estimator.solver,
+            cmg,
+            &mut NeverInterrupt,
+        )
+        .unwrap();
+        for width in [1, 3, 5, 33] {
+            let atoms = rademacher_atoms_with_interrupt(
+                CounterRng::new(17),
+                ProbeDomain::Leverage,
+                3,
+                width,
+                &plan.deletion.semantic_rank,
+                &plan.deletion.physical_count,
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+            let mut expected = vec![0.0; problem.cells() * width];
+            for column in 0..width {
+                for group in 0..plan.deletion_units() {
+                    expected[column * problem.cells() + plan.deletion.cell[group] as usize] +=
+                        atoms[column * plan.deletion_units() + group] as f64;
+                }
+            }
+            let expected =
+                transpose_cell_rhs_with_interrupt(&problem, &expected, width, &mut NeverInterrupt)
+                    .unwrap();
+            let actual = leverage_rhs_with_interrupt(
+                &problem,
+                &plan,
+                &atoms,
+                width,
+                &solver,
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+            assert_eq!(expected, actual);
+        }
+        let owner = std::thread::current().id();
+        let workers = Mutex::new(Vec::new());
+        let mut values = [usize::MAX; 17];
+        solver
+            .statistical_work(
+                values.iter_mut(),
+                "inert_pool",
+                |index, output, _| {
+                    *output = index;
+                    workers.lock().unwrap().push(std::thread::current().id());
+                    Ok(())
+                },
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+        assert_eq!(values, core::array::from_fn(|index| index));
+        assert!(workers
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|&thread| thread != owner));
+        let error = solver
+            .statistical_work(
+                0..17,
+                "ordered_error",
+                |index, _, _| {
+                    if index == 2 || index == 9 {
+                        Err(BackendError::invalid("ordered_error", index.to_string()))
+                    } else {
+                        Ok(())
+                    }
+                },
+                &mut NeverInterrupt,
+            )
+            .unwrap_err();
+        assert_eq!(error.message, "2");
+        let token = CancellationToken::new();
+        let calls = AtomicUsize::new(0);
+        let error = solver
+            .statistical_work(
+                0..17,
+                "inside_token",
+                |_, _, check| {
+                    calls.fetch_add(1, Ordering::Relaxed);
+                    token.cancel();
+                    check.checkpoint("inside_compressed_worker")
+                },
+                &mut CancellationInterrupt::new(token.clone()),
+            )
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert!(calls.load(Ordering::Relaxed) > 0);
+        solver
+            .statistical_work(0..3, "reuse", |_, _, _| Ok(()), &mut NeverInterrupt)
+            .unwrap();
+        solver
+            .statistical_work(0..0, "empty", |_, _, _| unreachable!(), &mut NeverInterrupt)
+            .unwrap();
+    }
+    assert!(statistical_metadata(u64::MAX).is_err());
+    assert!(target_assembly_forecast(u64::MAX, 1, 1, 1, 1).is_err());
+    assert!(target_assembly_forecast(1, 1, u64::MAX, 1, 1).is_err());
+    assert!(statistical_buffer(usize::MAX, 0_u64, &mut NeverInterrupt).is_err());
+}

@@ -194,14 +194,16 @@ quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 
-// Omitting the registered observation-key tie breaker retains the existing
-// qualified Rust route and must not claim the production full-CMG identity.
+// Omitted probe order keeps ordinary canonical ingestion and its original
+// Counter addressing, but no longer excludes the shared full-CMG solver.
 quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) backend(rust) rng(counter_v1) ///
     algorithm(jla) engine(auto) preconditioner(auto) batch(auto) ///
     probes(4) seed(81227) maxiter(10000) memory_gib(1) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
-assert `"`e(cmg_backend)'"' == ""
+assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
+assert e(rust_probeorder_supplied) == 0
+assert e(cmg_threads_used) == c(processors)
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 assert `"`c(rngstate)'"' == `"`caller_state'"'

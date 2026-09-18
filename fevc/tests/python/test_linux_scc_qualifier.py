@@ -8,15 +8,18 @@ import subprocess
 import tarfile
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[3]
 SCC = ROOT / "rust/stata_backend/scc"
 QUALIFIER = ROOT / "rust/stata_backend/qualify_linux_scc.sh"
 BUILDER = SCC / "build_linux_bundle.py"
+DIRTY_BUILDER = ROOT / "rust/experiments/optimization_parity_20260913/build_dirty_linux_bundle.py"
 
 
-def load_builder():
-    spec = importlib.util.spec_from_file_location("linux_scc_bundle", BUILDER)
+def load_builder(path=BUILDER):
+    spec = importlib.util.spec_from_file_location("linux_scc_bundle", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -63,6 +66,7 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "omitted PASS marker from its fresh batch log",
         "PASS test_rust_public_install.do",
         "CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION",
+        "DIRTY_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION",
     ):
         assert required in qualifier
     assert (
@@ -90,6 +94,7 @@ def test_scc_wrapper_preserves_pinned_stata_and_rust_tools() -> None:
     )
     assert '--stata "${stata_binary}"' in wrapper
     assert "export PATH=${rust_toolchain}/bin:/usr/bin:/bin" not in wrapper
+    assert "SOURCE_SNAPSHOT_KIND.txt" in wrapper
 
 
 def test_clean_install_distinguishes_macos_from_unix_linux() -> None:
@@ -160,3 +165,61 @@ def test_exact_commit_bundle_is_deterministic_and_self_verifying() -> None:
         expected, relative = row.split("  ", 1)
         assert relative != "SOURCE_FILES.sha256"
         assert hashlib.sha256(files[relative]).hexdigest() == expected
+
+
+def test_dirty_bundle_binds_current_source_without_private_veneto() -> None:
+    commit = subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+        check=True, capture_output=True, text=True,
+    ).stdout.strip()
+    builder = load_builder(DIRTY_BUILDER)
+    first, digest, count = builder.build(ROOT, commit)
+    second, second_digest, second_count = builder.build(ROOT, commit)
+    assert first == second
+    assert digest == second_digest == hashlib.sha256(first).hexdigest()
+    assert count == second_count
+    with tarfile.open(fileobj=io.BytesIO(first), mode="r:gz") as archive:
+        files = {
+            member.name.removeprefix("source/"): archive.extractfile(member).read()
+            for member in archive.getmembers() if member.isfile()
+        }
+    assert files["SOURCE_SNAPSHOT_KIND.txt"] == b"DIRTY_WORKTREE_SNAPSHOT_V1\n"
+    assert files["SOURCE_COMMIT.txt"] == f"{commit}\n".encode()
+    assert "fevc/_fevc_rust_comp_batch_receipt.ado" in files
+    assert "rust/crates/vckss-plugin/src/generic_execution_api.rs" in files
+    assert "rust/experiments/optimization_parity_20260913/run_development_smoke.sge" in files
+    assert "rust/experiments/optimization_parity_20260913/run_development_cell.sge" in files
+    assert not any(path.startswith("KSS_Veneto_replication/") for path in files)
+    assert len(files) == count
+    for row in files["SOURCE_FILES.sha256"].decode().splitlines():
+        expected, relative = row.split("  ", 1)
+        assert hashlib.sha256(files[relative]).hexdigest() == expected
+
+
+def test_dirty_bundle_rejects_unexpected_untracked_source(monkeypatch, tmp_path) -> None:
+    builder = load_builder(DIRTY_BUILDER)
+    def fake_paths(_root, *arguments):
+        return [Path("safe.txt")] if arguments == ("--cached",) else [Path("private.csv")]
+    monkeypatch.setattr(builder, "git_paths", fake_paths)
+    with pytest.raises(ValueError, match="unexpected untracked source path"):
+        builder.source_rows(tmp_path)
+
+
+def test_pipeline_snapshot_extension_admits_code_not_data() -> None:
+    from pathlib import PurePosixPath
+    builder = load_builder(DIRTY_BUILDER)
+    for name in (
+        "rust/experiments/pipeline_optimization_20260915/campaign.py",
+        "rust/experiments/pipeline_optimization_20260915/exact_transport_smoke.do",
+        "fevc/tests/python/test_macos_toolchain_identity.py",
+    ):
+        assert builder.permitted_untracked(PurePosixPath(name))
+    for name in (
+        "rust/experiments/pipeline_optimization_20260915/private.csv",
+        "rust/experiments/pipeline_optimization_20260915/credentials.env",
+        "rust/experiments/unknown/source.py",
+        "fevc/tests/python/private.csv",
+        "fevc/tests/python/unreviewed.py",
+        "KSS_Veneto_replication/private.csv",
+    ):
+        assert not builder.permitted_untracked(PurePosixPath(name))

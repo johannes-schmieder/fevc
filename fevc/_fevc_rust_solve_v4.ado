@@ -7,7 +7,58 @@ program define _fevc_rust_solve_v4, rclass
         targetweightmode deletionsource probeordersupplied wallsecondssupplied   ///
         physical_arg capabilityschema capabilityprofile frequencyused           ///
         signature_hi_arg signature_lo_arg leveragebatchmode targetbatchmode      ///
-        fallback wallseconds_arg
+        fallback wallseconds_arg execution threads componentbatchauto tolerancesupplied exactexecution
+
+    // Optional additive executor; all existing calls retain the V4 selector.
+    if "`execution'"=="" local execution = 0
+    if "`componentbatchauto'"=="" local componentbatchauto = 0
+    if "`tolerancesupplied'"=="" local tolerancesupplied = 0
+    if "`exactexecution'"=="" local exactexecution = 0
+    local solve_selector solve
+    local execution_args
+    if !inlist(`exactexecution',0,1,2) | (`exactexecution' & ///
+        (`execution' | `componentbatchauto' | missing(`threads') | ///
+        `threads'<=0 | `threads'>4294967295 | `threads'!=floor(`threads') | ///
+        "`algorithm'"!=cond(`exactexecution'==1,"exact","auto"))) {
+        di as err "request is outside the exact execution tuple"
+        exit 198
+    }
+    if `exactexecution' {
+        local solve_selector = cond(`exactexecution'==1,"solveexactexecution","solveexactresolvedv2")
+        local execution_args `threads'
+    }
+    if !inlist(`execution',0,1,2,3) {
+        di as err "invalid generic execution mode"
+        exit 198
+    }
+    if !inlist(`componentbatchauto',0,1) | (`componentbatchauto' & !inlist(`execution',1,2)) | ///
+        !inlist(`tolerancesupplied',0,1) {
+        di as err "invalid component batch execution mode"
+        exit 198
+    }
+    if `execution' {
+        if (`execution'!=3 & ("`algorithm'"!="jla" | "`engine'"!="generic" | `fallback'!=0)) | ///
+            (`execution'==1 & "`route'"!="diagonal") | ///
+            (`execution'==2 & ("`route'"!="cmg" | "`batchmode'"!="auto")) | ///
+            (`execution'==3 & (!inlist("`algorithm'","auto","jla") | ///
+                !inlist("`engine'","auto","generic") | "`route'"!="auto" | ///
+                "`batchmode'"!="auto" | `fallback'!=1)) | ///
+            missing(`threads') | `threads'<=0 | `threads'>4294967295 | ///
+            `threads'!=floor(`threads') {
+            di as err "request is outside the generic execution tuple"
+            exit 198
+        }
+        local solve_selector solveexecution
+        local execution_args `threads' `execution'
+        if `componentbatchauto' {
+            local solve_selector solveexecutionv7
+            local execution_args `threads' `execution' 1
+        }
+        if `execution'==3 {
+            local solve_selector solveexecutionv8
+            local execution_args `threads' `execution' `tolerancesupplied'
+        }
+    }
 
     if `capabilityschema' != 3 | `capabilityprofile' != 4 {
         di as err "planned Rust solve requires capability schema 3/profile 4"
@@ -79,7 +130,7 @@ program define _fevc_rust_solve_v4, rclass
         exit 198
     }
 
-    _fevc_rust_plugin_call `plugin', solve `handle' `seed' `probes'     ///
+    _fevc_rust_plugin_call `plugin', `solve_selector' `handle' `seed' `probes' ///
         `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
         `algorithm' `deletion' `nuisance' `exactlimit' `blocksizelimit' ///
         `rank_tolerance_arg' `block_tolerance_arg' `engine' `batchmode'  ///
@@ -87,7 +138,7 @@ program define _fevc_rust_solve_v4, rclass
         `probeordersupplied' `wallsecondssupplied' `physical_arg'        ///
         `capabilityschema' `capabilityprofile' `frequencyused'           ///
         `signature_hi_arg' `signature_lo_arg' `leveragebatchmode'        ///
-        `targetbatchmode' `fallback' `wallseconds_arg'
+        `targetbatchmode' `fallback' `wallseconds_arg' `execution_args'
 
     return scalar handle = real("`handle'")
     return scalar seed = `seed'
@@ -115,5 +166,9 @@ program define _fevc_rust_solve_v4, rclass
     return local deletion "`deletion'"
     return local nuisance "`nuisance'"
     return local backend "rust"
-    return local subcommand "solve"
+    if `execution' {
+        return scalar execution_mode = `execution'
+        return scalar threads = `threads'
+    }
+    return local subcommand "`solve_selector'"
 end

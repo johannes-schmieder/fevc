@@ -14,7 +14,7 @@ fevc_rust clear
 fevc_rust probe
 assert r(abi_compiled) == 1
 assert r(abi_runtime) == 1
-assert r(core_ready_flags) == 1023
+assert r(core_ready_flags) == 32767
 assert r(support_flags) == 38
 assert r(deterministic_parallelism) == 1
 fevc_rust selftest

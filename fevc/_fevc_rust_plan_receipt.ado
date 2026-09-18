@@ -2,7 +2,10 @@
 program define _fevc_rust_plan_receipt, rclass
     version 18.0
 
-    args component_inference component_probes component_gram_probes
+    args component_inference component_probes component_gram_probes execution ///
+        exact_execution exact_threads exact_work exact_handle
+    if "`exact_execution'"=="" local exact_execution = 0
+    if "`execution'"=="" local execution = 0
     if "`component_inference'"=="" local component_inference = 0
     if "`component_probes'"=="" local component_probes = 0
     if "`component_gram_probes'"=="" local component_gram_probes = 0
@@ -145,7 +148,7 @@ program define _fevc_rust_plan_receipt, rclass
             local mismatch_detail "unknown execution-plan applicability `applicability'"
         }
         else {
-            local expected_route_schema = cond(`applicability'==1,1,2)
+            local expected_route_schema = cond(`applicability'==1 & !`exact_execution',1,2)
             local expected_batched = (`applicability' != 1)
             if scalar(__vckss_plan_route_schema) !=                      ///
                     `expected_route_schema' |                            ///
@@ -212,6 +215,35 @@ program define _fevc_rust_plan_receipt, rclass
         }
     }
 
+    if !`receipt_mismatch' & `exact_execution' {
+        local exact_ok = scalar(__vckss_plan_applicability)==1 & ///
+            scalar(__vckss_plan_alg_req)==cond(`exact_execution'==1,1,0) & ///
+            scalar(__vckss_plan_threads_req)==`exact_threads' & ///
+            rowsof(`exact_work')==1 & colsof(`exact_work')==10
+        if `exact_ok' {
+            forvalues j = 1/9 {
+                if missing(`exact_work'[1,`j']) | `exact_work'[1,`j']<0 | ///
+                    `exact_work'[1,`j']!=floor(`exact_work'[1,`j']) local exact_ok = 0
+            }
+            local exact_ok = `exact_ok' & `exact_work'[1,1]==64 & `exact_work'[1,2]==1 & ///
+                `exact_work'[1,3]==`exact_handle' & ///
+                `exact_work'[1,4]==`exact_threads' & `exact_work'[1,5]>=1 & ///
+                `exact_work'[1,5]<=`exact_threads' & ///
+                `exact_work'[1,5]==scalar(__vckss_plan_threads_used) & ///
+                `exact_work'[1,6]==scalar(__vckss_plan_parallel) & ///
+                (`exact_work'[1,5]>1 | `exact_work'[1,6]==0) & ///
+                `exact_work'[1,7]==cond(scalar(__vckss_rust_solve_stayers)==2,2,1) & ///
+                `exact_work'[1,8]>0 & `exact_work'[1,8]<=`exact_work'[1,9] & ///
+                `exact_work'[1,9]==scalar(__vckss_mem_command) & ///
+                !missing(`exact_work'[1,10]) & `exact_work'[1,10]>=0 & ///
+                `exact_work'[1,10]<=scalar(__vckss_rust_full_tolerance)
+        }
+        if !`exact_ok' {
+            local receipt_mismatch = 1
+            local mismatch_detail "exact execution receipt did not reconcile with the selected plan"
+        }
+    }
+
     if !`receipt_mismatch' {
         local plan_names plan_alg_req plan_alg_sel plan_eng_req plan_eng_sel ///
             plan_rhs ctr_rng mem_hard mem_prepared mem_command             ///
@@ -253,7 +285,9 @@ program define _fevc_rust_plan_receipt, rclass
             // planner receipt.  The caller reconciles the exact increment
             // against the versioned component result receipt.
             local values_match = (`plan_value' == `result_value')
-            if "`plan_name'" == "batch_command" & `component_inference' {
+            // V6 jointly admits inference before batch/pool planning; older
+            // requests retain their additive post-plan attachment increment.
+            if "`plan_name'" == "batch_command" & `component_inference' & `execution'==0 {
                 local values_match = (`result_value' > `plan_value')
             }
             if !`values_match' {

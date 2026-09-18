@@ -30,6 +30,11 @@ extern "C" {
 #define VCKSS_CORE_JLA_PLAN_READY (UINT64_C(1) << 7)
 #define VCKSS_CORE_FULL_CMG_V2_READY (UINT64_C(1) << 8)
 #define VCKSS_CORE_PROJECTION_JLA_READY (UINT64_C(1) << 9)
+#define VCKSS_CORE_FULL_CMG_POINT_ROUTING_V1_READY (UINT64_C(1) << 10)
+#define VCKSS_CORE_FULL_CMG_MODEL_V1_READY (UINT64_C(1) << 11)
+#define VCKSS_CORE_GENERIC_EXECUTION_V1_READY (UINT64_C(1) << 12)
+#define VCKSS_CORE_AUTOMATIC_COMPONENT_BATCH_V1_READY (UINT64_C(1) << 13)
+#define VCKSS_CORE_RESOLVED_EXECUTION_V1_READY (UINT64_C(1) << 14)
 #define VCKSS_SUPPORT_EXACT (UINT64_C(1) << 0)
 #define VCKSS_SUPPORT_JLA (UINT64_C(1) << 1)
 #define VCKSS_SUPPORT_MATCH_DELETION (UINT64_C(1) << 2)
@@ -529,6 +534,31 @@ typedef struct VckssEngineSolveRequestV5 {
     uint32_t reserved_5;
 } VckssEngineSolveRequestV5;
 
+/* Execution-only extension of V4; V5 meanings and layouts remain frozen. */
+#define VCKSS_GENERIC_EXECUTION_DIAGONAL_QUEUE 1
+#define VCKSS_GENERIC_EXECUTION_DIRECT_ATTACHMENTS 2
+#define VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO 3
+typedef struct VckssEngineSolveRequestV6 {
+    VckssEngineSolveRequestV4 v4;
+    uint32_t execution_mode;
+    uint32_t threads;
+    uint64_t reserved_6;
+} VckssEngineSolveRequestV6;
+
+typedef struct VckssEngineSolveRequestV7 {
+    VckssEngineSolveRequestV6 v6;
+    uint32_t component_batch_mode;
+    uint32_t reserved_7;
+} VckssEngineSolveRequestV7;
+
+/* Additive resolver-aware diagonal execution. Exact/compressed selections
+ * retain their ordinary paths and do not create generic-work receipts. */
+typedef struct VckssEngineSolveRequestV8 {
+    VckssEngineSolveRequestV7 v7;
+    uint32_t resolved_execution_mode;
+    uint32_t tolerance_supplied;
+} VckssEngineSolveRequestV8;
+
 typedef struct VckssEngineSolveRequestInterruptV1 {
     VckssEngineSolveRequestV1 options;
     VckssInterruptPollV1 interrupt_poll;
@@ -568,6 +598,79 @@ typedef struct VckssEngineSolveRequestInterruptV5 {
     uint32_t checkpoint_interval;
     uint32_t reserved;
 } VckssEngineSolveRequestInterruptV5;
+
+typedef struct VckssEngineSolveRequestInterruptV6 {
+    VckssEngineSolveRequestV6 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssEngineSolveRequestInterruptV6;
+
+typedef struct VckssEngineSolveRequestInterruptV7 {
+    VckssEngineSolveRequestV7 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssEngineSolveRequestInterruptV7;
+
+typedef struct VckssEngineSolveRequestInterruptV8 {
+    VckssEngineSolveRequestV8 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssEngineSolveRequestInterruptV8;
+
+/* Experimental opt-in exact executor. No legacy entrypoint selects it and
+ * the ordinary core-ready capability mask remains unchanged. */
+typedef struct VckssExactExecutionRequestV1 {
+    VckssEngineSolveRequestV4 v4;
+    uint32_t threads;
+    uint32_t reserved;
+} VckssExactExecutionRequestV1;
+
+typedef struct VckssExactExecutionRequestInterruptV1 {
+    VckssExactExecutionRequestV1 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssExactExecutionRequestInterruptV1;
+
+typedef struct VckssExactExecutionReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t requested_threads;
+    uint32_t worker_limit; /* Selected bound, not measured active cores. */
+    uint64_t parallel_regions;
+    uint64_t estimator_passes;
+    uint64_t incremental_forecast_bytes;
+    uint64_t command_peak_forecast_bytes;
+    double maximum_original_fit_residual;
+} VckssExactExecutionReceiptV1;
+
+uint32_t vckss_rust_exact_execution_schema_v1(void);
+uint32_t vckss_rust_exact_legacy_execution_schema_v1(void);
+int32_t vckss_rust_engine_solve_exact_legacy_execution_interrupt_v1(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV2 *request,
+    uint32_t threads);
+/* Resolved-auto-only selector. Reuses the frozen payload layout without
+ * changing V1's explicit-exact-only contract or the request signature. */
+uint32_t vckss_rust_exact_resolved_execution_schema_v2(void);
+int32_t vckss_rust_engine_solve_exact_resolved_execution_v2(
+    uint64_t generation, const VckssExactExecutionRequestV1 *request);
+int32_t vckss_rust_engine_solve_exact_resolved_execution_interrupt_v2(
+    uint64_t generation, const VckssExactExecutionRequestInterruptV1 *request);
+int32_t vckss_rust_engine_solve_exact_execution_v1(
+    uint64_t generation, const VckssExactExecutionRequestV1 *request);
+int32_t vckss_rust_engine_solve_exact_execution_interrupt_v1(
+    uint64_t generation, const VckssExactExecutionRequestInterruptV1 *request);
+int32_t vckss_rust_engine_exact_execution_receipt_v1(
+    uint64_t generation, VckssExactExecutionReceiptV1 *output,
+    uint32_t output_capacity_bytes);
 
 typedef struct VckssEnginePreparationReceiptV1 {
     uint32_t struct_size;
@@ -1259,6 +1362,97 @@ typedef struct VckssFullCmgReceiptV1 {
     uint64_t workspace_count;
 } VckssFullCmgReceiptV1;
 
+/* Additive; never append model accounting to the frozen 400-byte receipt. */
+typedef struct VckssFullCmgModelReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t controls_count;
+    uint32_t nuisance_mode;
+    uint64_t logical_rhs_count;
+    uint64_t explicit_options_rhs_count;
+    uint64_t controlled_rhs_count;
+    uint64_t control_refinement_rhs_count;
+} VckssFullCmgModelReceiptV1;
+
+int32_t vckss_rust_engine_full_cmg_model_receipt_v1(
+    uint64_t generation, VckssFullCmgModelReceiptV1 *output,
+    uint32_t output_capacity_bytes);
+
+/* Actual complete logical work. Queued RHSs exclude scalar diagonal fits;
+   CMG RHSs include fits and complete-model refinements. Active workers are
+   measured only for the diagonal queue (zero for CMG); CMG reports selected
+   concurrency separately. Allocation forecasts are not RSS. */
+typedef struct VckssGenericExecutionReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t execution_mode;
+    uint32_t permitted_threads;
+    uint32_t planned_workers;
+    uint32_t maximum_active_workers;
+    uint32_t cmg_selected_concurrency;
+    uint32_t reserved;
+    uint64_t maximum_rhs_capacity;
+    uint64_t leverage_batch_width;
+    uint64_t target_batch_width;
+    uint64_t fit_rhs_count;
+    uint64_t control_projection_rhs_count;
+    uint64_t point_probe_rhs_count;
+    uint64_t projection_rhs_count;
+    uint64_t component_rhs_count;
+    uint64_t gram_rhs_count;
+    uint64_t logical_rhs_count;
+    uint64_t queued_rhs_count;
+    uint64_t cmg_rhs_count;
+    uint64_t control_refinement_rhs_count;
+    uint64_t command_peak_forecast_bytes;
+    double maximum_complete_residual;
+} VckssGenericExecutionReceiptV1;
+
+typedef struct VckssComponentBatchReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint32_t policy;
+    uint32_t selection_reason;
+    uint64_t generation;
+    uint64_t declared_component_width;
+    uint64_t declared_gram_width;
+    uint64_t component_width;
+    uint64_t gram_width;
+    uint64_t automatic_cap;
+    uint64_t permitted_threads;
+    uint64_t maximum_rhs_capacity;
+    uint64_t command_peak_forecast_bytes;
+} VckssComponentBatchReceiptV1;
+
+int32_t vckss_rust_engine_default_solve_request_v6(
+    VckssEngineSolveRequestV6 *output, uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_default_solve_request_interrupt_v6(
+    VckssEngineSolveRequestInterruptV6 *output, uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_solve_v6(
+    uint64_t generation, const VckssEngineSolveRequestV6 *request);
+int32_t vckss_rust_engine_solve_interrupt_v6(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV6 *request);
+int32_t vckss_rust_engine_generic_execution_receipt_v1(
+    uint64_t generation, VckssGenericExecutionReceiptV1 *output,
+    uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_default_solve_request_interrupt_v7(
+    VckssEngineSolveRequestInterruptV7 *output, uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_solve_interrupt_v7(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV7 *request);
+int32_t vckss_rust_engine_component_batch_receipt_v1(
+    uint64_t generation, VckssComponentBatchReceiptV1 *output,
+    uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_default_solve_request_v8(
+    VckssEngineSolveRequestV8 *output, uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_default_solve_request_interrupt_v8(
+    VckssEngineSolveRequestInterruptV8 *output, uint32_t output_capacity_bytes);
+int32_t vckss_rust_engine_solve_v8(
+    uint64_t generation, const VckssEngineSolveRequestV8 *request);
+int32_t vckss_rust_engine_solve_interrupt_v8(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV8 *request);
+
 typedef struct VckssEngineRhsReceiptV1 {
     uint32_t phase;
     uint32_t side;
@@ -1517,6 +1711,16 @@ int32_t vckss_rust_engine_augment_component_inference_interrupt_v4(
     uint32_t gram_probes
 );
 int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v4(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request,
+    uint32_t gram_probes
+);
+int32_t vckss_rust_engine_augment_component_inference_interrupt_v5(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request,
+    uint32_t gram_probes
+);
+int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v5(
     uint64_t generation,
     const VckssComponentInferenceAugmentationRequestInterruptV1 *request,
     uint32_t gram_probes
@@ -1795,6 +1999,24 @@ _Static_assert(sizeof(VckssEngineSolveRequestInterruptV2) == 224, "unexpected V2
 _Static_assert(sizeof(VckssEngineSolveRequestInterruptV3) == 288, "unexpected V3 interrupt solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestInterruptV4) == 312, "unexpected V4 interrupt solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV5) == 304, "unexpected V5 solve request ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestV6) == 304, "unexpected V6 solve request ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestInterruptV6) == 328, "unexpected V6 interrupt solve ABI size");
+_Static_assert(sizeof(VckssGenericExecutionReceiptV1) == 160, "unexpected generic execution receipt ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestV7) == 312, "unexpected V7 solve ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestInterruptV7) == 336, "unexpected V7 interrupt solve ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestV8) == 320, "unexpected V8 solve ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestInterruptV8) == 344, "unexpected V8 interrupt solve ABI size");
+_Static_assert(offsetof(VckssEngineSolveRequestV8, resolved_execution_mode) == 312, "unexpected V8 execution offset");
+_Static_assert(offsetof(VckssEngineSolveRequestInterruptV8, interrupt_poll) == 320, "unexpected V8 callback offset");
+_Static_assert(sizeof(VckssComponentBatchReceiptV1) == 88, "unexpected component batch receipt ABI size");
+_Static_assert(sizeof(VckssExactExecutionRequestV1) == 296, "unexpected exact execution request size");
+_Static_assert(sizeof(VckssExactExecutionRequestInterruptV1) == 320, "unexpected interrupt exact execution size");
+_Static_assert(sizeof(VckssExactExecutionReceiptV1) == 64, "unexpected exact execution receipt size");
+_Static_assert(offsetof(VckssExactExecutionRequestV1, threads) == 288, "unexpected exact execution threads offset");
+_Static_assert(offsetof(VckssExactExecutionRequestInterruptV1, interrupt_poll) == 296, "unexpected exact callback offset");
+_Static_assert(offsetof(VckssEngineSolveRequestV6, execution_mode) == 288, "unexpected V6 execution offset");
+_Static_assert(offsetof(VckssEngineSolveRequestInterruptV6, interrupt_poll) == 304, "unexpected V6 callback offset");
+_Static_assert(offsetof(VckssGenericExecutionReceiptV1, fit_rhs_count) == 64, "unexpected generic work offset");
 _Static_assert(sizeof(VckssEngineSolveRequestInterruptV5) == 328, "unexpected V5 interrupt solve request ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV1) == 72, "unexpected preparation receipt ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV2) == 248, "unexpected V2 preparation receipt ABI size");
@@ -1828,6 +2050,8 @@ _Static_assert(sizeof(VckssExecutionPlanReceiptV1) == 1000, "unexpected executio
 _Static_assert(sizeof(VckssEngineDetailedReceiptV7) == 1840, "unexpected V7 detailed receipt ABI size");
 _Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "unexpected performance receipt ABI size");
 _Static_assert(sizeof(VckssFullCmgReceiptV1) == 400, "unexpected full-CMG receipt ABI size");
+_Static_assert(sizeof(VckssFullCmgModelReceiptV1) == 56, "unexpected full-CMG model receipt ABI size");
+_Static_assert(offsetof(VckssFullCmgModelReceiptV1, logical_rhs_count) == 24, "unexpected full-CMG model receipt ABI offset");
 _Static_assert(sizeof(VckssEngineRhsReceiptV1) == 48, "unexpected RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV2) == 96, "unexpected V2 RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineSnapshotV1) == 24, "unexpected snapshot ABI size");

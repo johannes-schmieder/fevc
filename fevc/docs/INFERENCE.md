@@ -11,11 +11,17 @@ Mata exact target-specific family and requires:
 - `algorithm(exact)` or an omitted/automatic algorithm that resolves to
   exact;
 - the Mata backend and guarded Stata RNG;
-- `stayers(movers)`; and
+- either observation population: `stayers(both)` by default or explicit
+  `stayers(movers)`; and
 - unit frequency weights.
 
 The explicit fixed-offset match route below also permits positive integer
 frequency mass; observation component inference remains unit-frequency.
+The symmetric population options do not change the observation inference
+formula or its default retained sample. Earlier prerelease observation calls
+called that population `movers` while retaining eligible one-firm workers;
+explicit `stayers(movers)` now filters those workers before graph selection.
+This is not a new match/stayer hybrid component-inference capability.
 The supported explicit Rust generic-JLA attachment
 implements matrix-free `q=0` and eligible one-mode `q=1` component inference
 with a named structured variance model. The current development candidate
@@ -70,7 +76,7 @@ component point estimator was unchanged. Cross-fitting and agreement with the
 leverage-only sensitivity fit cannot detect a driver omitted from both models.
 The historical V5 confirmation passed the registered correct-model and mild-
 misspecification gates on its own source; its scope and limits are recorded in
-[`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json).
+[`structured_inference_confirmation_v5_result.json`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/structured_inference_confirmation_v5_result.json).
 It does not qualify the later q1 repair. The corrected observation confirmation
 has one failed SE-ratio gate (1.101204 versus 1.10), an unresolved calibration
 limitation recorded in `RC_OBSERVATION_CONFIRMATION_2026-09-05.md`.
@@ -145,12 +151,12 @@ nuisance-control estimation uncertainty.** Same-sample estimation of controls
 can induce cross-match dependence; few controls do not guarantee negligible
 uncertainty or conditional validity. There is no delta-method, influence,
 cross-fitted FE-model, joint-nuisance or second-stage correction. See the
-[controls diagnosis](FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md).
+[controls diagnosis](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md).
 
 Independent q0 and repaired eligible q1 confirmations pass in their declared
 fixed-offset regimes:
-[match q0](RC_MATCH_Q0_CONFIRMATION_2026-09-05.md) and
-[match q1](INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md).
+[match q0](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/RC_MATCH_Q0_CONFIRMATION_2026-09-05.md) and
+[match q1](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md).
 Their estimated-controls cases are calibration limitations, not coverage
 claims. Historical development failures remain unchanged. The
 [owner-approved interface decision](fixed_offset_match_interface_v1.json)
@@ -518,7 +524,7 @@ within `1.17e-6` relative for official `lincom_KSS` standard errors. Rust with
 4,000 Counter-V1 probes is within `0.2994%` of exact for the full covariance.
 
 The
-[focused scaling comparison](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
+[focused scaling comparison](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
 runs separate, source-bound FEVC and KSS Matlab processes so wall time and peak
 RSS cover KSS Matlab's JLA-plus-`lincom_KSS` path rather than only `lincom_KSS`.
 Source `96e7a66` passes all coefficient, covariance-diagonal, SE, residual, PSD,
@@ -567,7 +573,7 @@ high-rank approximation; it is not the separately derived fully unbiased
 leave-three-out variance estimator.
 
 The source-bound comparison in
-[archived inference/KSS Matlab qualification record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
+[archived inference/KSS Matlab qualification record](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
 separates exact projection validation from descriptive component-SE evidence.
 The additional KSS Matlab routine `leave_out_COMPLETE.m` returns only three marginal component standard
 errors, not the joint covariance or total-target uncertainty. It also retains

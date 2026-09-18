@@ -212,7 +212,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
         let operator = TwoWayOperator::new_with_interrupt(problem, interrupt)?;
         let requested = options.route;
         // A production full-CMG plan is itself the pre-RNG selection receipt:
-        // V5 admits only the qualified public Auto cell, then freezes CMG_FULL_V2
+        // V5 admits the no-control point Auto/CMG cell, then freezes CMG_FULL_V2
         // before this material setup. Legacy exact/dimension thresholds continue
         // to govern every request without such a plan.
         let selected = if full_cmg.is_some() {
@@ -220,11 +220,16 @@ impl<'a> PreparedTwoWaySolver<'a> {
         } else {
             route_decision(&operator, options)?
         };
-        if full_cmg.is_some() && selected != LinearSolverRoute::CmgPcg {
+        if full_cmg.is_some()
+            && !matches!(
+                requested,
+                LinearSolverRoute::Auto | LinearSolverRoute::CmgPcg
+            )
+        {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
                 "cmg_full_v2",
-                "the direct full-CMG route requires a frozen CMG-PCG selection",
+                "the direct full-CMG route cannot override explicit exact or diagonal selection",
             ));
         }
         let mut fallback = None;
@@ -355,20 +360,25 @@ impl<'a> PreparedTwoWaySolver<'a> {
         }
     }
 
-    pub(crate) fn map_independent_ordered<Input, Output, Operation>(
+    pub(crate) fn statistical_work<I, Iter, F>(
         &self,
-        input: Vec<Input>,
-        operation: Operation,
-    ) -> Vec<Output>
+        input: Iter,
+        phase: &'static str,
+        operation: F,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()>
     where
-        Input: Send,
-        Output: Send,
-        Operation: Fn(Input) -> Output + Send + Sync,
+        I: Send,
+        Iter: ExactSizeIterator<Item = I>,
+        F: Fn(usize, I, &mut dyn InterruptCheck) -> Result<()> + Sync,
     {
-        if let PreparedSolverBackend::FullCmg(solver) = &self.backend {
-            return solver.map_independent_ordered(input, operation);
-        }
-        input.into_iter().map(operation).collect()
+        let pool = match &self.backend {
+            PreparedSolverBackend::FullCmg(solver) => Some(crate::ordered_work::Pool::Cmg(solver)),
+            _ => None,
+        };
+        // Phase forecasts admit the larger of their RHS-column and row-block
+        // job counts before pool allocation/RNG. No new pool or solve is made.
+        crate::ordered_work::run(pool, input.len(), input, phase, operation, interrupt)
     }
 
     pub fn solve(&self, worker_rhs: &[f64], firm_rhs: &[f64]) -> Result<RoutedTwoWaySolve> {
@@ -1078,6 +1088,25 @@ mod tests {
             .solution
             .iter()
             .all(|value| value.residual.relative_norm <= 1.0e-5));
+    }
+
+    #[test]
+    fn direct_plan_cannot_override_explicit_diagonal_or_exact() {
+        let problem = fixture();
+        for route in [LinearSolverRoute::DiagonalPcg, LinearSolverRoute::Exact] {
+            let options = LinearSolverOptions {
+                route,
+                ..base_options()
+            };
+            let error = PreparedTwoWaySolver::prepare_full_cmg_v2_with_interrupt(
+                &problem,
+                options,
+                FullCmgPlanOptions::production(4, options.pcg.tolerance, None),
+                &mut NeverInterrupt,
+            )
+            .expect_err("explicit route must not be overridden by a direct plan");
+            assert_eq!(error.code, ErrorCode::UnsupportedFeature);
+        }
     }
 
     #[test]

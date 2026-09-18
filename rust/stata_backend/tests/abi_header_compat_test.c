@@ -2,6 +2,23 @@
 
 #include "vckss_rust.h"
 
+_Static_assert(sizeof(VckssExactExecutionRequestV1) == 296, "exact opt-in request layout");
+_Static_assert(sizeof(VckssExactExecutionRequestInterruptV1) == 320, "exact opt-in callback layout");
+_Static_assert(sizeof(VckssExactExecutionReceiptV1) == 64, "exact opt-in receipt layout");
+_Static_assert(offsetof(VckssExactExecutionRequestV1, threads) == 288, "exact opt-in prefix");
+
+void vckss_exact_opt_in_header_signatures_compile(void)
+{
+    uint32_t (*capability)(void) = vckss_rust_exact_execution_schema_v1;
+    int32_t (*solve)(uint64_t, const VckssExactExecutionRequestV1 *) =
+        vckss_rust_engine_solve_exact_execution_v1;
+    int32_t (*interrupt)(uint64_t, const VckssExactExecutionRequestInterruptV1 *) =
+        vckss_rust_engine_solve_exact_execution_interrupt_v1;
+    int32_t (*receipt)(uint64_t, VckssExactExecutionReceiptV1 *, uint32_t) =
+        vckss_rust_engine_exact_execution_receipt_v1;
+    (void)capability; (void)solve; (void)interrupt; (void)receipt;
+}
+
 _Static_assert(sizeof(VckssComponentInferenceResultReceiptV5) == 288, "component V5 layout changed");
 _Static_assert(offsetof(VckssComponentInferenceResultReceiptV5, joint_status) == 208, "component V5 prefix changed");
 

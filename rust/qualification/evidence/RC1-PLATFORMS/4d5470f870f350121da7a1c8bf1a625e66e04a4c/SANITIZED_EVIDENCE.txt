@@ -1,6 +1,0 @@
-Original source-bound macOS, Linux and supply-chain receipts are preserved.
-Windows records its failed project smoke and successful cleanup/stop.
-No native binaries, raw Stata startup/license logs, credentials, cloud account
-or instance identifiers, IP addresses, or licensed comparator source are included.
-Detailed sanitized Mac/Linux logs and tested binaries remain in ignored local
-diagnostic storage. This packet is not a complete all-platform release artifact.

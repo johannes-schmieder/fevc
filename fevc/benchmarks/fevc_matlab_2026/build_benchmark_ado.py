@@ -10,7 +10,12 @@ from pathlib import Path
 
 SCHEMA = "FEVC-BENCHMARK-ADO-ADAPTER-V1"
 THREAD_CONTRACT = "FEVC-BENCHMARK-THREADS-V1"
-INSERT_AFTER = "    local implicit_match = (`fullcmg' == 1)\n"
+INSERT_AFTER = (
+    "    local implicit_match = (`fullcmg' == 1 & \"`deletionmode'\"==\"match\" & ///\n"
+    "        \"`stayersmode'\"==\"movers\" & \"`probeorder'\"!=\"\" & ///\n"
+    "        !`frequencyused' & !`targetweightsupplied' & !`deletionidsupplied' & ///\n"
+    "        strtrim(`\"`controls'\"')==\"\" & \"`nuisance'\"==\"joint\")\n"
+)
 THREAD_CALL = "        fullcmg(`fullcmg') threads(`=c(processors)')                 ///\n"
 THREAD_CALL_ADAPTED = (
     "        fullcmg(`fullcmg') threads(`full_cmg_threads')                 ///\n"
@@ -47,7 +52,7 @@ ADAPTER = r'''    // Benchmark artifacts may decouple the native full-CMG pool f
             `benchmark_threads'==floor(`benchmark_threads') &          ///
             `benchmark_active'==floor(`benchmark_active') &            ///
             `benchmark_slots'==floor(`benchmark_slots') &              ///
-            inlist(`benchmark_threads',1,2,4,8,14,28) &                ///
+            inlist(`benchmark_threads',1,2,4,7,8,14,28) &              ///
             `benchmark_active'==`benchmark_threads' &                  ///
             `benchmark_slots'>=`benchmark_active' &                    ///
             c(processors)==min(4,`benchmark_active')
@@ -95,7 +100,7 @@ def build(source_path: Path, output_path: Path, receipt_path: Path) -> dict[str,
         "schema": SCHEMA,
         "status": "PASS",
         "thread_contract": THREAD_CONTRACT,
-        "allowed_native_threads": [1, 2, 4, 8, 14, 28],
+        "allowed_native_threads": [1, 2, 4, 7, 8, 14, 28],
         "maximum_stata_processors": 4,
         "source_path": source_path.name,
         "source_sha256": sha256(source_path),

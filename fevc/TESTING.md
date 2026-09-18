@@ -40,8 +40,6 @@ The integrated release-hardening checks are also individually available:
 
 ```bash
 ./.venv/bin/python fevc/tools/check_fevc_public_identity.py
-./.venv/bin/python fevc/tools/check_legacy_names.py
-./.venv/bin/python fevc/tools/check_fevc_history.py
 ./.venv/bin/python fevc/tools/license_audit.py
 ./.venv/bin/python fevc/tools/render_rust_mata_parity.py --check
 ./.venv/bin/python fevc/tools/build_release_artifact.py --check
@@ -232,6 +230,6 @@ weights, targets, RNG, and tolerances coincide. Preserve an unweakened failure
 rather than modifying the comparator or input to obtain a number.
 
 Workspace cleanup uses `tools/clean_workspace.py --dry-run` first and
-`--apply` only after reviewing the protected allowlist. Tracked source-bound
-evidence, `.venv`, qualification, reviews, reports, and per-SHA CI results are
-never eligible.
+`--apply` only after reviewing the protected allowlist. Tracked source, `.venv`, local archives, and source-bound evidence are never
+eligible. Historical retention checks were retired with the corresponding
+checkout material; see [the archive note](../docs/ARCHIVE.md).

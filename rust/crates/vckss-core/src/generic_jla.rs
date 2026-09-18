@@ -17,6 +17,25 @@
 use core::cmp::Ordering;
 
 pub(crate) mod residual_moment_attachment;
+mod spectrum_batches;
+mod statistical_batches;
+
+#[path = "generic_component_batches.rs"]
+mod component_batches;
+use component_batches::ComponentExecution;
+pub use component_batches::{ComponentBatchPolicy, ComponentBatchReceipt};
+
+#[path = "generic_diagonal_queue.rs"]
+mod diagonal;
+#[cfg(test)]
+#[path = "generic_diagonal_tests.rs"]
+mod diagonal_tests;
+#[path = "generic_full_cmg.rs"]
+mod direct;
+#[cfg(test)]
+#[path = "generic_full_cmg_tests.rs"]
+mod direct_tests;
+use crate::full_cmg::{FullCmgPlanOptions, FullCmgReceipt, FullCmgSetupReceipt};
 
 use crate::batch_plan::{
     plan_batches_with_forecasts, BatchPlanReceipt, BatchPlannerCaps, BatchRequest,
@@ -52,9 +71,11 @@ use crate::model_operator::{
     checked_matrix_length, reserve_exact, zeroed_f64_with_interrupt, CanonicalModelData, ModelRhs,
 };
 use crate::model_solver::{
-    ControlRankReceipt, ModelCoefficients, ModelRoutingOptions, ModelSolve, ModelSolverFallback,
-    ModelSolverOptions, ModelSolverRoute, PreparedModelSolver, PreparedModelSolverReceipt,
+    is_model_cmg_setup_fallback_error, ControlRankReceipt, ModelCoefficients, ModelRoutingOptions,
+    ModelSolve, ModelSolverFallback, ModelSolverOptions, ModelSolverRoute, PreparedModelSolver,
+    PreparedModelSolverReceipt,
 };
+use crate::pipeline_profile::{Phase as ProfilePhase, Scope as ProfileScope};
 use crate::problem::CompressedProblem;
 use crate::projection::{
     accumulate_projection_covariance, projection_coefficients, PreparedProjection, ProjectionResult,
@@ -141,6 +162,14 @@ pub struct GenericJlaThreadReceipt {
 
 #[derive(Clone, Debug)]
 pub struct GenericJlaExecutionReceipt {
+    /// Additive internal diagnostics; frozen native receipts are unchanged.
+    pub component_batch: Option<ComponentBatchReceipt>,
+    pub full_cmg: Option<FullCmgReceipt>,
+    /// Internal-only execution accounting; no frozen native receipt changes.
+    pub diagonal_queue: Option<GenericDiagonalQueueReceipt>,
+    /// Internal attachment execution; never encoded as the point-only native
+    /// model receipt or appended to a frozen ABI layout.
+    pub direct_attachments: Option<GenericDirectAttachmentReceipt>,
     pub schema_version: u32,
     pub requested_route: ModelSolverRoute,
     pub selected_route: ModelSolverRoute,
@@ -163,6 +192,24 @@ pub struct GenericJlaExecutionReceipt {
     pub unique_packed_words_before_plan_freeze: u64,
     pub physical_trials_before_plan_freeze: u64,
     pub threads: GenericJlaThreadReceipt,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct GenericDiagonalQueueReceipt {
+    pub plan: crate::model_solver::diagonal_queue::DiagonalQueuePlan,
+    pub work: crate::model_solver::diagonal_queue::DiagonalQueueWorkReceipt,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct GenericDirectAttachmentReceipt {
+    pub fit_rhs: usize,
+    pub control_projection_rhs: usize,
+    pub point_probe_rhs: usize,
+    pub projection_rhs: usize,
+    pub component_rhs: usize,
+    pub gram_rhs: usize,
+    pub logical_rhs: usize,
+    pub control_refinement_rhs: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -532,6 +579,7 @@ struct MemoryForecast {
 
 #[derive(Clone, Copy, Debug, Default)]
 struct RouteMemory {
+    full_cmg: Option<FullCmgSetupReceipt>,
     shared_cmg_persistent: u64,
     full_control_block_persistent: u64,
     setup_transient: u64,
@@ -727,7 +775,250 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
     hybrid: Option<&ExactStayerHybridPlan>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
+    run_generic_jla_with_direct_solver_interrupt(
+        problem,
+        execution_options,
+        projection,
+        component_inference,
+        hybrid,
+        None,
+        interrupt,
+    )
+}
+
+/// Additive solver selection; existing generic/inference callers retain their
+/// original route. This does not change deletion or target construction.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+pub fn run_generic_jla_with_direct_solver_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component_inference: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    full_cmg: Option<FullCmgPlanOptions>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
+    run_generic_jla_with_execution_interrupt(
+        problem,
+        execution_options,
+        projection,
+        component_inference,
+        hybrid,
+        full_cmg,
+        None,
+        false,
+        ComponentBatchPolicy::Literal,
+        interrupt,
+    )
+}
+
+/// Isolated development entrypoint: no ABI/Ado route selects this executor.
+#[doc(hidden)]
+pub fn run_generic_jla_with_diagonal_queue_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    threads: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
+    run_generic_jla_with_diagonal_queue_attachments_interrupt(
+        problem,
+        execution_options,
+        projection,
+        None,
+        hybrid,
+        threads,
+        interrupt,
+    )
+}
+
+/// Internal diagonal execution only. The existing attachment capability checks
+/// still apply; no frozen native request or public routing is changed.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_diagonal_queue_attachments_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component_inference: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    threads: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
+    if execution_options.routing.route != ModelSolverRoute::Diagonal || threads == 0 {
+        return Err(BackendError::invalid(
+            "generic_diagonal_queue",
+            "positive threads and explicit diagonal required",
+        ));
+    }
+    run_generic_jla_with_execution_interrupt(
+        problem,
+        execution_options,
+        projection,
+        component_inference,
+        hybrid,
+        None,
+        Some(threads),
+        false,
+        ComponentBatchPolicy::Literal,
+        interrupt,
+    )
+}
+
+/// Preserve an original automatic solver request. The registered firm/RHS
+/// rule selects the queued diagonal or direct CMG executor before RNG. Only a
+/// typed automatic-CMG setup/resource failure may retry the queued diagonal
+/// executor; numerical, cancellation and post-RNG failures remain fail-closed.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_resolved_execution_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component_inference: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    threads: usize,
+    full_cmg: FullCmgPlanOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
+    if !matches!(
+        execution_options.routing.route,
+        ModelSolverRoute::Auto | ModelSolverRoute::Diagonal
+    ) || threads == 0
+    {
+        return Err(BackendError::invalid(
+            "generic_execution",
+            "resolved execution requires an automatic or diagonal route and positive threads",
+        ));
+    }
+    if full_cmg.threads != threads {
+        return Err(BackendError::invalid(
+            "generic_execution",
+            "resolved execution requires matching queue and CMG thread counts",
+        ));
+    }
+    run_generic_jla_with_execution_interrupt(
+        problem,
+        execution_options,
+        projection,
+        component_inference,
+        hybrid,
+        Some(full_cmg),
+        Some(threads),
+        true,
+        ComponentBatchPolicy::Literal,
+        interrupt,
+    )
+}
+
+/// Internal direct-CMG attachments only. Ordinary native callers retain their
+/// point-only guard, request layouts and receipt meanings.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_direct_attachments_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component_inference: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    plan: FullCmgPlanOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
+    if execution_options.routing.route != ModelSolverRoute::Cmg
+        || (projection.is_none() && component_inference.is_none())
+    {
+        return Err(BackendError::invalid(
+            "generic_full_cmg",
+            "explicit CMG and attachment required",
+        ));
+    }
+    run_generic_jla_with_execution_interrupt(
+        problem,
+        execution_options,
+        projection,
+        component_inference,
+        hybrid,
+        Some(plan),
+        None,
+        true,
+        ComponentBatchPolicy::Literal,
+        interrupt,
+    )
+}
+
+/// Execution-only automatic inference widths. Legacy entrypoints and numeric
+/// augmentation widths are unchanged. Selection and admission precede RNG.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_automatic_component_batches_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    component: &PreparedComponentInference,
+    threads: usize,
+    full_cmg: Option<FullCmgPlanOptions>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
+    let direct = full_cmg.is_some();
+    if threads == 0
+        || full_cmg.is_some_and(|plan| plan.threads != threads)
+        || execution_options.routing.route
+            != if direct {
+                ModelSolverRoute::Cmg
+            } else {
+                ModelSolverRoute::Diagonal
+            }
+    {
+        return Err(invalid(
+            "automatic component batches require a matching explicit executor and positive threads",
+        ));
+    }
+    component.options.validate()?;
+    ComponentExecution::new(component).cap(threads)?;
+    run_generic_jla_with_execution_interrupt(
+        problem,
+        execution_options,
+        None,
+        Some(component),
+        None,
+        full_cmg,
+        if direct { None } else { Some(threads) },
+        direct,
+        ComponentBatchPolicy::Automatic,
+        interrupt,
+    )
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn run_generic_jla_with_execution_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component_inference: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    full_cmg: Option<FullCmgPlanOptions>,
+    diagonal_threads: Option<usize>,
+    direct_attachments: bool,
+    component_policy: ComponentBatchPolicy,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
     interrupt.checkpoint("generic_jla_entry")?;
+    let _profile = ProfileScope::new(ProfilePhase::Command);
+    let component_prepared = component_inference;
+    let mut component_view = component_prepared.map(ComponentExecution::new);
+    let component_inference = component_view.as_ref();
+    if full_cmg.is_some()
+        && (((projection.is_some() || component_inference.is_some()) && !direct_attachments)
+            || execution_options.leverage_batch != BatchRequest::Auto
+            || execution_options.target_batch != BatchRequest::Auto
+            || execution_options.routing.route == ModelSolverRoute::Diagonal)
+    {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_full_cmg",
+            "direct generic CMG requires point-only automatic batches",
+        ));
+    }
     let mut routing = execution_options.routing;
     if execution_options.estimator.memory_budget != crate::memory::MemoryBudget::Legacy {
         routing.cmg.memory_budget = execution_options.estimator.memory_budget;
@@ -741,6 +1032,15 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
     let workers = problem.workers();
     let firms = problem.firms();
     let controls = problem.controls.len();
+    // Controlled models retain their existing stricter estimation tolerance.
+    // Rank preparation supplies its separate fixed 1e-13 solve options.
+    let full_cmg = full_cmg.map(|mut plan| {
+        if controls > 0 || direct_attachments {
+            plan.fit_tolerance = options.solver.pcg.tolerance;
+            plan.probe_tolerance = options.solver.pcg.tolerance;
+        }
+        plan
+    });
     let projection_columns = projection.map_or(0, |value| value.columns);
     if projection_columns != options.projection_columns {
         return Err(BackendError::invariant(
@@ -806,6 +1106,17 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
     } else {
         ModelSolverRoute::Cmg
     };
+    let direct_selected = full_cmg.is_some()
+        && (!direct_attachments
+            || routing.route == ModelSolverRoute::Cmg
+            || (routing.route == ModelSolverRoute::Auto
+                && automatic_route == ModelSolverRoute::Cmg));
+    let diagonal_threads = if direct_selected {
+        None
+    } else {
+        diagonal_threads
+    };
+    let active_direct_attachments = direct_attachments && direct_selected;
     // The shared model router still records Auto as requested. Its numerical
     // dimension threshold is specialized here to enact the registered
     // generic-JLA structural F/planned-RHS policy.
@@ -863,14 +1174,189 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         weight: &weights,
         controls: &canonical.columns,
     };
-    let prepared_solvers = PreparedModelSolver::prepare_generic_jla_routed_with_interrupt(
-        full_data,
-        routed_prepare,
-        interrupt,
-    )?;
+    let mut controlled_batch = None;
+    let mut diagonal_plan = None;
+    let mut component_batch = None;
+    let prepared_solvers = if let Some(threads) = diagonal_threads {
+        let (batch, plan, inference) = diagonal::plan(
+            problem,
+            options,
+            full_parameters,
+            hybrid.is_some(),
+            component_inference,
+            component_policy,
+            execution_options.leverage_batch,
+            execution_options.target_batch,
+            threads,
+            memory_facts(problem, interrupt)?,
+            interrupt,
+        )?;
+        component_batch = inference;
+        // Forecast already includes the complete generic lifetime; the runtime
+        // validates the same increment again before allocating its owned pool.
+        let budget = match options.memory_budget {
+            crate::memory::MemoryBudget::Legacy => crate::memory::MemoryBudget::Explicit {
+                bytes: options.memory_limit_bytes,
+                check: crate::memory::MemoryCheck::Error,
+            },
+            budget => budget,
+        };
+        interrupt.checkpoint("generic_diagonal_queue_admitted")?;
+        let queue = std::sync::Arc::new(
+            crate::model_solver::diagonal_queue::DiagonalQueueRuntime::new(
+                [workers, firms, controls],
+                threads,
+                plan.maximum_rhs,
+                plan.command_peak_bytes - plan.incremental_peak_bytes,
+                budget,
+                interrupt,
+            )?,
+        );
+        if queue.plan() != plan {
+            return Err(BackendError::invariant(
+                "generic_diagonal_queue",
+                "runtime admission differs from frozen plan",
+            ));
+        }
+        diagonal_plan = Some(plan);
+        controlled_batch = Some(batch);
+        PreparedModelSolver::prepare_generic_jla_queued_diagonal(
+            full_data,
+            routed_prepare,
+            queue,
+            interrupt,
+        )?
+    } else if direct_selected {
+        let mut plan = full_cmg.ok_or_else(|| {
+            BackendError::invariant(
+                "generic_full_cmg",
+                "resolved direct execution lost its CMG plan",
+            )
+        })?;
+        plan.memory_budget = options.memory_budget;
+        let (_, _, maximum) = crate::full_cmg_batch_policy::caps(
+            options.probes as usize,
+            plan.threads,
+            crate::full_cmg_batch_policy::SELECTED_K,
+        )?;
+        plan.maximum_batch_rhs = maximum;
+        if component_policy == ComponentBatchPolicy::Automatic {
+            if let Some(component) = component_inference {
+                plan.maximum_batch_rhs = maximum.max(component.cap(plan.threads)?);
+            }
+        }
+        let minimum_component = component_inference.map(|value| value.select(component_policy, 1));
+        plan.non_cmg_command_peak_bytes = direct::attachments::forecast(
+            problem,
+            options,
+            full_parameters,
+            hybrid.is_some(),
+            if active_direct_attachments {
+                minimum_component.as_ref()
+            } else {
+                None
+            },
+            RouteMemory::default(),
+            memory_facts(problem, interrupt)?,
+            1,
+            1,
+        )?
+        .peak;
+        let prepared_direct = if active_direct_attachments {
+            direct::attachments::prepare(
+                problem,
+                full_data,
+                routed_prepare,
+                plan,
+                options,
+                full_parameters,
+                hybrid.is_some(),
+                component_inference,
+                component_policy,
+                interrupt,
+            )
+            .map(|(pair, batch, inference)| (pair, Some(batch), inference))
+        } else if controls == 0 {
+            PreparedModelSolver::prepare_generic_jla_direct(
+                problem,
+                full_data,
+                routed_prepare,
+                plan,
+                options.memory_limit_bytes,
+                interrupt,
+            )
+            .map(|pair| (pair, None, None))
+        } else {
+            direct::prepare_controlled(
+                problem,
+                full_data,
+                routed_prepare,
+                plan,
+                options,
+                full_parameters,
+                hybrid.is_some(),
+                interrupt,
+            )
+            .map(|(pair, batch)| (pair, Some(batch), None))
+        };
+        match prepared_direct {
+            Ok((pair, batch, inference)) => {
+                component_batch = inference;
+                controlled_batch = batch;
+                pair
+            }
+            Err(error)
+                if routing.route == ModelSolverRoute::Auto
+                    && routing.allow_automatic_cmg_setup_fallback
+                    && is_model_cmg_setup_fallback_error(&error) =>
+            {
+                let fallback = ModelSolverFallback {
+                    from: ModelSolverRoute::Cmg,
+                    to: ModelSolverRoute::Diagonal,
+                    code: error.code,
+                    message: error.to_string(),
+                };
+                let mut fallback_options = execution_options;
+                fallback_options.routing.route = ModelSolverRoute::Diagonal;
+                fallback_options.routing.allow_automatic_cmg_setup_fallback = false;
+                let mut result = run_generic_jla_with_execution_interrupt(
+                    problem,
+                    fallback_options,
+                    projection,
+                    component_prepared,
+                    hybrid,
+                    None,
+                    Some(plan.threads),
+                    false,
+                    component_policy,
+                    interrupt,
+                )?;
+                result.receipt.execution.requested_route = ModelSolverRoute::Auto;
+                result.receipt.execution.fallback = Some(fallback.clone());
+                result.receipt.execution.full_solver_setup.requested = ModelSolverRoute::Auto;
+                result.receipt.execution.full_solver_setup.fallback = Some(fallback);
+                return Ok(result);
+            }
+            Err(error) => return Err(error),
+        }
+    } else {
+        PreparedModelSolver::prepare_generic_jla_routed_with_interrupt(
+            full_data,
+            routed_prepare,
+            interrupt,
+        )?
+    };
+    if let (Some(prepared), Some(receipt)) = (&mut component_view, component_batch) {
+        // The selected component and Gram widths may have different probe caps.
+        prepared.options.batch_width = receipt.component_width;
+        if let Some(gram) = &mut prepared.residual_moments {
+            gram.batch_width = receipt.gram_width;
+        }
+    }
+    let component_inference = component_view.as_ref();
     let fe_hierarchy_reused = prepared_solvers.fe_hierarchy_reused;
     let mut full_solver = prepared_solvers.full;
-    let fe_solver = prepared_solvers.fe;
+    let mut fe_solver = prepared_solvers.fe;
     let control_rank = full_solver.control_rank_receipt().clone();
     for projection in &control_rank.projection_rhs {
         rhs_receipts.push(GenericJlaRhsReceipt {
@@ -892,21 +1378,81 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             "joint-control conditioning cannot certify canonical-basis invariance",
         )?;
     }
-    let route_memory = route_memory_forecast(problem, &full_solver, controls)?;
+    let mut route_memory = route_memory_forecast(problem, &full_solver, controls)?;
     let memory_facts = memory_facts(problem, interrupt)?;
-    let batch = plan_generic_jla_batches(
-        problem,
-        options,
-        full_parameters,
-        hybrid.is_some(),
-        execution_options.leverage_batch,
-        execution_options.target_batch,
-        route_memory,
-        memory_facts,
-        interrupt,
-    )?;
+    let mut batch = if let Some(batch) = controlled_batch {
+        batch
+    } else {
+        plan_generic_jla_batches(
+            problem,
+            options,
+            full_parameters,
+            hybrid.is_some(),
+            execution_options.leverage_batch,
+            execution_options.target_batch,
+            route_memory,
+            memory_facts,
+            interrupt,
+        )?
+    };
     options.leverage_batch_width = batch.leverage_active_width;
     options.target_batch_width = batch.target_active_width;
+    if direct_selected && !active_direct_attachments {
+        let maximum = options
+            .target_batch_width
+            .checked_mul(2)
+            .ok_or_else(|| resource("target RHS capacity overflow"))?
+            .max(options.leverage_batch_width);
+        if controls == 0 {
+            full_solver.configure_full_cmg_capacity(maximum)?;
+        } else if full_solver
+            .full_cmg_receipt()?
+            .is_none_or(|receipt| receipt.setup.maximum_batch_rhs != maximum)
+        {
+            return Err(BackendError::invariant(
+                "generic_full_cmg",
+                "control preparation and final batch capacities disagree",
+            ));
+        }
+        route_memory = route_memory_forecast(problem, &full_solver, controls)?;
+        let before = memory_forecast(
+            problem,
+            options,
+            full_parameters,
+            hybrid.is_some(),
+            route_memory,
+            memory_facts,
+            options.leverage_batch_width,
+            options.target_batch_width,
+        )?;
+        if options
+            .memory_budget
+            .rejects(before.peak, options.memory_limit_bytes)
+        {
+            admit_memory(before.peak, options.memory_limit_bytes)?;
+        }
+        interrupt.checkpoint("generic_full_cmg_pools_admitted")?;
+        if controls == 0 {
+            full_solver.allocate_full_cmg_pools()?;
+        }
+        fe_solver.refresh_full_cmg_receipt()?;
+        route_memory = route_memory_forecast(problem, &full_solver, controls)?;
+        direct::refresh_batch(
+            problem,
+            options,
+            full_parameters,
+            hybrid.is_some(),
+            route_memory,
+            memory_facts,
+            &mut batch,
+        )?;
+        if batch.plan.selected_command_peak_bytes > before.peak {
+            return Err(BackendError::invariant(
+                "generic_full_cmg",
+                "retained pool exceeds admitted forecast",
+            ));
+        }
+    }
     let mut memory = memory_forecast(
         problem,
         options,
@@ -917,21 +1463,51 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         options.leverage_batch_width,
         options.target_batch_width,
     )?;
-    if memory.peak != batch.plan.selected_command_peak_bytes {
+    if diagonal_plan.is_none()
+        && !active_direct_attachments
+        && memory.peak != batch.plan.selected_command_peak_bytes
+    {
         return Err(BackendError::invariant(
             "generic_jla_plan",
             "selected batch plan and final memory forecast disagree",
         ));
     }
     if let Some(prepared) = component_inference {
-        memory.component_inference =
-            component_inference_peak_forecast(problem, prepared, full_parameters, route_memory)?;
+        memory.component_inference = component_inference_peak_forecast(
+            problem,
+            prepared,
+            full_parameters,
+            route_memory,
+            if active_direct_attachments {
+                full_solver.owned_batch_capacity()?
+            } else {
+                diagonal_plan.map(|plan| plan.maximum_rhs)
+            },
+            full_solver.owned_batch_workers()?,
+        )?;
         // This first private implementation admits a deliberately
         // conservative lifetime bound: the existing complete command peak and
         // every component-attachment allocation may coexist. Later profiling
         // may tighten the bound without changing the statistical result.
         memory.peak = checked_sum(&[memory.peak, memory.component_inference])?;
         memory.peak_phase = GenericJlaMemoryPeakPhase::ComponentInference;
+    }
+    if let Some(plan) = diagonal_plan {
+        diagonal::add_increment(&mut memory, plan.incremental_peak_bytes)?;
+        if memory.peak != batch.plan.selected_command_peak_bytes
+            || memory.peak != plan.command_peak_bytes
+        {
+            return Err(BackendError::invariant(
+                "generic_diagonal_queue",
+                "attachment lifetime differs from pre-pool admission",
+            ));
+        }
+    }
+    if active_direct_attachments && memory.peak != batch.plan.selected_command_peak_bytes {
+        return Err(BackendError::invariant(
+            "generic_full_cmg",
+            "attachment lifetime differs from pre-pool admission",
+        ));
     }
     if options
         .memory_budget
@@ -944,7 +1520,12 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         execution_options.wallseconds,
         WallCalibration::Uncalibrated,
     )?;
+    full_solver.reconcile_full_cmg_memory(memory.peak)?;
     let mut execution = GenericJlaExecutionReceipt {
+        component_batch,
+        full_cmg: None,
+        diagonal_queue: None,
+        direct_attachments: None,
         schema_version: GENERIC_JLA_EXECUTION_SCHEMA_VERSION,
         requested_route: full_solver.receipt().requested,
         selected_route: full_solver.receipt().selected,
@@ -1651,6 +2232,7 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
     };
     let projection = match (projection, projection_coefficients) {
         (Some(prepared), Some(coefficients)) => {
+            let _profile = ProfileScope::new(ProfilePhase::Projection);
             let q = prepared.columns;
             let active_controls: &[Vec<f64>] = if options.nuisance == NuisanceMode::Joint {
                 &canonical.columns
@@ -1676,6 +2258,7 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                     solution,
                 ));
             }
+            let _statistics_profile = ProfileScope::new(ProfilePhase::ProjectionStatistics);
             let mut result = accumulate_projection_covariance(
                 problem,
                 prepared,
@@ -1743,6 +2326,93 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             maximum_complete_residual.max(inference.maximum_complete_residual);
     }
     drop(fe_solver);
+    execution.full_cmg = full_solver.full_cmg_receipt()?;
+    if active_direct_attachments {
+        let cmg = execution.full_cmg.as_ref().ok_or_else(|| {
+            BackendError::invariant("generic_full_cmg", "lost attachment solver receipt")
+        })?;
+        let component_rhs = component_inference_result
+            .as_ref()
+            .map_or(0, |value| value.solve_receipts.len());
+        let gram_rhs = component_inference_result
+            .as_ref()
+            .and_then(|value| value.residual_moments.as_ref())
+            .map_or(0, |fit| fit.projections.len());
+        let logical_rhs = rhs_receipts
+            .len()
+            .checked_add(component_rhs)
+            .and_then(|count| count.checked_add(gram_rhs))
+            .ok_or_else(|| resource("direct attachment logical RHS count overflow"))?;
+        let expected = u64::try_from(logical_rhs)
+            .ok()
+            .and_then(|count| count.checked_add(cmg.model_diagnostics.control_refinement_rhs_count))
+            .ok_or_else(|| resource("direct attachment refinement count overflow"))?;
+        if cmg.rhs_count != expected
+            || cmg.model_diagnostics.explicit_options_rhs_count != controls as u64
+        {
+            return Err(BackendError::invariant(
+                "generic_full_cmg",
+                "attachment solve work does not reconcile",
+            ));
+        }
+        execution.direct_attachments = Some(GenericDirectAttachmentReceipt {
+            fit_rhs: 1 + usize::from(options.nuisance == NuisanceMode::FixedOffset && controls > 0),
+            control_projection_rhs: controls,
+            point_probe_rhs: (options.probes as usize)
+                .checked_mul(3)
+                .ok_or_else(|| resource("direct probe count overflow"))?,
+            projection_rhs: projection_columns,
+            component_rhs,
+            gram_rhs,
+            logical_rhs,
+            control_refinement_rhs: cmg.model_diagnostics.control_refinement_rhs_count,
+        });
+    }
+    if let Some(plan) = diagonal_plan {
+        let work = full_solver.diagonal_queue_receipt()?.ok_or_else(|| {
+            BackendError::invariant("generic_diagonal_queue", "lost shared queue receipt")
+        })?;
+        let expected = (options.probes as usize)
+            .checked_mul(3)
+            .and_then(|count| count.checked_add(controls))
+            .and_then(|count| count.checked_add(options.projection_columns))
+            .and_then(|count| {
+                component_inference_result
+                    .as_ref()
+                    .map_or(Some(count), |inference| {
+                        count
+                            .checked_add(inference.solve_receipts.len())?
+                            .checked_add(
+                                inference
+                                    .residual_moments
+                                    .as_ref()
+                                    .map_or(0, |fit| fit.projections.len()),
+                            )
+                    })
+            })
+            .ok_or_else(|| resource("queued logical RHS count overflow"))?;
+        if work.completed_rhs != expected {
+            return Err(BackendError::invariant(
+                "generic_diagonal_queue",
+                "queued RHS count does not reconcile",
+            ));
+        }
+        execution.threads = GenericJlaThreadReceipt {
+            requested: plan.permitted_threads,
+            used: plan.workers,
+            parallel_regions: work.parallel_batches,
+        };
+        execution.diagonal_queue = Some(GenericDiagonalQueueReceipt { plan, work });
+    }
+    if let Some(receipt) = &execution.full_cmg {
+        execution.threads = GenericJlaThreadReceipt {
+            requested: receipt.setup.threads,
+            used: receipt.setup.threads,
+            parallel_regions: usize::from(
+                receipt.planned_batches > 0 || receipt.across_rhs_batches > 0,
+            ),
+        };
+    }
     drop(full_solver);
     drop(row_order);
     drop(weights);
@@ -1779,7 +2449,10 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             working_fit_complete_residual,
             maximum_reduced_residual,
             maximum_complete_residual,
-            full_residual_tolerance: options.solver.full_residual_tolerance(),
+            full_residual_tolerance: full_cmg
+                .map_or(options.solver.full_residual_tolerance(), |plan| {
+                    (10.0 * plan.fit_tolerance.max(plan.probe_tolerance)).max(1e-11)
+                }),
             control_rank,
             control_basis_relres,
             control_basis_forward_error,
@@ -1849,7 +2522,7 @@ fn validate_component_inference_request(
     routing: ModelRoutingOptions,
     options: GenericJlaOptions,
     projection: Option<&PreparedProjection>,
-    prepared: Option<&PreparedComponentInference>,
+    prepared: Option<&ComponentExecution<'_>>,
     hybrid: Option<&ExactStayerHybridPlan>,
 ) -> Result<()> {
     let Some(prepared) = prepared else {
@@ -2045,6 +2718,22 @@ fn transpose_outcome_rhs(
     {
         return Err(invalid("outcome-transpose dimensions disagree"));
     }
+    transpose_outcome_rhs_by(
+        problem,
+        controls,
+        row_order,
+        |row| weights[row] * outcome[row],
+        interrupt,
+    )
+}
+
+fn transpose_outcome_rhs_by(
+    problem: &CompressedProblem,
+    controls: &[Vec<f64>],
+    row_order: &[usize],
+    value_at: impl Fn(usize) -> f64,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
     let mut worker_sum = repeated(
         problem.workers(),
         StableAccumulator::default(),
@@ -2068,7 +2757,7 @@ fn transpose_outcome_rhs(
     )?;
     for (position, &row) in row_order.iter().enumerate() {
         checkpoint_chunk(interrupt, position, "generic_jla_transpose_outcome")?;
-        let w = weights[row] * outcome[row];
+        let w = value_at(row);
         let worker_index = problem.row_worker[row] as usize;
         let firm_index = problem.row_firm[row] as usize;
         worker_sum[worker_index].add(w);
@@ -3646,6 +4335,7 @@ fn match_leverage_moments(
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<FiveMoments>, f64)> {
+    let _profile = ProfileScope::new(ProfilePhase::Leverage);
     let groups = plan.rows.len();
     let mut moments = repeated(
         groups,
@@ -3667,7 +4357,9 @@ fn match_leverage_moments(
             interrupt,
             "generic_jla_match_leverage_allocate",
         )?;
-        rng.fill_rademacher_sums_with_interrupt(
+        fill_probe_atoms(
+            fe_solver,
+            rng,
             ProbeDomain::Leverage,
             first as u64,
             width,
@@ -3688,19 +4380,27 @@ fn match_leverage_moments(
             interrupt,
             "generic_jla_match_leverage_allocate",
         )?;
-        for column in 0..width {
-            for group in 0..groups {
-                checkpoint_chunk(
-                    interrupt,
-                    column * groups + group,
-                    "generic_jla_match_leverage_rhs",
-                )?;
-                let cell = plan.cell[group] as usize;
-                let atom = atoms[column * groups + group] as f64;
-                worker_rhs[column * problem.workers() + problem.cell_worker[cell] as usize] += atom;
-                firm_rhs[column * problem.firms() + problem.cell_firm[cell] as usize] += atom;
-            }
-        }
+        fe_solver.statistical_work(
+            worker_rhs
+                .chunks_mut(problem.workers())
+                .zip(firm_rhs.chunks_mut(problem.firms())),
+            "generic_jla_match_leverage_rhs",
+            |column, (worker, firm), interrupt| {
+                for group in 0..groups {
+                    checkpoint_chunk(
+                        interrupt,
+                        column * groups + group,
+                        "generic_jla_match_leverage_rhs",
+                    )?;
+                    let cell = plan.cell[group] as usize;
+                    let atom = atoms[column * groups + group] as f64;
+                    worker[problem.cell_worker[cell] as usize] += atom;
+                    firm[problem.cell_firm[cell] as usize] += atom;
+                }
+                Ok(())
+            },
+            interrupt,
+        )?;
         let solved = fe_solver.solve_batch_with_interrupt(
             &worker_rhs,
             &firm_rhs,
@@ -3709,14 +4409,9 @@ fn match_leverage_moments(
             width,
             interrupt,
         )?;
-        let mut prediction = zeroed_f64_with_interrupt(
-            problem.outcome.len(),
-            "match leverage predictions",
-            interrupt,
-            "generic_jla_match_leverage_allocate",
-        )?;
-        for column in 0..width {
-            let solution = &solved.solution[column];
+        let _statistics_profile = ProfileScope::new(ProfilePhase::LeverageStatistics);
+        statistical_batches::validate_predictions(fe_solver, &solved.solution, interrupt)?;
+        for (column, solution) in solved.solution.iter().enumerate() {
             rhs_receipts.push(rhs_receipt(
                 GenericJlaRhsPhase::Leverage,
                 GenericJlaRhsSide::Joint,
@@ -3728,29 +4423,15 @@ fn match_leverage_moments(
                 solution,
             ));
             maximum_relres = maximum_relres.max(solution.residual.relative_norm);
-            fe_solver.operator().predict_into_with_interrupt(
-                &solution.coefficients.worker,
-                &solution.coefficients.firm,
-                &[],
-                &mut prediction,
-                interrupt,
-            )?;
-            for group in 0..groups {
-                checkpoint_chunk(interrupt, group, "generic_jla_match_leverage_moments")?;
-                let frequency = plan.physical_count[group] as f64;
-                let projection = frequency.sqrt() * prediction[plan.rows[group][0]];
-                let residual =
-                    atoms[column * groups + group] as f64 / frequency.sqrt() - projection;
-                if !projection.is_finite() || !residual.is_finite() {
-                    return Err(BackendError::new(
-                        ErrorCode::JlaMomentFailed,
-                        "generic_jla_match_leverage_moments",
-                        "match leverage projection is nonfinite",
-                    ));
-                }
-                moments[group].add(projection, residual);
-            }
         }
+        statistical_batches::match_moments(
+            fe_solver,
+            plan,
+            &solved.solution,
+            &atoms,
+            &mut moments,
+            interrupt,
+        )?;
     }
     Ok((moments, maximum_relres))
 }
@@ -3843,6 +4524,7 @@ fn observation_and_match_leverage_moments(
     Option<Vec<FiveMoments>>,
     f64,
 )> {
+    let _profile = ProfileScope::new(ProfilePhase::Leverage);
     let rows = problem.outcome.len();
     let physical = usize::try_from(problem.physical_total)
         .map_err(|_| resource("physical observation count is not addressable"))?;
@@ -3930,8 +4612,10 @@ fn observation_and_match_leverage_moments(
         None => None,
     };
     let mut maximum_relres = 0.0_f64;
+    let addresses = statistical_batches::observation_addresses(problem, classes, interrupt)?;
     for first_probe in (0..options.probes as usize).step_by(options.leverage_batch_width) {
         interrupt.checkpoint("generic_jla_observation_leverage_batch")?;
+        let rhs_profile = ProfileScope::new(ProfilePhase::LeverageRhs);
         let width = options
             .leverage_batch_width
             .min(options.probes as usize - first_probe);
@@ -3956,7 +4640,9 @@ fn observation_and_match_leverage_moments(
                 interrupt,
                 "generic_jla_hybrid_leverage_allocate",
             )?;
-            rng.fill_rademacher_sums_with_interrupt(
+            fill_probe_atoms(
+                fe_solver,
+                rng,
                 ProbeDomain::Leverage,
                 first_probe as u64,
                 width,
@@ -3966,52 +4652,58 @@ fn observation_and_match_leverage_moments(
                 interrupt,
             )?;
         }
-        for column in 0..width {
-            let probe = (first_probe + column) as u64;
-            for class in classes {
-                let mut class_offset = 0_u64;
-                for &row in &class.rows {
-                    let mut atom = 0_i64;
-                    for copy in 0..problem.frequency[row] {
+        fe_solver.statistical_work(
+            worker_rhs
+                .chunks_mut(problem.workers())
+                .zip(firm_rhs.chunks_mut(problem.firms())),
+            "generic_jla_observation_leverage_rhs",
+            |column, (worker, firm), interrupt| {
+                let probe = (first_probe + column) as u64;
+                for class in classes {
+                    let mut class_offset = 0_u64;
+                    for &row in &class.rows {
+                        let mut atom = 0_i64;
+                        for copy in 0..problem.frequency[row] {
+                            checkpoint_chunk(
+                                interrupt,
+                                usize::try_from(class_offset + copy)
+                                    .map_err(|_| resource("physical observation index overflow"))?,
+                                "generic_jla_observation_atoms",
+                            )?;
+                            atom += i64::from(rademacher_copy(
+                                rng,
+                                ProbeDomain::Leverage,
+                                probe,
+                                class.entity,
+                                class_offset + copy,
+                            ));
+                        }
+                        class_offset = class_offset
+                            .checked_add(problem.frequency[row])
+                            .ok_or_else(|| resource("observation class offset overflow"))?;
+                        worker[problem.row_worker[row] as usize] += atom as f64;
+                        firm[problem.row_firm[row] as usize] += atom as f64;
+                    }
+                    debug_assert_eq!(class_offset, class.physical_count);
+                }
+                if let Some(plan) = match_plan {
+                    for group in 0..plan.rows.len() {
                         checkpoint_chunk(
                             interrupt,
-                            usize::try_from(class_offset + copy)
-                                .map_err(|_| resource("physical observation index overflow"))?,
-                            "generic_jla_observation_atoms",
+                            column * plan.rows.len() + group,
+                            "generic_jla_hybrid_match_rhs",
                         )?;
-                        atom += i64::from(rademacher_copy(
-                            rng,
-                            ProbeDomain::Leverage,
-                            probe,
-                            class.entity,
-                            class_offset + copy,
-                        ));
+                        let cell = plan.cell[group] as usize;
+                        let atom = match_atoms[column * plan.rows.len() + group] as f64;
+                        worker[problem.cell_worker[cell] as usize] += atom;
+                        firm[problem.cell_firm[cell] as usize] += atom;
                     }
-                    class_offset = class_offset
-                        .checked_add(problem.frequency[row])
-                        .ok_or_else(|| resource("observation class offset overflow"))?;
-                    worker_rhs[column * problem.workers() + problem.row_worker[row] as usize] +=
-                        atom as f64;
-                    firm_rhs[column * problem.firms() + problem.row_firm[row] as usize] +=
-                        atom as f64;
                 }
-                debug_assert_eq!(class_offset, class.physical_count);
-            }
-            if let Some(plan) = match_plan {
-                for group in 0..plan.rows.len() {
-                    checkpoint_chunk(
-                        interrupt,
-                        column * plan.rows.len() + group,
-                        "generic_jla_hybrid_match_rhs",
-                    )?;
-                    let cell = plan.cell[group] as usize;
-                    let atom = match_atoms[column * plan.rows.len() + group] as f64;
-                    worker_rhs[column * problem.workers() + problem.cell_worker[cell] as usize] +=
-                        atom;
-                    firm_rhs[column * problem.firms() + problem.cell_firm[cell] as usize] += atom;
-                }
-            }
-        }
+                Ok(())
+            },
+            interrupt,
+        )?;
+        drop(rhs_profile);
         let solved = fe_solver.solve_batch_with_interrupt(
             &worker_rhs,
             &firm_rhs,
@@ -4020,15 +4712,9 @@ fn observation_and_match_leverage_moments(
             width,
             interrupt,
         )?;
-        let mut prediction = zeroed_f64_with_interrupt(
-            rows,
-            "observation leverage predictions",
-            interrupt,
-            "generic_jla_observation_allocate",
-        )?;
-        for column in 0..width {
-            let probe = (first_probe + column) as u64;
-            let solution = &solved.solution[column];
+        let _statistics_profile = ProfileScope::new(ProfilePhase::LeverageStatistics);
+        statistical_batches::validate_predictions(fe_solver, &solved.solution, interrupt)?;
+        for (column, solution) in solved.solution.iter().enumerate() {
             rhs_receipts.push(rhs_receipt(
                 GenericJlaRhsPhase::Leverage,
                 GenericJlaRhsSide::Joint,
@@ -4040,87 +4726,39 @@ fn observation_and_match_leverage_moments(
                 solution,
             ));
             maximum_relres = maximum_relres.max(solution.residual.relative_norm);
-            fe_solver.operator().predict_into_with_interrupt(
-                &solution.coefficients.worker,
-                &solution.coefficients.firm,
-                &[],
-                &mut prediction,
+        }
+        statistical_batches::observation_moments(
+            fe_solver,
+            &addresses,
+            &solved.solution,
+            &mut projection_square_sum,
+            &mut projection_fourth_sum,
+            &mut projection_square_correction,
+            &mut projection_fourth_correction,
+            interrupt,
+        )?;
+        statistical_batches::observation_correlations(
+            fe_solver,
+            &addresses,
+            &row_offset,
+            &solved.solution,
+            rng,
+            first_probe,
+            &mut first_correlation,
+            &mut third_correlation,
+            &mut first_correction,
+            &mut third_correction,
+            interrupt,
+        )?;
+        if let (Some(plan), Some(moments)) = (match_plan, match_moments.as_mut()) {
+            statistical_batches::match_moments(
+                fe_solver,
+                plan,
+                &solved.solution,
+                &match_atoms,
+                moments,
                 interrupt,
             )?;
-            for class in classes {
-                for &row in &class.rows {
-                    checkpoint_chunk(interrupt, row, "generic_jla_observation_moments")?;
-                    let projected = prediction[row];
-                    stable_add_index(
-                        &mut projection_square_sum,
-                        &mut projection_square_correction,
-                        row,
-                        projected * projected,
-                    );
-                    stable_add_index(
-                        &mut projection_fourth_sum,
-                        &mut projection_fourth_correction,
-                        row,
-                        projected.powi(4),
-                    );
-                }
-            }
-            for class in classes {
-                let mut class_offset = 0_u64;
-                for &row in &class.rows {
-                    for copy in 0..problem.frequency[row] {
-                        checkpoint_chunk(
-                            interrupt,
-                            usize::try_from(class_offset + copy)
-                                .map_err(|_| resource("physical observation index overflow"))?,
-                            "generic_jla_observation_correlations",
-                        )?;
-                        let sign = f64::from(rademacher_copy(
-                            rng,
-                            ProbeDomain::Leverage,
-                            probe,
-                            class.entity,
-                            class_offset + copy,
-                        ));
-                        let physical_index = row_offset[row]
-                            + usize::try_from(copy)
-                                .map_err(|_| resource("physical copy index overflow"))?;
-                        stable_add_index(
-                            &mut first_correlation,
-                            &mut first_correction,
-                            physical_index,
-                            sign * prediction[row],
-                        );
-                        stable_add_index(
-                            &mut third_correlation,
-                            &mut third_correction,
-                            physical_index,
-                            sign * prediction[row].powi(3),
-                        );
-                    }
-                    class_offset = class_offset
-                        .checked_add(problem.frequency[row])
-                        .ok_or_else(|| resource("observation class offset overflow"))?;
-                }
-            }
-            if let (Some(plan), Some(moments)) = (match_plan, match_moments.as_mut()) {
-                for group in 0..plan.rows.len() {
-                    checkpoint_chunk(interrupt, group, "generic_jla_hybrid_match_moments")?;
-                    let frequency = plan.physical_count[group] as f64;
-                    let projection = frequency.sqrt() * prediction[plan.rows[group][0]];
-                    let residual = match_atoms[column * plan.rows.len() + group] as f64
-                        / frequency.sqrt()
-                        - projection;
-                    if !projection.is_finite() || !residual.is_finite() {
-                        return Err(BackendError::new(
-                            ErrorCode::JlaMomentFailed,
-                            "generic_jla_hybrid_match_moments",
-                            "hybrid match leverage projection is nonfinite",
-                        ));
-                    }
-                    moments[group].add(projection, residual);
-                }
-            }
         }
     }
     finish_stable_vector(
@@ -4511,7 +5149,7 @@ struct ComponentInferenceCounterPlan {
 }
 
 fn plan_component_inference_counter(
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     classes: &[ObservationClass],
     structured_class_count: Option<u64>,
 ) -> Result<ComponentInferenceCounterPlan> {
@@ -4710,7 +5348,7 @@ fn grouped_component_addresses_and_folds(
 }
 
 fn plan_grouped_component_inference_counter(
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     addresses: &ComponentInferenceAddresses,
     structured_class_count: Option<u64>,
 ) -> Result<ComponentInferenceCounterPlan> {
@@ -4898,21 +5536,37 @@ fn component_transpose_rhs(
             "component inference outcome has the wrong unit count",
         ));
     }
+    component_transpose_rhs_by(problem, rows, |row| outcome[row], interrupt)
+}
+
+fn component_transpose_rhs_by(
+    problem: &CompressedProblem,
+    rows: ComponentInferenceRows<'_>,
+    value_at: impl Fn(usize) -> f64,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
     match rows {
         ComponentInferenceRows::Observation {
             controls,
             row_order,
-        } => {
-            let weights = vec![1.0; outcome.len()];
-            transpose_outcome_rhs(problem, controls, &weights, outcome, row_order, interrupt)
-        }
+        } => transpose_outcome_rhs_by(problem, controls, row_order, value_at, interrupt),
         ComponentInferenceRows::Match { plan } => {
-            let mut worker = vec![0.0; problem.workers()];
-            let mut firm = vec![0.0; problem.firms()];
+            let mut worker = zeroed_f64_with_interrupt(
+                problem.workers(),
+                "component worker RHS",
+                interrupt,
+                "grouped_component_transpose",
+            )?;
+            let mut firm = zeroed_f64_with_interrupt(
+                problem.firms(),
+                "component firm RHS",
+                interrupt,
+                "grouped_component_transpose",
+            )?;
             for group in 0..plan.rows.len() {
                 checkpoint_chunk(interrupt, group, "grouped_component_transpose")?;
                 let cell = plan.cell[group] as usize;
-                let value = (plan.physical_count[group] as f64).sqrt() * outcome[group];
+                let value = (plan.physical_count[group] as f64).sqrt() * value_at(group);
                 worker[problem.cell_worker[cell] as usize] += value;
                 firm[problem.cell_firm[cell] as usize] += value;
             }
@@ -4965,6 +5619,60 @@ fn component_predict(
             Ok(())
         }
     }
+}
+
+/// Write a prediction directly in the residual-probe permutation, avoiding
+/// one N-vector per active column. No summation order changes within a row.
+fn component_predict_in_order(
+    problem: &CompressedProblem,
+    rows: ComponentInferenceRows<'_>,
+    solver: &PreparedModelSolver<'_>,
+    coefficients: &ModelCoefficients,
+    order: &[usize],
+    output: &mut [f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    if output.len() != order.len() || order.len() != rows.len(problem) {
+        return Err(invalid("permuted component prediction dimensions disagree"));
+    }
+    match rows {
+        ComponentInferenceRows::Observation { .. } => {
+            solver.operator().validate_prediction_coefficients(
+                &coefficients.worker,
+                &coefficients.firm,
+                &coefficients.control,
+                interrupt,
+            )?;
+            for (position, &row) in order.iter().enumerate() {
+                checkpoint_chunk(interrupt, position, "residual_moment_prediction")?;
+                output[position] = solver.operator().prediction_at(
+                    &coefficients.worker,
+                    &coefficients.firm,
+                    &coefficients.control,
+                    row,
+                )?;
+            }
+        }
+        ComponentInferenceRows::Match { plan } => {
+            if !coefficients.control.is_empty()
+                || coefficients.worker.len() != problem.workers()
+                || coefficients.firm.len() != problem.firms()
+            {
+                return Err(invalid("permuted match prediction coefficients disagree"));
+            }
+            for (position, &group) in order.iter().enumerate() {
+                checkpoint_chunk(interrupt, position, "residual_moment_prediction")?;
+                let cell = plan.cell[group] as usize;
+                output[position] = (plan.physical_count[group] as f64).sqrt()
+                    * (coefficients.worker[problem.cell_worker[cell] as usize]
+                        + coefficients.firm[problem.cell_firm[cell] as usize]);
+                if !output[position].is_finite() {
+                    return Err(nonfinite("collapsed-match prediction is nonfinite"));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug)]
@@ -5165,9 +5873,10 @@ fn component_normalize(mut value: ComponentSpectrumVector) -> Result<ComponentSp
 fn component_orthonormalize_pair(
     value: [ComponentSpectrumVector; 2],
 ) -> Result<[ComponentSpectrumVector; 2]> {
-    let first = component_normalize(value[0].clone())?;
-    let projection = component_prediction_inner(&first.prediction, &value[1].prediction)?;
-    let second = component_linear_combination(&value[1], &first, 1.0, -projection)?;
+    let [first, second] = value;
+    let first = component_normalize(first)?;
+    let projection = component_prediction_inner(&first.prediction, &second.prediction)?;
+    let second = component_linear_combination(&second, &first, 1.0, -projection)?;
     Ok([first, component_normalize(second)?])
 }
 
@@ -5243,7 +5952,11 @@ fn component_ritz_rotate(
     let plus = center + radius;
     let minus = center - radius;
     let eigenvector = |eigenvalue: f64| {
-        let (mut left, mut right) = if second.abs() > (eigenvalue - first).abs() {
+        // The two equivalent null-row formulas are (b, lambda-a) and
+        // (lambda-d, b). Use the larger one: near a diagonal matrix the
+        // smaller formula subtracts nearly equal eigenvalues, magnifying
+        // rounding into a spurious rotation and failed mode certification.
+        let (mut left, mut right) = if (eigenvalue - first).abs() >= (eigenvalue - fourth).abs() {
             (second, eigenvalue - first)
         } else {
             (eigenvalue - fourth, second)
@@ -5274,10 +5987,48 @@ fn component_ritz_rotate(
     component_orthonormalize_pair([leading, second])
 }
 
+#[test]
+fn component_ritz_nearly_diagonal_signed_spectra_keep_small_residuals() {
+    let vector = |prediction: Vec<f64>| ComponentSpectrumVector {
+        coefficients: ModelCoefficients {
+            worker: prediction.clone(),
+            firm: vec![],
+            control: vec![],
+        },
+        prediction,
+    };
+    let basis = [vector(vec![1.0, 0.0]), vector(vec![0.0, 1.0])];
+    for (a, d) in [
+        (0.21921914782479462, 0.03178002726656686),
+        (0.03178002726656686, 0.21921914782479462),
+        (-0.21921914782479462, 0.03178002726656686),
+        (0.03178002726656686, -0.21921914782479462),
+        (0.25, 0.25),
+        (-0.25, 0.25),
+    ] {
+        for b in [0.0, 1e-18, 2e-17, -2e-17, 1e-10, -0.03] {
+            let actions = [vector(vec![a, b]), vector(vec![b, d])];
+            let modes = component_ritz_rotate(&basis, &actions).unwrap();
+            for mode in modes {
+                let x = mode.prediction[0];
+                let y = mode.prediction[1];
+                let ax = a * x + b * y;
+                let ay = b * x + d * y;
+                let lambda = x * ax + y * ay;
+                let residual = (ax - lambda * x).hypot(ay - lambda * y);
+                assert!(
+                    residual <= 2e-15,
+                    "matrix=({a},{b},{d}) vector=({x},{y}) residual={residual}"
+                );
+            }
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn run_component_spectrum(
     problem: &CompressedProblem,
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     solver: &PreparedModelSolver<'_>,
     inference_rows: ComponentInferenceRows<'_>,
     addresses: &ComponentInferenceAddresses,
@@ -5465,6 +6216,25 @@ fn run_component_spectrum(
     })?;
     let start = component_orthonormalize_pair(start)?;
 
+    let iteration_receipt_start = solve_receipts.len();
+    let mut batched = if let Some(width) = spectrum_batches::width(
+        prepared.options.batch_width,
+        solver.owned_batch_capacity()?,
+        solver.owned_batch_workers()?,
+    ) {
+        Some(spectrum_batches::iterate(
+            problem,
+            inference_rows,
+            solver,
+            &start,
+            prepared.options.spectrum_iterations,
+            width,
+            solve_receipts,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
     let mut output = [ComponentSpectrumDiagnostics::default(); REPORTED_TARGETS];
     let mut leading_mode = Vec::with_capacity(REPORTED_TARGETS);
     for target in 0..REPORTED_TARGETS {
@@ -5480,35 +6250,45 @@ fn run_component_spectrum(
             ..ComponentSpectrumDiagnostics::default()
         };
         let target_mode = (|| -> Result<ComponentSpectrumVector> {
-            let mut basis = start.clone();
-            for iteration in 0..prepared.options.spectrum_iterations {
-                let phase_index = (target as u32)
-                    .checked_mul(prepared.options.spectrum_iterations)
-                    .and_then(|value| value.checked_add(iteration))
-                    .and_then(|value| value.checked_mul(2))
-                    .ok_or_else(|| resource("component spectrum iteration index overflow"))?;
-                let once = component_apply_target_pair(
-                    problem,
-                    inference_rows,
-                    solver,
-                    target,
-                    &basis,
-                    phase_index,
-                    solve_receipts,
-                    interrupt,
-                )?;
-                let twice = component_apply_target_pair(
-                    problem,
-                    inference_rows,
-                    solver,
-                    target,
-                    &once,
-                    phase_index + 1,
-                    solve_receipts,
-                    interrupt,
-                )?;
-                basis = component_orthonormalize_pair(twice)?;
-            }
+            let basis = if let Some(batched) = &mut batched {
+                batched[target].take().ok_or_else(|| {
+                    BackendError::invariant(
+                        "component_inference_spectrum",
+                        "missing cross-target iteration result",
+                    )
+                })??
+            } else {
+                let mut basis = start.clone();
+                for iteration in 0..prepared.options.spectrum_iterations {
+                    let phase_index = (target as u32)
+                        .checked_mul(prepared.options.spectrum_iterations)
+                        .and_then(|value| value.checked_add(iteration))
+                        .and_then(|value| value.checked_mul(2))
+                        .ok_or_else(|| resource("component spectrum iteration index overflow"))?;
+                    let once = component_apply_target_pair(
+                        problem,
+                        inference_rows,
+                        solver,
+                        target,
+                        &basis,
+                        phase_index,
+                        solve_receipts,
+                        interrupt,
+                    )?;
+                    let twice = component_apply_target_pair(
+                        problem,
+                        inference_rows,
+                        solver,
+                        target,
+                        &once,
+                        phase_index + 1,
+                        solve_receipts,
+                        interrupt,
+                    )?;
+                    basis = component_orthonormalize_pair(twice)?;
+                }
+                basis
+            };
             let final_phase = REPORTED_TARGETS as u32 * prepared.options.spectrum_iterations * 2
                 + target as u32 * 2;
             let ritz_action = component_apply_target_pair(
@@ -5593,6 +6373,23 @@ fn run_component_spectrum(
             }
             Err(error) => return Err(error),
         }
+    }
+    if batched.is_some() {
+        // Keep the historical target-major receipt order, including each
+        // target's final Ritz actions. Execution order is not a public key.
+        let per_target = prepared.options.spectrum_iterations * 4;
+        let final_start = REPORTED_TARGETS as u32 * per_target;
+        solve_receipts[iteration_receipt_start..].sort_unstable_by_key(|receipt| {
+            let index = receipt.target_or_probe;
+            if index < final_start {
+                (index / per_target, index % per_target)
+            } else {
+                (
+                    (index - final_start) / 4,
+                    per_target + (index - final_start) % 4,
+                )
+            }
+        });
     }
     Ok(ComponentSpectrumResult {
         diagnostics: output,
@@ -5846,7 +6643,7 @@ fn prepare_component_q1(
 }
 
 fn finish_component_q1(
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     variance: &[f64],
     state: PreparedComponentQ1,
 ) -> Result<[ComponentQ1TargetResult; REPORTED_TARGETS]> {
@@ -5889,7 +6686,7 @@ fn finish_component_q1(
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn run_component_inference_attachment(
     problem: &CompressedProblem,
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     solver: &PreparedModelSolver<'_>,
     coefficients: &ModelCoefficients,
     inference_rows: ComponentInferenceRows<'_>,
@@ -5908,6 +6705,7 @@ fn run_component_inference_attachment(
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ComponentInferenceResult> {
     interrupt.checkpoint("generic_jla_component_inference_entry")?;
+    let _profile = ProfileScope::new(ProfilePhase::Component);
     let rows = inference_rows.len(problem);
     let controls = inference_rows.control_columns();
     let unit_order = match inference_rows {
@@ -6142,6 +6940,7 @@ fn run_component_inference_attachment(
         ));
     }
 
+    let spectrum_profile = ProfileScope::new(ProfilePhase::ComponentSpectrum);
     let spectrum = run_component_spectrum(
         problem,
         prepared,
@@ -6151,6 +6950,7 @@ fn run_component_inference_attachment(
         &mut solve_receipts,
         interrupt,
     )?;
+    drop(spectrum_profile);
     let mut q1 = if prepared.options.reference_distribution == ComponentReferenceDistribution::Q1 {
         Some(prepare_component_q1(
             problem,
@@ -6179,6 +6979,7 @@ fn run_component_inference_attachment(
     let batch_width = prepared.options.batch_width.min(probes);
     for first in (0..probes).step_by(batch_width) {
         interrupt.checkpoint("generic_jla_component_covariance_batch")?;
+        let prepare_profile = ProfileScope::new(ProfilePhase::ComponentPrepare);
         let width = batch_width.min(probes - first);
         let mut pseudo_outcome = vec![0.0; rows * width];
         let mut pseudo_worker_rhs = vec![0.0; problem.workers() * width];
@@ -6206,6 +7007,7 @@ fn run_component_inference_attachment(
                     .copy_from_slice(&rhs.2);
             }
         }
+        drop(prepare_profile);
         let solved = solver.solve_batch_with_interrupt(
             &pseudo_worker_rhs,
             &pseudo_firm_rhs,
@@ -6214,6 +7016,7 @@ fn run_component_inference_attachment(
             width,
             interrupt,
         )?;
+        let _statistics_profile = ProfileScope::new(ProfilePhase::ComponentStatistics);
         let mut pseudo_fit = vec![0.0; rows];
         let mut pseudo_residual = vec![0.0; rows];
         for local in 0..width {
@@ -6364,9 +7167,11 @@ fn component_solve_receipt(
 
 fn component_inference_peak_forecast(
     problem: &CompressedProblem,
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     full_parameters: usize,
     route_memory: RouteMemory,
+    queue_capacity: Option<usize>,
+    spectrum_workers: usize,
 ) -> Result<u64> {
     let rows = u64::try_from(problem.outcome.len())
         .map_err(|_| resource("component-inference row forecast is not representable"))?;
@@ -6457,9 +7262,30 @@ fn component_inference_peak_forecast(
     checked_sum(&[
         prepared.persistent_bytes,
         fixed_rows,
+        spectrum_batches::extra_bytes(
+            rows,
+            original_parameters,
+            spectrum_batches::width(
+                prepared.options.batch_width,
+                queue_capacity,
+                spectrum_workers,
+            )
+            .is_some(),
+        )?,
         batch_rows,
         external_batch,
         solver_batch,
+        route_memory.full_cmg.map_or(Ok(0), |setup| {
+            // Trace actions retain four transformed columns per probe. Admit
+            // logical output lifetimes even when physical chunks are smaller.
+            direct::solve_bytes(
+                workers,
+                problem.firms() as u64,
+                problem.controls.len() as u64,
+                checked_product(&[batch.max(1), 4], "component direct columns")?,
+                setup,
+            )
+        })?,
         retained_receipts,
         critical_workspace,
         // V5 exports all matrices synchronously through Rust/C into Stata.
@@ -6470,7 +7296,7 @@ fn component_inference_peak_forecast(
             0
         },
         if prepared.residual_moments.is_some() {
-            residual_moment_attachment::peak_bytes(problem, prepared, route_memory)?
+            residual_moment_attachment::peak_bytes(problem, prepared, route_memory, queue_capacity)?
         } else {
             0
         },
@@ -6494,6 +7320,7 @@ fn target_correction(
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<TargetCorrection> {
+    let _profile = ProfileScope::new(ProfilePhase::Target);
     let workers = problem.workers();
     let firms = problem.firms();
     let q = solver.operator().controls();
@@ -6506,11 +7333,23 @@ fn target_correction(
         "generic_jla_target_allocate",
     )?;
     let mut maximum_solve_relres = 0.0_f64;
-    let mut diagonal_sum = retain_diagonal.then(|| {
-        core::array::from_fn(|_| vec![StableAccumulator::default(); problem.outcome.len()])
-    });
+    let mut diagonal_sum = if retain_diagonal {
+        let mut allocate = || {
+            repeated(
+                problem.outcome.len(),
+                StableAccumulator::default(),
+                "target diagonal accumulators",
+                interrupt,
+                "generic_jla_target_allocate",
+            )
+        };
+        Some([allocate()?, allocate()?, allocate()?])
+    } else {
+        None
+    };
     for first in (0..probes).step_by(options.target_batch_width) {
         interrupt.checkpoint("generic_jla_target_batch")?;
+        let rng_profile = ProfileScope::new(ProfilePhase::TargetRng);
         let width = options.target_batch_width.min(probes - first);
         let mut atoms = repeated(
             checked_matrix_length(plan.cell.len(), width, "target atoms")?,
@@ -6519,7 +7358,9 @@ fn target_correction(
             interrupt,
             "generic_jla_target_allocate",
         )?;
-        rng.fill_rademacher_sums_with_interrupt(
+        fill_probe_atoms(
+            solver,
+            rng,
             ProbeDomain::Target,
             first as u64,
             width,
@@ -6528,6 +7369,8 @@ fn target_correction(
             &mut atoms,
             interrupt,
         )?;
+        drop(rng_profile);
+        let rhs_profile = ProfileScope::new(ProfilePhase::TargetRhs);
         let columns = width
             .checked_mul(2)
             .ok_or_else(|| resource("target RHS column count overflow"))?;
@@ -6561,93 +7404,107 @@ fn target_correction(
             interrupt,
             "generic_jla_target_allocate",
         )?;
-        for local in 0..width {
-            let mut total_direction = StableAccumulator::default();
-            let mut reference_scale = StableAccumulator::default();
-            let worker_column = 2 * local;
-            let firm_column = worker_column + 1;
-            for stratum in 0..plan.cell.len() {
-                checkpoint_chunk(
-                    interrupt,
-                    local * plan.cell.len() + stratum,
-                    "generic_jla_target_direction",
-                )?;
-                let direction = (plan.per_copy_mass[stratum] / problem.target_total).sqrt()
-                    * atoms[local * plan.cell.len() + stratum] as f64;
-                if !direction.is_finite() {
-                    return Err(BackendError::new(
-                        ErrorCode::TargetCenteringFailed,
+        let worker_pair = checked_matrix_length(workers, 2, "target worker pair")?;
+        let firm_pair = checked_matrix_length(firms, 2, "target firm pair")?;
+        solver.statistical_work(
+            worker_rhs
+                .chunks_mut(worker_pair)
+                .zip(firm_rhs.chunks_mut(firm_pair))
+                .zip(worker_correction.chunks_mut(worker_pair))
+                .zip(firm_correction.chunks_mut(firm_pair)),
+            "generic_jla_target_rhs",
+            |local, (((worker_rhs, firm_rhs), worker_correction), firm_correction), interrupt| {
+                let mut total_direction = StableAccumulator::default();
+                let mut reference_scale = StableAccumulator::default();
+                let worker_column = 0;
+                let firm_column = 1;
+                for stratum in 0..plan.cell.len() {
+                    checkpoint_chunk(
+                        interrupt,
+                        local * plan.cell.len() + stratum,
                         "generic_jla_target_direction",
-                        "target direction is nonfinite",
-                    ));
+                    )?;
+                    let direction = (plan.per_copy_mass[stratum] / problem.target_total).sqrt()
+                        * atoms[local * plan.cell.len() + stratum] as f64;
+                    if !direction.is_finite() {
+                        return Err(BackendError::new(
+                            ErrorCode::TargetCenteringFailed,
+                            "generic_jla_target_direction",
+                            "target direction is nonfinite",
+                        ));
+                    }
+                    total_direction.add(direction);
+                    reference_scale.add(direction.abs());
+                    let cell = plan.cell[stratum] as usize;
+                    stable_add_index(
+                        worker_rhs,
+                        worker_correction,
+                        worker_column * workers + problem.cell_worker[cell] as usize,
+                        direction,
+                    );
+                    stable_add_index(
+                        firm_rhs,
+                        firm_correction,
+                        firm_column * firms + problem.cell_firm[cell] as usize,
+                        direction,
+                    );
                 }
-                total_direction.add(direction);
-                reference_scale.add(direction.abs());
-                let cell = plan.cell[stratum] as usize;
-                stable_add_index(
-                    &mut worker_rhs,
-                    &mut worker_correction,
-                    worker_column * workers + problem.cell_worker[cell] as usize,
-                    direction,
-                );
-                stable_add_index(
-                    &mut firm_rhs,
-                    &mut firm_correction,
-                    firm_column * firms + problem.cell_firm[cell] as usize,
-                    direction,
-                );
-            }
-            let total_direction = total_direction.finish();
-            reference_scale.add(total_direction.abs());
-            let reference_scale = reference_scale.finish();
-            for stratum in 0..plan.cell.len() {
-                checkpoint_chunk(
+                let total_direction = total_direction.finish();
+                reference_scale.add(total_direction.abs());
+                let reference_scale = reference_scale.finish();
+                for stratum in 0..plan.cell.len() {
+                    checkpoint_chunk(
+                        interrupt,
+                        local * plan.cell.len() + stratum,
+                        "generic_jla_target_centering",
+                    )?;
+                    let centered =
+                        plan.target_mass[stratum] / problem.target_total * total_direction;
+                    let cell = plan.cell[stratum] as usize;
+                    stable_add_index(
+                        worker_rhs,
+                        worker_correction,
+                        worker_column * workers + problem.cell_worker[cell] as usize,
+                        -centered,
+                    );
+                    stable_add_index(
+                        firm_rhs,
+                        firm_correction,
+                        firm_column * firms + problem.cell_firm[cell] as usize,
+                        -centered,
+                    );
+                }
+                finish_stable_vector(
+                    &mut worker_rhs[worker_column * workers..(worker_column + 1) * workers],
+                    &worker_correction[worker_column * workers..(worker_column + 1) * workers],
                     interrupt,
-                    local * plan.cell.len() + stratum,
                     "generic_jla_target_centering",
                 )?;
-                let centered = plan.target_mass[stratum] / problem.target_total * total_direction;
-                let cell = plan.cell[stratum] as usize;
-                stable_add_index(
-                    &mut worker_rhs,
-                    &mut worker_correction,
-                    worker_column * workers + problem.cell_worker[cell] as usize,
-                    -centered,
-                );
-                stable_add_index(
-                    &mut firm_rhs,
-                    &mut firm_correction,
-                    firm_column * firms + problem.cell_firm[cell] as usize,
-                    -centered,
-                );
-            }
-            finish_stable_vector(
-                &mut worker_rhs[worker_column * workers..(worker_column + 1) * workers],
-                &worker_correction[worker_column * workers..(worker_column + 1) * workers],
-                interrupt,
-                "generic_jla_target_centering",
-            )?;
-            finish_stable_vector(
-                &mut firm_rhs[firm_column * firms..(firm_column + 1) * firms],
-                &firm_correction[firm_column * firms..(firm_column + 1) * firms],
-                interrupt,
-                "generic_jla_target_centering",
-            )?;
-            balance_score(
-                &mut worker_rhs[worker_column * workers..(worker_column + 1) * workers],
-                reference_scale,
-                options.rank_tolerance,
-                interrupt,
-            )?;
-            balance_score(
-                &mut firm_rhs[firm_column * firms..(firm_column + 1) * firms],
-                reference_scale,
-                options.rank_tolerance,
-                interrupt,
-            )?;
-        }
+                finish_stable_vector(
+                    &mut firm_rhs[firm_column * firms..(firm_column + 1) * firms],
+                    &firm_correction[firm_column * firms..(firm_column + 1) * firms],
+                    interrupt,
+                    "generic_jla_target_centering",
+                )?;
+                balance_score(
+                    &mut worker_rhs[worker_column * workers..(worker_column + 1) * workers],
+                    reference_scale,
+                    options.rank_tolerance,
+                    interrupt,
+                )?;
+                balance_score(
+                    &mut firm_rhs[firm_column * firms..(firm_column + 1) * firms],
+                    reference_scale,
+                    options.rank_tolerance,
+                    interrupt,
+                )?;
+                Ok(())
+            },
+            interrupt,
+        )?;
         drop(worker_correction);
         drop(firm_correction);
+        drop(rhs_profile);
         let solved = solver.solve_batch_with_interrupt(
             &worker_rhs,
             &firm_rhs,
@@ -6656,24 +7513,8 @@ fn target_correction(
             columns,
             interrupt,
         )?;
-        let mut worker_projection = zeroed_f64_with_interrupt(
-            problem.outcome.len(),
-            "worker target projection",
-            interrupt,
-            "generic_jla_target_allocate",
-        )?;
-        let mut firm_projection = zeroed_f64_with_interrupt(
-            problem.outcome.len(),
-            "firm target projection",
-            interrupt,
-            "generic_jla_target_allocate",
-        )?;
-        let mut total_projection = zeroed_f64_with_interrupt(
-            problem.outcome.len(),
-            "total target projection",
-            interrupt,
-            "generic_jla_target_allocate",
-        )?;
+        let _statistics_profile = ProfileScope::new(ProfilePhase::TargetStatistics);
+        statistical_batches::validate_predictions(solver, &solved.solution, interrupt)?;
         for local in 0..width {
             let worker_solve = &solved.solution[2 * local];
             let firm_solve = &solved.solution[2 * local + 1];
@@ -6696,73 +7537,29 @@ fn target_correction(
             maximum_solve_relres = maximum_solve_relres
                 .max(worker_solve.residual.relative_norm)
                 .max(firm_solve.residual.relative_norm);
-            solver.operator().predict_into_with_interrupt(
-                &worker_solve.coefficients.worker,
-                &worker_solve.coefficients.firm,
-                &worker_solve.coefficients.control,
-                &mut worker_projection,
-                interrupt,
-            )?;
-            solver.operator().predict_into_with_interrupt(
-                &firm_solve.coefficients.worker,
-                &firm_solve.coefficients.firm,
-                &firm_solve.coefficients.control,
-                &mut firm_projection,
-                interrupt,
-            )?;
-            let worker = target_contraction(
-                problem,
-                working_y,
-                deleted_adjusted,
-                &worker_projection,
-                options.deletion,
-                row_order,
-                match_rows,
-                stayer_rows,
-                interrupt,
-            )?;
-            let firm = target_contraction(
-                problem,
-                working_y,
-                deleted_adjusted,
-                &firm_projection,
-                options.deletion,
-                row_order,
-                match_rows,
-                stayer_rows,
-                interrupt,
-            )?;
-            for (position, &row) in row_order.iter().enumerate() {
-                checkpoint_chunk(interrupt, position, "generic_jla_target_total_projection")?;
-                total_projection[row] = worker_projection[row] + firm_projection[row];
-            }
-            let total = target_contraction(
-                problem,
-                working_y,
-                deleted_adjusted,
-                &total_projection,
-                options.deletion,
-                row_order,
-                match_rows,
-                stayer_rows,
-                interrupt,
-            )?;
-            let draw = VarianceComponents {
-                worker,
-                firm,
-                covariance: 0.5 * (total - worker - firm),
-                total,
-            };
-            draw.verify_accounting(1.0e-11)?;
-            draws[first + local] = draw;
-            if let Some(diagonal) = diagonal_sum.as_mut() {
-                for (position, &row) in row_order.iter().enumerate() {
-                    checkpoint_chunk(interrupt, position, "generic_jla_target_diagonal")?;
-                    diagonal[0][row].add(worker_projection[row] * worker_projection[row]);
-                    diagonal[1][row].add(firm_projection[row] * firm_projection[row]);
-                    diagonal[2][row].add(worker_projection[row] * firm_projection[row]);
-                }
-            }
+        }
+        solver.statistical_work(
+            draws[first..first + width].iter_mut(),
+            "generic_jla_target_statistics",
+            |local, draw, interrupt| {
+                *draw = statistical_batches::target_draw(
+                    problem,
+                    solver,
+                    &solved.solution[2 * local..2 * local + 2],
+                    working_y,
+                    deleted_adjusted,
+                    options.deletion,
+                    row_order,
+                    match_rows,
+                    stayer_rows,
+                    interrupt,
+                )?;
+                Ok(())
+            },
+            interrupt,
+        )?;
+        if let Some(diagonal) = diagonal_sum.as_mut() {
+            statistical_batches::target_diagonal(solver, &solved.solution, diagonal, interrupt)?;
         }
     }
     let mean = component_mean(&draws, interrupt)?;
@@ -6783,6 +7580,7 @@ fn target_correction(
     })
 }
 
+#[cfg(test)]
 fn target_contraction(
     problem: &CompressedProblem,
     working_y: &[f64],
@@ -7321,6 +8119,9 @@ fn route_memory_forecast(
     solver: &PreparedModelSolver<'_>,
     controls: usize,
 ) -> Result<RouteMemory> {
+    if let Some(receipt) = solver.full_cmg_receipt()? {
+        return direct::route_memory(problem, receipt.setup);
+    }
     let Some(cmg) = solver.receipt().cmg.as_ref() else {
         return Ok(RouteMemory::default());
     };
@@ -7429,6 +8230,7 @@ fn route_memory_forecast(
         .max(completed_preconditioner_peak)
         .max(control_block_build_peak);
     Ok(RouteMemory {
+        full_cmg: None,
         shared_cmg_persistent,
         full_control_block_persistent,
         setup_transient,
@@ -7451,6 +8253,19 @@ fn plan_generic_jla_batches(
     memory_facts: MemoryFacts,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaBatchExecutionReceipt> {
+    if let Some(setup) = route_memory.full_cmg {
+        return direct::plan_batches(
+            problem,
+            options,
+            full_parameters,
+            hybrid,
+            route_memory,
+            memory_facts,
+            setup,
+            leverage_request,
+            target_request,
+        );
+    }
     let width_one = memory_forecast(
         problem,
         options,
@@ -7837,6 +8652,9 @@ fn memory_forecast(
     // residual, direction, action, verified action, plus the worker and
     // entity-major parameter action workspaces.
     let solver_batch = |columns: u64, dimension: u64, label: &'static str| -> Result<u64> {
+        if let Some(setup) = route_memory.full_cmg {
+            return direct::solve_bytes(workers, firms, controls, columns, setup);
+        }
         checked_sum(&[
             checked_product(&[dimension, columns, f64_bytes, 11], label)?,
             checked_product(&[workers, columns, f64_bytes, 3], "solver worker workspace")?,
@@ -7896,6 +8714,13 @@ fn memory_forecast(
         leverage_batch,
     ])?;
     let observation_leverage = checked_sum(&[
+        checked_product(
+            &[
+                rows,
+                size_of::<statistical_batches::ObservationAddress>() as u64,
+            ],
+            "observation statistical addresses",
+        )?,
         checked_product(
             &[physical, f64_bytes, 4],
             "observation physical correlations and compensation",
@@ -8136,6 +8961,61 @@ fn rademacher_copy(rng: CounterRng, domain: ProbeDomain, probe: u64, entity: u64
     }
 }
 
+/// Keep four adjacent Philox lanes together, so parallelism does not repeat a
+/// complete counter block for each scalar lane. This is RNG packing only,
+/// not experimental CMG RHS fusion. Addresses and admitted payloads are fixed.
+#[allow(clippy::too_many_arguments)]
+fn fill_probe_atoms(
+    solver: &PreparedModelSolver<'_>,
+    rng: CounterRng,
+    domain: ProbeDomain,
+    first: u64,
+    columns: usize,
+    entity: &[u64],
+    physical: &[u64],
+    atoms: &mut [i64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    if columns == 0 || entity.is_empty() || entity.len() != physical.len() {
+        return rng.fill_rademacher_sums_with_interrupt(
+            domain, first, columns, entity, physical, atoms, interrupt,
+        );
+    }
+    if atoms.len() != checked_matrix_length(entity.len(), columns, "statistical RNG output")? {
+        return Err(BackendError::invariant(
+            "generic_jla_rng",
+            "RNG column shape mismatch",
+        ));
+    }
+    first
+        .checked_add((columns - 1) as u64)
+        .ok_or_else(|| resource("statistical RNG probe index overflow"))?;
+    let job_width = checked_matrix_length(entity.len(), 4, "packed statistical RNG job")?;
+    solver.statistical_work(
+        atoms.chunks_mut(job_width),
+        "generic_jla_rng",
+        |block, atoms, check| {
+            let probe = first
+                .checked_add(
+                    (block as u64)
+                        .checked_mul(4)
+                        .ok_or_else(|| resource("statistical RNG block overflow"))?,
+                )
+                .ok_or_else(|| resource("statistical RNG probe index overflow"))?;
+            rng.fill_rademacher_sums_with_interrupt(
+                domain,
+                probe,
+                atoms.len() / entity.len(),
+                entity,
+                physical,
+                atoms,
+                check,
+            )
+        },
+        interrupt,
+    )
+}
+
 fn dot(
     left: &[f64],
     right: &[f64],
@@ -8315,6 +9195,7 @@ mod tests {
             design_only_order: false,
             unified_variance_fit: false,
         };
+        let prepared = ComponentExecution::new(&prepared);
         let plan = plan_component_inference_counter(
             &prepared,
             &[

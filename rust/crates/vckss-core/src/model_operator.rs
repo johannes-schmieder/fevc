@@ -13,6 +13,7 @@ use crate::control_basis::MAX_CANONICAL_CONTROLS;
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{
     checkpoint_chunk, stable_sort_by_with_interrupt, InterruptCheck, NeverInterrupt,
+    INTERRUPT_CHECK_CHUNK,
 };
 use crate::operator::SymmetricOperator;
 
@@ -540,19 +541,22 @@ impl<'a> ModelOperator<'a> {
             interrupt,
             "model_rhs_copy_control",
         )?;
-        let mut work = 0_usize;
-        for &row in &self.row_order {
-            checkpoint_chunk(interrupt, work, "model_rhs_reduce")?;
-            let worker = dense_index(self.data.row_worker[row]);
-            let firm = dense_index(self.data.row_firm[row]);
-            let contribution = self.data.weight[row] * worker_scaled[worker];
-            reduced[firm] -= contribution;
-            for (control, column) in self.data.controls.iter().enumerate() {
-                work = checked_work_increment(work, "model RHS work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_rhs_reduce")?;
-                reduced[self.firms() + control] -= column[row] * contribution;
+        // B' D_worker^-1 rhs needs only the already admitted weighted pair
+        // and worker-control sums, not another observation scan per RHS.
+        // The final certification remains independent and row-based.
+        for pair in 0..self.sufficient.pair_weight.len() {
+            checkpoint_chunk(interrupt, pair, "model_rhs_reduce")?;
+            let worker = dense_index(self.sufficient.pair_worker[pair]);
+            let firm = dense_index(self.sufficient.pair_firm[pair]);
+            reduced[firm] -= self.sufficient.pair_weight[pair] * worker_scaled[worker];
+        }
+        for control in 0..self.controls() {
+            let begin = control * self.workers();
+            for (worker, &scaled) in worker_scaled.iter().enumerate() {
+                checkpoint_chunk(interrupt, worker, "model_rhs_reduce")?;
+                reduced[self.firms() + control] -=
+                    self.sufficient.worker_control[begin + worker] * scaled;
             }
-            work = checked_work_increment(work, "model RHS work overflow")?;
         }
         center_firms_with_interrupt(&mut reduced[..self.firms()], interrupt, "model_rhs_center")?;
         validate_internal_finite_with_interrupt(
@@ -593,19 +597,22 @@ impl<'a> ModelOperator<'a> {
             interrupt,
             "model_reconstruct_copy",
         )?;
-        let mut work = 0_usize;
-        for &row in &self.row_order {
-            checkpoint_chunk(interrupt, work, "model_reconstruct")?;
-            let worker_index = dense_index(self.data.row_worker[row]);
-            let firm = dense_index(self.data.row_firm[row]);
-            let mut value = reduced[firm] - firm_mean;
-            for (control, column) in self.data.controls.iter().enumerate() {
-                work = checked_work_increment(work, "model reconstruction work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_reconstruct")?;
-                value += column[row] * reduced[self.firms() + control];
+        // Recover D_worker^-1 (rhs - B reduced) from the same prepared sums.
+        // No workspace or retained state is added, and the full W+F+Q check
+        // below the solver boundary still traverses original observations.
+        for pair in 0..self.sufficient.pair_weight.len() {
+            checkpoint_chunk(interrupt, pair, "model_reconstruct")?;
+            let worker_index = dense_index(self.sufficient.pair_worker[pair]);
+            let firm = dense_index(self.sufficient.pair_firm[pair]);
+            worker[worker_index] -= self.sufficient.pair_weight[pair] * (reduced[firm] - firm_mean);
+        }
+        for control in 0..self.controls() {
+            let begin = control * self.workers();
+            let coefficient = reduced[self.firms() + control];
+            for (index, value) in worker.iter_mut().enumerate() {
+                checkpoint_chunk(interrupt, index, "model_reconstruct")?;
+                *value -= self.sufficient.worker_control[begin + index] * coefficient;
             }
-            worker[worker_index] -= self.data.weight[row] * value;
-            work = checked_work_increment(work, "model reconstruction work overflow")?;
         }
         for (index, value) in worker.iter_mut().enumerate() {
             checkpoint_chunk(interrupt, index, "model_reconstruct_scale")?;
@@ -639,10 +646,35 @@ impl<'a> ModelOperator<'a> {
         output: &mut [f64],
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
+        if output.len() != self.rows() {
+            return Err(BackendError::invalid(
+                "model_prediction",
+                "prediction arrays have incompatible dimensions",
+            ));
+        }
+        self.validate_prediction_coefficients(worker, firm, control, interrupt)?;
+        let chunk_rows = checked_row_chunk(self.rows(), self.controls(), 1)?;
+        for (chunk, predictions) in output.chunks_mut(chunk_rows).enumerate() {
+            interrupt.checkpoint("model_prediction")?;
+            for (offset, prediction) in predictions.iter_mut().enumerate() {
+                let row = chunk * chunk_rows + offset;
+                *prediction = self.prediction_at(worker, firm, control, row)?;
+            }
+        }
+        interrupt.checkpoint("model_prediction")?;
+        Ok(())
+    }
+
+    pub(crate) fn validate_prediction_coefficients(
+        &self,
+        worker: &[f64],
+        firm: &[f64],
+        control: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if worker.len() != self.workers()
             || firm.len() != self.firms()
             || control.len() != self.controls()
-            || output.len() != self.rows()
         {
             return Err(BackendError::invalid(
                 "model_prediction",
@@ -651,28 +683,32 @@ impl<'a> ModelOperator<'a> {
         }
         validate_finite_with_interrupt(worker, interrupt, "model_prediction_validate")?;
         validate_finite_with_interrupt(firm, interrupt, "model_prediction_validate")?;
-        validate_finite_with_interrupt(control, interrupt, "model_prediction_validate")?;
-        let mut work = 0_usize;
-        for row in 0..self.rows() {
-            checkpoint_chunk(interrupt, work, "model_prediction")?;
-            let worker_index = dense_index(self.data.row_worker[row]);
-            let firm_index = dense_index(self.data.row_firm[row]);
-            let mut value = worker[worker_index] + firm[firm_index];
-            for (coefficient, column) in control.iter().zip(self.data.controls) {
-                work = checked_work_increment(work, "model prediction work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_prediction")?;
-                value += coefficient * column[row];
-            }
-            if !value.is_finite() {
-                return Err(invariant_nonfinite(
-                    "model_prediction",
-                    "model prediction is nonfinite",
-                ));
-            }
-            output[row] = value;
-            work = checked_work_increment(work, "model prediction work overflow")?;
+        validate_finite_with_interrupt(control, interrupt, "model_prediction_validate")
+    }
+
+    /// Caller validates coefficient dimensions/finiteness once before a
+    /// disjoint-row sweep. Arithmetic and the per-row finite gate are shared
+    /// with the full prediction method, including active canonical controls.
+    #[inline]
+    pub(crate) fn prediction_at(
+        &self,
+        worker: &[f64],
+        firm: &[f64],
+        control: &[f64],
+        row: usize,
+    ) -> Result<f64> {
+        let mut value = worker[dense_index(self.data.row_worker[row])]
+            + firm[dense_index(self.data.row_firm[row])];
+        for (coefficient, column) in control.iter().zip(self.data.controls) {
+            value += coefficient * column[row];
         }
-        Ok(())
+        if !value.is_finite() {
+            return Err(invariant_nonfinite(
+                "model_prediction",
+                "model prediction is nonfinite",
+            ));
+        }
+        Ok(value)
     }
 
     pub fn full_residual(
@@ -726,27 +762,25 @@ impl<'a> ModelOperator<'a> {
             interrupt,
             "model_residual_copy_control",
         )?;
-        let mut work = 0_usize;
-        for &row in &self.row_order {
-            checkpoint_chunk(interrupt, work, "model_full_residual")?;
-            let worker_index = dense_index(self.data.row_worker[row]);
-            let firm_index = dense_index(self.data.row_firm[row]);
-            let mut prediction = worker[worker_index] + firm[firm_index];
-            for (coefficient, column) in control.iter().zip(self.data.controls) {
-                work = checked_work_increment(work, "model residual work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_full_residual")?;
-                prediction += coefficient * column[row];
+        let chunk_rows = checked_row_chunk(self.rows(), self.controls(), 2)?;
+        for rows in self.row_order.chunks(chunk_rows) {
+            interrupt.checkpoint("model_full_residual")?;
+            for &row in rows {
+                let worker_index = dense_index(self.data.row_worker[row]);
+                let firm_index = dense_index(self.data.row_firm[row]);
+                let mut prediction = worker[worker_index] + firm[firm_index];
+                for (coefficient, column) in control.iter().zip(self.data.controls) {
+                    prediction += coefficient * column[row];
+                }
+                let weighted = self.data.weight[row] * prediction;
+                worker_residual[worker_index] -= weighted;
+                firm_residual[firm_index] -= weighted;
+                for (residual, column) in control_residual.iter_mut().zip(self.data.controls) {
+                    *residual -= column[row] * weighted;
+                }
             }
-            let weighted = self.data.weight[row] * prediction;
-            worker_residual[worker_index] -= weighted;
-            firm_residual[firm_index] -= weighted;
-            for (residual, column) in control_residual.iter_mut().zip(self.data.controls) {
-                work = checked_work_increment(work, "model residual work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_full_residual")?;
-                *residual -= column[row] * weighted;
-            }
-            work = checked_work_increment(work, "model residual work overflow")?;
         }
+        interrupt.checkpoint("model_full_residual")?;
         let absolute_norm = triple_norm_with_interrupt(
             &worker_residual,
             &firm_residual,
@@ -1388,8 +1422,20 @@ pub(crate) fn reserve_exact<T>(values: &mut Vec<T>, length: usize, label: &str) 
     })
 }
 
-fn checked_work_increment(value: usize, message: &str) -> Result<usize> {
-    value.checked_add(1).ok_or_else(|| resource_error(message))
+/// Bound the same row-plus-control work previously checked in inner loops.
+/// Canonical controls are capped at 32, so a complete row always fits. The
+/// row and control arithmetic order is unchanged; no residual is reused.
+fn checked_row_chunk(rows: usize, controls: usize, passes: usize) -> Result<usize> {
+    let work_per_row = controls
+        .checked_mul(passes)
+        .and_then(|work| work.checked_add(1))
+        .ok_or_else(|| resource_error("model row work overflow"))?;
+    let _work = checked_matrix_length(rows, work_per_row, "model row work")?;
+    let chunk = INTERRUPT_CHECK_CHUNK / work_per_row;
+    if chunk == 0 {
+        return Err(resource_error("model row exceeds interruption work bound"));
+    }
+    Ok(chunk)
 }
 
 fn invariant_nonfinite(phase: &'static str, message: &'static str) -> BackendError {
@@ -1398,4 +1444,33 @@ fn invariant_nonfinite(phase: &'static str, message: &'static str) -> BackendErr
 
 fn resource_error(message: &str) -> BackendError {
     BackendError::new(ErrorCode::ResourceLimit, "model_resource", message)
+}
+
+#[cfg(test)]
+mod row_chunk_tests {
+    use super::*;
+
+    #[test]
+    fn row_chunk_bounds_and_overflow_are_checked() {
+        for controls in 0..=MAX_CANONICAL_CONTROLS {
+            for passes in [1, 2] {
+                let width = checked_row_chunk(8_001, controls, passes).unwrap();
+                let work = 1 + controls * passes;
+                assert!(width > 0);
+                assert!(width * work <= INTERRUPT_CHECK_CHUNK);
+                assert!((width + 1) * work > INTERRUPT_CHECK_CHUNK);
+                assert_eq!(checked_row_chunk(0, controls, passes).unwrap(), width);
+            }
+        }
+        for (rows, controls, passes) in [
+            (usize::MAX, 1, 1),
+            (1, usize::MAX, 2),
+            (1, INTERRUPT_CHECK_CHUNK, 1),
+        ] {
+            assert_eq!(
+                checked_row_chunk(rows, controls, passes).unwrap_err().code,
+                ErrorCode::ResourceLimit
+            );
+        }
+    }
 }

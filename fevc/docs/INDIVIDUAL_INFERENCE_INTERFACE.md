@@ -110,7 +110,7 @@ and prospectively separated repeated-seed check are recorded in
 ## Remaining gates
 
 The complete 48-cell, 19,200-call development run is FAIL; see
-[`the checkpoint`](INDIVIDUAL_INFERENCE_DEVELOPMENT_2026-09-06.md).
+[`the checkpoint`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/INDIVIDUAL_INFERENCE_DEVELOPMENT_2026-09-06.md).
 The new owner-approved milestone uses bounded saved-draw comparisons, local
 native/Stata validation and refreshed complete-command timings before updating
 the paper as approximate model-based inference. It does not require the older

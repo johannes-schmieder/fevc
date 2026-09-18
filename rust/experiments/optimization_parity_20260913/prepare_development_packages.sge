@@ -1,0 +1,98 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l mem_per_core=3G
+#$ -l h_rt=00:25:00
+#$ -N fevc_opprep
+
+set -euo pipefail
+: "${OP_RUN_DIR:?}"
+: "${OP_BASELINE_SNAPSHOT_SHA256:?}"
+: "${OP_CANDIDATE_SOURCE_SHA256:?}"
+[[ "${OP_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+test "${NSLOTS}" = 4
+test "${OP_BASELINE_SNAPSHOT_SHA256}" = 4bdba22c0e6da99b3fd597aabab8df4d01307d01704951f3d5d2c089885cd2ad
+test "$(tr -d '[:space:]' < "${OP_RUN_DIR}/bundle.sha256")" = "${OP_CANDIDATE_SOURCE_SHA256}"
+test -f "${OP_RUN_DIR}/input/baseline-source.tar.gz"
+test -f "${OP_RUN_DIR}/input/baseline-snapshot.json"
+test "$(sha256sum "${OP_RUN_DIR}/input/baseline-snapshot.json" | awk '{print $1}')" = \
+  "${OP_BASELINE_SNAPSHOT_SHA256}"
+test -f "${OP_RUN_DIR}/artifacts/candidate/fevc_rust_linux_x64.plugin"
+test ! -e "${OP_RUN_DIR}/campaign/packages"
+
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+"${python_bin}" --version
+module purge
+module load stata-mp/19
+rust_toolchain=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu
+export PATH=${rust_toolchain}/bin:${SCC_STATA_MP_BIN}:/usr/bin:/bin
+export RUSTC=${rust_toolchain}/bin/rustc
+export RUSTDOC=${rust_toolchain}/bin/rustdoc
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+export OMP_NUM_THREADS=${NSLOTS}
+
+work=${TMPDIR}/fevc-op-prep-${JOB_ID}
+test ! -e "${work}"
+mkdir -p "${work}" "${OP_RUN_DIR}/campaign"
+tar --no-same-owner --no-same-permissions -xzf \
+  "${OP_RUN_DIR}/input/baseline-source.tar.gz" -C "${work}"
+baseline_source=${work}/source
+test -d "${baseline_source}/fevc"
+"${python_bin}" - "${baseline_source}" "${OP_RUN_DIR}/input/baseline-snapshot.json" <<'PY'
+import hashlib, json, pathlib, sys
+root, receipt = pathlib.Path(sys.argv[1]), json.load(open(sys.argv[2]))
+for relative, expected in receipt["files"].items():
+    path = root / relative
+    if not path.is_file() or path.is_symlink():
+        raise SystemExit(f"missing baseline source: {relative}")
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != expected:
+        raise SystemExit(f"baseline source mismatch: {relative}")
+PY
+
+spi=${work}/stata-spi
+target=${work}/cargo-target
+VCKSS_STATA_SPI_DIR=${spi} "${baseline_source}/rust/stata_backend/fetch_stata_spi.sh"
+env VCKSS_STATA_SPI_DIR=${spi} CARGO_TARGET_DIR=${target} \
+  RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= cargo build \
+  --manifest-path "${baseline_source}/rust/stata_backend/Cargo.toml" --locked --release
+baseline_plugin=${target}/release/libvckss_stata.so
+file "${baseline_plugin}" | grep -F 'ELF 64-bit LSB shared object' >/dev/null
+
+packages_tmp=${work}/packages
+mkdir -p "${packages_tmp}/baseline" "${packages_tmp}/candidate"
+for variant in baseline candidate; do
+  if test "${variant}" = baseline; then source=${baseline_source}; else source=${OP_RUN_DIR}/source; fi
+  find "${source}/fevc" -maxdepth 1 -type f \
+    \( -name '*.ado' -o -name '*.mata' -o -name '*.sthlp' -o -name '*.pkg' -o -name '*.toc' \) \
+    -exec cp {} "${packages_tmp}/${variant}/" \;
+done
+install -m 0755 "${baseline_plugin}" \
+  "${packages_tmp}/baseline/fevc_rust_linux_x64.plugin"
+install -m 0755 "${OP_RUN_DIR}/artifacts/candidate/fevc_rust_linux_x64.plugin" \
+  "${packages_tmp}/candidate/fevc_rust_linux_x64.plugin"
+printf '%s\n' "${OP_BASELINE_SNAPSHOT_SHA256}" > "${packages_tmp}/baseline/SOURCE.sha256"
+printf '%s\n' "${OP_CANDIDATE_SOURCE_SHA256}" > "${packages_tmp}/candidate/SOURCE.sha256"
+for variant in baseline candidate; do
+  (cd "${packages_tmp}/${variant}" && find . -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum) \
+    > "${packages_tmp}/${variant}.files.sha256"
+done
+mv "${packages_tmp}" "${OP_RUN_DIR}/campaign/packages"
+chmod -R a-w "${OP_RUN_DIR}/campaign/packages"
+{
+  printf 'schema\tFEVC-OPTIMIZATION-DEVELOPMENT-PACKAGES-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "${JOB_ID}"
+  printf 'host\t%s\n' "${HOSTNAME}"
+  printf 'slots\t%s\n' "${NSLOTS}"
+  printf 'baseline_source_sha256\t%s\n' "${OP_BASELINE_SNAPSHOT_SHA256}"
+  printf 'candidate_source_sha256\t%s\n' "${OP_CANDIDATE_SOURCE_SHA256}"
+  printf 'baseline_plugin_sha256\t%s\n' "$(sha256sum "${OP_RUN_DIR}/campaign/packages/baseline/fevc_rust_linux_x64.plugin" | awk '{print $1}')"
+  printf 'candidate_plugin_sha256\t%s\n' "$(sha256sum "${OP_RUN_DIR}/campaign/packages/candidate/fevc_rust_linux_x64.plugin" | awk '{print $1}')"
+} > "${OP_RUN_DIR}/campaign/packages.tsv"
+printf 'FEVC OPTIMIZATION DEVELOPMENT PACKAGES PASS: job=%s\n' "${JOB_ID}"

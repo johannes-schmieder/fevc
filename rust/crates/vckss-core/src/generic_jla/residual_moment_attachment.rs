@@ -6,7 +6,7 @@ use crate::residual_moment_inference::{
     Diagnostic, Options, ProjectionReceipt, DESIGN_ORDERING_CONTRACT, MATCH_ORDERING_CONTRACT,
     ORDERING_CONTRACT,
 };
-use crate::residual_moments::{memory_plan, prepare_with_interrupt};
+use crate::residual_moments::{memory_plan, prepare_with_executor_interrupt};
 use crate::structured_variance::{basis_row, normalized_midranks};
 
 pub(crate) fn design_order(
@@ -81,7 +81,7 @@ pub(super) fn row_ranks(order: &[usize]) -> Vec<u64> {
     ranks
 }
 
-pub(super) fn terms(prepared: &PreparedComponentInference) -> Result<usize> {
+pub(super) fn terms(prepared: &ComponentExecution<'_>) -> Result<usize> {
     match prepared.variance_source {
         ComponentVarianceSource::StructuredCommon => Ok(
             if prepared.inference_unit == ComponentInferenceUnit::Match {
@@ -97,13 +97,18 @@ pub(super) fn terms(prepared: &PreparedComponentInference) -> Result<usize> {
     }
 }
 
-fn callback_bytes(problem: &CompressedProblem, route: RouteMemory) -> Result<u64> {
+fn callback_bytes(
+    problem: &CompressedProblem,
+    route: RouteMemory,
+    queued_width: Option<usize>,
+) -> Result<u64> {
     let p = checked_sum(&[
         problem.workers() as u64,
         problem.firms() as u64,
         problem.controls.len() as u64,
     ])?;
-    // Scalar complete-system solve/RHS/result work plus two row permutations.
+    // Scalar complete-system work, input/prediction, and forward/inverse
+    // permutations. Parallel prediction writes directly to its admitted output.
     // The live solver and its control sufficient statistics are already owned
     // and admitted by generic JLA. CMG's per-column workspace remains charged.
     checked_sum(&[
@@ -113,13 +118,36 @@ fn callback_bytes(problem: &CompressedProblem, route: RouteMemory) -> Result<u64
             "residual projection row workspace",
         )?,
         route.cmg_batch_workspace_per_column,
+        // The queue separately admits concurrent PCG scratch. These are the
+        // caller-owned packed RHSs and returned columns kept for this chunk.
+        queued_width.map_or(Ok(0), |width| {
+            checked_sum(&[
+                crate::residual_moments::parallel_work_bytes(width)? as u64,
+                checked_product(&[width as u64, 128], "residual ordered RHS headers")?,
+                checked_product(&[p, width as u64, 16, 8], "queued residual columns")?,
+                checked_product(
+                    &[width as u64, core::mem::size_of::<ModelSolve>() as u64],
+                    "queued residual solution headers",
+                )?,
+                route.full_cmg.map_or(Ok(0), |setup| {
+                    direct::solve_bytes(
+                        problem.workers() as u64,
+                        problem.firms() as u64,
+                        problem.controls.len() as u64,
+                        width as u64,
+                        setup,
+                    )
+                })?,
+            ])
+        })?,
     ])
 }
 
 pub(super) fn peak_bytes(
     problem: &CompressedProblem,
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     route: RouteMemory,
+    queue_capacity: Option<usize>,
 ) -> Result<u64> {
     let options = prepared
         .residual_moments
@@ -131,8 +159,12 @@ pub(super) fn peak_bytes(
         moment.positivity_multiplier = prepared.structured_options.positivity_multiplier;
         moment.observations_per_term = prepared.structured_options.observations_per_term;
     }
-    moment.projection_workspace_bytes = usize::try_from(callback_bytes(problem, route)?)
-        .map_err(|_| resource("residual projection workspace overflow"))?;
+    moment.projection_workspace_bytes = usize::try_from(callback_bytes(
+        problem,
+        route,
+        queue_capacity.map(|capacity| capacity.min(options.batch_width).min(options.probes)),
+    )?)
+    .map_err(|_| resource("residual projection workspace overflow"))?;
     moment.additional_memory_limit_bytes = usize::MAX;
     let units = match prepared.inference_unit {
         ComponentInferenceUnit::Observation => problem.outcome.len(),
@@ -162,7 +194,7 @@ pub(super) fn peak_bytes(
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub(super) fn fit(
     problem: &CompressedProblem,
-    prepared: &PreparedComponentInference,
+    prepared: &ComponentExecution<'_>,
     solver: &PreparedModelSolver<'_>,
     inference_rows: ComponentInferenceRows<'_>,
     residual: &[f64],
@@ -172,6 +204,7 @@ pub(super) fn fit(
     match_mass: Option<&[f64]>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<Diagnostic> {
+    let _profile = ProfileScope::new(ProfilePhase::ComponentGram);
     let options: Options = prepared
         .residual_moments
         .ok_or_else(|| invalid("missing residual moment options"))?;
@@ -232,8 +265,24 @@ pub(super) fn fit(
         moment.observations_per_term = prepared.structured_options.observations_per_term;
     }
     moment.effective_projection_tolerance = solver.options().pcg.tolerance;
-    moment.projection_workspace_bytes = usize::try_from(callback_bytes(problem, route)?)
-        .map_err(|_| resource("residual projection workspace overflow"))?;
+    let queued_width = solver
+        .owned_batch_capacity()?
+        .map(|capacity| capacity.min(options.batch_width).min(options.probes));
+    let mut inverse_order = Vec::new();
+    if queued_width.is_some() {
+        reserve_exact(&mut inverse_order, n, "residual inverse row order")?;
+        inverse_order.resize(n, usize::MAX);
+        for (position, &row) in order.iter().enumerate() {
+            checkpoint_chunk(interrupt, position, "residual_moment_inverse_order")?;
+            if row >= n || inverse_order[row] != usize::MAX {
+                return Err(invalid("residual projection order is not a permutation"));
+            }
+            inverse_order[row] = position;
+        }
+    }
+    moment.projection_workspace_bytes =
+        usize::try_from(callback_bytes(problem, route, queued_width)?)
+            .map_err(|_| resource("residual projection workspace overflow"))?;
     // This increment was added to the complete generic-JLA admission pre-RNG.
     moment.additional_memory_limit_bytes = usize::MAX;
     let mut projections = Vec::with_capacity(options.probes);
@@ -241,48 +290,138 @@ pub(super) fn fit(
     let mut prediction = vec![0.0; n];
     // Estimated h is explicitly identified in the result; its statistical
     // properties are not the exact-h moment identity of the stand-alone API.
-    let candidate = prepare_with_interrupt(
+    let candidate = prepare_with_executor_interrupt(
         &basis,
         terms,
         &h,
         &ids,
         moment,
         |gaussian, columns, projected, certificates, interrupt| {
-            for column in 0..columns {
-                for (position, &row) in order.iter().enumerate() {
-                    input[row] = gaussian[column * n + position];
+            let mut finish =
+                |column: usize, solved: &ModelSolve, interrupt: &mut dyn InterruptCheck| {
+                    component_predict(
+                        problem,
+                        inference_rows,
+                        solver,
+                        &solved.coefficients,
+                        &mut prediction,
+                        interrupt,
+                    )?;
+                    for (position, &row) in order.iter().enumerate() {
+                        projected[column * n + position] = prediction[row];
+                    }
+                    certificates[column] = solved.receipt.full_residual;
+                    projections.push(ProjectionReceipt {
+                        probe: projections.len(),
+                        iterations: solved.receipt.pcg.iterations,
+                        reduced_residual: solved.receipt.pcg.relative_residual,
+                        complete_residual: solved.receipt.full_residual,
+                        full_residual_tolerance: solved.receipt.full_residual_tolerance,
+                    });
+                    Ok(())
+                };
+            if let Some(batch_width) = queued_width {
+                let workers = problem.workers();
+                let firms = problem.firms();
+                let controls = inference_rows.controls();
+                for first in (0..columns).step_by(batch_width) {
+                    interrupt.checkpoint("residual_moment_projection_batch")?;
+                    let width = batch_width.min(columns - first);
+                    let mut rhs = [Vec::new(), Vec::new(), Vec::new()];
+                    for (buffer, dimension) in rhs.iter_mut().zip([workers, firms, controls]) {
+                        let length =
+                            checked_matrix_length(dimension, width, "residual projection RHSs")?;
+                        reserve_exact(buffer, length, "residual projection RHSs")?;
+                        buffer.resize(length, 0.0);
+                    }
+                    let mut columns = repeated(
+                        width,
+                        None,
+                        "residual RHS slots",
+                        interrupt,
+                        "residual_moment_projection_batch",
+                    )?;
+                    solver.statistical_work(
+                        columns.iter_mut(),
+                        "residual_moment_rhs",
+                        |local, output, interrupt| {
+                            *output = Some(component_transpose_rhs_by(
+                                problem,
+                                inference_rows,
+                                |row| gaussian[(first + local) * n + inverse_order[row]],
+                                interrupt,
+                            )?);
+                            Ok(())
+                        },
+                        interrupt,
+                    )?;
+                    for (local, column) in columns.into_iter().enumerate() {
+                        let column =
+                            column.ok_or_else(|| invalid("missing residual RHS column"))?;
+                        for ((buffer, dimension), values) in rhs
+                            .iter_mut()
+                            .zip([workers, firms, controls])
+                            .zip([column.0, column.1, column.2])
+                        {
+                            buffer[local * dimension..(local + 1) * dimension]
+                                .copy_from_slice(&values);
+                        }
+                    }
+                    let solved = solver.solve_batch_with_interrupt(
+                        &rhs[0], &rhs[1], &rhs[2], width, width, interrupt,
+                    )?;
+                    solver.statistical_work(
+                        solved
+                            .solution
+                            .iter()
+                            .zip(projected[first * n..(first + width) * n].chunks_mut(n)),
+                        "residual_moment_prediction",
+                        |_, (solved, output), interrupt| {
+                            component_predict_in_order(
+                                problem,
+                                inference_rows,
+                                solver,
+                                &solved.coefficients,
+                                order,
+                                output,
+                                interrupt,
+                            )
+                        },
+                        interrupt,
+                    )?;
+                    for (local, solved) in solved.solution.iter().enumerate() {
+                        certificates[first + local] = solved.receipt.full_residual;
+                        projections.push(ProjectionReceipt {
+                            probe: projections.len(),
+                            iterations: solved.receipt.pcg.iterations,
+                            reduced_residual: solved.receipt.pcg.relative_residual,
+                            complete_residual: solved.receipt.full_residual,
+                            full_residual_tolerance: solved.receipt.full_residual_tolerance,
+                        });
+                    }
                 }
-                let rhs = component_transpose_rhs(problem, inference_rows, &input, interrupt)?;
-                let solved = solver.solve_with_interrupt(
-                    ModelRhs {
-                        worker: &rhs.0,
-                        firm: &rhs.1,
-                        control: &rhs.2,
-                    },
-                    interrupt,
-                )?;
-                component_predict(
-                    problem,
-                    inference_rows,
-                    solver,
-                    &solved.coefficients,
-                    &mut prediction,
-                    interrupt,
-                )?;
-                for (position, &row) in order.iter().enumerate() {
-                    projected[column * n + position] = prediction[row];
+            } else {
+                // Preserve the legacy scalar callback unless the pre-admitted
+                // internal executor was explicitly selected before RNG.
+                for column in 0..columns {
+                    for (position, &row) in order.iter().enumerate() {
+                        input[row] = gaussian[column * n + position];
+                    }
+                    let rhs = component_transpose_rhs(problem, inference_rows, &input, interrupt)?;
+                    let solved = solver.solve_with_interrupt(
+                        ModelRhs {
+                            worker: &rhs.0,
+                            firm: &rhs.1,
+                            control: &rhs.2,
+                        },
+                        interrupt,
+                    )?;
+                    finish(column, &solved, interrupt)?;
                 }
-                certificates[column] = solved.receipt.full_residual;
-                projections.push(ProjectionReceipt {
-                    probe: projections.len(),
-                    iterations: solved.receipt.pcg.iterations,
-                    reduced_residual: solved.receipt.pcg.relative_residual,
-                    complete_residual: solved.receipt.full_residual,
-                    full_residual_tolerance: solved.receipt.full_residual_tolerance,
-                });
             }
             Ok(())
         },
+        solver,
         interrupt,
     )?;
     let mut fit = candidate.fit_with_interrupt(&e, interrupt)?;

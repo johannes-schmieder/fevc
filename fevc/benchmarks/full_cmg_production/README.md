@@ -28,12 +28,12 @@ VCkss release-blocking statistical gates remain the exact-reference and
 common-probe differential suites.
 
 The private alpha macOS promotion matrix is summarized in
-[`MACOS_HEADLINE_4B6874E.md`](MACOS_HEADLINE_4B6874E.md). It records a
+[`MACOS_HEADLINE_4B6874E.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_production/MACOS_HEADLINE_4B6874E.md). It records a
 74.774-second VCkss warm median versus 104.489 seconds for MATLAB, with less
 than half MATLAB's process-tree peak memory. The source-bound receipts are in
 the adjacent `evidence/macos/` tree. Earlier accepted production checkpoints
-remain preserved in [`MACOS_HEADLINE_DD39F04.md`](MACOS_HEADLINE_DD39F04.md)
-and [`MACOS_HEADLINE_F0E5D79.md`](MACOS_HEADLINE_F0E5D79.md).
+remain preserved in [`MACOS_HEADLINE_DD39F04.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_production/MACOS_HEADLINE_DD39F04.md)
+and [`MACOS_HEADLINE_F0E5D79.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_production/MACOS_HEADLINE_F0E5D79.md).
 
 The fixed-CZ18 SCC matrix is submitted only from a clean `main` checkout:
 
@@ -47,19 +47,19 @@ position-balanced comparison, and writes all artifacts below
 `/projectnb/welfgr/fevc/runs/RUN_ID`.
 
 The private alpha SCC promotion matrix is summarized in
-[`SCC_CZ18_4B6874E.md`](SCC_CZ18_4B6874E.md). Job `7328597` records a
+[`SCC_CZ18_4B6874E.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_production/SCC_CZ18_4B6874E.md). Job `7328597` records a
 19.097-second VCkss warm median versus 33.058 seconds for MATLAB, with less
 than one quarter of MATLAB's process-tree peak memory. Its pinned validation,
 task, environment, wrapper, and qacct receipts are under the adjacent
 `evidence/scc/` tree. The earlier accepted matrix remains preserved in
-[`SCC_CZ18_DD39F04.md`](SCC_CZ18_DD39F04.md).
+[`SCC_CZ18_DD39F04.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_production/SCC_CZ18_DD39F04.md).
 
 The exact alpha macOS plugin qualifier passed at receipt-tip source
 `4dafec6734af4b8d3c25785f268f19f69f780684`, including thin arm64, thin
 x86_64 under Rosetta, universal, clean-install, ABI, lifecycle, routing, and
 focused `CMG_FULL_V2` coverage. Its byte-preserved receipt and sanitized
 transcript are under
-[`../../../rust/qualification/evidence/M5-FULL-CMG-MACOS/`](../../../rust/qualification/evidence/M5-FULL-CMG-MACOS/).
+[`../../../rust/qualification/evidence/M5-FULL-CMG-MACOS/`](https://github.com/johannes-schmieder/fevc/tree/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/rust/qualification/evidence/M5-FULL-CMG-MACOS).
 
 The exact SCC Linux x86-64 plugin qualifier passed at source
 `992eba0947ca155c534f532750fc202e41ecf978` in job `7330577`.
@@ -69,6 +69,6 @@ full-CMG routes, ABI, cancellation/lifecycle, pinned Rust 1.85.1 formatting,
 Clippy, and Rust tests all pass. The compact source manifest, qualifier and
 wrapper receipts, sanitized-evidence marker, scheduler accounting, and
 checksum manifest are under
-[`../../../rust/qualification/evidence/M5-FULL-CMG-LINUX-SCC/`](../../../rust/qualification/evidence/M5-FULL-CMG-LINUX-SCC/).
+[`../../../rust/qualification/evidence/M5-FULL-CMG-LINUX-SCC/`](https://github.com/johannes-schmieder/fevc/tree/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/rust/qualification/evidence/M5-FULL-CMG-LINUX-SCC).
 Raw Stata logs, licensed material, and the native binary remain outside the
 repository.

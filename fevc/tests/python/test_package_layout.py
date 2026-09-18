@@ -46,6 +46,7 @@ def test_package_manifest_is_complete() -> None:
         "_fevc_rust_plugin_call.ado",
         "_fevc_rust_solve_v4.ado",
         "_fevc_rust_solve_v5.ado",
+        "_fevc_rust_cmg_model.ado",
         "_fevc_rust_plan_receipt.ado",
         "_fevc_rust_reconcile_comp_v7.ado",
         "_fevc_rust_reconcile_exact_v7.ado",
@@ -57,9 +58,13 @@ def test_package_manifest_is_complete() -> None:
         "_fevc_rust_windows.ado",
         "_fevc_rust_linux.ado",
         "_fevc_rust_public_call.ado",
+        "_fevc_rust_core_ready.ado",
         "_fevc_component_model_route.ado",
+        "_fevc_observation_population.ado",
+        "_fevc_stayer_population_post.ado",
         "_fevc_exact_inference_model_post.ado",
         "_fevc_rust_component_attach.ado",
+        "_fevc_rust_comp_batch_receipt.ado",
         "_fevc_rust_component_fetch.ado",
         "_fevc_rust_component_post.ado",
         "_fevc_failure_guidance.ado",
@@ -109,7 +114,14 @@ def test_public_full_cmg_reconciles_selected_rhs_capacity() -> None:
     assert "2*`native_selected_tgt_batch')" in ado
     assert "`cmg_max_batch_rhs'==64" not in ado
     assert "`cmg_workspace_count'<=`cmg_threads_used'" in ado
-    assert "`cmg_rhs_count'==1+3*`probes'" in ado
+    assert "_fevc_rust_cmg_model `handle' `control_count'" in ado
+    model = (ROOT / "_fevc_rust_cmg_model.ado").read_text(encoding="utf-8")
+    assert "`controls'+1+(`controls'>0 & `nuisance'==2)+3*`probes'" in model
+    assert "`cmg_rhs'!=`logical'+r(control_refinement_rhs_count)" in model
+    assert "r(explicit_options_rhs_count)!=`controls'" in model
+    assert "_fevc_rust_core_ready `rust_core_flags'" in ado
+    ready = (ROOT / "_fevc_rust_core_ready.ado").read_text(encoding="utf-8")
+    assert "mod(floor(`flags'/2048),2)==1" in ready
 
 
 def test_version_identifiers_agree() -> None:
@@ -351,8 +363,8 @@ def test_package_records_internal_license_boundary() -> None:
     assert "gpl-3.0-only prerelease source package" in manifest
     assert "no public release has yet been issued" in manifest
     assert "gpl-3.0-only" in readme
-    assert "human package-boundary and provenance review" in readme
-    assert "was completed on 29 august 2026" in readme
+    license_note = (ROOT.parent / "CODE_LICENSE.md").read_text(encoding="utf-8")
+    assert "completed on 2026-08-29" in license_note
     assert (ROOT.parent / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
     assert (ROOT / "THIRD_PARTY_NOTICES.txt").is_file()
 

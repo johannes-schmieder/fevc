@@ -30,8 +30,10 @@ Before substantive work:
 
 - Work on `main` and the current worktree unless the owner directs otherwise.
   Do not create a branch/worktree, rewrite history, or discard unrelated work.
-- Treat accepted exact-SHA receipts, reviews, source manifests, archived
-  reports, and benchmark evidence as immutable. Transient development smokes
+- Treat accepted exact-SHA receipts, source manifests, archived reports, and
+  benchmark evidence as immutable. The owner-authorized September 18 cleanup
+  archives historical output outside the tracked checkout and deletes GPT Pro
+  reviews; do not restore those directories. See `docs/ARCHIVE.md`. Transient development smokes
   are diagnostic runs: preserve their useful logs, but do not promote every
   failed attempt into publication-grade evidence or a compatibility lineage.
 - Do not copy restricted row-level data or licensed comparator source into the

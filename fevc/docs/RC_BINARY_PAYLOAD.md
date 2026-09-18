@@ -44,12 +44,34 @@ by this preparation document.
    q0/q1 and help; separately retain the portable-only missing-native test.
    Obtain the owner's exact-artifact approval before distribution.
 
-The tracked `fevc.pkg` remains a portable development/source manifest. The
-native builder generates the full installation manifest inside its archive,
-adding every platform file without checking binaries into Git or making
-source-only CI depend on machine-local build outputs. A portable checkout
-installation therefore still does not provide the Rust-only match inference
-feature; the complete RC payload will.
+The tracked `fevc/fevc.pkg` remains a portable development/source manifest.
+The native builder generates the complete manifest only after validating all
+five binary inputs. The public installation will use root `fevc.pkg` and
+`stata.toc` files that reference the runtime and binaries under `fevc/`.
+Both `net install` and `github install` must deliver that same payload.
+
+To prepare the repository layout in a new directory, use `--repository-dir`
+instead of `--output-dir`:
+
+```bash
+./.venv/bin/python fevc/tools/build_native_release.py \
+    --binary-dir DIR --manifest MANIFEST \
+    --repository-dir /private/tmp/fevc-install-repository
+```
+
+This requires a clean committed source and the same complete, source-bound
+binary evidence as the archive builder. It writes root installation metadata,
+the `fevc/` payload, and a hash receipt, and refuses an existing destination.
+It does not copy anything into the live checkout or publish it. Once qualified
+and approved, the installation metadata and tested binaries can be committed
+together with their matching source. Release attachments alone do not supply
+the raw GitHub installation endpoint.
+
+The upstream `github` installer inspected during preparation uses `master`
+URLs. Verify the exact advertised command against the publication layout and
+provide an equivalent compatibility ref if needed. No such ref is created by
+the builder. Verify clean installs and upgrades using both commands on the
+supported platforms, including actual native execution and binary hashes.
 
 The final receipt binds the package source, native inputs, archive digest and
 every installed file. A later documentation/evidence commit must not be

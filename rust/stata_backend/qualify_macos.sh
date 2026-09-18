@@ -20,15 +20,34 @@ fail() {
   exit 1
 }
 
+apple_toolchain_identity() {
+  # Explicit CLT selection uses its separately installed compiler and SDK.
+  # Never infer this choice after an Xcode setup or license failure.
+  apple_compiler_path=$(xcrun --find clang) || fail "cannot resolve Apple clang"
+  if [[ "${DEVELOPER_DIR:-}" == /Library/Developer/CommandLineTools ]]; then
+    [[ "${apple_compiler_path}" == /Library/Developer/CommandLineTools/usr/bin/clang ]] || \
+      fail "explicit Command Line Tools selection resolved a different compiler"
+    apple_toolchain_kind=COMMAND_LINE_TOOLS
+    xcode_version=NOT_USED_COMMAND_LINE_TOOLS
+  else
+    apple_toolchain_kind=XCODE
+    xcode_version=$(xcodebuild -version | paste -sd, -) || \
+      fail "cannot inspect selected Xcode (check its setup/license)"
+  fi
+  apple_sdk_path=$(xcrun --show-sdk-path) || fail "cannot resolve Apple SDK"
+  apple_sdk_version=$(xcrun --show-sdk-version) || fail "cannot inspect Apple SDK"
+  [[ -n "${apple_sdk_path}" && -n "${apple_sdk_version}" ]] || fail "empty Apple SDK identity"
+}
+
 qualification_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
+        'source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control observation/match JLA point CMG_FULL_V2 cells through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'source-local Rust alpha routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
+        'source-local Rust alpha routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control observation/match JLA point CMG_FULL_V2 cells through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
       ;;
     *)
       fail "invalid Rosetta status for receipt scope: $1"
@@ -144,10 +163,12 @@ if [[ -n "${artifacts_dir}" ]]; then
 fi
 
 for required_command in arch awk clang codesign curl file git grep install \
-  lipo nm otool paste rustup sed shasum sort sw_vers xcodebuild; do
+  lipo nm otool paste rustup sed shasum sort sw_vers xcodebuild xcrun; do
   command -v "${required_command}" >/dev/null 2>&1 || \
     fail "required command is unavailable: ${required_command}"
 done
+
+apple_toolchain_identity
 
 rust_toolchain=1.85.1
 rust_cargo=$(rustup which --toolchain "${rust_toolchain}" cargo) || \
@@ -308,6 +329,7 @@ source_inputs=(
   "${package_dir}/_fevc_rust_plugin_call.ado"
   "${package_dir}/_fevc_rust_solve_v4.ado"
   "${package_dir}/_fevc_rust_solve_v5.ado"
+  "${package_dir}/_fevc_rust_cmg_model.ado"
   "${package_dir}/_fevc_rust_plan_receipt.ado"
   "${package_dir}/_fevc_rust_reconcile_comp_v7.ado"
   "${package_dir}/_fevc_rust_reconcile_exact_v7.ado"
@@ -319,9 +341,13 @@ source_inputs=(
   "${package_dir}/_fevc_rust_windows.ado"
   "${package_dir}/_fevc_rust_linux.ado"
   "${package_dir}/_fevc_rust_public_call.ado"
+  "${package_dir}/_fevc_rust_core_ready.ado"
   "${package_dir}/_fevc_component_model_route.ado"
+  "${package_dir}/_fevc_observation_population.ado"
+  "${package_dir}/_fevc_stayer_population_post.ado"
   "${package_dir}/_fevc_exact_inference_model_post.ado"
   "${package_dir}/_fevc_rust_component_attach.ado"
+  "${package_dir}/_fevc_rust_comp_batch_receipt.ado"
   "${package_dir}/_fevc_rust_component_fetch.ado"
   "${package_dir}/_fevc_rust_component_post.ado"
   "${package_dir}/_fevc_failure_guidance.ado"
@@ -342,6 +368,12 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_planned_compressed.do"
   "${package_dir}/tests/stata/test_rust_planned_compressed_post.do"
   "${package_dir}/tests/stata/test_rust_full_cmg_v2.do"
+  "${package_dir}/tests/stata/test_rust_observation_full_cmg.do"
+  "${package_dir}/tests/stata/test_rust_pooled_full_cmg.do"
+  "${package_dir}/tests/stata/test_rust_point_routes_full_cmg.do"
+  "${package_dir}/tests/stata/test_rust_controlled_full_cmg.do"
+  "${package_dir}/tests/stata/test_rust_execution_paths.do"
+  "${package_dir}/tests/stata/test_stayer_option_symmetry.do"
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
@@ -735,6 +767,24 @@ run_stata_case arm64 public-planned-compressed \
 run_stata_case arm64 public-full-cmg \
   "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
   'PASS test_rust_full_cmg_v2.do' "${test_package_dir}"
+run_stata_case arm64 public-observation-full-cmg \
+  "${package_dir}/tests/stata/test_rust_observation_full_cmg.do" \
+  'PASS test_rust_observation_full_cmg.do' "${test_package_dir}"
+run_stata_case arm64 public-pooled-full-cmg \
+  "${package_dir}/tests/stata/test_rust_pooled_full_cmg.do" \
+  'PASS test_rust_pooled_full_cmg.do' "${test_package_dir}"
+run_stata_case arm64 public-point-routes-full-cmg \
+  "${package_dir}/tests/stata/test_rust_point_routes_full_cmg.do" \
+  'PASS test_rust_point_routes_full_cmg.do' "${test_package_dir}"
+run_stata_case arm64 public-controlled-full-cmg \
+  "${package_dir}/tests/stata/test_rust_controlled_full_cmg.do" \
+  'PASS test_rust_controlled_full_cmg.do' "${test_package_dir}"
+run_stata_case arm64 public-generic-execution \
+  "${package_dir}/tests/stata/test_rust_execution_paths.do" \
+  'PASS test_rust_execution_paths.do' "${test_package_dir}"
+run_stata_case arm64 public-stayer-options \
+  "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
+  'STAYER_OPTION_SYMMETRY_PASS' "${test_package_dir}"
 run_stata_case arm64 public-exact \
   "${package_dir}/tests/stata/test_rust_public_exact.do" \
   'FEVC RUST PUBLIC EXACT PASS' "${test_package_dir}"
@@ -780,6 +830,24 @@ run_stata_case arm64 universal-public-planned-compressed \
 run_stata_case arm64 universal-public-full-cmg \
   "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
   'PASS test_rust_full_cmg_v2.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-observation-full-cmg \
+  "${package_dir}/tests/stata/test_rust_observation_full_cmg.do" \
+  'PASS test_rust_observation_full_cmg.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-pooled-full-cmg \
+  "${package_dir}/tests/stata/test_rust_pooled_full_cmg.do" \
+  'PASS test_rust_pooled_full_cmg.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-point-routes-full-cmg \
+  "${package_dir}/tests/stata/test_rust_point_routes_full_cmg.do" \
+  'PASS test_rust_point_routes_full_cmg.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-controlled-full-cmg \
+  "${package_dir}/tests/stata/test_rust_controlled_full_cmg.do" \
+  'PASS test_rust_controlled_full_cmg.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-generic-execution \
+  "${package_dir}/tests/stata/test_rust_execution_paths.do" \
+  'PASS test_rust_execution_paths.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-stayer-options \
+  "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
+  'STAYER_OPTION_SYMMETRY_PASS' "${universal_test_package_dir}"
 run_stata_case arm64 universal-public-exact \
   "${package_dir}/tests/stata/test_rust_public_exact.do" \
   'FEVC RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
@@ -837,6 +905,24 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 public-full-cmg \
     "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
     'PASS test_rust_full_cmg_v2.do' "${test_package_dir}"
+  run_stata_case x86_64 public-observation-full-cmg \
+    "${package_dir}/tests/stata/test_rust_observation_full_cmg.do" \
+    'PASS test_rust_observation_full_cmg.do' "${test_package_dir}"
+  run_stata_case x86_64 public-pooled-full-cmg \
+    "${package_dir}/tests/stata/test_rust_pooled_full_cmg.do" \
+    'PASS test_rust_pooled_full_cmg.do' "${test_package_dir}"
+  run_stata_case x86_64 public-point-routes-full-cmg \
+    "${package_dir}/tests/stata/test_rust_point_routes_full_cmg.do" \
+    'PASS test_rust_point_routes_full_cmg.do' "${test_package_dir}"
+run_stata_case x86_64 public-controlled-full-cmg \
+    "${package_dir}/tests/stata/test_rust_controlled_full_cmg.do" \
+    'PASS test_rust_controlled_full_cmg.do' "${test_package_dir}"
+run_stata_case x86_64 public-generic-execution \
+    "${package_dir}/tests/stata/test_rust_execution_paths.do" \
+    'PASS test_rust_execution_paths.do' "${test_package_dir}"
+  run_stata_case x86_64 public-stayer-options \
+    "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
+    'STAYER_OPTION_SYMMETRY_PASS' "${test_package_dir}"
   run_stata_case x86_64 public-exact \
     "${package_dir}/tests/stata/test_rust_public_exact.do" \
     'FEVC RUST PUBLIC EXACT PASS' "${test_package_dir}"
@@ -882,6 +968,24 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 universal-public-full-cmg \
     "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
     'PASS test_rust_full_cmg_v2.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-observation-full-cmg \
+    "${package_dir}/tests/stata/test_rust_observation_full_cmg.do" \
+    'PASS test_rust_observation_full_cmg.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-pooled-full-cmg \
+    "${package_dir}/tests/stata/test_rust_pooled_full_cmg.do" \
+    'PASS test_rust_pooled_full_cmg.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-point-routes-full-cmg \
+    "${package_dir}/tests/stata/test_rust_point_routes_full_cmg.do" \
+    'PASS test_rust_point_routes_full_cmg.do' "${universal_test_package_dir}"
+run_stata_case x86_64 universal-public-controlled-full-cmg \
+    "${package_dir}/tests/stata/test_rust_controlled_full_cmg.do" \
+    'PASS test_rust_controlled_full_cmg.do' "${universal_test_package_dir}"
+run_stata_case x86_64 universal-public-generic-execution \
+    "${package_dir}/tests/stata/test_rust_execution_paths.do" \
+    'PASS test_rust_execution_paths.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-stayer-options \
+    "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
+    'STAYER_OPTION_SYMMETRY_PASS' "${universal_test_package_dir}"
   run_stata_case x86_64 universal-public-exact \
     "${package_dir}/tests/stata/test_rust_public_exact.do" \
     'FEVC RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
@@ -957,7 +1061,6 @@ fi
 rustc_version=$("${rust_rustc}" --version)
 cargo_version=$("${rust_cargo}" --version)
 clang_version=$(clang --version | sed -n '1p')
-xcode_version=$(xcodebuild -version | paste -sd, -)
 macos_version=$(sw_vers -productVersion)
 required_export_text=$(printf '%s,' "${required_exports[@]}")
 required_export_text=${required_export_text%,}
@@ -996,6 +1099,10 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'rustc=%s\n' "${rustc_version}"
   printf 'cargo=%s\n' "${cargo_version}"
   printf 'clang=%s\n' "${clang_version}"
+  printf 'apple_toolchain_kind=%s\n' "${apple_toolchain_kind}"
+  printf 'apple_compiler_path=%s\n' "${apple_compiler_path}"
+  printf 'apple_sdk_path=%s\n' "${apple_sdk_path}"
+  printf 'apple_sdk_version=%s\n' "${apple_sdk_version}"
   printf 'xcode=%s\n' "${xcode_version}"
   printf 'stata_binary_sha256=%s\n' "$(hash_file "${stata_binary}")"
   printf 'stata_binary_architectures=%s\n' "${stata_architectures}"
@@ -1109,6 +1216,13 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_private_planned_compressed=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_planned_compressed=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_observation_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-thin-package>\n'
+  printf 'arm64_public_stayer_options=STAYER_OPTION_SYMMETRY_PASS\n'
+  printf 'command.test_arm64_public_stayer_options=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_pooled_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_point_routes_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_controlled_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_generic_execution=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
@@ -1123,6 +1237,13 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_private_planned_compressed=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_planned_compressed=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_observation_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-universal-package>\n'
+  printf 'arm64_universal_public_stayer_options=STAYER_OPTION_SYMMETRY_PASS\n'
+  printf 'command.test_arm64_universal_public_stayer_options=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_pooled_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_point_routes_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_controlled_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_generic_execution=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
@@ -1139,6 +1260,13 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_private_planned_compressed=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_planned_compressed=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_observation_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-thin-package>\n'
+    printf 'x86_64_public_stayer_options=STAYER_OPTION_SYMMETRY_PASS\n'
+    printf 'command.test_x86_64_public_stayer_options=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_pooled_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_point_routes_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_controlled_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_generic_execution=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
@@ -1153,6 +1281,13 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_private_planned_compressed=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_planned_compressed=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_observation_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-universal-package>\n'
+    printf 'x86_64_universal_public_stayer_options=STAYER_OPTION_SYMMETRY_PASS\n'
+    printf 'command.test_x86_64_universal_public_stayer_options=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_pooled_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_point_routes_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_controlled_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_generic_execution=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'

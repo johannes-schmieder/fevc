@@ -52,7 +52,7 @@ does not submit SCC jobs, alter the KSS Matlab source, install plugins,
 or promote raw logs into the repository.
 
 The completed architectural result is recorded in
-[`DECISION_REPORT.md`](DECISION_REPORT.md) and the compact machine-readable
+[`DECISION_REPORT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/DECISION_REPORT.md) and the compact machine-readable
 [`decision_receipt.json`](decision_receipt.json). Direct full CMG is rejected
 for promotion: on the accepted same-node SCC run it is 32.20% faster than the
 matched VCkss baseline but 29.99% slower than KSS Matlab, and the
@@ -107,28 +107,28 @@ the current policy treats it as nonblocking. Because C still failed the MATLAB
 performance gate, the registered warm matrix and fixed CZ18 case were not run.
 
 Subsequent development checkpoints are recorded separately. The
-[`TOLERANCE_CHECKPOINT.md`](TOLERANCE_CHECKPOINT.md) ladder establishes the
+[`TOLERANCE_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/TOLERANCE_CHECKPOINT.md) ladder establishes the
 MATLAB-like `1e-6` probe tolerance. The
-[`MIXED_PRECISION_CHECKPOINT.md`](MIXED_PRECISION_CHECKPOINT.md) paired run
+[`MIXED_PRECISION_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/MIXED_PRECISION_CHECKPOINT.md) paired run
 preserves but disables the mixed-hierarchy experiment because its 2.01%
 end-to-end gain misses the 10% enablement gate and its measured memory rises.
 The
-[`PROBE_TOLERANCE_DIRECT_CHECKPOINT.md`](PROBE_TOLERANCE_DIRECT_CHECKPOINT.md)
+[`PROBE_TOLERANCE_DIRECT_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/PROBE_TOLERANCE_DIRECT_CHECKPOINT.md)
 result removes a private 100-fold randomized over-solve. It reaches 112.875
 seconds, or 0.657 times registered MATLAB, while passing the unchanged
 statistical and complete-system residual gates. It is a substantial checkpoint
 but not the required 2× result. The subsequent
-[`PACKED_COUNTER_CHECKPOINT.md`](PACKED_COUNTER_CHECKPOINT.md) computes the
+[`PACKED_COUNTER_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/PACKED_COUNTER_CHECKPOINT.md) computes the
 four frozen Counter-V1 lanes once per Philox block. It preserves bit-identical
 targets and reaches 104.329 seconds, or 0.608 times registered MATLAB; the 2×
 gate remains unmet.
 The
-[`PARALLEL_RESIDUAL_CHECKPOINT.md`](PARALLEL_RESIDUAL_CHECKPOINT.md) reuses the
+[`PARALLEL_RESIDUAL_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/PARALLEL_RESIDUAL_CHECKPOINT.md) reuses the
 same isolated CMG pool for bounded ordered recovery and independent residual
 certification. It preserves bit-identical targets and reaches 90.102 seconds,
 or 0.525 times registered MATLAB; it is 4.236 seconds short of the 2x gate.
 The
-[`ALPHA_HEADLINE_CHECKPOINT.md`](ALPHA_HEADLINE_CHECKPOINT.md) result adds
+[`ALPHA_HEADLINE_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/ALPHA_HEADLINE_CHECKPOINT.md) result adds
 ordered parallel probe generation and independent preparation/accumulation.
 Its clean source-bound single run reaches 81.145 seconds, or 0.473 times
 registered MATLAB, with bit-identical targets and unchanged residual and state
@@ -142,12 +142,12 @@ seconds (1.669x faster), but still misses the 2x threshold by 25.079 seconds.
 The fused-f64 executor regresses to 239.610 seconds and is disabled. Direct and
 fused retain bit-identical corrected targets and a `6.971259e-6` maximum
 complete residual. See
-[`SCC_DIRECT_FUSED_CHECKPOINT.md`](SCC_DIRECT_FUSED_CHECKPOINT.md) and its
+[`SCC_DIRECT_FUSED_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/SCC_DIRECT_FUSED_CHECKPOINT.md) and its
 machine-readable receipt. The official full-CMG repeated solve is now the
 measured dominant bottleneck; do not resume simplified-hierarchy work.
 
 The exact standalone-CMG
-[`CMG_PCG_PHASE_PROFILE.md`](CMG_PCG_PHASE_PROFILE.md) diagnostic then
+[`CMG_PCG_PHASE_PROFILE.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/CMG_PCG_PHASE_PROFILE.md) diagnostic then
 attributes a representative scalar solve: 51.3% CMG preconditioner, 13.5%
 quotient centering, 12.5% norms, 9.5% matvec, and 8.7% dot products. It is not
 an estimator/MATLAB benchmark. It registers deterministic pass fusion and
@@ -163,7 +163,7 @@ VCkss is 2.0667 times as fast. Candidate median peak RSS is 2,530,940 KiB
 versus MATLAB's 4,310,024 KiB. All complete residual, common-probe corrected-
 target, repeatability, application/state, process-tree, wrapper, and qacct
 gates pass. See
-[`CZ18_P200_MATRIX_CHECKPOINT.md`](CZ18_P200_MATRIX_CHECKPOINT.md) and the
+[`CZ18_P200_MATRIX_CHECKPOINT.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/CZ18_P200_MATRIX_CHECKPOINT.md) and the
 compact JSON receipt.
 
 The registered synthetic P200 matrix is accepted at SCC job `7318114` but is
@@ -180,7 +180,7 @@ second warm median across 601 RHSs, or 79.80% of the complete command. The
 current route needs a 32.124-second complete-command reduction to reach the 2x
 target; with all other time fixed, that means a 32.56% repeated-solve
 reduction. See
-[`SYNTHETIC_P200_MATRIX_DECISION.md`](SYNTHETIC_P200_MATRIX_DECISION.md) and
+[`SYNTHETIC_P200_MATRIX_DECISION.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/SYNTHETIC_P200_MATRIX_DECISION.md) and
 the compact JSON decision. The route remains private: do not begin vendoring,
 hardening, default-auto exposure, alpha tagging, or benchmark-PDF work. The
 next bounded research lane is official-CMG hierarchy tuning and then measured
@@ -190,5 +190,5 @@ The first post-reboot macOS synthetic-matrix attempt at source `787327f`
 stopped in its cold MATLAB cell because MATLAB R2024b was signed out. The
 process-tree monitor classified it as `FAIL_BEFORE_IDENTITY`; no partial timing
 is accepted. See
-[`MACOS_SYNTHETIC_MATRIX_MATLAB_AUTH_FAILURE.md`](MACOS_SYNTHETIC_MATRIX_MATLAB_AUTH_FAILURE.md).
+[`MACOS_SYNTHETIC_MATRIX_MATLAB_AUTH_FAILURE.md`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/full_cmg_spike/MACOS_SYNTHETIC_MATRIX_MATLAB_AUTH_FAILURE.md).
 Rerun the complete matrix in a new directory after interactive authentication.

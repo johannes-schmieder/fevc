@@ -105,4 +105,4 @@ No VCkss completion time, MATLAB completion time, coefficient/covariance
 comparison, or paired speed ratio is accepted from this stage. Observed
 failed-role walls remain diagnostic only. The 1,920,000- and 7,680,000-row
 stages were not submitted. Compact evidence and its interpretation are indexed
-in [`evidence/scc/30d49fda876597782cca22adf36094993f7a6212/README.md`](evidence/scc/30d49fda876597782cca22adf36094993f7a6212/README.md).
+in `evidence/scc/30d49fda876597782cca22adf36094993f7a6212/README.md` (historical path; see [archive access](../../../docs/ARCHIVE.md)).

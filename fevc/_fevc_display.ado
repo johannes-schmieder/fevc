@@ -4,6 +4,8 @@ program define _fevc_display
     version 18.0
     syntax [, DECOMPOSITIONonly FULL INFERENCEdiagnosticsonly]
 
+    quietly _fevc_stayer_population_post
+
     if "`inferencediagnosticsonly'" != "" {
         _fevc_display_structured
         exit
@@ -68,7 +70,7 @@ program define _fevc_display
         di as txt "Note: CMG setup fell back to diagonal PCG; "  ///
             as result "`e(fallback_message)'"
     }
-    if "`e(stayers)'" == "both" & e(N_stayers) > 0 {
+    if "`e(deletion)'" == "match" & "`e(stayers)'" == "both" & e(N_stayers) > 0 {
         di as txt "Note: movers use match blocks; stayers use observation deletion."
         di as txt "      Stayer correction is not match-robust."
     }

@@ -65,3 +65,22 @@ def test_native_payload_rejects_symlink(inputs):
     (root / name).symlink_to(root / native.BINARY_NAMES[1])
     with pytest.raises(ValueError, match="symlink"):
         build(inputs)
+
+
+def test_repository_install_manifest_resolves_to_the_complete_payload(inputs, tmp_path):
+    files = build(inputs)
+    destination = tmp_path / "repository"
+    native.write_repository(destination, files)
+    pkg = (destination / "fevc.pkg").read_text()
+    listed = [line[2:] for line in pkg.splitlines() if line.startswith("f ")]
+    assert len(listed) == len(set(listed))
+    expected = {f"fevc/{item.relative}": item.data for item in files
+                if str(item.relative) not in {"fevc.pkg", "stata.toc"}}
+    assert set(listed) == set(expected)
+    for relative in listed:
+        assert (destination / relative).read_bytes() == expected[relative]
+    assert all(f"fevc/{name}" in listed for name in native.BINARY_NAMES)
+    assert (destination / "stata.toc").read_bytes() == (
+        portable.PACKAGE_ROOT / "stata.toc").read_bytes()
+    with pytest.raises(FileExistsError):
+        native.write_repository(destination, files)

@@ -8,12 +8,12 @@ its source-only/Mac-only options are superseded by that request. Public
 distribution and tagging remain unauthorized. The Windows runner's bounded
 artifact-collection extension is a separate infrastructure decision.
 Current execution results are in the
-[RC binary checkpoint](RC_BINARY_CHECKPOINT_2026-09-05.md): Mac/Linux and
+[RC binary checkpoint](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/RC_BINARY_CHECKPOINT_2026-09-05.md): Mac/Linux and
 source/supply-chain gates pass. Windows returned `STATA_DRIVER_FAILED` and
 cleaned up/stopped; its opaque failure needs the approved diagnostic/artifact
 collection extension. Windows and final archive acceptance remain open.
 It supersedes old development instructions in PLAN and historical checklists.
-The exact-source [match interface qualification](FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)
+The exact-source [match interface qualification](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)
 and all earlier scientific receipts remain unchanged.
 
 ## What is ready

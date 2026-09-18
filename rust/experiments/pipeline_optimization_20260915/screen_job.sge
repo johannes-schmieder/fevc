@@ -1,0 +1,27 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+set -euo pipefail
+: "${PF_RUN_ROOT:?}"
+: "${PF_STAGE:?}"
+: "${NSLOTS:?}"
+[[ "${PF_RUN_ROOT}" == /projectnb/welfgr/vckss/runs/* ]]
+export PF_TASK_STARTED_UNIX=$(date +%s)
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+module load stata-mp/19
+export PF_STATA=${SCC_STATA_MP_BIN:?}/stata-mp
+toolchain=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu
+export RUSTUP_HOME=/projectnb/welfgr/vckss/toolchains/rustup
+export RUSTUP_TOOLCHAIN=1.85.1-x86_64-unknown-linux-gnu
+export PATH=${toolchain}/bin:${PATH}
+export RUSTC=${toolchain}/bin/rustc RUSTDOC=${toolchain}/bin/rustdoc
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+export CARGO_BUILD_JOBS=${NSLOTS} RUST_TEST_THREADS=${NSLOTS}
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+export PYTHONDONTWRITEBYTECODE=1
+harness=${PF_RUN_ROOT}/source/rust/experiments/pipeline_optimization_20260915
+exec "${python_bin}" "${harness}/screen_scc.py" "${PF_RUN_ROOT}" "${PF_STAGE}"

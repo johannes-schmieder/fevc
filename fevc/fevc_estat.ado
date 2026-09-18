@@ -59,6 +59,10 @@ program define _fevc_estat_sample
     di as txt "{hline 61}"
     di as txt %-38s "Incomplete rows removed" as result          ///
         %20.0fc e(N_requested)-e(N_complete)
+    if e(N_stayer_option_dropped)>0 & e(N_stayer_option_dropped)<. {
+        di as txt %-38s "Rows excluded by stayers(movers)" as result ///
+            %20.0fc e(N_stayer_option_dropped)
+    }
 
     if "`e(deletion)'" == "match" & "`e(stayers)'" == "both" {
         di as txt _newline "Mover-graph selection (stayers are assessed afterward)"
@@ -86,7 +90,7 @@ program define _fevc_estat_sample
     di as txt %-38s "Rows removed by graph pruning" as result   ///
         %20.0fc e(N_graph_dropped)
 
-    if "`e(stayers)'" == "both" {
+    if "`e(deletion)'" == "match" & "`e(stayers)'" == "both" {
         di as txt _newline "Combined mover-stayer population"
         di as txt %-38s "Included stayer workers" as result      ///
             %20.0fc e(N_stayers)

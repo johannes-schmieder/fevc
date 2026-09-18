@@ -22,6 +22,7 @@ local installed_plugin_dir `"`install_root'/f"'
 foreach required in fevc.ado fevc_rust.ado ///
     _fevc_rust_plugin_call.ado _fevc_rust_solve_v4.ado ///
     _fevc_rust_solve_v5.ado ///
+    _fevc_rust_cmg_model.ado ///
     _fevc_rust_plan_receipt.ado                         ///
     _fevc_rust_reconcile_comp_v7.ado                    ///
     _fevc_rust_reconcile_exact_v7.ado                   ///
@@ -31,9 +32,12 @@ foreach required in fevc.ado fevc_rust.ado ///
     _fevc_rust_post_stayer_hybrid.ado _fevc_rust_macos.ado ///
     _fevc_rust_windows.ado _fevc_rust_linux.ado        ///
     _fevc_rust_public_call.ado                         ///
+    _fevc_rust_core_ready.ado                          ///
     _fevc_component_model_route.ado                    ///
+    _fevc_observation_population.ado _fevc_stayer_population_post.ado ///
     _fevc_exact_inference_model_post.ado                ///
     _fevc_rust_component_attach.ado                    ///
+    _fevc_rust_comp_batch_receipt.ado                  ///
     _fevc_rust_component_fetch.ado                     ///
     _fevc_rust_component_post.ado                      ///
     _fevc_failure_guidance.ado {
@@ -66,6 +70,10 @@ if `"`install_mode'"' == "qualified" {
         test_rust_planned_v4.do test_rust_planned_compressed.do ///
         test_rust_planned_compressed_post.do                    ///
         test_rust_full_cmg_v2.do                               ///
+        test_rust_observation_full_cmg.do                      ///
+        test_rust_controlled_full_cmg.do                       ///
+        test_rust_execution_paths.do                          ///
+        test_stayer_option_symmetry.do                        ///
         test_rust_public_exact.do test_rust_public_generic.do   ///
         test_stayers_hybrid.do test_rust_component_inference.do   ///
         test_rust_match_component_inference.do test_rust_individual_inference.do {

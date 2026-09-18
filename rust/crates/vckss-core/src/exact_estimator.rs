@@ -22,11 +22,17 @@ use crate::interrupt::{
     checkpoint_chunk, stable_sort_by_with_interrupt, InterruptCheck, NeverInterrupt,
 };
 use crate::jla::{plugin_components_with_interrupt, VarianceComponents};
+use crate::model_operator::{
+    checked_matrix_length, copy_f64_with_interrupt, reserve_exact, zeroed_f64_with_interrupt,
+};
 use crate::problem::CompressedProblem;
 use crate::types::{DeletionMode, NuisanceMode};
 use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkReceipt};
 
 pub const EXACT_EXECUTION_SCHEMA_VERSION: u32 = 1;
+
+#[doc(hidden)]
+pub mod parallel;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ExactEstimatorOptions {
@@ -373,7 +379,7 @@ pub fn run_exact_estimator_with_interrupt(
     options: ExactEstimatorOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ExactEstimatorResult> {
-    let (result, sources) = run_exact_estimator_internal(problem, options, None, interrupt)?;
+    let (result, sources) = run_exact_estimator_internal(problem, options, None, None, interrupt)?;
     debug_assert!(sources.is_none());
     Ok(result)
 }
@@ -394,7 +400,7 @@ pub fn run_exact_stayer_hybrid_with_interrupt(
 ) -> Result<ExactStayerHybridResult> {
     validate_stayer_hybrid_plan(problem, plan, options, interrupt)?;
     let (estimator, sources) =
-        run_exact_estimator_internal(problem, options, Some(plan), interrupt)?;
+        run_exact_estimator_internal(problem, options, Some(plan), None, interrupt)?;
     let [mover_correction, stayer_correction] = sources.ok_or_else(|| {
         BackendError::invariant(
             "exact_stayer_hybrid",
@@ -480,9 +486,11 @@ fn run_exact_estimator_internal(
     problem: &CompressedProblem,
     options: ExactEstimatorOptions,
     hybrid: Option<&ExactStayerHybridPlan>,
+    parallel: Option<&parallel::Runtime>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(ExactEstimatorResult, Option<[VarianceComponents; 2]>)> {
     interrupt.checkpoint("exact_estimator_entry")?;
+    let _profile = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Exact);
     let options = options.validate()?;
     let rows = problem.outcome.len();
     let workers = problem.workers();
@@ -544,7 +552,8 @@ fn run_exact_estimator_internal(
     drop(semantic_order);
     let control_receipt = canonical.receipt.clone();
     let full_design = build_design(problem, Some(&canonical.columns), interrupt)?;
-    let full_information = crossproduct(
+    let full_information = execution_crossproduct(
+        parallel,
         &full_design,
         rows,
         full_embedding,
@@ -552,6 +561,8 @@ fn run_exact_estimator_internal(
         interrupt,
         "exact_full_information",
     )?;
+    let inverse_profile =
+        crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactInverse);
     let full_inverse = invert_scaled_zero_sum_quotient(
         &full_information,
         full_embedding,
@@ -560,6 +571,7 @@ fn run_exact_estimator_internal(
         interrupt,
         "exact_full_inverse",
     )?;
+    drop(inverse_profile);
     if controls > 0 {
         enforce_downstream_bound(
             control_receipt.forward_error,
@@ -603,7 +615,12 @@ fn run_exact_estimator_internal(
     let fixedoffset = options.nuisance == NuisanceMode::FixedOffset && controls > 0;
     let (design, information, working_outcome, working_inverse, mut beta, parameters, embedding) =
         if fixedoffset {
-            let mut working = problem.outcome.clone();
+            let mut working = copy_f64_with_interrupt(
+                &problem.outcome,
+                "exact working outcome",
+                interrupt,
+                "exact_fixedoffset_outcome",
+            )?;
             for row in 0..rows {
                 checkpoint_chunk(interrupt, row, "exact_fixedoffset_outcome")?;
                 let mut offset = 0.0;
@@ -619,7 +636,8 @@ fn run_exact_estimator_internal(
             drop(full_information);
             drop(full_design);
             let design = build_design(problem, None, interrupt)?;
-            let information = crossproduct(
+            let information = execution_crossproduct(
+                parallel,
                 &design,
                 rows,
                 working_embedding,
@@ -627,6 +645,8 @@ fn run_exact_estimator_internal(
                 interrupt,
                 "exact_working_information",
             )?;
+            let inverse_profile =
+                crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactInverse);
             let inverse = invert_scaled_zero_sum_quotient(
                 &information,
                 working_embedding,
@@ -635,6 +655,7 @@ fn run_exact_estimator_internal(
                 interrupt,
                 "exact_working_inverse",
             )?;
+            drop(inverse_profile);
             let rhs = weighted_transpose_vector(
                 &design,
                 rows,
@@ -665,7 +686,12 @@ fn run_exact_estimator_internal(
             (
                 full_design,
                 full_information,
-                problem.outcome.clone(),
+                copy_f64_with_interrupt(
+                    &problem.outcome,
+                    "exact working outcome",
+                    interrupt,
+                    "exact_working_outcome",
+                )?,
                 full_inverse,
                 full_beta,
                 full_parameters,
@@ -673,7 +699,8 @@ fn run_exact_estimator_internal(
             )
         };
     center_firm_coordinates(&mut beta, workers, firms)?;
-    let mut residual = Vec::with_capacity(rows);
+    let mut residual = Vec::new();
+    reserve_exact(&mut residual, rows, "exact working residual")?;
     for row in 0..rows {
         checkpoint_chunk(interrupt, row, "exact_working_residual")?;
         let fit = row_dot(
@@ -724,7 +751,8 @@ fn run_exact_estimator_internal(
     let plugin =
         plugin_components_with_interrupt(problem, &beta[..workers], firm_effect, interrupt)?;
 
-    let design_inverse = multiply(
+    let design_inverse = execution_multiply(
+        parallel,
         &design,
         rows,
         embedding,
@@ -779,10 +807,176 @@ fn run_exact_estimator_internal(
         (None, 0.0)
     };
 
-    let deletion_units = match options.deletion {
-        DeletionMode::Observation => {
+    let correction_profile =
+        crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactCorrection);
+    let (deletion_units, correction_sources) = if let Some(runtime) = parallel {
+        let result = parallel::CorrectionContext {
+            problem,
+            design: &design,
+            design_inverse: &design_inverse,
+            inverse: &working_inverse,
+            inverse_factor: inverse_factor.as_deref(),
+            information: &information,
+            outcome: &working_outcome,
+            residual: &residual,
+            target: &target,
+            embedding,
+            options,
+            rank_margin: rank_verification_margin,
+            controlled_joint: controls > 0 && options.nuisance == NuisanceMode::Joint,
+            control_forward: control_receipt.forward_error,
+        }
+        .run(runtime, hybrid, interrupt)?;
+        correction = result.correction;
+        max_leverage = result.leverage;
+        maker_relres = result.maker_relres;
+        deletion_rank_gap = result.gap;
+        (result.units, result.sources)
+    } else {
+        let deletion_units = match options.deletion {
+            DeletionMode::Observation => {
+                for row in 0..rows {
+                    checkpoint_chunk(interrupt, row, "exact_observation_correction")?;
+                    let z = &design_inverse[row * embedding..(row + 1) * embedding];
+                    let leverage = row_dot(
+                        &design,
+                        row,
+                        embedding,
+                        z,
+                        interrupt,
+                        "exact_observation_leverage_matvec",
+                    )?;
+                    if !leverage.is_finite() || leverage < -100.0 * options.rank_tolerance {
+                        return Err(nonestimable("physical observation leverage is invalid"));
+                    }
+                    let maker = 1.0 - leverage;
+                    if maker <= options.block_tolerance {
+                        return Err(nonestimable(
+                            "physical observation deletion has leverage at or above one",
+                        ));
+                    }
+                    deletion_rank_gap = deletion_rank_gap.min(maker);
+                    if controls > 0 && options.nuisance == NuisanceMode::Joint {
+                        enforce_downstream_bound(
+                        control_receipt.forward_error,
+                        maker,
+                        "observation-deletion conditioning cannot certify control-basis invariance",
+                    )?;
+                    }
+                    if maker <= rank_verification_margin
+                        || (controls > 0 && options.nuisance == NuisanceMode::Joint)
+                    {
+                        certify_deleted_information(
+                            &information,
+                            &design[row * embedding..(row + 1) * embedding],
+                            1,
+                            embedding,
+                            workers..(workers + firms),
+                            options.rank_tolerance,
+                            interrupt,
+                            "exact_observation_deleted_information",
+                        )?;
+                    }
+                    max_leverage = max_leverage.max(leverage);
+                    let scale =
+                        u64_to_f64(problem.frequency[row])? * working_outcome[row] * residual[row]
+                            / maker;
+                    add_scaled(
+                        &mut correction,
+                        target.bilinear(
+                            z,
+                            z,
+                            interrupt,
+                            "exact_observation_target_bilinear",
+                            "exact_observation_target_bilinear_cells",
+                        )?,
+                        scale,
+                    );
+                }
+                problem.physical_total
+            }
+            DeletionMode::Match => {
+                let groups =
+                    hybrid.map_or(problem.deletion_units(), |plan| plan.mover_deletion_units);
+                for group in 0..groups {
+                    interrupt.checkpoint("exact_match_block")?;
+                    let range = problem.deletion_index.range(group);
+                    if range.len() > options.blocksize_limit {
+                        return Err(BackendError::new(
+                            ErrorCode::ResourceLimit,
+                            "exact_estimator",
+                            "a deletion block exceeds blocksize_limit()",
+                        ));
+                    }
+                    let mut indices = Vec::new();
+                    reserve_exact(&mut indices, range.len(), "exact deletion rows")?;
+                    for (local, &row) in problem.deletion_index.items[range].iter().enumerate() {
+                        checkpoint_chunk(interrupt, local, "exact_match_block")?;
+                        indices.push(usize::try_from(row).expect("validated deletion row"));
+                    }
+                    let block = match_block_action(
+                        &design,
+                        &working_inverse,
+                        inverse_factor.as_ref().expect("match inverse factor"),
+                        &information,
+                        &working_outcome,
+                        &residual,
+                        &problem.frequency,
+                        embedding,
+                        workers..(workers + firms),
+                        &indices,
+                        options,
+                        rank_verification_margin,
+                        controls > 0 && options.nuisance == NuisanceMode::Joint,
+                        control_receipt.forward_error,
+                        interrupt,
+                    )?;
+                    max_leverage = max_leverage.max(block.max_leverage);
+                    maker_relres = maker_relres.max(block.relres);
+                    deletion_rank_gap = deletion_rank_gap.min(1.0 - block.max_leverage);
+                    let left = transpose_matvec(
+                        &block.block_inverse,
+                        indices.len(),
+                        embedding,
+                        &block.transformed_outcome,
+                        interrupt,
+                        "exact_match_target_left_transpose",
+                    )?;
+                    let right = transpose_matvec(
+                        &block.block_inverse,
+                        indices.len(),
+                        embedding,
+                        &block.deleted_residual,
+                        interrupt,
+                        "exact_match_target_right_transpose",
+                    )?;
+                    add_scaled(
+                        &mut correction,
+                        target.bilinear(
+                            &left,
+                            &right,
+                            interrupt,
+                            "exact_match_target_bilinear",
+                            "exact_match_target_bilinear_cells",
+                        )?,
+                        1.0,
+                    );
+                }
+                u64::try_from(groups).map_err(|_| resource_error("deletion-unit count overflow"))?
+            }
+        };
+        let correction_sources = if let Some(plan) = hybrid {
+            let mut mover_correction = correction;
+            mover_correction.total =
+                mover_correction.worker + mover_correction.firm + 2.0 * mover_correction.covariance;
+            mover_correction.verify_accounting(1.0e-9)?;
+            let mut stayer_correction = VarianceComponents::default();
+            let mut stayer_physical_units = 0_u64;
             for row in 0..rows {
-                checkpoint_chunk(interrupt, row, "exact_observation_correction")?;
+                checkpoint_chunk(interrupt, row, "exact_stayer_observation_correction")?;
+                if !plan.stayer_rows[row] {
+                    continue;
+                }
                 let z = &design_inverse[row * embedding..(row + 1) * embedding];
                 let leverage = row_dot(
                     &design,
@@ -790,15 +984,17 @@ fn run_exact_estimator_internal(
                     embedding,
                     z,
                     interrupt,
-                    "exact_observation_leverage_matvec",
+                    "exact_stayer_leverage_matvec",
                 )?;
                 if !leverage.is_finite() || leverage < -100.0 * options.rank_tolerance {
-                    return Err(nonestimable("physical observation leverage is invalid"));
+                    return Err(nonestimable(
+                        "stayer physical-observation leverage is invalid",
+                    ));
                 }
                 let maker = 1.0 - leverage;
                 if maker <= options.block_tolerance {
                     return Err(nonestimable(
-                        "physical observation deletion has leverage at or above one",
+                        "a stayer physical-observation deletion has leverage at or above one",
                     ));
                 }
                 deletion_rank_gap = deletion_rank_gap.min(maker);
@@ -806,7 +1002,7 @@ fn run_exact_estimator_internal(
                     enforce_downstream_bound(
                         control_receipt.forward_error,
                         maker,
-                        "observation-deletion conditioning cannot certify control-basis invariance",
+                        "stayer-observation conditioning cannot certify control-basis invariance",
                     )?;
                 }
                 if maker <= rank_verification_margin
@@ -820,179 +1016,44 @@ fn run_exact_estimator_internal(
                         workers..(workers + firms),
                         options.rank_tolerance,
                         interrupt,
-                        "exact_observation_deleted_information",
+                        "exact_stayer_deleted_information",
                     )?;
                 }
                 max_leverage = max_leverage.max(leverage);
-                let scale =
-                    u64_to_f64(problem.frequency[row])? * working_outcome[row] * residual[row]
-                        / maker;
+                let frequency = problem.frequency[row];
+                stayer_physical_units = stayer_physical_units
+                    .checked_add(frequency)
+                    .ok_or_else(|| resource_error("stayer physical deletion count overflow"))?;
+                let scale = u64_to_f64(frequency)? * working_outcome[row] * residual[row] / maker;
                 add_scaled(
-                    &mut correction,
+                    &mut stayer_correction,
                     target.bilinear(
                         z,
                         z,
                         interrupt,
-                        "exact_observation_target_bilinear",
-                        "exact_observation_target_bilinear_cells",
+                        "exact_stayer_target_bilinear",
+                        "exact_stayer_target_bilinear_cells",
                     )?,
                     scale,
                 );
             }
-            problem.physical_total
-        }
-        DeletionMode::Match => {
-            let groups = hybrid.map_or(problem.deletion_units(), |plan| plan.mover_deletion_units);
-            for group in 0..groups {
-                interrupt.checkpoint("exact_match_block")?;
-                let range = problem.deletion_index.range(group);
-                if range.len() > options.blocksize_limit {
-                    return Err(BackendError::new(
-                        ErrorCode::ResourceLimit,
-                        "exact_estimator",
-                        "a deletion block exceeds blocksize_limit()",
-                    ));
-                }
-                let indices = problem.deletion_index.items[range]
-                    .iter()
-                    .map(|&row| usize::try_from(row).expect("validated deletion row"))
-                    .collect::<Vec<_>>();
-                let block = match_block_action(
-                    &design,
-                    &working_inverse,
-                    inverse_factor.as_ref().expect("match inverse factor"),
-                    &information,
-                    &working_outcome,
-                    &residual,
-                    &problem.frequency,
-                    embedding,
-                    workers..(workers + firms),
-                    &indices,
-                    options,
-                    rank_verification_margin,
-                    controls > 0 && options.nuisance == NuisanceMode::Joint,
-                    control_receipt.forward_error,
-                    interrupt,
-                )?;
-                max_leverage = max_leverage.max(block.max_leverage);
-                maker_relres = maker_relres.max(block.relres);
-                deletion_rank_gap = deletion_rank_gap.min(1.0 - block.max_leverage);
-                let left = transpose_matvec(
-                    &block.block_inverse,
-                    indices.len(),
-                    embedding,
-                    &block.transformed_outcome,
-                    interrupt,
-                    "exact_match_target_left_transpose",
-                )?;
-                let right = transpose_matvec(
-                    &block.block_inverse,
-                    indices.len(),
-                    embedding,
-                    &block.deleted_residual,
-                    interrupt,
-                    "exact_match_target_right_transpose",
-                )?;
-                add_scaled(
-                    &mut correction,
-                    target.bilinear(
-                        &left,
-                        &right,
-                        interrupt,
-                        "exact_match_target_bilinear",
-                        "exact_match_target_bilinear_cells",
-                    )?,
-                    1.0,
-                );
-            }
-            u64::try_from(groups).map_err(|_| resource_error("deletion-unit count overflow"))?
-        }
+            stayer_correction.total = stayer_correction.worker
+                + stayer_correction.firm
+                + 2.0 * stayer_correction.covariance;
+            stayer_correction.verify_accounting(1.0e-9)?;
+            correction = add_components(mover_correction, stayer_correction)?;
+            let mover_units = u64::try_from(plan.mover_deletion_units)
+                .map_err(|_| resource_error("mover deletion-unit count overflow"))?;
+            let combined_units = mover_units
+                .checked_add(stayer_physical_units)
+                .ok_or_else(|| resource_error("hybrid deletion-unit count overflow"))?;
+            Some(([mover_correction, stayer_correction], combined_units))
+        } else {
+            None
+        };
+        (deletion_units, correction_sources)
     };
-    let correction_sources = if let Some(plan) = hybrid {
-        let mut mover_correction = correction;
-        mover_correction.total =
-            mover_correction.worker + mover_correction.firm + 2.0 * mover_correction.covariance;
-        mover_correction.verify_accounting(1.0e-9)?;
-        let mut stayer_correction = VarianceComponents::default();
-        let mut stayer_physical_units = 0_u64;
-        for row in 0..rows {
-            checkpoint_chunk(interrupt, row, "exact_stayer_observation_correction")?;
-            if !plan.stayer_rows[row] {
-                continue;
-            }
-            let z = &design_inverse[row * embedding..(row + 1) * embedding];
-            let leverage = row_dot(
-                &design,
-                row,
-                embedding,
-                z,
-                interrupt,
-                "exact_stayer_leverage_matvec",
-            )?;
-            if !leverage.is_finite() || leverage < -100.0 * options.rank_tolerance {
-                return Err(nonestimable(
-                    "stayer physical-observation leverage is invalid",
-                ));
-            }
-            let maker = 1.0 - leverage;
-            if maker <= options.block_tolerance {
-                return Err(nonestimable(
-                    "a stayer physical-observation deletion has leverage at or above one",
-                ));
-            }
-            deletion_rank_gap = deletion_rank_gap.min(maker);
-            if controls > 0 && options.nuisance == NuisanceMode::Joint {
-                enforce_downstream_bound(
-                    control_receipt.forward_error,
-                    maker,
-                    "stayer-observation conditioning cannot certify control-basis invariance",
-                )?;
-            }
-            if maker <= rank_verification_margin
-                || (controls > 0 && options.nuisance == NuisanceMode::Joint)
-            {
-                certify_deleted_information(
-                    &information,
-                    &design[row * embedding..(row + 1) * embedding],
-                    1,
-                    embedding,
-                    workers..(workers + firms),
-                    options.rank_tolerance,
-                    interrupt,
-                    "exact_stayer_deleted_information",
-                )?;
-            }
-            max_leverage = max_leverage.max(leverage);
-            let frequency = problem.frequency[row];
-            stayer_physical_units = stayer_physical_units
-                .checked_add(frequency)
-                .ok_or_else(|| resource_error("stayer physical deletion count overflow"))?;
-            let scale = u64_to_f64(frequency)? * working_outcome[row] * residual[row] / maker;
-            add_scaled(
-                &mut stayer_correction,
-                target.bilinear(
-                    z,
-                    z,
-                    interrupt,
-                    "exact_stayer_target_bilinear",
-                    "exact_stayer_target_bilinear_cells",
-                )?,
-                scale,
-            );
-        }
-        stayer_correction.total =
-            stayer_correction.worker + stayer_correction.firm + 2.0 * stayer_correction.covariance;
-        stayer_correction.verify_accounting(1.0e-9)?;
-        correction = add_components(mover_correction, stayer_correction)?;
-        let mover_units = u64::try_from(plan.mover_deletion_units)
-            .map_err(|_| resource_error("mover deletion-unit count overflow"))?;
-        let combined_units = mover_units
-            .checked_add(stayer_physical_units)
-            .ok_or_else(|| resource_error("hybrid deletion-unit count overflow"))?;
-        Some(([mover_correction, stayer_correction], combined_units))
-    } else {
-        None
-    };
+    drop(correction_profile);
     let deletion_units = correction_sources
         .as_ref()
         .map_or(deletion_units, |(_, combined_units)| *combined_units);
@@ -1244,9 +1305,16 @@ fn match_block_action(
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<MatchBlockResult> {
     let width = indices.len();
-    let mut block_design = vec![0.0; width * parameters];
-    let mut transformed_outcome = vec![0.0; width];
-    let mut transformed_residual = vec![0.0; width];
+    let mut block_design = zeroed_f64_with_interrupt(
+        checked_matrix_length(width, parameters, "exact block design")?,
+        "exact block design",
+        interrupt,
+        "exact_match_copy",
+    )?;
+    let mut transformed_outcome =
+        zeroed_f64_with_interrupt(width, "exact block outcome", interrupt, "exact_match_copy")?;
+    let mut transformed_residual =
+        zeroed_f64_with_interrupt(width, "exact block residual", interrupt, "exact_match_copy")?;
     for (local, &row) in indices.iter().enumerate() {
         checkpoint_chunk(interrupt, local, "exact_match_copy")?;
         let root = u64_to_f64(frequency[row])?.sqrt();
@@ -1275,7 +1343,12 @@ fn match_block_action(
         "exact_match_factor",
     )?;
     let (deleted_residual, relres, minimum_maker) = if width <= parameters {
-        let mut maker = vec![0.0; width * width];
+        let mut maker = zeroed_f64_with_interrupt(
+            checked_matrix_length(width, width, "exact maker")?,
+            "exact maker",
+            interrupt,
+            "exact_match_maker_assembly",
+        )?;
         let mut assembly_work = 0_usize;
         for row in 0..width {
             for column in 0..width {
@@ -1327,7 +1400,12 @@ fn match_block_action(
         .max(maker_inverse.relres);
         (solved, relres, extremes.smallest_lower)
     } else {
-        let mut reduced = vec![0.0; parameters * parameters];
+        let mut reduced = zeroed_f64_with_interrupt(
+            checked_matrix_length(parameters, parameters, "exact reduced maker")?,
+            "exact reduced maker",
+            interrupt,
+            "exact_match_reduced_assembly",
+        )?;
         let mut assembly_work = 0_usize;
         for row in 0..parameters {
             for column in 0..parameters {
@@ -1388,7 +1466,8 @@ fn match_block_action(
             interrupt,
             "exact_match_addition_matvec",
         )?;
-        let mut deleted = Vec::with_capacity(width);
+        let mut deleted = Vec::new();
+        reserve_exact(&mut deleted, width, "exact deleted residual")?;
         for (row, (&left, right)) in transformed_residual.iter().zip(addition).enumerate() {
             checkpoint_chunk(interrupt, row, "exact_match_deleted_residual")?;
             deleted.push(left + right);
@@ -1401,7 +1480,8 @@ fn match_block_action(
             interrupt,
             "exact_match_low_rank_action",
         )?;
-        let mut maker_residual = Vec::with_capacity(width);
+        let mut maker_residual = Vec::new();
+        reserve_exact(&mut maker_residual, width, "exact maker residual")?;
         for row in 0..width {
             checkpoint_chunk(interrupt, row, "exact_match_complete_residual")?;
             maker_residual.push(deleted[row] - action[row] - transformed_residual[row]);
@@ -1466,8 +1546,18 @@ struct TargetMoments<'a> {
 impl<'a> TargetMoments<'a> {
     fn build(problem: &'a CompressedProblem, interrupt: &mut dyn InterruptCheck) -> Result<Self> {
         let workers = problem.workers();
-        let mut worker_share = vec![0.0; workers];
-        let mut firm_share = vec![0.0; problem.firms()];
+        let mut worker_share = zeroed_f64_with_interrupt(
+            workers,
+            "exact worker share",
+            interrupt,
+            "exact_target_moments",
+        )?;
+        let mut firm_share = zeroed_f64_with_interrupt(
+            problem.firms(),
+            "exact firm share",
+            interrupt,
+            "exact_target_moments",
+        )?;
         for row in 0..problem.outcome.len() {
             checkpoint_chunk(interrupt, row, "exact_target_moments")?;
             let mass = problem.target_weight[row] / problem.target_total;
@@ -1542,7 +1632,12 @@ fn control_semantic_order(
     problem: &CompressedProblem,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<usize>> {
-    let mut order = (0..problem.outcome.len()).collect::<Vec<_>>();
+    let mut order = Vec::new();
+    reserve_exact(&mut order, problem.outcome.len(), "exact semantic order")?;
+    for row in 0..problem.outcome.len() {
+        checkpoint_chunk(interrupt, row, "exact_control_semantic_order")?;
+        order.push(row);
+    }
     stable_sort_by_with_interrupt(
         &mut order,
         |&left, &right| {
@@ -1574,7 +1669,7 @@ fn build_design(
     let entries = rows
         .checked_mul(parameters)
         .ok_or_else(|| resource_error("dense design size overflow"))?;
-    let mut design = vec![0.0; entries];
+    let mut design = zeroed_f64_with_interrupt(entries, "exact design", interrupt, "exact_design")?;
     for row in 0..rows {
         checkpoint_chunk(interrupt, row, "exact_design")?;
         let worker = usize::try_from(problem.row_worker[row]).expect("dense worker");
@@ -1640,8 +1735,9 @@ fn complete_fit_residual(
         ));
     }
     let dimension = workers + firms + controls.len();
-    let mut rhs = vec![0.0; dimension];
-    let mut normal_residual = vec![0.0; dimension];
+    let mut rhs = zeroed_f64_with_interrupt(dimension, "exact residual rhs", interrupt, phase)?;
+    let mut normal_residual =
+        zeroed_f64_with_interrupt(dimension, "exact normal residual", interrupt, phase)?;
     for row in 0..rows {
         checkpoint_chunk(interrupt, row, phase)?;
         let worker = usize::try_from(problem.row_worker[row]).expect("dense worker");
@@ -1742,7 +1838,8 @@ fn certify_deleted_information(
             "deleted-information dimensions disagree",
         ));
     }
-    let mut deleted = information.to_vec();
+    let mut deleted =
+        copy_f64_with_interrupt(information, "exact deleted information", interrupt, phase)?;
     for deleted_row in 0..deleted_rows {
         for row in 0..dimension {
             let left = deleted_design[deleted_row * dimension + row];
@@ -1775,6 +1872,41 @@ fn certify_deleted_information(
     })
 }
 
+fn execution_crossproduct(
+    parallel: Option<&parallel::Runtime>,
+    design: &[f64],
+    rows: usize,
+    parameters: usize,
+    frequency: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+    phase: &'static str,
+) -> Result<Vec<f64>> {
+    let _profile =
+        crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactInformation);
+    match parallel {
+        Some(runtime) => {
+            runtime.crossproduct(design, rows, parameters, frequency, interrupt, phase)
+        }
+        None => crossproduct(design, rows, parameters, frequency, interrupt, phase),
+    }
+}
+
+fn execution_multiply(
+    parallel: Option<&parallel::Runtime>,
+    left: &[f64],
+    rows: usize,
+    inner: usize,
+    right: &[f64],
+    columns: usize,
+    interrupt: &mut dyn InterruptCheck,
+    phase: &'static str,
+) -> Result<Vec<f64>> {
+    match parallel {
+        Some(runtime) => runtime.multiply(left, rows, inner, right, columns, interrupt, phase),
+        None => multiply(left, rows, inner, right, columns, interrupt, phase),
+    }
+}
+
 fn crossproduct(
     design: &[f64],
     rows: usize,
@@ -1783,7 +1915,12 @@ fn crossproduct(
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<Vec<f64>> {
-    let mut output = vec![0.0; parameters * parameters];
+    let mut output = zeroed_f64_with_interrupt(
+        checked_matrix_length(parameters, parameters, phase)?,
+        phase,
+        interrupt,
+        phase,
+    )?;
     for row in 0..rows {
         let weight = u64_to_f64(frequency[row])?;
         for left in 0..parameters {
@@ -1819,7 +1956,7 @@ fn weighted_transpose_vector(
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<Vec<f64>> {
-    let mut output = vec![0.0; parameters];
+    let mut output = zeroed_f64_with_interrupt(parameters, phase, interrupt, phase)?;
     for row in 0..rows {
         checkpoint_chunk(interrupt, row, phase)?;
         let scale = u64_to_f64(frequency[row])? * value[row];
@@ -1839,13 +1976,20 @@ fn multiply(
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<Vec<f64>> {
-    if left.len() != left_rows * inner || right.len() != inner * right_columns {
+    if left.len() != checked_matrix_length(left_rows, inner, phase)?
+        || right.len() != checked_matrix_length(inner, right_columns, phase)?
+    {
         return Err(BackendError::invalid(
             "exact_estimator",
             "dense multiplication dimensions disagree",
         ));
     }
-    let mut output = vec![0.0; left_rows * right_columns];
+    let mut output = zeroed_f64_with_interrupt(
+        checked_matrix_length(left_rows, right_columns, phase)?,
+        phase,
+        interrupt,
+        phase,
+    )?;
     for row in 0..left_rows {
         for column in 0..right_columns {
             let mut value = 0.0;
@@ -1881,13 +2025,13 @@ fn matvec_rect(
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<Vec<f64>> {
-    if matrix.len() != rows * columns || value.len() != columns {
+    if matrix.len() != checked_matrix_length(rows, columns, phase)? || value.len() != columns {
         return Err(BackendError::invalid(
             "exact_estimator",
             "matrix-vector dimensions disagree",
         ));
     }
-    let mut output = vec![0.0; rows];
+    let mut output = zeroed_f64_with_interrupt(rows, phase, interrupt, phase)?;
     let mut work = 0_usize;
     for row in 0..rows {
         let mut sum = 0.0;
@@ -1909,13 +2053,13 @@ fn transpose_matvec(
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<Vec<f64>> {
-    if matrix.len() != rows * columns || value.len() != rows {
+    if matrix.len() != checked_matrix_length(rows, columns, phase)? || value.len() != rows {
         return Err(BackendError::invalid(
             "exact_estimator",
             "transposed matrix-vector dimensions disagree",
         ));
     }
-    let mut output = vec![0.0; columns];
+    let mut output = zeroed_f64_with_interrupt(columns, phase, interrupt, phase)?;
     let mut work = 0_usize;
     for row in 0..rows {
         for column in 0..columns {
@@ -2092,7 +2236,13 @@ fn preserve_user_break_or(
     code: ErrorCode,
     message: &'static str,
 ) -> BackendError {
-    if error.code == ErrorCode::UserBreak {
+    if matches!(
+        error.code,
+        ErrorCode::UserBreak
+            | ErrorCode::ResourceLimit
+            | ErrorCode::AllocationFailed
+            | ErrorCode::Panic
+    ) {
         error
     } else {
         BackendError::new(code, "exact_estimator", message)
@@ -2147,7 +2297,7 @@ mod tests {
         }
     }
 
-    fn fixture(controls: Vec<Vec<f64>>, frequency: Vec<u64>) -> CompressedProblem {
+    pub(super) fn fixture(controls: Vec<Vec<f64>>, frequency: Vec<u64>) -> CompressedProblem {
         let worker = vec![1, 1, 1, 1, 2, 2, 2, 2];
         let firm = vec![1, 1, 2, 2, 1, 1, 2, 2];
         CanonicalInput::from_validated(
@@ -2168,7 +2318,7 @@ mod tests {
         .expect("fixture compresses")
     }
 
-    fn hybrid_fixture() -> (CompressedProblem, ExactStayerHybridPlan) {
+    pub(super) fn hybrid_fixture() -> (CompressedProblem, ExactStayerHybridPlan) {
         let rows = 10_usize;
         let problem = CanonicalInput::from_validated(
             InputColumns {
@@ -2701,7 +2851,7 @@ mod tests {
         assert_eq!(error.code, ErrorCode::ResourceLimit);
     }
 
-    fn block_fixture(block: usize) -> CompressedProblem {
+    pub(super) fn block_fixture(block: usize) -> CompressedProblem {
         let mut worker = Vec::new();
         let mut firm = Vec::new();
         let mut deletion = Vec::new();

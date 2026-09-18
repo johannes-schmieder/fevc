@@ -73,6 +73,18 @@ impl<'a> TwoWayOperator<'a> {
                 "the initial two-way operator does not yet include controls",
             ));
         }
+        Self::fe_part_with_interrupt(problem, interrupt)
+    }
+
+    /// A borrowed FE sub-operator, not a full controlled-model solve. Its
+    /// caller must separately retain/certify all control equations. Keeping
+    /// this constructor crate-private prevents silently dropping controls at
+    /// the existing public two-way boundary.
+    pub(crate) fn fe_part_with_interrupt(
+        problem: &'a CompressedProblem,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("operator_setup")?;
         if problem.firms() < 2 || problem.workers() == 0 || problem.cells() == 0 {
             return Err(BackendError::new(
                 ErrorCode::GraphUnidentified,
@@ -81,8 +93,18 @@ impl<'a> TwoWayOperator<'a> {
             ));
         }
 
-        let mut worker_diagonal = vec![0.0; problem.workers()];
-        let mut firm_diagonal = vec![0.0; problem.firms()];
+        let mut worker_diagonal = crate::model_operator::zeroed_f64_with_interrupt(
+            problem.workers(),
+            "FE worker diagonal",
+            interrupt,
+            "operator_setup",
+        )?;
+        let mut firm_diagonal = crate::model_operator::zeroed_f64_with_interrupt(
+            problem.firms(),
+            "FE firm diagonal",
+            interrupt,
+            "operator_setup",
+        )?;
         for cell in 0..problem.cells() {
             checkpoint_chunk(interrupt, cell, "operator_setup_cells")?;
             let weight = problem.cell_weight[cell];

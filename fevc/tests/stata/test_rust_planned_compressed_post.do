@@ -237,12 +237,13 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 // The public engine-auto boundary must preserve the compressed result family.
-// On this small F-1=3 quotient the registered pre-RNG automatic solver rule
-// selects the exact/direct route without changing the JLA estimator family.
+// An explicit batch retains the legacy automatic solver rule: on this small
+// F-1=3 quotient it selects exact without changing the JLA estimator family.
+// Automatic batches now select full CMG, covered by the point-routing suite.
 quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto)   ///
-    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    batch(7) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
     targetweight(target_weight) nodisplay
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
@@ -285,7 +286,7 @@ assert `"`auto_sortedby_after'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
-// Automatic diagonal selection requires the firm quotient to exceed the
+// With an explicit batch, legacy automatic diagonal selection requires the firm quotient to exceed the
 // registered direct-solver threshold of 500 while remaining below the CMG
 // threshold.  K(2,502) is connected after deleting any one match, so this
 // fixture tests routing without weakening the match-deletion graph contract.
@@ -313,7 +314,7 @@ local diagonal_caller_signature `"`r(datasignature)'"'
 quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto)   ///
-    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    batch(7) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
     targetweight(target_weight) nodisplay
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"

@@ -58,15 +58,15 @@ assert `"`e(inference_model)'"' == "structured_common"
 assert `"`e(result_family)'"' == "generic"
 assert `"`e(inference_support_status)'"' == "approximate_model_based"
 assert strpos(`"`e(inference_capability)'"',"observation deletion") > 0
-assert `"`e(inference_population)'"' == "movers"
+assert `"`e(inference_population)'"' == "both"
 assert `"`e(inference_deletion_requested)'"' == "observation"
 assert `"`e(inference_deletion_selected)'"' == "observation"
 assert e(inference_independent_units)==300
 assert e(inference_nuisance_omitted)==0
 assert e(component_unit_receipt)[1,"deletion"]==2
 assert e(component_unit_receipt)[1,"effective_matches"]==0
-assert `"`e(inference_population_requested)'"' == "movers"
-assert `"`e(inference_population_selected)'"' == "movers"
+assert `"`e(inference_population_requested)'"' == "both"
+assert `"`e(inference_population_selected)'"' == "both"
 assert `"`e(inference_model_requested)'"' == "structured_common"
 assert `"`e(inference_model_selected)'"' == "structured_common"
 assert `"`e(inference_backend_requested)'"' == "rust"
@@ -85,7 +85,7 @@ assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(preconditioner_requested)'"' == "diagonal"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(deletion)'"' == "observation"
-assert `"`e(stayers)'"' == "movers"
+assert `"`e(stayers)'"' == "both"
 assert `"`e(nuisance)'"' == "joint"
 assert `"`e(inference_reference_requested)'"' == "q0"
 assert `"`e(inference_reference_selected)'"' == "q0 diffuse"
@@ -232,12 +232,12 @@ capture noisily fevc outcome control, worker(worker) firm(firm)     ///
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
 
-capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(observation) stayers(both) algorithm(jla) engine(generic) ///
-    backend(rust) rng(counter_v1) preconditioner(diagonal)          ///
-    inference(highrank) inferencemodel(structured_common) nodisplay
-assert _rc == 498
-assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
+// Explicit both is the same population and inference as the default above.
+fevc outcome control, `common_options' stayers(both) batch(8)
+assert "`e(stayers)'"=="both" & e(stayers_option_supplied)==1
+assert "`e(inference_population)'"=="both"
+assert mreldif(q0_results,e(results))<1e-8
+assert mreldif(q0_V,e(V))<1e-8
 
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
     deletion(observation) nuisance(fixedoffset) algorithm(jla) engine(generic) ///

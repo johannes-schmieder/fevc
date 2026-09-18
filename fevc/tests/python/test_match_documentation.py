@@ -55,8 +55,17 @@ def test_catalog_preserves_match_install_inventory():
     old = subprocess.check_output(
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.pkg"], cwd=ROOT, text=True
     )
+    additive_helpers = {
+        "f _fevc_memory_options.ado",
+        "f _fevc_observation_population.ado",
+        "f _fevc_stayer_population_post.ado",
+        "f _fevc_rust_cmg_model.ado",
+        "f _fevc_rust_comp_batch_receipt.ado",
+        "f _fevc_rust_core_ready.ado",
+    }
+    assert additive_helpers <= set(manifest.splitlines())
     assert [x for x in old.splitlines() if x.startswith("f ")] == [
-        x for x in manifest.splitlines() if x.startswith("f ") and x != "f _fevc_memory_options.ado"
+        x for x in manifest.splitlines() if x.startswith("f ") and x not in additive_helpers
     ]
     assert "fixed-offset match" in manifest
     assert "fixed-offset match" in (ROOT / "fevc/stata.toc").read_text()

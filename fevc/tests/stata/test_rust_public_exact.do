@@ -174,7 +174,7 @@ foreach nuisance in joint fixedoffset {
         targetweight(target) backend(rust) rng(auto) engine(generic) ///
         probes(7) batch(3) seed(99) tolerance(1e-12) maxiter(17)     ///
         physical_limit(1) stayers(movers) nodisplay
-    assert `"`e(target_population)'"' == "retained observations"
+    assert `"`e(target_population)'"' == "movers"
     assert e(deletion_units) == `mata_observation_units'
     assert e(deletion_units) == 9
     assert e(N_physical) == 9

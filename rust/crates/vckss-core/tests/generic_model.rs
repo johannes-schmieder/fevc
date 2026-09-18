@@ -185,6 +185,163 @@ fn wide_control_fixture(controls: usize) -> Fixture {
     }
 }
 
+#[test]
+fn original_row_kernels_poll_at_completion_and_reuse_after_break() {
+    for controls in [0, 1, 3, 32] {
+        let fixture = wide_control_fixture(controls);
+        let operator = ModelOperator::new(fixture.data()).unwrap();
+        let (worker, firm, control) = coefficients(&fixture, 31);
+        let rhs = normal_rhs(&fixture, &worker, &firm, &control);
+        let mut prediction = vec![f64::NAN; fixture.weight.len()];
+        // The prediction fits in one bounded chunk even with 32 controls.
+        let mut interrupt = BreakOnPhase {
+            phase: "model_prediction",
+            calls: 0,
+            stop: 2,
+        };
+        let error = operator
+            .predict_into_with_interrupt(&worker, &firm, &control, &mut prediction, &mut interrupt)
+            .expect_err("check completion as well as chunk entry");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert!(prediction.iter().all(|value| value.is_finite()));
+        operator
+            .predict_into(&worker, &firm, &control, &mut prediction)
+            .unwrap();
+        for (row, actual) in prediction.iter().enumerate() {
+            let mut expected =
+                worker[fixture.worker[row] as usize] + firm[fixture.firm[row] as usize];
+            for (coefficient, column) in control.iter().zip(&fixture.controls) {
+                expected += coefficient * column[row];
+            }
+            assert_eq!(*actual, expected);
+        }
+        let mut interrupt = BreakOnPhase {
+            phase: "model_full_residual",
+            calls: 0,
+            stop: 2,
+        };
+        let error = operator
+            .full_residual_with_interrupt(&worker, &firm, &control, rhs.view(), &mut interrupt)
+            .expect_err("check final or intermediate row chunk");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        let residual = operator
+            .full_residual(&worker, &firm, &control, rhs.view())
+            .unwrap();
+        assert!(residual.relative_norm <= 1e-11);
+    }
+}
+
+#[test]
+fn prediction_cancellation_is_bounded_by_control_work_not_only_rows() {
+    for controls in [0, 1, 3, 32] {
+        let original = wide_control_fixture(controls);
+        let mut fixture = original.clone();
+        for _ in 1..129 {
+            fixture.worker.extend_from_slice(&original.worker);
+            fixture.firm.extend_from_slice(&original.firm);
+            fixture.weight.extend_from_slice(&original.weight);
+            for (output, input) in fixture.controls.iter_mut().zip(&original.controls) {
+                output.extend_from_slice(input);
+            }
+        }
+        let operator = ModelOperator::new(fixture.data()).unwrap();
+        let (worker, firm, control) = coefficients(&fixture, 7);
+        let mut prediction = vec![f64::NAN; fixture.weight.len()];
+        let mut interrupt = BreakOnPhase {
+            phase: "model_prediction",
+            calls: 0,
+            stop: 2,
+        };
+        let error = operator
+            .predict_into_with_interrupt(&worker, &firm, &control, &mut prediction, &mut interrupt)
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        let completed = prediction
+            .iter()
+            .take_while(|value| value.is_finite())
+            .count();
+        let bound = vckss_core::interrupt::INTERRUPT_CHECK_CHUNK / (1 + controls);
+        assert_eq!(completed, bound);
+        assert!(prediction[completed..].iter().all(|value| value.is_nan()));
+        operator
+            .predict_into(&worker, &firm, &control, &mut prediction)
+            .unwrap();
+        assert!(prediction.iter().all(|value| value.is_finite()));
+    }
+}
+
+#[test]
+fn rhs_and_worker_recovery_reuse_statistics_without_rescanning_repeated_rows() {
+    struct Count(usize);
+    impl InterruptCheck for Count {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == "model_rhs_reduce" || phase == "model_reconstruct" {
+                self.0 += 1;
+            }
+            Ok(())
+        }
+    }
+    for controls in [0, 1, 3, 32] {
+        let original = wide_control_fixture(controls);
+        let mut fixture = original.clone();
+        // Identical design rows need not have identical positive weights.
+        // The independent row-level normal equation remains the oracle.
+        for repetition in 1..129 {
+            fixture.worker.extend_from_slice(&original.worker);
+            fixture.firm.extend_from_slice(&original.firm);
+            fixture.weight.extend(
+                original
+                    .weight
+                    .iter()
+                    .map(|x| x * (1.0 + repetition as f64 / 257.0)),
+            );
+            for (output, input) in fixture.controls.iter_mut().zip(&original.controls) {
+                output.extend_from_slice(input);
+            }
+        }
+        let operator = ModelOperator::new(fixture.data()).unwrap();
+        let (worker, firm, control) = coefficients(&fixture, 19);
+        let rhs = normal_rhs(&fixture, &worker, &firm, &control);
+        let reduced: Vec<_> = firm.iter().chain(&control).copied().collect();
+        let mut count = Count(0);
+        let recovered = operator
+            .reconstruct_worker_with_interrupt(&rhs.worker, &reduced, &mut count)
+            .unwrap();
+        for (a, b) in recovered.iter().zip(&worker) {
+            assert!((a - b).abs() <= 1e-10 * a.abs().max(b.abs()).max(1.0));
+        }
+        // One bounded pair pass and one bounded worker pass per control,
+        // independent of the number of repeated observations.
+        assert!(
+            count.0 <= 1 + controls,
+            "row rescanning: {} checkpoints",
+            count.0
+        );
+        count.0 = 0;
+        let actual = operator
+            .reduce_rhs_with_interrupt(rhs.view(), &mut count)
+            .unwrap();
+        let mut expected = vec![0.0; operator.parameter_count()];
+        let mut workspace = ModelWorkspace::new(&operator).unwrap();
+        operator
+            .apply_with_workspace(&reduced, &mut expected, &mut workspace)
+            .unwrap();
+        for (a, b) in actual.iter().zip(&expected) {
+            assert!((a - b).abs() <= 1e-10 * a.abs().max(b.abs()).max(1.0));
+        }
+        assert!(
+            count.0 <= 1 + controls,
+            "row rescanning: {} checkpoints",
+            count.0
+        );
+        // Certification continues to inspect the original row equations.
+        let residual = operator
+            .full_residual(&recovered, &firm, &control, rhs.view())
+            .unwrap();
+        assert!(residual.relative_norm <= 1e-11);
+    }
+}
+
 fn coefficients(fixture: &Fixture, seed: u64) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     let mut worker = (0..fixture.workers)
         .map(|index| ((index * 7 + seed as usize) % 13) as f64 / 7.0 - 0.8)

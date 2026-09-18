@@ -114,8 +114,8 @@ results; advisory policy does not permit malformed or inconsistent receipts.
 
 ## Accuracy and reproducibility
 
-The [September 10 implementation record](MEMORY_FORECAST_2026-09-10.md) and
-[its machine-readable result](memory_forecast_v1_result.json) report four
+The [September 10 implementation record](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/MEMORY_FORECAST_2026-09-10.md) and
+[its machine-readable result](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/memory_forecast_v1_result.json) report four
 full-CMG core fixtures with forecast excess of 0.17–2.64% over independently
 measured direct allocation peaks. These are bounded development checks, not a
 5% guarantee for other inputs or backends. Generic/exact and projection routes

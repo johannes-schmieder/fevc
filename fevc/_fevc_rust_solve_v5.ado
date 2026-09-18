@@ -13,15 +13,17 @@ program define _fevc_rust_solve_v5, rclass
         di as err "full-CMG Rust solve requires capability schema 3/profile 4"
         exit 198
     }
-    if "`algorithm'" != "jla" | "`engine'" != "auto" |          ///
-        "`route'" != "auto" | "`deletion'" != "match" |          ///
-        "`nuisance'" != "joint" | "`batchmode'" != "auto" |      ///
+    if "`algorithm'" != "jla" | !inlist("`engine'","auto","generic") | ///
+        !inlist("`route'","auto","cmg") | !inlist("`deletion'","match","observation") | ///
+        !inlist("`nuisance'","joint","fixedoffset") | "`batchmode'" != "auto" | ///
         "`leveragebatchmode'" != "auto" |                          ///
-        "`targetbatchmode'" != "auto" | "`stayers'" != "movers" | ///
-        "`targetweightmode'" != "frequency" |                      ///
-        "`deletionsource'" != "cell" | `probeordersupplied' != 1 | ///
-        `frequencyused' != 0 | `leveragebatch' != 0 |               ///
-        `targetbatch' != 0 | `fallback' != 1 {
+        "`targetbatchmode'" != "auto" | !inlist("`stayers'","movers","all") | ///
+        !inlist("`targetweightmode'","frequency","explicit") |     ///
+        ("`deletion'"=="match" & !inlist("`deletionsource'","cell","matchid")) | ///
+        ("`deletion'"=="observation" & "`deletionsource'"!="observation") | ///
+        !inlist(`probeordersupplied',0,1) | ///
+        !inlist(`frequencyused',0,1) | `leveragebatch' != 0 |        ///
+        `targetbatch' != 0 | `fallback' != ("`route'"=="auto") {
         di as err "request is outside the qualified full-CMG Rust tuple"
         exit 198
     }

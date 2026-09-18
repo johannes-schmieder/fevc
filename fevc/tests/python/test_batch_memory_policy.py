@@ -10,7 +10,7 @@ def test_batch_forecast_accounts_for_physical_observation_matrix() -> None:
     assert forecast < routing
     assert "8*scalar(`retained_physical_total')" in ado
     assert 'quietly _vckss_post_failure "BATCH_MEMORY_LIMIT"' not in ado
-    assert "Percentage batch budgets select a practical automatic width" in ado
+    assert "The direct-peak model, not width heuristics, is the allocation gate." in ado
     assert "ereturn scalar batch_physical_column_bytes" in ado
 
 

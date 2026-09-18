@@ -82,6 +82,7 @@ program define fevc, eclass
     global VCKSS_STAGE_VALIDATION_TIMER `stage_validation_timer'
     capture noisily _vckss_impl `0'
     local command_rc = _rc
+    if !`command_rc' quietly _fevc_stayer_population_post
     if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
         if real("$VCKSS_MEMORY_FORECAST") > 0 & real("$VCKSS_MEMORY_FORECAST") < . {
             ereturn scalar memory_forecast_bytes = max(e(memory_forecast_bytes),real("$VCKSS_MEMORY_FORECAST"))
@@ -1258,13 +1259,34 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if "`rngrequested'"=="" local rngrequested counter_v1
     if "`fullcmg'"=="" local fullcmg = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
+    // One execution context; the isolated benchmark adapter may replace only
+    // this initialization, never Stata's own processor/accounting metadata.
+    local native_threads = c(processors)
     local projection_requested = (strtrim(`"`project'"') != "")
     local component_requested = ("`inference'" != "none" &       ///
         inlist(lower(strtrim("`inferencemodel'")),                 ///
             "structured_common", "structured_leverage"))
+    local generic_execution = 0
+    if `fullcmg'==0 & "`algorithm_requested'"=="jla" & "`enginerequested'"=="generic" & ///
+        (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
+        if "`preconditionerrequested'"=="diagonal" local generic_execution = 1
+        if "`preconditionerrequested'"=="cmg" & "`batchrequested'"=="auto" & ///
+            (`projection_requested' | `component_requested') local generic_execution = 2
+    }
+    if `fullcmg'==0 & inlist("`algorithm_requested'","auto","jla") & ///
+        inlist("`enginerequested'","auto","generic") & ///
+        "`preconditionerrequested'"=="auto" & "`batchrequested'"=="auto" & ///
+        (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
+        local generic_execution = 3
+    }
+    local component_batch_auto = (`component_requested' & inlist(`generic_execution',1,2) & ///
+        "`batchrequested'"=="auto")
     tempvar native_input_order
     quietly generate double `native_input_order' = _n
-    local implicit_match = (`fullcmg' == 1)
+    local implicit_match = (`fullcmg' == 1 & "`deletionmode'"=="match" & ///
+        "`stayersmode'"=="movers" & "`probeorder'"!="" & ///
+        !`frequencyused' & !`targetweightsupplied' & !`deletionidsupplied' & ///
+        strtrim(`"`controls'"')=="" & "`nuisance'"=="joint")
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
         `frequency' `target' `touse' `controls' `project' {
         confirm numeric variable `input'
@@ -1408,6 +1430,15 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     local cap_tgt_defer = r(target_batch_resolution_deferred)
     local cap_reason_name `"`r(reason)'"'
     local cap_profile_name `"`r(profile)'"'
+    quietly _vckss_request_signature 3 `algorithm_expected_code' ///
+        `deletion_code' `nuisance_code' `route_expected_code' ///
+        `capability_rng_code' `control_count' `frequency_code' ///
+        `engine_expected_code' `phase_batch_code' `stayers_code' ///
+        `target_code' `deletion_source_code' `probeorder_supplied_code' ///
+        `wallseconds_supplied_code' `physicallimit' `phase_batch_code' ///
+        `phase_batch_code' `fallback_allowed' `wallseconds_value'
+    local expected_signature_hi = r(signature_hi)
+    local expected_signature_lo = r(signature_lo)
     local capability_ok = 1
     foreach name in struct_size abi_version request_schema supported ///
         reason_code profile_code algorithm_code deletion_mode_code   ///
@@ -1430,8 +1461,9 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `capability_ok' {
         local capability_ok =                                      ///
             `cap_struct_size'==160 & `cap_abi_version'==1 &        ///
-            `cap_request_schema'==3 & `cap_supported'==1 &         ///
-            `cap_reason_code'==0 & `cap_profile_code'==4 &         ///
+            `cap_request_schema'==3 & inlist(`cap_supported',0,1) & ///
+            (`cap_supported'==1)==(`cap_reason_code'==0) & ///
+            `cap_profile_code'==cond(`cap_supported',4,0) & ///
             `cap_algorithm_code'==`algorithm_expected_code' &                              ///
             `cap_deletion_mode_code'==`deletion_code' &            ///
             `cap_nuisance_mode_code'==`nuisance_code' &            ///
@@ -1461,6 +1493,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `cap_tgt_defer'==               ///
                 ("`phase_batch_mode'"=="auto") &                   ///
             `cap_wall_advisory_only'==1 &                          ///
+            `cap_request_signature_hi'==`expected_signature_hi' & ///
+            `cap_request_signature_lo'==`expected_signature_lo' & ///
             `cap_request_signature_hi'<=4294967295 &               ///
             `cap_request_signature_lo'<=4294967295
     }
@@ -1474,6 +1508,20 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         ereturn local native_error_phase "request_capability_reconcile"
         ereturn local backend_selected ""
         ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    if !`cap_supported' {
+        capture quietly fevc_rust clear
+        quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
+            "Rust planned capability declined the materialized tuple: `cap_reason_name'."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "request_capability"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn local rust_request_capability_reason "`cap_reason_name'"
+        ereturn scalar rust_cap_reason_code = `cap_reason_code'
         ereturn scalar rust_core_ready_flags = `rustcoreflags'
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
@@ -1915,7 +1963,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture noisily _fevc_rust_component_attach `handle' `result_stored' ///
             `solve_resident' `p_mem_limit' `component_model'              ///
             `component_reference' `inferencesimulations' `batch'          ///
-            `inferenceseed' `level' `ranktol' `component_aug_ctx' `deletionmode' `inferencegramprobes'
+            `inferenceseed' `level' `ranktol' `component_aug_ctx' `deletionmode' `inferencegramprobes' `component_batch_auto'
         if _rc exit _rc
         local component_augmentation_peak = r(peak)
         local p_prep_peak = max(`p_prep_peak',r(peak))
@@ -1924,6 +1972,13 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         (`result_workers'+`p_firms'-1+`control_count'<=`exactlimit')
     local exact_plan_complexity =                              ///
         `result_workers'+`p_firms'-1+`control_count'
+    local exact_execution = 0
+    if `exact_selected_pre_rng' & ///
+        (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
+        local exact_execution = cond("`algorithm_requested'"=="exact",1,2)
+        local generic_execution = 0
+        local fullcmg = 0
+    }
     if (`result_physical' > `physicallimit') &                    ///
         !(`exact_selected_pre_rng') {
         capture quietly fevc_rust release `handle'
@@ -2046,7 +2101,10 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         signaturehi(`cap_request_signature_hi')                     ///
         signaturelo(`cap_request_signature_lo')                     ///
         fallback(`fallback_allowed') wallseconds(`wallseconds_value') ///
-        fullcmg(`fullcmg') threads(`=c(processors)')                 ///
+        execution(`generic_execution')                            ///
+        componentbatchauto(`component_batch_auto')                 ///
+        fullcmg(`fullcmg') threads(`native_threads')                 ///
+        exactexecution(`exact_execution')                          ///
         tolerancesupplied(`tolerancesupplied')
     if _rc {
         local failure_rc = _rc
@@ -2057,12 +2115,35 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         exit _rc
     }
 
+    tempname generic_work generic_max_complete
+    local resolved_execution = (`generic_execution'==3)
+    if `generic_execution' & !`resolved_execution' {
+        capture noisily _fevc_rust_public_call executionreceipt `handle'
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
+            exit _rc
+        }
+        matrix `generic_work' = r(receipt)
+    }
+    tempname component_batch_receipt
+    local selected_inference_width = 0
+    if `component_batch_auto' {
+        capture noisily _fevc_rust_comp_batch_receipt `handle' ///
+            `inferencesimulations' `inferencegramprobes' `generic_work' `native_threads'
+        if _rc exit _rc
+        matrix `component_batch_receipt' = r(receipt)
+        local selected_inference_width = r(width)
+    }
     local component_result_probes = 0
     local component_gram_probes = 0
     if `component_requested' local component_result_probes = `inferencesimulations'
     if `component_requested' local component_gram_probes = `inferencegramprobes'
+    local result_execution = cond(`resolved_execution',0,`generic_execution')
     capture noisily _fevc_rust_public_call result `handle',          ///
         componentinference(`component_requested')                    ///
+        execution(`result_execution')                                ///
+        exactexecution(`exact_execution') exactthreads(`native_threads') ///
         componentprobes(`component_result_probes') componentgramprobes(`component_gram_probes')
     local result_export_rc = _rc
     if `result_export_rc' {
@@ -2073,8 +2154,38 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
 
     local native_result_engine = r(selected_engine_code)
+    tempname exact_work_ctx
+    if `exact_execution' {
+        matrix `exact_work_ctx' = r(exact_execution_receipt)
+        local work_ok = rowsof(`exact_work_ctx')==1 & colsof(`exact_work_ctx')==10
+        if `work_ok' {
+            forvalues column = 1/9 {
+                if missing(`exact_work_ctx'[1,`column']) | `exact_work_ctx'[1,`column']<0 | ///
+                    `exact_work_ctx'[1,`column']!=floor(`exact_work_ctx'[1,`column']) local work_ok = 0
+            }
+            local work_ok = `work_ok' & `exact_work_ctx'[1,1]==64 & ///
+                `exact_work_ctx'[1,2]==1 & `exact_work_ctx'[1,3]==`handle' & ///
+                `exact_work_ctx'[1,4]==`native_threads' & ///
+                inrange(`exact_work_ctx'[1,5],1,`native_threads') & ///
+                `exact_work_ctx'[1,5]==r(plan_threads_used) & ///
+                `exact_work_ctx'[1,6]==r(plan_parallel) & ///
+                `exact_work_ctx'[1,7]==cond(`stayers_code'==2,2,1) & ///
+                `exact_work_ctx'[1,8]>0 & `exact_work_ctx'[1,8]<=`exact_work_ctx'[1,9] & ///
+                `exact_work_ctx'[1,9]==r(mem_command) & ///
+                inrange(`exact_work_ctx'[1,10],0,r(full_residual_tolerance))
+        }
+        if !`work_ok' {
+            capture quietly _fevc_rust_public_call release `handle'
+            capture quietly fevc_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "The exact execution receipt does not match the resolved public request."
+            exit 498
+        }
+    }
     local native_selected_lev_batch = r(leverage_batch_width)
     local native_selected_tgt_batch = r(target_batch_width)
+    // Preserve binary64 residuals; macro decimal rendering can round upward.
+    scalar `generic_max_complete' = r(max_complete_residual)
     local native_result_rhs_schema = r(rhs_receipt_schema)
     local native_perf_schema = r(performance_schema)
     local native_perf_flags = r(performance_flags)
@@ -2094,6 +2205,41 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname component_point_snapshot
     if `component_requested' {
         matrix `component_point_snapshot' = r(result)[3,1..4]
+    }
+    if `resolved_execution' {
+        if `native_result_engine'==2 {
+            capture noisily _fevc_rust_public_call executionreceipt `handle'
+            if _rc {
+                local failure_rc = _rc
+                capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
+                exit _rc
+            }
+            matrix `generic_work' = r(receipt)
+            local generic_execution = `generic_work'[1,4]
+            if !inlist(`generic_execution',1,2) {
+                capture quietly fevc_rust release `handle'
+                capture quietly fevc_rust clear
+                quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                    "Resolved native execution returned an invalid executor receipt."
+                exit 498
+            }
+        }
+        else local generic_execution = 0
+    }
+    // executionreceipt replaces r().  A resolved diagonal execution has no
+    // later full-CMG refresh, so restore the immutable result export before
+    // generic receipt reconciliation.  Component inference performs its own
+    // refresh below after fetching component results.
+    if `resolved_execution' & `generic_execution'==1 & !`component_requested' {
+        capture noisily _fevc_rust_public_call result `handle',          ///
+            componentinference(0) execution(`generic_execution')         ///
+            componentprobes(0) componentgramprobes(0)
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+                handle(`handle') phase(resolved_result_refresh)
+            exit _rc
+        }
     }
     tempname component_V_primitive component_V component_trace_mcse
     tempname component_spectrum component_q1_raw component_variance_summary
@@ -2117,7 +2263,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         // componentresult replaces r(). Re-export the immutable solved
         // result before any generic-result reconciliation or posting.
         capture noisily _fevc_rust_public_call result `handle',           ///
-            componentinference(1) componentprobes(`inferencesimulations') ///
+            componentinference(1) execution(`generic_execution') componentprobes(`inferencesimulations') ///
             componentgramprobes(`component_gram_probes')
         if _rc {
             local failure_rc = _rc
@@ -2127,9 +2273,9 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         }
     }
 
-    local full_cmg_active = (`fullcmg' == 1)
+    local full_cmg_active = (`fullcmg' == 1 | `generic_execution'==2)
     local full_cmg_pre_reconciled = 0
-    if `full_cmg_active' {
+    if `full_cmg_active' & `native_result_engine'==1 {
         if `native_result_engine'!=1 | `native_result_rhs_schema'!=1 {
             capture quietly fevc_rust release `handle'
             capture quietly fevc_rust clear
@@ -2163,7 +2309,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         }
         local full_cmg_pre_reconciled = 1
     }
-    tempname full_cmg_receipt
+    tempname full_cmg_receipt full_cmg_model_receipt
     if `full_cmg_active' {
         capture noisily _fevc_rust_public_call fullcmgreceipt `handle'
         local full_cmg_receipt_rc = _rc
@@ -2216,14 +2362,26 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local cmg_backend `"`r(cmg_backend)'"'
         local cmg_source_commit `"`r(cmg_source_commit)'"'
         local expected_cmg_fit_tol = `tolerance'
-        local expected_cmg_probe_tol = cond(`tolerancesupplied',`tolerance',1e-6)
+        local expected_cmg_probe_tol = cond(`tolerancesupplied' | `control_count'>0 | ///
+            `generic_execution'==2,`tolerance',1e-6)
+        if `generic_execution'==0 {
+            capture noisily _fevc_rust_cmg_model `handle' `control_count' ///
+                `nuisance_code' `probes' `cmg_rhs_count'
+            if _rc {
+                local failure_rc = _rc
+                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
+                    handle(`handle') phase(full_cmg_model_receipt)
+                exit _rc
+            }
+            matrix `full_cmg_model_receipt' = r(receipt)
+        }
         local full_cmg_receipt_ok =                              ///
             `cmg_generation'==`handle' & `cmg_backend_identity'==2 & ///
             `"`cmg_backend'"'=="CMG_FULL_V2" &                 ///
             `"`cmg_source_commit'"'==                           ///
                 "92a12f2d572ca56b30a035220953f9dd4bced999" &  ///
-            `cmg_threads_requested'==c(processors) &              ///
-            `cmg_threads_used'==c(processors) &                    ///
+            `cmg_threads_requested'==`native_threads' &              ///
+            `cmg_threads_used'==`native_threads' &                    ///
             `cmg_fit_tol'==`expected_cmg_fit_tol' &                ///
             `cmg_probe_tol'==`expected_cmg_probe_tol' &            ///
             `cmg_fit_inner'==0.01*`expected_cmg_fit_tol' &         ///
@@ -2241,7 +2399,6 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 2*`native_selected_tgt_batch') &                   ///
             `cmg_workspace_count'>0 &                              ///
             `cmg_workspace_count'<=`cmg_threads_used' &            ///
-            `cmg_rhs_count'==1+3*`probes' &                        ///
             `cmg_max_complete'<=max(1e-11,10*max(                  ///
                 `expected_cmg_fit_tol',`expected_cmg_probe_tol'))
         if !`full_cmg_receipt_ok' {
@@ -2404,7 +2561,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `targetweightsupplied' `"`cmdline'"'                    ///
             `wallseconds_supplied_code' `wallseconds_value'         ///
             `exact_prep_ctx' `exact_graph_ctx' `exact_cap_ctx'      ///
-            `stayers_mode' `exact_plan_complexity'
+            `stayers_mode' `exact_plan_complexity' `exact_execution' `native_threads'
         local exact_post_rc = _rc
         if !`exact_post_rc' & `stayers_code'==2 {
             capture noisily _fevc_rust_post_stayer_hybrid `depvar' ///
@@ -2417,6 +2574,12 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             if `exact_post_rc' ereturn clear
         }
         if !`exact_post_rc' {
+            if `exact_execution' {
+                ereturn matrix rust_exact_execution = `exact_work_ctx'
+                ereturn local rust_exact_execution_schema "VCKSS-EXACT-EXECUTION-V1"
+                ereturn local rust_execution_mode "exact_parallel"
+                ereturn scalar rust_native_threads = `native_threads'
+            }
             ereturn matrix rust_phase_profile = `rust_phase_profile'
             ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
             ereturn local rust_phase_profile_units "seconds"
@@ -2606,6 +2769,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_phase_profile_flags = `native_perf_flags'
             if `full_cmg_active' {
                 ereturn matrix full_cmg_receipt = `full_cmg_receipt'
+                ereturn matrix full_cmg_model_receipt = `full_cmg_model_receipt'
+                ereturn local full_cmg_model_schema "CMG-FULL-MODEL-V1"
                 ereturn scalar resource_peak_bytes = `cmg_pre_rng_forecast'
                 ereturn scalar memory_forecast_bytes = `cmg_pre_rng_forecast'
                 ereturn local cmg_backend "`cmg_backend'"
@@ -2619,6 +2784,16 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             }
         }
         exit `compressed_post_rc'
+    }
+    if `full_cmg_active' {
+        capture noisily _fevc_rust_public_call result `handle', ///
+            componentinference(`component_requested') execution(`generic_execution') componentprobes(`component_result_probes') ///
+            componentgramprobes(`component_gram_probes')
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(full_cmg_generic_refresh)
+            exit _rc
+        }
     }
     if `native_result_engine'!=2 | `native_result_rhs_schema'!=2 {
         capture quietly fevc_rust release `handle'
@@ -2728,7 +2903,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         plan_res_rng_lo:r_pre_rng_lo                                ///
         wall_requested:r_wall_requested_value                       ///
         wall_forecast:r_wall_forecast_value wall_advisory:r_wall_advisory_value ///
-        wall_margin:r_wall_margin_value mem_command:r_plan_mem_command {
+        wall_margin:r_wall_margin_value mem_command:r_plan_mem_command mem_setup:r_setup_peak {
         gettoken returned localname : pair, parse(":")
         local localname = substr("`localname'",2,.)
         local `localname' = r(`returned')
@@ -2777,6 +2952,12 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         (`control_count'>0 & "`nuisance'"=="fixedoffset")+3*`probes' + ///
         `projection_columns'
     local expected_full_tol = max(1e-11,10*`tolerance')
+    if `full_cmg_active' local expected_full_tol = max(1e-11,10*max(`expected_cmg_fit_tol',`expected_cmg_probe_tol'))
+    // Keep this comparison in scalars: local-macro formatting can round the
+    // last bit of 10*tolerance (notably at 1e-11).
+    tempname native_fit_tol
+    scalar `native_fit_tol' = scalar(`native_full_tol')
+    if `full_cmg_active' scalar `native_fit_tol' = max(1e-11,10*`full_cmg_receipt'[1,18])
     local expected_flags = 126+(`control_count'>0)
     local maker_gate = max(1e-10,100*`ranktol')
     local roundoff_gate = 1e-12
@@ -2829,7 +3010,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `rhs_native'[`semantic_row',6]!=scalar(`native_full_red') | ///
             `rhs_native'[`semantic_row',7]!=scalar(`native_full_complete') | ///
             `rhs_native'[`semantic_row',8]!=`r_full_zero' |       ///
-            `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+            `rhs_native'[`semantic_row',13]!=scalar(`native_fit_tol') | ///
             `rhs_native'[`semantic_row',14]!=2 |                  ///
             `rhs_native'[`semantic_row',15]!=`r_dimension' local results_ok = 0
         local semantic_row = `semantic_row'+1
@@ -2955,7 +3136,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         r_batch_tgt_selbytes r_ctr_complete r_pre_rng_hi r_pre_rng_lo ///
         r_wall_requested_value r_wall_forecast_value                ///
         r_wall_advisory_value r_wall_margin_value r_plan_mem_command ///
-        r_proj_columns r_proj_peak
+        r_proj_columns r_proj_peak r_setup_peak
     foreach value of local receipt_numbers {
         if missing(``value'') local results_ok = 0
     }
@@ -2987,7 +3168,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_batch_lev_sel'==`r_lev_batch' &                        ///
         `r_batch_tgt_sel'==`r_tgt_batch' &                        ///
         `r_plan_mem_command'==`r_batch_command'+                  ///
-            `component_requested'*`ci_result_peak' &              ///
+            (`generic_execution'==0)*`component_requested'*`ci_result_peak' & ///
         `r_batch_command'==max(`r_batch_nonbatched',              ///
             `r_batch_lev_selbytes',`r_batch_tgt_selbytes') &      ///
         `r_batch_lev_onebytes'<=`r_batch_lev_selbytes' &          ///
@@ -3017,11 +3198,11 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_wall_requested_value'==`wallseconds_value'
     local expected_generic_base_peak = max(`r_canon_peak',`r_fit_peak', ///
         `r_geometry_peak',`r_generic_lev_peak',`r_generic_tgt_peak',    ///
-        `r_proj_peak',`r_maker_peak',`r_generic_result')
+        `r_proj_peak',`r_maker_peak',`r_generic_result',cond(`full_cmg_active' | `generic_execution',`r_setup_peak',0))
     local memory_result_ok =                                     ///
         `r_result_bytes'==`r_generic_result' &                   ///
         `r_result_bytes'>=`r_rhs_v2_copy' &                      ///
-        `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak') & ///
+        `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak',cond(`full_cmg_active' | `generic_execution',`r_setup_peak',0)) & ///
         `r_generic_peak'==`expected_generic_base_peak'+          ///
             `component_requested'*`ci_result_peak' &             ///
         `r_solve_peak'==`r_generic_peak' &                       ///
@@ -3044,6 +3225,46 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_proj_columns'==`projection_columns' &                   ///
         `r_proj_peak'==cond(`projection_columns'>0,`prr_peak',0)
     local component_max_complete = `component_inference_receipt'[1,14]
+    if `generic_execution' {
+        local component_work = 0
+        if `component_requested' local component_work = `component_inference_receipt'[1,22]-`component_gram_probes'
+        local execution_ok = rowsof(`generic_work')==1 & colsof(`generic_work')==23
+        if `execution_ok' {
+            forvalues column=1/22 {
+                if missing(`generic_work'[1,`column']) | `generic_work'[1,`column']<0 | ///
+                    `generic_work'[1,`column']>9007199254740992 | ///
+                    `generic_work'[1,`column']!=floor(`generic_work'[1,`column']) local execution_ok = 0
+            }
+        }
+        if `execution_ok' {
+            local execution_ok = `generic_work'[1,1]==160 & `generic_work'[1,2]==1 & ///
+                `generic_work'[1,3]==`handle' & `generic_work'[1,4]==`generic_execution' & ///
+                `generic_work'[1,5]==`native_threads' & ///
+                `generic_work'[1,6]>=1 & `generic_work'[1,6]<=`native_threads' & ///
+                `generic_work'[1,7]<=`generic_work'[1,6] & ///
+                `generic_work'[1,9]==max(`r_lev_batch',2*`r_tgt_batch', ///
+                    cond(`component_batch_auto',`selected_inference_width',0)) & ///
+                `generic_work'[1,10]==`r_lev_batch' & `generic_work'[1,11]==`r_tgt_batch' & ///
+                `generic_work'[1,12]==1+(`control_count'>0 & "`nuisance'"=="fixedoffset") & ///
+                `generic_work'[1,13]==`control_count' & `generic_work'[1,14]==3*`probes' & ///
+                `generic_work'[1,15]==`projection_columns' & `generic_work'[1,16]==`component_work' & ///
+                `generic_work'[1,17]==`component_gram_probes' & ///
+                `generic_work'[1,18]==`expected_rhs_rows'+`component_work'+`component_gram_probes' & ///
+                `generic_work'[1,22]==`r_plan_mem_command' & ///
+                `generic_work'[1,23]>=scalar(`generic_max_complete') & ///
+                `generic_work'[1,23]<=`expected_full_tol'
+            if `generic_execution'==1 local execution_ok = `execution_ok' & ///
+                `generic_work'[1,6]<=`generic_work'[1,9] & `generic_work'[1,7]>=1 & ///
+                `generic_work'[1,8]==0 & `generic_work'[1,20]==0 & `generic_work'[1,21]==0 & ///
+                `generic_work'[1,19]+`generic_work'[1,12]==`generic_work'[1,18]
+            if `generic_execution'==2 local execution_ok = `execution_ok' & ///
+                `generic_work'[1,7]==0 & `generic_work'[1,19]==0 & ///
+                `generic_work'[1,18]+`generic_work'[1,21]==`generic_work'[1,20] & ///
+                `generic_work'[1,20]==`cmg_rhs_count' & ///
+                `generic_work'[1,8]==`cmg_max_concurrency' & `generic_work'[1,9]==`cmg_max_batch_rhs'
+        }
+        if !`execution_ok' local results_ok = 0
+    }
     local residual_receipt_ok =                                    ///
         `r_max_red'==`rhs_max_reduced' &                           ///
         `r_max_complete'==max(`rhs_max_complete',                  ///
@@ -3134,7 +3355,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture quietly fevc_rust release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
-            "Generic-JLA V6/RHS-V2 result receipts did not reconcile with the submitted request."
+            "Generic-JLA V6/RHS-V2 result receipts did not reconcile with the submitted request. Checks: fit=`fit_receipt_ok', route=`route_result_ok', plan=`plan_result_ok', batch=`batch_result_ok', residual=`residual_receipt_ok', schema=`schema_receipt_ok', numeric=`generic_numeric_ok', submission=`submission_receipt_ok', memory=`memory_result_ok', execution=`execution_ok'. Receipt: algorithm=`r_algorithm_req'/`r_algorithm_sel', engine=`r_engine_req'/`r_engine_sel', route=`r_req_route'/`r_sel_route', plan=`r_plan_alg_req'/`r_plan_alg_sel'/`r_plan_eng_req'/`r_plan_eng_sel'/`r_plan_route_req'/`r_plan_route_sel', batches=`r_lev_batch'/`r_tgt_batch', rows=`r_rhs_rows'."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "result_reconcile"
         ereturn local backend_selected ""
@@ -3458,6 +3679,41 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     ereturn matrix rust_preparation_receipt = `preparation_receipt'
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
     ereturn matrix rust_generic_receipt = `generic_receipt'
+    if `generic_execution' {
+        ereturn scalar rust_execution_threads = `generic_work'[1,5]
+        ereturn scalar rust_execution_workers = `generic_work'[1,6]
+        ereturn scalar rust_execution_active_workers = `generic_work'[1,7]
+        ereturn scalar rust_execution_cmg_concurrency = `generic_work'[1,8]
+        ereturn scalar rust_execution_rhs_capacity = `generic_work'[1,9]
+        ereturn scalar rust_execution_logical_rhs = `generic_work'[1,18]
+        ereturn scalar rust_execution_queued_rhs = `generic_work'[1,19]
+        ereturn scalar rust_execution_cmg_rhs = `generic_work'[1,20]
+        ereturn scalar rust_execution_refinement_rhs = `generic_work'[1,21]
+        ereturn scalar rust_execution_peak_bytes = `generic_work'[1,22]
+        ereturn scalar rust_execution_max_residual = `generic_work'[1,23]
+        ereturn matrix rust_execution_receipt = `generic_work'
+        ereturn local rust_execution_schema "VCKSS-GENERIC-EXECUTION-V1"
+        ereturn local rust_execution_mode = cond(`generic_execution'==1,"diagonal_queue","direct_attachments")
+    }
+    if `component_batch_auto' {
+        ereturn matrix rust_component_batch_receipt = `component_batch_receipt'
+        ereturn local rust_component_batch_schema "VCKSS-COMPONENT-BATCH-V1"
+    }
+    if `full_cmg_active' {
+        ereturn matrix full_cmg_receipt = `full_cmg_receipt'
+        if `generic_execution'==0 {
+            ereturn matrix full_cmg_model_receipt = `full_cmg_model_receipt'
+            ereturn local full_cmg_model_schema "CMG-FULL-MODEL-V1"
+        }
+        ereturn local cmg_backend "`cmg_backend'"
+        ereturn local cmg_source_commit "`cmg_source_commit'"
+        ereturn scalar cmg_threads_requested = `cmg_threads_requested'
+        ereturn scalar cmg_threads_used = `cmg_threads_used'
+        ereturn scalar cmg_admitted_peak_bytes = `cmg_admitted_peak'
+        ereturn scalar cmg_max_complete_residual = `cmg_max_complete'
+        ereturn scalar cmg_refinement_attempts = `cmg_refine_attempts'
+        ereturn scalar cmg_refined_columns = `cmg_refined_columns'
+    }
     ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
     ereturn matrix route_diagnostics = `route_diagnostics'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
@@ -3962,7 +4218,7 @@ program define _vckss_impl, eclass sortpreserve
         ((inlist(lower(strtrim(`"`deletion'"')),"","match") &    ///
             inlist(lower(strtrim(`"`stayers'"')),"","movers","both")) | ///
          (lower(strtrim(`"`deletion'"'))=="observation" &          ///
-            inlist(lower(strtrim(`"`stayers'"')),"","movers"))) & ///
+            inlist(lower(strtrim(`"`stayers'"')),"","movers","both"))) & ///
         `preconditioner_supplied' &                                ///
         inlist(lower(strtrim(`"`preconditioner'"')),               ///
             "diagonal", "cmg") &                                 ///
@@ -4184,22 +4440,19 @@ program define _vckss_impl, eclass sortpreserve
         di as error "nuisance() must be joint or fixedoffset"
         exit 198
     }
-    if "`stayers'" == "" {
-        if "`deletion'" == "match" local stayers both
-        else local stayers movers
-    }
+    if "`stayers'" == "" local stayers both
     local stayers = lower(strtrim("`stayers'"))
     if !inlist("`stayers'", "movers", "both") {
         quietly _vckss_post_failure "INVALID_STAYER_CONVENTION"
         di as error "stayers() must be movers or both"
         exit 198
     }
-    if "`deletion'" == "observation" & "`stayers'" == "both" {
-        quietly _vckss_post_failure "STAYER_HYBRID_DELETION_UNSUPPORTED" ///
-            "The mixed-deletion stayer hybrid is defined only for a mover-match headline."
-        di as error "stayers(both) requires deletion(match)"
-        exit 498
-    }
+    local stayers_population "`stayers'"
+    global VCKSS_ROUTE_STAYERS_REQUESTED "`stayers_population'"
+    // The frozen internal flag selects match-stayer augmentation, not an
+    // observation population. Observation selection is resolved below before
+    // native preparation/RNG; both populations use ordinary observation units.
+    if "`deletion'" == "observation" local stayers movers
     if "`inference'" != "none" & "`stayers'" != "movers" {
         quietly _vckss_post_failure "INFERENCE_STAYER_UNSUPPORTED" ///
             "Inference is defined for the single retained observation-deletion population."
@@ -4309,37 +4562,36 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
-    // Freeze the qualified CMG_FULL_V2 cell before any sample transformation.
-    // Explicit Rust retains its strict consent tuple; automatic routing may
-    // select the same effective cell only on the qualified macOS/Linux builds.
-    // The one combined bit controls both raw implicit-match preparation and
-    // the V5 solve request, so the two paths cannot drift.
+    // Preflight the qualified CMG cell before sample transformation.
     local rust_full_cmg_platform =                         ///
         strpos(lower(`"`c(machine_type)'"'),"mac") > 0 | ///
         `"`c(os)'"' == "Unix"
     local rust_full_cmg_common =                           ///
         `rust_public' & `rust_full_cmg_platform' &         ///
         "`algorithm'"=="jla" &                           ///
-        "`engine_requested'"=="auto" &                  ///
-        "`preconditioner'"=="auto" &                   ///
+        inlist("`engine_requested'","auto","generic") & ///
+        inlist("`preconditioner'","auto","cmg") &       ///
         "`batch_requested'"=="auto" &                  ///
-        "`deletion'"=="match" & "`nuisance'"=="joint" & ///
-        "`stayers'"=="movers" & "`probeorder'"!="" &  ///
-        strtrim(`"`controls'"')=="" & !`targetweight_supplied' & ///
-        !`deletionid_supplied' & strtrim("`weight'")==""
-    local rust_full_cmg_explicit =                         ///
-        `rust_full_cmg_common' &                           ///
-        "`backend_requested'"=="rust" & `backend_supplied' & ///
-        "`rng_requested'"=="counter_v1" & `rng_supplied' & ///
-        `algorithm_supplied' & `engine_supplied' &          ///
-        `preconditioner_supplied' & `batch_supplied'
-    local rust_full_cmg_auto =                             ///
-        `rust_full_cmg_common' &                           ///
-        "`backend_requested'"=="auto" &                  ///
-        "`rng_requested'"=="auto"
-    local rust_full_cmg_eligible =                         ///
-        `rust_full_cmg_explicit' | `rust_full_cmg_auto'
-    local implicit_match = `rust_full_cmg_eligible'
+        inlist("`deletion'","match","observation") & ///
+        inlist("`nuisance'","joint","fixedoffset") & ///
+        inlist("`stayers'","movers","both") &            ///
+        strtrim(`"`project'"')=="" & "`inference'"=="none"
+    local rust_full_cmg_eligible = `rust_full_cmg_common'
+    local rust_execution_eligible = `rust_public' & `rust_full_cmg_platform' & ///
+        "`algorithm'"=="jla" & "`engine_requested'"=="generic" & ///
+        ("`preconditioner'"=="diagonal" | ///
+            ("`preconditioner'"=="cmg" & "`batch_requested'"=="auto" & ///
+                (strtrim(`"`project'"')!="" | "`inference'"!="none")))
+    local rust_comp_auto_eligible = `rust_execution_eligible' & ///
+        "`inference'"!="none" & "`batch_requested'"=="auto"
+    local rust_exec_resolve_ok = `rust_public' & `rust_full_cmg_platform' & ///
+        !`rust_full_cmg_eligible' & inlist("`algorithm'","auto","jla") & ///
+        inlist("`engine_requested'","auto","generic") & ///
+        "`preconditioner'"=="auto" & "`batch_requested'"=="auto"
+    local implicit_match = `rust_full_cmg_eligible' & "`deletion'"=="match" & ///
+        "`stayers'"=="movers" & "`probeorder'"!="" & ///
+        !`targetweight_supplied' & !`deletionid_supplied' & strtrim("`weight'")=="" & ///
+        strtrim(`"`controls'"')=="" & "`nuisance'"=="joint"
 
     global VCKSS_ROUTE_ALGORITHM_REQUESTED "`algorithm'"
     global VCKSS_ROUTE_ENGINE_REQUESTED "`engine_requested'"
@@ -4429,6 +4681,10 @@ program define _vckss_impl, eclass sortpreserve
             ("`stayers'" == "movers" |                             ///
                 ("`stayers'"=="both" & "`deletion'"=="match" & ///
                     "`probeorder'"=="" & !`wallseconds_supplied'))) )
+        // Already-supported explicit diagonal requests must reach the new
+        // planned executor too; keep the legacy ABI available to direct callers.
+        if `rust_execution_eligible' & `rust_generic_supported' local rust_planned_generic_supported = 1
+        if `rust_exec_resolve_ok' local rust_planned_generic_supported = 1
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///
             "`engine_requested'" == "auto" &                     ///
@@ -4456,6 +4712,7 @@ program define _vckss_impl, eclass sortpreserve
         local rust_options_supported =                         ///
             `rust_legacy_jla_supported' | `rust_generic_supported' | ///
             `rust_planned_generic_supported' |                       ///
+            `rust_exec_resolve_ok' |                                ///
             `rust_auto_exact_supported' | `rust_exact_supported' |   ///
             `rust_exact_stayer_supported'
         if !`rust_options_supported' {
@@ -4506,6 +4763,11 @@ program define _vckss_impl, eclass sortpreserve
         }
         capture quietly fevc_rust probe
         local rust_probe_rc = _rc
+        if !`rust_probe_rc' & `rust_full_cmg_platform' & inlist("`algorithm'","auto","exact") {
+            if r(exact_api)!=1 | ("`algorithm'"=="auto" & r(exact_resolved_api)!=2) | ///
+                ("`algorithm'"=="exact" & r(exact_legacy_api)!=1) ///
+                local rust_probe_rc = 498
+        }
         if `memory_api_rc' & !`rust_strict' local rust_probe_rc = 498
         if `rust_probe_rc' {
             if !`rust_strict' {
@@ -4554,35 +4816,14 @@ program define _vckss_impl, eclass sortpreserve
         local rust_core_flags = r(core_ready_flags)
         local rust_support_flags = r(support_flags)
         local rust_deterministic = r(deterministic_parallelism)
-        local rust_core_required =                              ///
-            mod(floor(`rust_core_flags'/1),2) == 1
-        // All Rust routes on a qualified full-CMG platform require the new
-        // runtime readiness bit, so a pre-V2 plugin cannot be mixed with this
-        // ado build. Windows omits the bit and retains its existing routes.
-        if `rust_full_cmg_platform' {
-            local rust_core_required = `rust_core_required' &   ///
-                mod(floor(`rust_core_flags'/256),2) == 1
-        }
-        if `scalable_project_requested' {
-            local rust_core_required = `rust_core_required' &   ///
-                mod(floor(`rust_core_flags'/512),2) == 1
-        }
-        if "`algorithm'" == "exact" & "`stayers'" == "movers" {
-            local rust_core_required = `rust_core_required' &   ///
-                mod(floor(`rust_core_flags'/2),2) == 1
-        }
-        else {
-            local rust_core_required = `rust_core_required' &   ///
-                mod(floor(`rust_core_flags'/4),2) == 1 &        ///
-                mod(floor(`rust_core_flags'/8),2) == 1 &        ///
-                mod(floor(`rust_core_flags'/32),2) == 1 &       ///
-                mod(floor(`rust_core_flags'/64),2) == 1 &       ///
-                mod(floor(`rust_core_flags'/128),2) == 1
-            if `rust_auto_exact_supported' | `rust_exact_stayer_supported' {
-                local rust_core_required = `rust_core_required' & ///
-                    mod(floor(`rust_core_flags'/2),2) == 1
-            }
-        }
+        local rust_execution_api = r(execution_api)
+        quietly _fevc_rust_core_ready `rust_core_flags' `rust_full_cmg_platform' ///
+            `rust_full_cmg_eligible' `rust_execution_eligible' ///
+            `rust_comp_auto_eligible' `rust_exec_resolve_ok' ///
+            `scalable_project_requested' ///
+            `rust_auto_exact_supported' `rust_exact_stayer_supported' ///
+            `algorithm' `stayers' `rust_execution_api'
+        local rust_core_required = r(ready)
         local rust_transport_valid =                           ///
             !missing(`rust_abi_compiled') &                    ///
             !missing(`rust_abi_runtime') &                     ///
@@ -4635,10 +4876,8 @@ program define _vckss_impl, eclass sortpreserve
     // automatic request to Mata during preflight. Native implicit-match
     // preparation is meaningful only while the qualified Rust cell remains
     // selected; every fallback must re-enter the ordinary Mata preparation.
-    local implicit_match = `rust_public' & `rust_full_cmg_eligible'
+    local implicit_match = `rust_public' & `implicit_match'
 
-    /* PREP-BND-PERF-V1 observes command-boundary work only.  These
-       diagnostics never participate in routing, RNG, or acceptance. */
     local prep_mark_validate_seconds = 0
     local prep_initial_group_seconds = 0
     local prep_runtime_setup_seconds = 0
@@ -4938,21 +5177,14 @@ program define _vckss_impl, eclass sortpreserve
         local N_stayers = 0
         local N_stayer_rows = 0
     }
-    else {
-        quietly egen long `initial_worker' = group(`worker') if `touse'
-        quietly egen long `initial_firm' = group(`firm') if `touse'
-        sort `initial_worker' `initial_firm'
-        local prep_sort_calls = `prep_sort_calls' + 1
-        quietly by `initial_worker' `initial_firm': generate byte `pair_first' = ///
-            (_n == 1) if `touse'
-        quietly by `initial_worker': egen long `firm_count' = total(`pair_first') ///
-            if `touse'
-        quietly egen byte `worker_tag' = tag(`initial_worker') if `touse'
-        quietly generate byte `original_stayer' = (`firm_count' == 1) if `touse'
-        quietly count if `worker_tag' & `firm_count' == 1 & `touse'
-        local N_stayers = r(N)
-        quietly count if `firm_count' == 1 & `touse'
-        local N_stayer_rows = r(N)
+    _fevc_observation_population `deletion' `stayers_population' `touse' ///
+        `original_stayer' `worker' `firm' `initial_worker' `initial_firm' ///
+        `N_complete' `implicit_match' `pair_first' `firm_count' `worker_tag' ///
+        `prep_sort_calls'
+    if `N_complete'==0 {
+        quietly _vckss_post_failure "NO_MOVER_SAMPLE" ///
+            "stayers(movers) excluded every complete-case worker."
+        exit 2000
     }
 
     if `rust_public' {
@@ -5552,9 +5784,7 @@ program define _vckss_impl, eclass sortpreserve
             local fastpath_message "compressed binomial trials require total physical mass below 2^53"
         }
         else if "`engine_requested'" == "generic" {
-            // Graph selection has already certified that every match lies in
-            // one coefficient coordinate.  This is sufficient to retain the
-            // exact semantic-atom RNG path without building compressed arrays.
+            // Graph certification retains semantic-atom RNG without compression.
             local fastpath_eligible = 1
             local fastpath_status FASTPATH_BYPASSED
             local fastpath_message "caller explicitly selected the generic engine"
@@ -5670,9 +5900,7 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "unused compressed command state could not be released"
                 exit 498
             }
-            // An eligible auto call can reach the generic route only after
-            // compressed preparation declines the design.  Construct the
-            // unchanged Stata semantic oracle before invoking that route.
+            // Preserve the semantic oracle if compressed preparation declines.
             if !`prep_stata_semantic_ready' {
                 quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
                 quietly timer on $VCKSS_STAGE_SELECTION_TIMER
@@ -5839,12 +6067,7 @@ program define _vckss_impl, eclass sortpreserve
             `resource_forecasts'[`resource_row',11]
         local resource_hard_wall =                               ///
             `resource_forecasts'[`resource_row',12]
-        // The model's provisional solver component is planning evidence,
-        // not an admission decision.  Before routing, reject only direct
-        // allocations that are unavoidable for every solver route, including
-        // the minimum FE/base design.  The solver then reconciles the selected
-        // DIAGONAL or CMG allocation against the remaining memory before
-        // estimator RNG begins.
+        // Admit unavoidable allocations here; admit route-specific work pre-RNG.
         local resource_min_solver_rows = `N_retained'
         if `resource_row' == 1 local resource_min_solver_rows =   ///
             `resource_cells'
@@ -5909,11 +6132,7 @@ program define _vckss_impl, eclass sortpreserve
         exit 498
     }
 
-    // Forecast the largest estimator scratch family conservatively as
-    // fourteen retained-row vectors, twelve coefficient vectors, and one
-    // literal-physical-mass vector per simultaneous probe. The percentage
-    // and processor thresholds choose a practical automatic width. They do
-    // not replace the complete direct-peak allocation check below.
+    // Scratch forecast guides width; the direct-peak check remains authoritative.
     local batch_memory_budget_bytes = floor(`memory_gib'*1024^3*.35)
     local batch_physical_column_bytes =                            ///
         8*scalar(`retained_physical_total')
@@ -5950,10 +6169,7 @@ program define _vckss_impl, eclass sortpreserve
         local batch_routing_reason "exact algorithm does not consume probe batches"
     }
 
-    // The memory envelope is a fail-closed direct-allocation contract.
-    // Percentage batch budgets select a practical automatic width. They are
-    // heuristics, not independent rejection gates; the complete direct-peak
-    // resource model below is the authoritative allocation check.
+    // The direct-peak model, not width heuristics, is the allocation gate.
 
     if "`selected_algorithm'" == "jla" &                         ///
         "`engine_selected'" == "generic" {
@@ -7681,7 +7897,8 @@ program define _vckss_request_signature, rclass
     args request_schema algorithm_code deletion_code nuisance_code ///
         route_code rng_code controls_count frequency_code engine_code ///
         batch_code stayers_code target_code deletionsource_code       ///
-        probeorder_code wallseconds_code physical_limit
+        probeorder_code wallseconds_code physical_limit              ///
+        leverage_batch_code target_batch_code fallback_code wallseconds_value
 
     // Reproduce the native fixed-domain FNV-1a identity receipt with two
     // exact 32-bit limbs.  Stata doubles represent every intermediate below
@@ -7690,15 +7907,20 @@ program define _vckss_request_signature, rclass
     local signature_lo = 2216829733
     local signature_bytes 86 67 75 83 83 45 82 69 81 85 69 83 84 ///
         45 67 65 80 65 66 73 76 73 84 89 45 86
-    if `request_schema' == 2 local signature_bytes `signature_bytes' 50
+    if `request_schema' == 3 local signature_bytes `signature_bytes' 51
+    else if `request_schema' == 2 local signature_bytes `signature_bytes' 50
     else local signature_bytes `signature_bytes' 49
     local signature_values `request_schema' `algorithm_code'       ///
         `deletion_code' `nuisance_code' `route_code' `rng_code'    ///
         `controls_count' `frequency_code'
-    if `request_schema' == 2 {
+    if inlist(`request_schema',2,3) {
         local signature_values `signature_values' `engine_code'    ///
             `batch_code' `stayers_code' `target_code'              ///
             `deletionsource_code' `probeorder_code' `wallseconds_code'
+    }
+    if `request_schema' == 3 {
+        local signature_values `signature_values' `leverage_batch_code' ///
+            `target_batch_code' `fallback_code'
     }
     foreach value in `signature_values' {
         forvalues byte_index = 0/3 {
@@ -7706,10 +7928,21 @@ program define _vckss_request_signature, rclass
                 `=mod(floor(`value'/(256^`byte_index')),256)'
         }
     }
-    if `request_schema' == 2 {
+    if inlist(`request_schema',2,3) {
         forvalues byte_index = 0/7 {
             local signature_bytes `signature_bytes'              ///
                 `=mod(floor(`physical_limit'/(256^`byte_index')),256)'
+        }
+    }
+    if `request_schema' == 3 {
+        // %16L exposes the binary64 representation in little-endian byte
+        // order, including fractional/subnormal values, without decimal
+        // rounding or a non-exact 64-bit integer conversion.
+        local wall_hex = lower(strtrim(strofreal(`wallseconds_value',"%16L")))
+        forvalues offset = 1(2)15 {
+            local high = strpos("0123456789abcdef",substr("`wall_hex'",`offset',1))-1
+            local low = strpos("0123456789abcdef",substr("`wall_hex'",`offset'+1,1))-1
+            local signature_bytes `signature_bytes' `=16*`high'+`low''
         }
     }
     foreach byte of local signature_bytes {
@@ -7746,6 +7979,10 @@ program define _vckss_rexact, eclass sortpreserve
         capsupported capreason capprofile capalgorithm capdeletion    ///
         capnuisance caproute caprng capcontrols capfrequency          ///
         capsignaturehi capsignaturelo
+
+    // This private execution context does not alter Stata processor metadata.
+    local native_threads = c(processors)
+    local exact_legacy = (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix")
 
     foreach input in `depvar' `worker' `firm' `deletionvar'           ///
         `frequency' `target' `touse' `controls' {
@@ -7907,7 +8144,8 @@ program define _vckss_rexact, eclass sortpreserve
         maxiter(`maxiterrequested') algorithm(exact)                 ///
         deletion(`deletionmode') nuisance(`nuisance')                ///
         exactlimit(`exactlimit') blocksizelimit(`blocksizelimit')    ///
-        ranktolerance(`ranktol') blocktolerance(`blocktol')
+        ranktolerance(`ranktol') blocktolerance(`blocktol')          ///
+        exactlegacy(`exact_legacy') threads(`native_threads')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
@@ -8148,6 +8386,34 @@ program define _vckss_rexact, eclass sortpreserve
             }
         }
     }
+    tempname exact_work
+    if `exact_legacy' {
+        capture noisily _fevc_rust_public_call exactexecutionreceipt `handle'
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
+                phase(exact_execution_receipt)
+            exit `failure_rc'
+        }
+        matrix `exact_work' = r(receipt)
+        local work_ok = rowsof(`exact_work')==1 & colsof(`exact_work')==10
+        if `work_ok' {
+            forvalues column = 1/9 {
+                if missing(`exact_work'[1,`column']) | `exact_work'[1,`column']<0 | ///
+                    `exact_work'[1,`column']!=floor(`exact_work'[1,`column']) local work_ok = 0
+            }
+        }
+        if `work_ok' local work_ok = `exact_work'[1,1]==64 & ///
+            `exact_work'[1,2]==1 & `exact_work'[1,3]==`handle' & ///
+            `exact_work'[1,4]==`native_threads' & ///
+            inrange(`exact_work'[1,5],1,`native_threads') & ///
+            (`exact_work'[1,5]>1 | `exact_work'[1,6]==0) & ///
+            `exact_work'[1,7]==1 & `exact_work'[1,8]>0 & ///
+            `exact_work'[1,8]<=`exact_work'[1,9] & ///
+            `exact_work'[1,9]==`r_exact_peak' & ///
+            inrange(`exact_work'[1,10],0,`expected_fit_tolerance')
+        if !`work_ok' local result_receipts_ok = 0
+    }
     if !`result_receipts_ok' {
         capture quietly fevc_rust release `handle'
         capture quietly fevc_rust clear
@@ -8381,6 +8647,12 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn scalar physical_limit = `physicallimit'
     ereturn scalar physical_limit_applied = 0
     ereturn scalar active_processors = c(processors)
+    if `exact_legacy' {
+        ereturn matrix rust_exact_execution = `exact_work'
+        ereturn local rust_exact_execution_schema "VCKSS-EXACT-EXECUTION-V1"
+        ereturn local rust_execution_mode "exact_parallel"
+        ereturn scalar rust_native_threads = `native_threads'
+    }
     ereturn scalar route_code = 1
     ereturn scalar route_planned_rhs = 0
     ereturn scalar rust_requested_route = `r_req_route'
@@ -8443,6 +8715,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn local rng_runtime "NOT_APPLICABLE"
     ereturn local rng_leverage_domain "NOT_APPLICABLE"
     ereturn local rng_target_domain "NOT_APPLICABLE"
+    ereturn local algorithm_requested "exact"
     ereturn local algorithm "exact"
     ereturn local engine_requested "`enginerequested'"
     ereturn local engine_selected "NOT_APPLICABLE"
@@ -9246,6 +9519,8 @@ program define _vckss_post_failure, eclass
     ereturn local withholding_detail `"`failure_detail'"'
     ereturn local withholding_reason `"`failure_reason'"'
     ereturn local withholding_suggestion `"`failure_suggestion'"'
+    if "${VCKSS_ROUTE_STAYERS_REQUESTED}"!="" ///
+        ereturn local stayers "${VCKSS_ROUTE_STAYERS_REQUESTED}"
     if "${VCKSS_ROUTE_METADATA_READY}" == "1" {
         ereturn local backend_requested ///
             `"${VCKSS_ROUTE_BACKEND_REQUESTED}"'
@@ -9301,7 +9576,9 @@ program define _vckss_route_context_clear
         VCKSS_ROUTE_DELETION_REQUESTED VCKSS_ROUTE_NUISANCE_REQUESTED ///
         VCKSS_ROUTE_ALGORITHM_SUPPLIED VCKSS_ROUTE_ENGINE_SUPPLIED ///
         VCKSS_ROUTE_PRECOND_SUPPLIED VCKSS_ROUTE_BATCH_SUPPLIED ///
-        VCKSS_ROUTE_STAYERS_SUPPLIED VCKSS_ROUTE_DELETIONID_SUPPLIED {
+        VCKSS_ROUTE_STAYERS_SUPPLIED VCKSS_ROUTE_DELETIONID_SUPPLIED ///
+        VCKSS_ROUTE_STAYERS_REQUESTED VCKSS_ROUTE_POPULATION_COMPLETE ///
+        VCKSS_ROUTE_POPULATION_INPUT VCKSS_ROUTE_STAYER_DROPPED {
         capture macro drop `route_global'
     }
 end

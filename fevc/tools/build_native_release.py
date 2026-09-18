@@ -59,6 +59,35 @@ def native_files(package_root: Path, binary_root: Path, manifest: dict,
     return tuple(sorted(files, key=lambda item: str(item.relative)))
 
 
+def repository_files(files: tuple[portable.PackageFile, ...]) -> tuple[portable.PackageFile, ...]:
+    """Expose one package at the repository root without duplicating runtime source."""
+    output = []
+    for item in files:
+        name = str(item.relative)
+        if name == "fevc.pkg":
+            lines = item.data.decode("utf-8").splitlines()
+            data = "\n".join(
+                "f fevc/" + line[2:] if line.startswith("f ") else line
+                for line in lines
+            ) + "\n"
+            output.append(portable.PackageFile(item.relative, data.encode("utf-8")))
+        elif name == "stata.toc":
+            output.append(item)
+        else:
+            output.append(portable.PackageFile(PurePosixPath("fevc") / item.relative, item.data))
+    return tuple(sorted(output, key=lambda item: str(item.relative)))
+
+
+def write_repository(directory: Path, files: tuple[portable.PackageFile, ...]) -> None:
+    """Write only to a new staging directory; never modify the live checkout."""
+    directory.mkdir(parents=True, exist_ok=False)
+    for item in repository_files(files):
+        relative = portable._safe_relative(str(item.relative))
+        target = directory / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(item.data)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary-dir", required=True, type=Path)
@@ -66,6 +95,8 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--check", action="store_true")
     group.add_argument("--output-dir", type=Path)
+    group.add_argument("--repository-dir", type=Path,
+                       help="stage root fevc.pkg/stata.toc and complete fevc/ payload")
     args = parser.parse_args()
     source_commit = portable.clean_source_identity()
     manifest_data = args.manifest.read_bytes()
@@ -90,6 +121,14 @@ def main() -> int:
         (args.output_dir / f"fevc-{version}-native.receipt.json").write_text(
             json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
+    if args.repository_dir is not None:
+        write_repository(args.repository_dir, files)
+        receipt["repository_files"] = [
+            {"path": str(item.relative), "sha256": portable.sha256(item.data),
+             "size": len(item.data)} for item in repository_files(files)
+        ]
+        (args.repository_dir / "native-package.receipt.json").write_text(
+            json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"FEVC_NATIVE_ARTIFACT_CHECK_PASS version={version} files={len(files)} "
           f"sha256={portable.sha256(archive)} source_commit={source_commit}")
     return 0

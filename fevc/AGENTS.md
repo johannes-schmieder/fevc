@@ -37,6 +37,9 @@ Preserve:
 - match deletion as the default, `deletionid()` independent of coefficient
   cells, and the KSS Matlab-compatible combined mover/eligible-stayer target by
   default, with `stayers(movers)` as the explicit mover-only opt-out;
+- `stayers(both)` as the default in both deletion modes, and explicit
+  `stayers(movers)` as a true mover-only population in both. Observation/both
+  uses ordinary physical-observation deletion, not match/stayer augmentation;
 - positive integer frequency weights as literal physical copies and explicit
   target weights as stored-row mass;
 - coefficient cells, deletion units, and exact target-scale strata as distinct
@@ -102,8 +105,9 @@ A green quick receipt is not native qualification. Rust-boundary changes need
 the source-local plugin profile and exact-SHA evidence. Documentation-only work
 normally reuses unaffected scientific and performance evidence.
 
-Do not edit source-bound reports, receipts, reviews, manifests, or archived
-benchmark outputs. Do not infer a new benchmark or release claim from them.
+Do not edit source-bound reports, receipts, manifests, or archived benchmark
+outputs. Historical output is stored outside the public checkout and GPT Pro
+reviews were deleted at the owner's request; see `../docs/ARCHIVE.md`. Do not infer a new benchmark or release claim from them.
 Postestimation changes must keep the help, package manifest, clean-install
 checks, default display, and focused `estat` regressions synchronized.
 Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and the CMG

@@ -43,6 +43,7 @@ pub(crate) enum ComponentInferencePolicy {
     IndividualV2,
     UnifiedV3,
     DirectV4 { gram_probes: u32 },
+    DirectAutomaticV5 { gram_probes: u32 },
 }
 
 #[derive(Clone, Debug)]
@@ -80,6 +81,8 @@ pub struct ComponentInferenceAugmentationReceipt {
 pub struct PreparedComponentInferenceAugmentation {
     pub core: PreparedComponentInference,
     pub receipt: ComponentInferenceAugmentationReceipt,
+    /// Execution-only intent; numeric V1--V4 attachment widths remain literal.
+    pub automatic_batch: bool,
 }
 
 /// Diagnostic-only native wall-clock phases. These values never participate
@@ -712,7 +715,9 @@ impl PreparedProblemWithMask {
             ));
         }
         let individual = policy != ComponentInferencePolicy::Legacy;
-        let mut core = if let ComponentInferencePolicy::DirectV4 { gram_probes } = policy {
+        let mut core = if let ComponentInferencePolicy::DirectV4 { gram_probes }
+        | ComponentInferencePolicy::DirectAutomaticV5 { gram_probes } = policy
+        {
             vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
                 &self.problem,
                 inference_unit,
@@ -776,6 +781,7 @@ impl PreparedProblemWithMask {
             .preparation_peak_forecast_bytes
             .max(augmentation_peak_forecast_bytes);
         self.component_inference = Some(PreparedComponentInferenceAugmentation {
+            automatic_batch: matches!(policy, ComponentInferencePolicy::DirectAutomaticV5 { .. }),
             receipt: ComponentInferenceAugmentationReceipt {
                 rows,
                 variance_source,

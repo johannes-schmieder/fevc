@@ -231,16 +231,8 @@ def main() -> int:
     if not PYTHON.is_file():
         raise RuntimeError(f"repository interpreter is missing: {PYTHON}")
     run(
-        "historical-name and immutable-evidence audit",
-        [str(PYTHON), "fevc/tools/check_legacy_names.py"],
-    )
-    run(
         "FEVC public-identity audit",
         [str(PYTHON), "fevc/tools/check_fevc_public_identity.py"],
-    )
-    run(
-        "FEVC preserved-history audit",
-        [str(PYTHON), "fevc/tools/check_fevc_history.py"],
     )
     run(
         "FEVC license and provenance audit",

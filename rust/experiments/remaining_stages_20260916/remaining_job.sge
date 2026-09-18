@@ -1,0 +1,15 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -j y
+set -euo pipefail
+umask 077
+: "${PF_REMAIN_ROOT:?}" "${PF_MODE:?}" "${PF_PLAN_SHA256:?}"
+[[ "$PF_REMAIN_ROOT" == /projectnb/welfgr/vckss/runs/*-pipeline-remaining ]]
+export PF_TASK_STARTED_UNIX="$(date +%s)"
+export PYTHONDONTWRITEBYTECODE=1
+export OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+module purge
+module load python3/3.12.4 stata-mp/19 matlab/2026a
+exec python3 "$PF_REMAIN_ROOT/harness/remaining.py" "$PF_REMAIN_ROOT" "$PF_MODE" \
+    --stage "${PF_REMAIN_STAGE:-smoke}"

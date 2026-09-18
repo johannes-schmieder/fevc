@@ -49,8 +49,11 @@ assert `"`e(status)'"' == "KSS_POINT_ESTIMATES_ONLY"
 assert `"`e(version)'"' == "0.5.0-rc.1"
 assert strpos(`"`e(cmdline)'"',"algorithm(jla)") > 0
 assert strpos(`"`e(cmdline)'"',"backend(rust)") > 0
-assert e(rust_cap_schema) == 2
-assert e(rust_cap_profile_code) == 3
+// Explicit public batches now use planned V6 on supported builds. The
+// private V3 same-atom reference below deliberately keeps its frozen schema.
+local queued_execution = mod(floor(e(rust_core_ready_flags)/4096),2)==1
+assert e(rust_cap_schema) == cond(`queued_execution',3,2)
+assert e(rust_cap_profile_code) == cond(`queued_execution',4,3)
 assert e(rust_rng_contract_code) == 1
 assert e(probes) == 7
 assert e(leverage_batch) == 2 & e(target_batch) == 2
@@ -79,7 +82,8 @@ assert e(rust_probeorder_supplied) == 0
 assert e(rust_wallseconds_supplied) == 0
 assert e(rust_frequency_use_code) == 1
 assert e(rust_solve_physical_limit) == e(physical_limit)
-assert e(rust_result_cap_schema) == 2 & e(rust_result_cap_profile) == 3
+assert e(rust_result_cap_schema) == cond(`queued_execution',3,2)
+assert e(rust_result_cap_profile) == cond(`queued_execution',4,3)
 assert e(rust_solve_signature_hi) == e(rust_cap_signature_hi)
 assert e(rust_solve_signature_lo) == e(rust_cap_signature_lo)
 assert colsof(e(rust_memory_receipt)) == 12
@@ -214,7 +218,8 @@ assert e(backend_fallback) == 0
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
-// The qualified V4/V7 planner also accepts a fully explicit strict tuple.
+// Keep this V4/V7 diagonal planner as the legacy bitwise oracle. Controlled
+// auto/CMG now selects the direct route and has a separate equivalence test.
 tempname planned_reference planned_memory
 local planned_rng `"`c(rng)'"'
 local planned_stream = c(rngstream)
@@ -224,14 +229,14 @@ quietly _datasignature
 local planned_signature `"`r(datasignature)'"'
 quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
-    backend(rust) rng(counter_v1) engine(generic) preconditioner(auto) ///
+    backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
     targetweight(target_weight) wallseconds(60) stayers(movers) nodisplay
 matrix `planned_reference' = e(results)
 matrix `planned_memory' = e(rust_memory_receipt)
 assert mreldif(`planned_reference',`public_reference') == 0
 assert `"`e(backend_selected)'"' == "rust"
-assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(preconditioner_requested)'"' == "diagonal"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(batch_requested)'"' == "auto"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
@@ -240,7 +245,7 @@ assert `"`e(rust_capability_profile)'"' == "PLANNED_V1"
 assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_cap_schema) == 3 & e(rust_cap_profile_code) == 4
 assert e(rust_result_cap_schema) == 3 & e(rust_result_cap_profile) == 4
-assert e(rust_requested_route) == 0
+assert e(rust_requested_route) == 2
 assert e(rust_selected_route) == 2 & e(route_code) == 2
 assert e(rust_solver_fallback) == 0 & e(rust_solver_fallback_error) == 0
 assert e(rust_batch_mode_code) == 0
@@ -324,13 +329,24 @@ capture noisily _fevc_rust_generic_planned outcome worker firm deletion_id ///
     "nodisplay" match joint 2 1e-10 1e-10 5000 50000000 control 1 1    ///
     "fevc outcome control [fw=frequency], backend(rust) algorithm(auto) engine(generic)" ///
     auto auto 1 60
-assert _rc == 0
+local auto_algorithm_rc = _rc
+if `auto_algorithm_rc' != 0 {
+    display as error "algorithm(auto) generic planner returned rc=`auto_algorithm_rc'"
+    display as error "withholding=`e(withholding_status)' phase=`e(native_error_phase)'"
+    display as error "detail=`e(withholding_detail)'"
+}
+assert `auto_algorithm_rc' == 0
 assert mreldif(e(results),`planned_reference') == 0
 assert `"`e(algorithm)'"' == "jla"
 assert `"`e(engine_requested)'"' == "generic"
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(preconditioner_requested)'"' == "auto"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
+assert `"`e(rust_execution_mode)'"' == "diagonal_queue"
+assert e(rust_execution_threads) == c(processors)
+assert e(rust_execution_queued_rhs) + e(rust_execution_receipt)[1,"fit"] == ///
+    e(rust_plan_rhs)
+assert e(rust_execution_cmg_rhs) == 0
 assert e(rust_requested_algorithm_code) == 0
 assert e(rust_selected_algorithm_code) == 2
 assert e(rust_requested_engine_code) == 2
@@ -369,6 +385,31 @@ assert c(rngstream) == `auto_algorithm_stream'
 assert `"`c(rngstate)'"' == `"`auto_algorithm_state'"'
 local auto_algorithm_sortedby_after : sortedby
 assert `"`auto_algorithm_sortedby_after'"' == `"`auto_algorithm_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`auto_algorithm_signature'"'
+
+// The public router admits the same deferred algorithm/route tuple and must
+// expose the resolved queue receipt without changing its numerical result.
+quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+    deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(auto) ///
+    backend(rust) rng(counter_v1) engine(generic) preconditioner(auto) ///
+    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    targetweight(target_weight) exact_limit(2) stayers(movers) nodisplay
+assert mreldif(e(results),`planned_reference') == 0
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(algorithm)'"' == "jla"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
+assert `"`e(rust_execution_mode)'"' == "diagonal_queue"
+assert e(rust_execution_threads) == c(processors)
+assert e(rust_execution_active_workers) >= 1
+assert e(rust_execution_queued_rhs) + e(rust_execution_receipt)[1,"fit"] == ///
+    e(rust_plan_rhs)
+assert e(rust_execution_cmg_rhs) == 0
+quietly fevc_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`auto_algorithm_rng'"'
+assert c(rngstream) == `auto_algorithm_stream'
+assert `"`c(rngstate)'"' == `"`auto_algorithm_state'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`auto_algorithm_signature'"'
 
@@ -825,10 +866,10 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`compressed_auto_signature'"'
 
 
-// Automatic preconditioning must preserve the compressed engine choice and
-// select the registered exact/direct route for this small quotient before
-// Counter-V1 begins.  Advisory wall planning may report work but may not
-// change results or caller state.
+// The legacy explicit-batch route preserves the compressed engine and selects
+// exact for this small quotient before Counter-V1 begins. Automatic batches
+// now use full CMG, covered separately by the point-routing suite. Advisory
+// wall planning may report work but may not change results or caller state.
 local compressed_preauto_rng `"`c(rng)'"'
 local compressed_preauto_stream = c(rngstream)
 local compressed_preauto_state `"`c(rngstate)'"'
@@ -838,7 +879,7 @@ local compressed_preauto_signature `"`r(datasignature)'"'
 quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto) ///
-    batch(auto) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    batch(4) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) ///
     wallseconds(60) stayers(movers) nodisplay
 tempname compressed_preauto_results compressed_preauto_memory ///
     compressed_preauto_rhs
@@ -1231,7 +1272,7 @@ capture quietly fevc outcome control, worker(worker) firm(firm) ///
     probes(4) maxiter(1) memory_gib(1) stayers(movers) nodisplay
 assert _rc != 0
 assert `"`e(withholding_status)'"' == "PCG_MAXITER"
-assert `"`e(native_error_phase)'"' == "solve"
+assert `"`e(native_error_phase)'"' == cond(`queued_execution',"solve_jla","solve")
 assert `"`e(backend_selected)'"' == "" & `"`e(rng_selected)'"' == ""
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
@@ -1249,7 +1290,8 @@ capture quietly fevc outcome control duplicate_control, worker(worker) firm(firm
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
     probes(4) memory_gib(1) stayers(movers) nodisplay
 assert _rc != 0
-assert inlist(`"`e(withholding_status)'"',"SINGULAR_INFORMATION", ///
+assert inlist(`"`e(withholding_status)'"', ///
+    cond(`queued_execution',"SINGULAR_NUISANCE_BLOCK","SINGULAR_INFORMATION"), ///
     "AMBIGUOUS_CONTROL_BASIS")
 assert e(native_error_code) < .
 assert `"`e(backend_selected)'"' == "" & `"`e(rng_selected)'"' == ""
@@ -1364,6 +1406,7 @@ local reconcile_sortedby : sortedby
 quietly _datasignature
 local reconcile_signature `"`r(datasignature)'"'
 foreach fault in missing_capability corrupt_capability {
+    display "CAPABILITY_FAULT_ATTEMPT `fault'"
     global VCKSS_GENERIC_FAULT `fault'
     global VCKSS_GENERIC_PREPARE_CALLED 0
     capture quietly fevc outcome control, worker(worker) firm(firm) ///
@@ -1400,6 +1443,7 @@ foreach fault in missing_capability corrupt_capability {
 foreach fault in corrupt_result cr_rcond cr_small cr_large cr_projection ///
     cr_normalization cr_fe_bound cr_max_projection cr_effective_tol     ///
     cr_pcg_tol cr_residual_gate rhs_control_complete rhs_full_reduced {
+    display "RESULT_FAULT_ATTEMPT `fault'"
     global VCKSS_GENERIC_FAULT `fault'
     global VCKSS_GENERIC_PREPARE_CALLED 0
     capture quietly fevc outcome control, worker(worker) firm(firm) ///

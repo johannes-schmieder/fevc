@@ -581,11 +581,13 @@ if `rust_available' {
 }
 restore
 
-// Observation deletion remains incompatible with the mixed convention.
-capture noisily fevc y c1 c2 [fw=frequency], worker(worker) ///
+// Observation deletion accepts the same population option, but deletes
+// physical observations throughout instead of attaching a mixed correction.
+fevc y c1 c2 [fw=frequency], worker(worker) ///
     firm(firm) deletion(observation) algorithm(exact) stayers(both) nodisplay
-assert _rc == 498
-assert "`e(withholding_status)'" == "STAYER_HYBRID_DELETION_UNSUPPORTED"
+assert "`e(stayers)'" == "both"
+assert "`e(deletion)'" == "observation"
+assert e(N_retained) == 28
 // The Mata and Rust generic JLA implementations estimate the same combined
 // target; exact parity is assessed against each estimator's reported MCSE.
 fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)            ///

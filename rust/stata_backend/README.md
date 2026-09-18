@@ -20,6 +20,9 @@ The versioned boundary provides:
 - exact, compressed-JLA, and generic-JLA result families;
 - detailed execution-plan and numerical receipt V7;
 - additive diagnostic performance receipt V1;
+- execution-only V6 for explicitly selected generic diagonal queues and
+  direct-CMG projection/component attachments, plus a separate complete-work
+  receipt V1 (development candidate; qualification status is in the ledger);
 - explicit memory-budget presence/check policy V1 and expected/admission
   forecast V1, preserving older ABI request layouts; and
 - generation-safe result, release, clear, snapshot, and typed-error handling.
@@ -39,6 +42,52 @@ routing. Current qualification and release boundaries are recorded in
 [`../../fevc/PLAN.md`](../../fevc/PLAN.md).
 
 ## Public and legacy memory policy
+
+The additive V6 request is 304 bytes with an exact V4 prefix; its interrupt
+request is 328 bytes. It selects diagonal queue (1) or direct attachments (2),
+requires positive permitted threads and the existing explicit generic-JLA,
+Counter-V1, no-fallback tuple. Direct attachments additionally require explicit
+CMG and automatic point batches. Existing augmentation widths remain literal,
+including eight; inference omission is not inferred from a numeric width.
+Readiness bit 12 identifies this execution interface on Mac/Linux builds, not
+a new statistical capability or a platform/performance qualification claim.
+The Stata probe additionally exports `execution_api=3` for its matching C
+selectors. Earlier FFI-only experimental binaries already advertised bit 12;
+public V6 requests require both facts before preparation. Missing transport
+metadata defaults to zero after clearing any cached scalar. This does not
+change the native capability ABI or any statistical request signature.
+
+The additive V8 request is 320 bytes (344 bytes with interruption) and retains
+the exact V7/V6/V4 prefixes. Execution mode 3 preserves the original automatic
+route and resolves queued diagonal versus direct CMG from the registered firm
+and planned-RHS rule before estimator RNG. Its suffix records whether the user
+supplied a tolerance so fit and probe tolerances retain their existing phase
+semantics. Readiness bit 14 and `execution_api=3` are both required before
+public preparation; older binaries fail closed without a native context.
+
+The separate 160-byte `VckssGenericExecutionReceiptV1` counts fit, strict rank,
+point, projection, component and Gram RHSs. Queued work excludes scalar diagonal
+fits; direct work includes fits and extra complete-model refinements. Measured
+diagonal concurrency and CMG's selected concurrency bound have distinct fields;
+zero measured CMG concurrency means uninstrumented, not zero actual activity.
+All V1--V5 solve layouts and meanings are frozen, including ignored V5 threads
+when its full-CMG flag is zero. The point-only 56-byte model receipt rejects
+attachment execution instead of silently mixing inference work into its counts.
+The interface adds no public Stata option, automatic inference-width policy,
+estimator fallback or installed package replacement. Qualification and remaining
+integration are recorded in the optimization-parity experiment ledger.
+
+The public wrapper now uses the private `solveexecution` selector for explicit
+generic/JLA/diagonal requests (automatic or literal point batches), and for
+explicit generic/JLA/CMG projection/component attachments with automatic point
+batches. The C shim validates the complete 160-byte receipt before exporting
+23 exact scalar fields; the Ado `executionreceipt` helper returns their matrix
+and clears transport scalars. Public reconciliation checks actual work,
+admitted memory, original-system residuals and caller state before posting
+`e(rust_execution_receipt)`. V3 request signatures are independently reproduced
+before preparation. Legacy solve selectors and V5 point-only accounting remain
+unchanged. Effective automatic routes and inference omission intent still need
+completion; do not interpret this explicit-route hookup as all-path parity.
 
 Public `fevc` uses the additive memory-policy interface. An omitted
 `memory_gib()` carries explicit absence; it is not a 4-GiB default or an

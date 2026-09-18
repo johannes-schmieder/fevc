@@ -1,125 +1,77 @@
-# `fevc`
+# fevc
 
-This repository develops and audits the standalone `fevc` Stata/Mata
-implementation of Kline--Saggio--Sølvsten leave-out bias-corrected point
-estimates for linear two-way fixed-effect variance decompositions. The
-`0.5.0-rc.1` source also provides opt-in econometric inference and
-fixed-effect projection inference, including explicit fixed-offset match
-q0/q1 component inference. An optional Rust estimation and inference backend
-and the package-owned CMG numerical component are included.
+`fevc` estimates bias-corrected variance components in worker–firm fixed-effects
+models in Stata, using the leave-out approach of Kline, Saggio, and Sølvsten.
+It reports worker-effect variance, firm-effect variance, their covariance,
+and the variance of their combined contribution.
 
-Public-source preparation is recorded in the
-[readiness note](fevc/docs/PUBLIC_SOURCE_READINESS.md). The package remains
-a prerelease: no public tag, release archive, or native binary distribution has
-been issued.
+The command supports controls, frequency weights, and match or observation
+deletion. It provides exact calculation for small problems and a randomized
+approximation for larger datasets, with a native Rust backend for supported
+requests. Point estimation is the default; inference is available for
+[supported models](fevc/docs/INFERENCE.md).
 
-The current source-local Mac candidate uses one residual-moment variance
-fitter for observation and fixed-offset match deletion, with separate
-individual-interval/joint-covariance reporting, 200 default JLA probes and
-2,048 direct residual Gram probes. `inferencegramprobes()` controls Gram
-precision separately; approximate model-based inference retains calibration
-and specification caveats.
-See the [candidate contract](fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md).
-The [completion report](fevc/docs/INFERENCE_COMPLETION_2026-09-08.md)
-records the passing local Mac, replay and paper checks. Historical scientific
-passes remain source-specific; other platforms and public distribution remain
-separate.
+## Requirements
 
-Memory budgets are optional. With no `memory_gib()`, the command forecasts
-and continues without memory-based batch or concurrency adjustment. Explicit
-budgets warn by default; `memorycheck(error)` opts into strict forecast
-admission. See the [memory guide](fevc/docs/MEMORY.md) for scope, timing,
-returned results and accuracy limits.
+- Stata 18 or 19.
+- The planned binary distribution supports macOS (Apple Silicon and Intel),
+  Linux x86-64, and Windows x86-64, without a compiler or Rust installation.
 
-The companion working paper is maintained separately in the sibling
-`fevc-paper` repository. Its active repository and PDF filenames use the
-`fevc` identity; frozen predecessor and migration records retain old names.
+## Installation
 
-Comparator naming and the two code versions are documented in the [KSS Matlab source and version note](fevc/docs/SOURCE_PROVENANCE.md#kss-matlab-package-terminology-and-version).
-
-## Repository map
-
-- [`fevc/`](fevc/README.md): installable command, Mata runtime,
-  Rust-facing Ado boundary, help, tests, benchmarks, and active package plan.
-- [`fevc/docs/`](fevc/docs/README.md): documentation index for
-  scientific contracts, numerical architecture, decisions, provenance, and
-  retained engineering results.
-- [`fevc/cmg/`](fevc/cmg/README.md): internal GPL-3.0-only CMG
-  component, deterministic generator, tests, and provenance.
-- [`rust/`](rust/README.md): optional native backend source, active native test
-  plan, dated progress snapshots, and Stata plugin boundary.
-- [`qualification/`](qualification/) and [`reviews/`](reviews/): source-bound
-  evidence and independent reviews.
-- [`docs/history/`](docs/history/) and [`docs/migration/`](docs/migration/):
-  immutable predecessor and migration records.
-
-The current development milestone and exact handoff state are recorded in
-[`fevc/PLAN.md`](fevc/PLAN.md). Historical reports and exact-SHA
-receipts are evidence, not instructions for the next change.
-
-## Local setup
-
-Use Python 3.13 and the repository-local environment:
-
-```bash
-python3.13 -m venv .venv
-./.venv/bin/python -m pip install --upgrade pip
-./.venv/bin/python -m pip install -r requirements/dev.txt
-```
-
-Run the deterministic source gates with:
-
-```bash
-./.venv/bin/python -m pytest -q
-./.venv/bin/python fevc/cmg/tools/assemble.py --all --check
-```
-
-Licensed Stata is intentionally local-only. When Stata/MP is available on an
-authorized machine, run:
-
-```bash
-./.venv/bin/python fevc/tools/run_checks.py
-```
-
-See [`fevc/TESTING.md`](fevc/TESTING.md) for the full test and
-qualification taxonomy.
-
-## Install from a checkout
-
-In Stata, point `net install` at the package directory in this checkout:
+The complete binary distribution is being prepared. The commands below are
+the intended public installation routes and are **not yet available**.
+See the [installation status](INSTALLATION.md) for current availability.
 
 ```stata
-net install fevc, from("/absolute/path/to/this/repository/fevc") replace
+net install fevc, replace ///
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/main/")
 ```
 
-This checkout manifest is portable source only. The requested RC payload
-will include every Mac, Linux and Windows plugin; its source-bound preparation
-and private testing are described in [RC binary preparation](fevc/docs/RC_BINARY_PAYLOAD.md).
-Rust-only fixed-offset match inference requires the native payload or a
-qualified local build.
+If you already use the Stata `github` command:
 
-See [`fevc/README.md`](fevc/README.md) for command examples, supported
-capabilities, and optional native-backend details.
-
-## License and distribution status
-
-The CMG implementation and a distributed KSS package containing it are
-GPL-3.0-only as recorded in [`CODE_LICENSE.md`](CODE_LICENSE.md). The human
-review of the package boundary, upstream notices, corresponding source, and
-third-party/data exclusions was completed on 29 August 2026. The current tree and reachable history are reviewed in the
-[public-source preparation record](fevc/docs/PUBLIC_SOURCE_READINESS.md).
-Public visibility and exact-artifact distribution remain separate owner decisions.
-
-## Workspace cleanup
-
-Preview disposable ignored artifacts with:
-
-```bash
-./.venv/bin/python fevc/tools/clean_workspace.py --dry-run
+```stata
+github install johannes-schmieder/fevc
 ```
 
-Use `--apply` after reviewing the list. The cleaner preserves tracked files,
-qualification evidence, local diagnostics, generated research outputs and
-installed plugins. Rust build caches require the additional `--build-caches`
-flag. Keep new run outputs under ignored `.local/` or `output/`; retain durable,
-sanitized evidence under the established source-bound evidence directories.
+Both routes will install the command, help, and precompiled native backend.
+
+## Example
+
+With worker–firm panel data loaded:
+
+```stata
+* Bias-corrected worker–firm variance decomposition
+fevc log_wage, worker(worker_id) firm(firm_id)
+
+* Include year effects
+fevc log_wage i.year, worker(worker_id) firm(firm_id)
+
+* Show uncorrected estimates, estimated bias, and corrected components
+estat decomposition, full
+```
+
+Match deletion is the default. The displayed decomposition separates worker,
+firm, and sorting contributions; sorting is twice the worker–firm covariance.
+
+To run a self-contained example with simulated data:
+
+```stata
+fevc_run exact_controls using fevc.sthlp
+```
+
+This example restores your data when it finishes. See `help fevc` for syntax,
+options, and more examples, or read the [usage guide](fevc/README.md).
+
+## Documentation
+
+- [Usage guide](fevc/README.md)
+- [Installation](INSTALLATION.md)
+- [Changelog](fevc/CHANGELOG.md)
+- [Detailed documentation](fevc/docs/README.md)
+- [Contributing](CONTRIBUTING.md)
+
+## License
+
+GPL-3.0-only for the package code. See [LICENSE](LICENSE),
+[code licensing](CODE_LICENSE.md), and [third-party notices](THIRD_PARTY_NOTICES.md).

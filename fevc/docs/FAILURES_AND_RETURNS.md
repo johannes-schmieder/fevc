@@ -34,7 +34,7 @@ Status codes are 0 computed, 1 nonpositive variance, 2 singular covariance,
 3 interval failure, 4 unidentified Mata mode, 5 invalid target-specific Mata
 variance fit, and 6 uncertified Rust mode. Unavailable AM endpoints are
 missing, never replaced by q0 intervals. Shared failures remain atomic.
-See [the repair erratum](INFERENCE_REPAIR_ERRATUM_2026-09-04.md).
+See [the repair erratum](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/INFERENCE_REPAIR_ERRATUM_2026-09-04.md).
 
 The supported explicit Rust structured modes additionally post
 `e(component_spectrum)`, `e(component_trace_mcse)`,
@@ -361,15 +361,17 @@ estimand. The catalog includes:
 - `NONFINITE_FIT`, `NONFINITE_LEVERAGE`, `NONFINITE_CORRECTION`, and
   `NONFINITE_CORRECTED_TARGET` when the final finite component subtraction
   overflows; and
-- `STAYER_HYBRID_DELETION_UNSUPPORTED` when `stayers(both)` is combined with
-  observation deletion. Current mixed Rust requests also reject explicit
-  probe-order and wall-time options before estimator RNG.
+- `NO_MOVER_SAMPLE` when explicit observation `stayers(movers)` excludes every
+  complete-case worker. `stayers(both)` is accepted and is the default in both
+  deletion modes. Mixed match/stayer Rust requests still reject unsupported
+  explicit probe-order and wall-time options before estimator RNG; observation
+  deletion does not use that mixed attachment.
 
 The command never repairs these states through an undisclosed ridge,
 different component, changed deletion unit, reduced probe count, or loosened
 tolerance.
 
-The combined default is deliberately labelled mixed deletion: its mover
+The combined match-deletion default is deliberately labelled mixed deletion: its mover
 correction follows declared match blocks, while its stayer correction is not
 match-robust. `stayers(movers)` is the explicit opt-out when a uniformly
 match-deleted target is required.

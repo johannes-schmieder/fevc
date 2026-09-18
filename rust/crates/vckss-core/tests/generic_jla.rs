@@ -39,6 +39,12 @@ use vckss_core::structured_variance::StructuredVarianceOptions;
 use vckss_core::types::{DeletionMode, InputColumns, NuisanceMode};
 use vckss_core::wall_plan::WallAdvisoryStatus;
 
+#[path = "generic_jla/queued_component.rs"]
+mod queued_component;
+
+#[path = "generic_jla/direct_component.rs"]
+mod direct_component;
+
 fn fixture(controls: bool) -> CompressedProblem {
     let mut worker = Vec::new();
     let mut firm = Vec::new();

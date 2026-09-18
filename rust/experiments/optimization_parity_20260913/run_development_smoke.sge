@@ -1,0 +1,78 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -binding linear:4
+#$ -l mem_per_core=3G
+#$ -l h_rt=00:25:00
+#$ -N fevc_opsmoke
+
+set -euo pipefail
+: "${OP_RUN_DIR:?}"
+: "${OP_CANDIDATE_SOURCE_SHA256:?}"
+[[ "${OP_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+test "${NSLOTS}" = 4
+test -f "${OP_RUN_DIR}/campaign/packages.tsv"
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+"${python_bin}" --version
+module purge
+module load stata-mp/19
+export OP_PYTHON=${python_bin}
+harness=${OP_RUN_DIR}/source/rust/experiments/optimization_parity_20260913
+profile=observation_projection
+input=${OP_RUN_DIR}/input/development/${profile}.csv
+input_sha=$(tr -d '[:space:]' < "${input}.sha256")
+smoke=${OP_RUN_DIR}/campaign/smoke
+test ! -e "${smoke}"
+mkdir -p "${smoke}"
+run_smoke() {
+  variant=$1 output=$2 requested_profile=$3
+  export OP_PACKAGE=${OP_RUN_DIR}/campaign/packages/${variant}
+  export OP_INPUT=${input} OP_OUTPUT_DIR=${smoke}/${output}
+  export OP_PROFILE=${requested_profile} OP_VARIANT=${variant} OP_THREADS=4
+  export OP_SEED=104729 OP_WARMUP=1 OP_REPETITION=0
+  export OP_INPUT_SHA256=${input_sha} OP_HARNESS_DIR=${harness}
+  if test "${variant}" = baseline; then
+    export OP_SOURCE_SHA256=4bdba22c0e6da99b3fd597aabab8df4d01307d01704951f3d5d2c089885cd2ad
+  else
+    export OP_SOURCE_SHA256=${OP_CANDIDATE_SOURCE_SHA256}
+  fi
+  "${harness}/development_call.sh"
+}
+run_smoke baseline baseline-success "${profile}"
+run_smoke candidate candidate-success "${profile}"
+"${OP_PYTHON}" - "${smoke}/candidate-success/result.tsv" <<'PY'
+import csv, sys
+row = next(csv.DictReader(open(sys.argv[1]), delimiter="\t"))
+assert row["schema"] == "FEVC-OPTIMIZATION-DEVELOPMENT-CALL-V1"
+assert row["variant"] == "candidate"
+assert row["execution_mode"] == "diagonal_queue"
+assert int(float(row["execution_threads"])) == 4
+assert int(float(row["queued_rhs"])) > 0
+assert int(float(row["cmg_rhs"])) == 0
+assert float(row["max_residual"]) <= float(row["acceptance"])
+PY
+
+# A deliberately invalid profile must propagate as a nonzero launcher result,
+# leave a typed wrapper failure, and never create a successful result row.
+if run_smoke candidate deliberate-failure invalid_deliberate_profile; then
+  printf 'deliberate failure unexpectedly succeeded\n' >&2
+  exit 1
+fi
+test -f "${smoke}/deliberate-failure/wrapper.fail"
+test ! -e "${smoke}/deliberate-failure/result.tsv"
+{
+  printf 'schema\tFEVC-OPTIMIZATION-DEVELOPMENT-SMOKE-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "${JOB_ID}"
+  printf 'host\t%s\n' "${HOSTNAME}"
+  printf 'slots\t%s\n' "${NSLOTS}"
+  printf 'successful_variants\t2\n'
+  printf 'deliberate_failure_propagated\t1\n'
+} > "${OP_RUN_DIR}/campaign/smoke.tsv"
+printf 'FEVC OPTIMIZATION DEVELOPMENT SMOKE PASS: job=%s\n' "${JOB_ID}" \
+  > "${OP_RUN_DIR}/campaign/smoke.pass"

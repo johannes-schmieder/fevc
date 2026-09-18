@@ -67,7 +67,7 @@ and descriptive full-model fit accounting.
   {ul:Deletion and target population}
     {cmd:deletion(match|observation)}{col 36}delete a declared match or one physical observation
     {cmd:deletionid(}{it:varname}{cmd:)}{col 36}dependence-block ID for match deletion
-    {cmd:stayers(both|movers)}{col 36}combined MATLAB population (match default) or mover-only opt-out
+    {cmd:stayers(both|movers)}{col 36}include eligible stayers (default in both modes) or movers only
     {cmd:targetweight(}{it:varname}{cmd:)}{col 36}stored-row target mass, separate from regression weight
 
   {ul:Controls and numerical method}
@@ -166,12 +166,15 @@ tuples.  Explicit {cmd:algorithm(auto) engine(auto)} may select the exact
 result family before estimator RNG.  {cmd:probeorder()} is a supported
 semantic tie-breaker for mover-only Rust JLA.  Exact and generic JLA
 {cmd:stayers(both)} routes use the versioned native augmentation lifecycle.
-On qualified macOS and Linux builds, the no-control
-match/joint/movers JLA cell with {cmd:engine(auto)},
+On qualified macOS and Linux builds, the no-control, unit-frequency,
+default-target joint/movers JLA point cell with either observation or match
+deletion and {cmd:engine(auto)},
 {cmd:preconditioner(auto)}, {cmd:batch(auto)}, and an explicit
 {cmd:probeorder()} selects {cmd:CMG_FULL_V2} through either strict
 {cmd:backend(rust) rng(counter_v1)} or automatic
-{cmd:backend(auto) rng(auto)} routing.  Other requests retain their existing
+{cmd:backend(auto) rng(auto)} routing.  Both deletion modes share degree-four
+elimination, thread-aware batches and the ordered scalar queue, while retaining
+their distinct statistical probes and corrections.  Other requests retain their existing
 routes.  Counter-V1 JLA never changes the caller's Stata RNG.  The default
 full-CMG fit and probe tolerances are {cmd:1e-10} and {cmd:1e-6}; an explicit
 {cmd:tolerance()} overrides both.  Failed columns are deterministically
@@ -208,12 +211,22 @@ the covariance as the sorting contribution so that its components add to the
 total.
 
 {pstd}
-With match deletion, {cmd:stayers(both)} is the default, matching the KSS Matlab package.  It uses one pooled mover-stayer fit and target normalization,
+{cmd:stayers(both)} is the default for both deletion modes.  With match deletion,
+it matches the KSS Matlab package and uses one pooled mover-stayer fit and target normalization,
 deletes retained mover matches as blocks, and deletes eligible stayer
 observations one literal physical copy at a time.  Thus the mover part uses
 the declared match-dependence convention, while the stayer part is explicitly
 {it:not} match-robust.  Specify {cmd:stayers(movers)} to recover the
 mover-only fit, target, correction, and estimation sample.
+
+{pstd}
+With observation deletion, {cmd:stayers(both)} retains eligible one-firm workers
+in the ordinary leave-out sample and deletes one physical observation throughout.
+{cmd:stayers(movers)} excludes workers observed at only one firm in the frozen
+complete-case sample before graph selection.  Earlier prereleases also retained
+these workers under explicit observation-deletion {cmd:stayers(movers)}; use
+{cmd:stayers(both)} or omit the option to preserve that previous population.
+Default observation-deletion estimates are unchanged by this option correction.
 
 {pstd}
 Controls are nuisance coefficients and have zero weight in the four KSS
@@ -311,7 +324,7 @@ sample has a final zero-bridge certificate.  A tied component ranking is
 withheld rather than broken using arbitrary encoded IDs.
 
 {pstd}
-For {cmd:stayers(both)}, let M be exactly those final mover rows.  The
+For {cmd:deletion(match) stayers(both)}, let M be exactly those final mover rows.  The
 estimation sample is M plus workers who were one-firm stayers in
 the original frozen complete-case sample, whose firm is represented in M,
 and whose frequency-weighted physical history has at least two observations.
@@ -393,13 +406,19 @@ structural preflight before the estimator random stream begins.  Rust resolves
 the same frozen plan through versioned capability and plan receipts.
 
 {pstd}
-{cmd:stayers(both)} requires {cmd:deletion(match)}.  It is implemented by
+The {cmd:deletion(match) stayers(both)} mixed correction is implemented by
 Mata and Rust for exact and generic JLA calculations; JLA automatically
 bypasses the mover-only compressed engine.  {cmd:probeorder()} and
 {cmd:wallseconds()} are not supported on the current mixed Rust route.  If the
 combined design or any required mover-match or stayer-observation deletion
 fails a rank, convergence, or numerical gate, the complete request is
 withheld.
+
+{pstd}
+Observation-deletion {cmd:stayers(both)} does not use mixed-deletion augmentation;
+it retains the ordinary observation estimator, including its eligible optimized
+solver route.  In both modes, the public {cmd:e(stayers)} records the population
+option.  Frozen native receipt flags retain their legacy augmentation meaning.
 
 {marker memory}
 {dlgtab:Memory forecasts and optional budgets}
@@ -499,21 +518,24 @@ not post {cmd:e(V)}.
 {pstd}
 When {cmd:inferencemodel()} is omitted, component inference uses the existing
 Mata exact target-specific smoother and requires
-{cmd:deletion(observation)}, {cmd:stayers(movers)}, and unit frequency
+{cmd:deletion(observation)} and unit frequency
 weights. Omitted or automatic algorithm selection resolves to exact. The
 supported explicit capabilities {cmd:structured_common} and
 {cmd:structured_leverage} instead require {cmd:backend(rust)},
 {cmd:rng(counter_v1)}, {cmd:algorithm(jla)},
-{cmd:deletion(observation)}, {cmd:stayers(movers)},
+{cmd:deletion(observation)},
 {cmd:nuisance(joint)}, and {cmd:preconditioner(diagonal|cmg)}. They support
 low-dimensional controls but reject frequency weights on observation deletion.
+Both observation-inference routes use {cmd:stayers(both)} by default;
+{cmd:stayers(movers)} requests a mover-only population. This makes the previous
+default population explicit without changing its inference formula.
 A separate explicit match tuple instead requires {cmd:deletion(match)},
 {cmd:nuisance(fixedoffset)}, {cmd:stayers(movers)}, and {cmd:engine(generic)}
 with the same explicit Rust/JLA/Counter-V1, model and solver options.
 Match inference permits positive integer frequencies as regression mass,
 not independent clusters, and preserves {cmd:deletionid()} and
-{cmd:targetweight()} semantics. Joint-control match inference, eligible
-stayers, simultaneous {cmd:project()}, and automatic routing remain unsupported. The paper's
+{cmd:targetweight()} semantics. Joint-control match inference, match/stayer
+hybrid inference, simultaneous {cmd:project()}, and automatic routing remain unsupported. The paper's
 unrestricted variance-product construction is not implemented and has no
 reserved option token. All unsupported tuples fail rather than substitute
 another method.
@@ -664,7 +686,8 @@ explicit {cmd:preconditioner(diagonal)} or forced
 weights interpreted as literal physical copies.  Automatic solver routing is
 not admitted for {cmd:project()}.  Forced projection CMG shares the planned
 generic hierarchy between the full and fixed-effect solvers and fails closed;
-it is distinct from the specialized match-deletion {cmd:CMG_FULL_V2} route.
+it is distinct from the eligible no-control point-estimation {cmd:CMG_FULL_V2}
+route shared by observation and match deletion.
 For match deletion the explicit generic route also supports the default
 {cmd:stayers(both)} mixed deletion partition.
 Target mass remains stored-row mass and is not multiplied by frequency.  The
@@ -712,7 +735,7 @@ the deletion unit, reduce probes, or loosen tolerances silently.
 
   {ul:Computation and resources}
     Exact size limit{col 34}use auto/JLA for a large identified design
-    Unsupported stayer convention{col 34}use match deletion and exact or generic JLA, or request stayers(movers)
+    Unsupported mixed correction{col 34}use supported exact or generic JLA match options
     Unsupported component route{col 34}use Mata exact observation deletion with unit frequency weights
     Invalid inference covariance{col 34}inspect leverage, support, smoothing fit, and projection rank
     PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
@@ -843,7 +866,7 @@ worker-firm total.  Stored shares are proportions; the display multiplies
 them by 100.
 
 {pstd}
-With {cmd:stayers(both)}, the ordinary headline returns have the combined
+With {cmd:deletion(match) stayers(both)}, the ordinary headline returns have the combined
 mover-stayer meaning.  Compatibility aliases are
 {cmd:e(stayer_hybrid_results)}, {cmd:e(stayer_hybrid_plugin)},
 {cmd:e(stayer_hybrid_correction)}, and {cmd:e(stayer_hybrid_kss)}.
@@ -881,6 +904,16 @@ Sample and design scalars include {cmd:e(N_requested)},
 {cmd:e(worker_levels)}, {cmd:e(firm_levels)},
 {cmd:e(deletion_units)}, {cmd:e(target_weight_sum)},
 {cmd:e(weighted_rss)}, {cmd:e(max_leverage)}, and graph-pruning counts.
+
+{pstd}
+{cmd:e(stayers)} records the public population choice, and
+{cmd:e(stayers_option_supplied)} distinguishes explicit from default selection.
+{cmd:e(N_complete)} counts complete cases before population selection;
+{cmd:e(N_graph_input)} counts rows passed to graph preparation.
+{cmd:e(N_stayer_option_dropped)} counts rows excluded solely by explicit
+observation-deletion {cmd:stayers(movers)}. These returns follow
+{cmd:e(stayer_option_schema)} = {cmd:FEVC-STAYER-POPULATION-V1}; unchanged raw
+native preparation receipts describe graph input, not pre-selection rows.
 
 {pstd}
 Memory returns are posted after successful completion, including with
@@ -938,6 +971,17 @@ columns {cmd:ingest}, {cmd:canonicalize}, {cmd:graph}, {cmd:compress},
 Units are seconds and the schema is recorded in
 {cmd:e(rust_phase_profile_schema)}.  These are diagnostic wall-clock values;
 they never affect estimator selection, memory admission, RNG, or results.
+
+{pstd}
+Direct full-CMG point results also retain the frozen 46-column
+{cmd:e(full_cmg_receipt)}. The separate {cmd:e(full_cmg_model_receipt)}
+has columns {cmd:controls}, {cmd:nuisance} (1 joint, 2 fixed offset),
+{cmd:logical_rhs}, {cmd:strict_rhs}, {cmd:controlled_rhs}, and
+{cmd:refinement_rhs}; {cmd:e(full_cmg_model_schema)} is
+{cmd:CMG-FULL-MODEL-V1}. Logical RHSs include the control-rank projections
+and any fixed-offset working fit. Extra control-refinement solves are not
+extra random probes. Rank projections retain their separate strict residual
+gate; controlled point probes do not use the relaxed no-control default.
 
 {pstd}
 On a recognized failure, the principal strings are

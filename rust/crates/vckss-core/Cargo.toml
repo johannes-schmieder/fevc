@@ -8,8 +8,13 @@ authors.workspace = true
 repository.workspace = true
 description = "Numerical core for the vckss Rust backend"
 
+[features]
+# Diagnostic builds only. No environment-driven production instrumentation.
+pipeline-profile = []
+
 [dependencies]
 cmg = { path = "../../vendor/cmg", features = ["parallel"] }
+rayon = "=1.12.0"
 
 [lints]
 workspace = true

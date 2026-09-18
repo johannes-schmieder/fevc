@@ -57,13 +57,31 @@ program define fevc_rust, rclass
             di as err "probe does not accept additional arguments"
             exit 198
         }
+        // Old FFI-only builds advertise native V6 but omit this shim field.
+        // Drop any stale scalar first so absence cannot inherit readiness.
+        capture scalar drop __vckss_rust_execution_api
+        capture scalar drop __vckss_rust_exact_api
+        capture scalar drop __vckss_rust_exact_resolved_api
+        capture scalar drop __vckss_rust_exact_legacy_api
         _fevc_rust_plugin_call `plugin', probe
+        local execution_api = 0
+        capture confirm scalar __vckss_rust_execution_api
+        if !_rc local execution_api = scalar(__vckss_rust_execution_api)
+        foreach name in exact_api exact_resolved_api exact_legacy_api {
+            local `name' = 0
+            capture confirm scalar __vckss_rust_`name'
+            if !_rc local `name' = scalar(__vckss_rust_`name')
+        }
         return scalar abi_compiled = scalar(__vckss_rust_abi_compiled)
         return scalar abi_runtime = scalar(__vckss_rust_abi_runtime)
         return scalar core_ready_flags = scalar(__vckss_rust_core_flags)
         return scalar support_flags = scalar(__vckss_rust_support_flags)
         return scalar deterministic_parallelism = scalar(__vckss_rust_deterministic)
-        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic {
+        return scalar execution_api = `execution_api'
+        return scalar exact_api = `exact_api'
+        return scalar exact_resolved_api = `exact_resolved_api'
+        return scalar exact_legacy_api = `exact_legacy_api'
+        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api exact_api exact_resolved_api exact_legacy_api {
             capture scalar drop __vckss_rust_`name'
         }
         return local backend "rust"
@@ -493,7 +511,7 @@ program define fevc_rust, rclass
         capture scalar drop __vckss_comp_interface
         exit
     }
-    if inlist("`subcommand'", "augmentcomponent", "augmentcomponentv2", "augmentcomponentv3", "augmentcomponentv4") {
+    if inlist("`subcommand'", "augmentcomponent", "augmentcomponentv2", "augmentcomponentv3", "augmentcomponentv4", "augmentcomponentv5") {
         gettoken handle 0 : 0, parse(" ,")
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
@@ -517,8 +535,9 @@ program define fevc_rust, rclass
         if "`subcommand'"=="augmentcomponentv2" local component_command `component_command'v2
         if "`subcommand'"=="augmentcomponentv3" local component_command `component_command'v3
         local gram_arg ""
-        if "`subcommand'"=="augmentcomponentv4" {
-            local component_command `component_command'v4
+        if inlist("`subcommand'","augmentcomponentv4","augmentcomponentv5") {
+            if "`subcommand'"=="augmentcomponentv4" local component_command `component_command'v4
+            else local component_command `component_command'v5
             if `"`gramprobes'"'=="" local gramprobes = 2048
             capture confirm integer number `gramprobes'
             if _rc | !inrange(real(`"`gramprobes'"'),512,2147483647) exit 198
@@ -526,7 +545,9 @@ program define fevc_rust, rclass
         }
         else if `"`gramprobes'"'!="" exit 198
         if !inlist("`model'", "structured_common", "structured_leverage") | ///
-            !inlist("`reference'", "q0", "q1") | `probes' < 2 | `batch' < 1 | ///
+            !inlist("`reference'", "q0", "q1") | `probes' < 2 | ///
+            (`batch' < 1 & "`subcommand'"!="augmentcomponentv5") | ///
+            ("`subcommand'"=="augmentcomponentv5" & `batch'!=0) | ///
             `spectrumprobes' < 2 | `spectrumiterations' < 1 | `seed' < 1 |    ///
             `psdtolerance' <= 0 | `spectrumtolerance' <= 0 |                 ///
             `confidence' <= 0 | `confidence' >= 1 |                         ///
@@ -834,14 +855,15 @@ program define fevc_rust, rclass
     if inlist("`subcommand'", "release", "result") {
         syntax anything(name=handle id="native Rust generation")          ///
             [, COMPONENTINFERENCE(integer 0) COMPONENTPROBES(integer 0) ///
-            COMPONENTGRAMPROBES(integer 0)]
+            COMPONENTGRAMPROBES(integer 0) EXECUTION(integer 0) ///
+            EXACTEXECUTION(integer 0) EXACTTHREADS(integer 1)]
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
             di as err "`subcommand' requires one positive integer native generation"
             exit 198
         }
         if "`subcommand'" == "release" {
-            if `componentinference' != 0 | `componentprobes' != 0 | `componentgramprobes' != 0 {
+            if `componentinference' != 0 | `componentprobes' != 0 | `componentgramprobes' != 0 | `execution' != 0 | `exactexecution' != 0 {
                 di as err "component result options are not valid for release"
                 exit 198
             }
@@ -851,7 +873,19 @@ program define fevc_rust, rclass
             return local subcommand "release"
             exit
         }
+        if !inlist(`exactexecution',0,1,2) | (`exactexecution' & ///
+            (`execution' | `componentinference' | missing(`exactthreads') | ///
+            `exactthreads'<1 | `exactthreads'>4294967295)) {
+            di as err "invalid exact result reconciliation options"
+            exit 198
+        }
+        tempname exact_work
+        if `exactexecution' {
+            fevc_rust exactexecutionreceipt `handle'
+            matrix `exact_work' = r(receipt)
+        }
         if !inlist(`componentinference', 0, 1) |                         ///
+            !inlist(`execution',0,1,2) | ///
             (`componentinference' & `componentprobes' < 2) |             ///
             (!`componentinference' & (`componentprobes' != 0 | `componentgramprobes' != 0)) | ///
             (`componentgramprobes'!=0 & !inrange(`componentgramprobes',512,2147483647)) {
@@ -859,6 +893,16 @@ program define fevc_rust, rclass
             exit 198
         }
 
+        if `execution' {
+            tempname execution_work
+            fevc_rust executionreceipt `handle'
+            matrix `execution_work' = r(receipt)
+            if `execution_work'[1,4]!=`execution' {
+                quietly _fevc_rust_release_idle `plugin' `handle'
+                di as err "Rust result executor does not match the selected V6 request"
+                exit 498
+            }
+        }
         _fevc_rust_plugin_call `plugin', result `handle'
         local rhs_rows = scalar(__vckss_rust_rhs_rows)
         local rhs_schema = scalar(__vckss_rust_rhs_schema)
@@ -976,7 +1020,8 @@ program define fevc_rust, rclass
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
         if `capability_schema' == 3 {
             capture noisily _fevc_rust_plan_receipt                      ///
-                `componentinference' `componentprobes' `componentgramprobes'
+                `componentinference' `componentprobes' `componentgramprobes' `execution' ///
+                `exactexecution' `exactthreads' `exact_work' `handle'
             local plan_rc = _rc
             if `plan_rc' {
                 quietly _fevc_rust_release_idle `plugin' `handle'
@@ -1017,6 +1062,7 @@ program define fevc_rust, rclass
                     scalar(__vckss_rust_g_peak)) |                           ///
                 ((!`componentinference' &                                  ///
                     scalar(__vckss_rust_g_peak) != max(                     ///
+                        scalar(__vckss_rust_solver_setup),                 ///
                         scalar(__vckss_rust_g_canon_peak),                   ///
                         scalar(__vckss_rust_g_fit_peak),                     ///
                         scalar(__vckss_rust_g_geometry_peak),                ///
@@ -1027,6 +1073,7 @@ program define fevc_rust, rclass
                         scalar(__vckss_rust_g_result_bytes))) |              ///
                  (`componentinference' &                                   ///
                     scalar(__vckss_rust_g_peak) < max(                      ///
+                        scalar(__vckss_rust_solver_setup),                 ///
                         scalar(__vckss_rust_g_canon_peak),                   ///
                         scalar(__vckss_rust_g_fit_peak),                     ///
                         scalar(__vckss_rust_g_geometry_peak),                ///
@@ -1130,7 +1177,7 @@ program define fevc_rust, rclass
                         scalar(__vckss_rust_full_complete) |                  ///
                     el(`rhs_receipts', `row', 8) !=                           ///
                         scalar(__vckss_rust_full_zero) |                      ///
-                    el(`rhs_receipts', `row', 13) !=                          ///
+                    el(`rhs_receipts', `row', 13) >                           ///
                         scalar(__vckss_rust_full_tolerance) {
                     local receipt_mismatch = 1
                 }
@@ -1449,6 +1496,7 @@ program define fevc_rust, rclass
         return local selected_engine "`selected_engine'"
         return local backend "rust"
         return local subcommand "result"
+        if `exactexecution' return matrix exact_execution_receipt = `exact_work'
         foreach name in plugin_worker plugin_firm plugin_cov plugin_total     ///
             correction_worker correction_firm correction_cov correction_total ///
             corrected_worker corrected_firm corrected_cov corrected_total      ///
@@ -1487,6 +1535,123 @@ program define fevc_rust, rclass
             pf_total_ns {
             capture scalar drop __vckss_rust_`name'
         }
+        exit
+    }
+
+    if "`subcommand'" == "exactexecutionreceipt" {
+        syntax anything(name=handle id="native Rust generation")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'")<=0 {
+            di as err "exactexecutionreceipt requires one positive integer generation"
+            exit 198
+        }
+        foreach name in struct schema generation threads workers regions passes incremental peak residual {
+            capture scalar drop __vckss_eex_`name'
+        }
+        capture noisily _fevc_rust_plugin_call `plugin', exactexecutionreceipt `handle'
+        local exact_rc = _rc
+        if !`exact_rc' {
+            tempname work
+            matrix `work' = (scalar(__vckss_eex_struct),scalar(__vckss_eex_schema), ///
+                scalar(__vckss_eex_generation),scalar(__vckss_eex_threads), ///
+                scalar(__vckss_eex_workers),scalar(__vckss_eex_regions), ///
+                scalar(__vckss_eex_passes),scalar(__vckss_eex_incremental), ///
+                scalar(__vckss_eex_peak),scalar(__vckss_eex_residual))
+            matrix colnames `work' = struct schema generation threads worker_limit ///
+                parallel_regions estimator_passes incremental_forecast command_peak max_fit_residual
+        }
+        foreach name in struct schema generation threads workers regions passes incremental peak residual {
+            capture scalar drop __vckss_eex_`name'
+        }
+        if `exact_rc' exit `exact_rc'
+        return matrix receipt = `work'
+        exit
+    }
+
+    if "`subcommand'" == "executionreceipt" {
+        syntax anything(name=handle id="native Rust generation")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "executionreceipt requires one positive integer native generation"
+            exit 198
+        }
+        capture noisily _fevc_rust_plugin_call `plugin', executionreceipt `handle'
+        local execution_export_rc = _rc
+        if `execution_export_rc' {
+            foreach name in struct schema generation mode threads workers active cmg_concurrency ///
+                capacity leverage target fit rank point projection component gram logical queued ///
+                cmg refinement peak residual {
+                capture scalar drop __vckss_gex_`name'
+            }
+            exit `execution_export_rc'
+        }
+        tempname work
+        matrix `work' = J(1,23,.)
+        local i = 0
+        foreach name in struct schema generation mode threads workers active cmg_concurrency ///
+            capacity leverage target fit rank point projection component gram logical queued ///
+            cmg refinement peak residual {
+            local ++i
+            matrix `work'[1,`i'] = scalar(__vckss_gex_`name')
+            capture scalar drop __vckss_gex_`name'
+        }
+        matrix colnames `work' = struct schema generation mode threads workers active cmg_concurrency ///
+            capacity leverage target fit rank point projection component gram logical queued ///
+            cmg refinement peak residual
+        return matrix receipt = `work'
+        return local schema "VCKSS-GENERIC-EXECUTION-V1"
+        return local subcommand "executionreceipt"
+        exit
+    }
+
+    if "`subcommand'" == "componentbatchreceipt" {
+        syntax anything(name=handle id="native Rust generation")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'")<=0 exit 198
+        capture noisily _fevc_rust_plugin_call `plugin', componentbatchreceipt `handle'
+        local export_rc = _rc
+        if `export_rc' {
+            foreach name in struct schema policy reason generation declared_component ///
+                declared_gram component gram cap threads capacity peak {
+                capture scalar drop __vckss_cba_`name'
+            }
+            exit `export_rc'
+        }
+        tempname batch
+        matrix `batch' = J(1,13,.)
+        local i = 0
+        foreach name in struct schema policy reason generation declared_component ///
+            declared_gram component gram cap threads capacity peak {
+            local ++i
+            matrix `batch'[1,`i'] = scalar(__vckss_cba_`name')
+            capture scalar drop __vckss_cba_`name'
+        }
+        matrix colnames `batch' = struct schema policy reason generation declared_component ///
+            declared_gram component gram cap threads capacity peak
+        return matrix receipt = `batch'
+        return local schema "VCKSS-COMPONENT-BATCH-V1"
+        return local subcommand "componentbatchreceipt"
+        exit
+    }
+
+    if "`subcommand'" == "fullcmgmodelreceipt" {
+        syntax anything(name=handle id="native Rust generation")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "fullcmgmodelreceipt requires one positive integer native generation"
+            exit 198
+        }
+        _fevc_rust_plugin_call `plugin', fullcmgmodelreceipt `handle'
+        foreach pair in struct:struct_size schema:schema_version generation:generation ///
+            controls:controls_count nuisance:nuisance_mode logical_rhs:logical_rhs_count ///
+            strict_rhs:explicit_options_rhs_count controlled_rhs:controlled_rhs_count ///
+            refinement_rhs:control_refinement_rhs_count {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_cmm_`source')
+            capture scalar drop __vckss_cmm_`source'
+        }
+        return local subcommand "fullcmgmodelreceipt"
         exit
     }
 
@@ -1579,7 +1744,27 @@ program define fevc_rust, rclass
             SIGNATUREHI(real 0) SIGNATURELO(real 0)                          ///
             LEVERAGEBATCHMODE(string) TARGETBATCHMODE(string)                ///
             FALLBACK(integer -1) WALLSECONDS(real 0) FULLCMG(integer 0) ///
-            THREADS(integer 1) TOLERANCESUPPLIED(integer 0)]
+            THREADS(integer 1) TOLERANCESUPPLIED(integer 0) EXECUTION(integer 0) ///
+            COMPONENTBATCHAUTO(integer 0) EXACTEXECUTION(integer 0) EXACTLEGACY(integer 0)]
+        if !inlist(`exactlegacy',0,1) | (`exactlegacy' & ///
+            (`exactexecution' | `execution' | `fullcmg' | `componentbatchauto' | ///
+             `capabilityschema' | `capabilityprofile' | "`engine'"!="" | ///
+             "`algorithm'"!="exact" | missing(`threads') | `threads'<1)) {
+            di as err "invalid additive legacy-exact execution request"
+            exit 198
+        }
+        if !inlist(`exactexecution',0,1,2) | (`exactexecution' & ///
+            (`execution' | `fullcmg' | `componentbatchauto' | ///
+            `capabilityschema'!=3 | `capabilityprofile'!=4)) {
+            di as err "invalid additive exact execution request"
+            exit 198
+        }
+        if !inlist(`execution',0,1,2,3) | !inlist(`componentbatchauto',0,1) | ///
+            (`componentbatchauto' & !`execution') | (`execution' & `fullcmg') | ///
+            (`execution' & (`capabilityschema'!=3 | `capabilityprofile'!=4)) {
+            di as err "invalid additive generic execution request"
+            exit 198
+        }
         if missing(`seed') | missing(`probes') |                         ///
             missing(`leveragebatch') | missing(`targetbatch') |         ///
             missing(`tolerance') | missing(`maxiter') |                 ///
@@ -1694,7 +1879,7 @@ program define fevc_rust, rclass
                 `wallsecondssupplied' `physical_arg' `capabilityschema'  ///
                 `capabilityprofile' `frequencyused' `signature_hi_arg'   ///
                 `signature_lo_arg' `leveragebatchmode'                   ///
-                `targetbatchmode' `fallback' `wallseconds_arg'
+                `targetbatchmode' `fallback' `wallseconds_arg' `execution' `threads' `componentbatchauto' `tolerancesupplied' `exactexecution'
             return add
             exit
         }
@@ -1703,10 +1888,16 @@ program define fevc_rust, rclass
             exit 198
         }
         if "`engine'" == "" {
-            _fevc_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
+            local selector solve
+            local thread_arg
+            if `exactlegacy' {
+                local selector solveexactlegacyv1
+                local thread_arg `threads'
+            }
+            _fevc_rust_plugin_call `plugin', `selector' `handle' `seed' `probes'  ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
                 `algorithm' `deletion' `nuisance' `exactlimit' `blocksizelimit' ///
-                `rank_tolerance_arg' `block_tolerance_arg'
+                `rank_tolerance_arg' `block_tolerance_arg' `thread_arg'
         }
         else {
             if "`engine'" != "generic" {

@@ -7,12 +7,16 @@ use std::sync::Mutex;
 use vckss_core::batch_plan::BatchRequest;
 use vckss_core::cmg::CmgOptions;
 use vckss_core::error::ErrorCode;
+use vckss_core::full_cmg::FullCmgPlanOptions;
+use vckss_core::generic_jla::run_generic_jla_with_direct_solver_interrupt;
 use vckss_core::generic_jla::{
     run_generic_jla, run_generic_jla_routed, GenericJlaExecutionOptions, GenericJlaMemoryPeakPhase,
     GenericJlaOptions,
 };
 use vckss_core::krylov::PcgOptions;
+use vckss_core::memory::MemoryBudget;
 use vckss_core::model_operator::CanonicalModelData;
+use vckss_core::model_solver::diagonal_queue::DiagonalBatchExecutor;
 use vckss_core::model_solver::{
     ModelRoutingOptions, ModelSolverOptions, ModelSolverRoute, PreparedModelSolver,
 };
@@ -25,6 +29,86 @@ static TRACKING: AtomicBool = AtomicBool::new(false);
 static CURRENT: AtomicUsize = AtomicUsize::new(0);
 static PEAK: AtomicUsize = AtomicUsize::new(0);
 static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+#[test]
+fn isolated_diagonal_queue_incremental_heap_stays_within_admitted_payload() {
+    let _lock = TEST_LOCK.lock().unwrap();
+    let mut worker = Vec::new();
+    let mut firm = Vec::new();
+    let mut weight = Vec::new();
+    let mut controls = vec![Vec::new(); 2];
+    for w in 0..140_u32 {
+        for visit in 0..(2 + w % 7) {
+            for repeat in 0..4 {
+                let row = worker.len();
+                worker.push(w);
+                firm.push((w + visit) % 71);
+                weight.push(0.5 + ((w + repeat + visit) % 13) as f64 / 3.0);
+                controls[0].push((row as f64 * 0.37).sin());
+                controls[1].push((row as f64 * 0.57).cos());
+            }
+        }
+    }
+    let solver = PreparedModelSolver::prepare(
+        CanonicalModelData {
+            workers: 140,
+            firms: 71,
+            row_worker: &worker,
+            row_firm: &firm,
+            weight: &weight,
+            controls: &controls,
+        },
+        ModelSolverOptions::default(),
+    )
+    .unwrap();
+    let columns = 33;
+    let mut worker_rhs = vec![0.0; 140 * columns];
+    let mut firm_rhs = vec![0.0; 71 * columns];
+    let mut control_rhs = vec![0.0; 2 * columns];
+    for column in 0..columns {
+        for row in 0..worker.len() {
+            let value = ((row + column) as f64 * 0.11).cos() * weight[row];
+            worker_rhs[140 * column + worker[row] as usize] += value;
+            firm_rhs[71 * column + firm[row] as usize] += value;
+            for q in 0..2 {
+                control_rhs[2 * column + q] += value * controls[q][row];
+            }
+        }
+    }
+    for threads in [1, 7] {
+        let ((queue, solved), peak, live) = measured_live(|| {
+            let queue = DiagonalBatchExecutor::new(
+                &solver,
+                threads,
+                columns,
+                0,
+                MemoryBudget::Unspecified,
+                &mut vckss_core::interrupt::NeverInterrupt,
+            )
+            .unwrap();
+            let solved = queue
+                .solve_batch_with_interrupt(
+                    &worker_rhs,
+                    &firm_rhs,
+                    &control_rhs,
+                    columns,
+                    ModelSolverOptions::default(),
+                    &mut vckss_core::interrupt::NeverInterrupt,
+                )
+                .unwrap();
+            (queue, solved)
+        });
+        let plan = queue.plan();
+        let heap_forecast = plan.incremental_peak_bytes - plan.stack_reservation_bytes;
+        eprintln!("diagonal_queue threads={threads} measured_heap_peak={peak} retained_heap={live} heap_forecast={heap_forecast} stack_reservation={}", plan.stack_reservation_bytes);
+        assert!(peak as u64 <= heap_forecast);
+        assert!(live <= peak);
+        assert_eq!(solved.0.solution.len(), columns);
+        assert!(solved.1.retained_queue_metadata_bytes <= plan.queue_metadata_bytes);
+        drop(solved);
+        drop(queue);
+    }
+}
 
 fn record_allocation(bytes: usize) {
     if TRACKING.load(Ordering::Relaxed) {
@@ -101,6 +185,71 @@ fn measured_live<T>(action: impl FnOnce() -> T) -> (T, usize, usize) {
     let live = CURRENT.load(Ordering::SeqCst);
     TRACKING.store(false, Ordering::SeqCst);
     (output, PEAK.load(Ordering::SeqCst), live)
+}
+
+#[test]
+fn compressed_statistical_command_heap_and_retained_payload_are_admitted() {
+    use vckss_core::engine::{
+        run_jla_no_controls_planned, JlaEngineOptions, PlannedJlaEngineOptions,
+    };
+    let _lock = TEST_LOCK.lock().unwrap();
+    let selected = std::env::var("FEVC_COMPRESSED_STATISTICAL_MEMORY_THREADS").ok();
+    if selected.is_none() {
+        // One allocator window per process, like the other pool-lifetime tests:
+        // a preceding pool's runtime teardown must not cross a fresh counter.
+        for threads in [1, 7] {
+            assert!(std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "compressed_statistical_command_heap_and_retained_payload_are_admitted",
+                    "--nocapture",
+                    "--test-threads=1"
+                ])
+                .env(
+                    "FEVC_COMPRESSED_STATISTICAL_MEMORY_THREADS",
+                    threads.to_string()
+                )
+                .status()
+                .unwrap()
+                .success());
+        }
+        return;
+    }
+    let problem = q0_cmg_setup_problem(257);
+    for threads in [1, 7] {
+        if selected.as_deref() != Some(threads.to_string().as_str()) {
+            continue;
+        }
+        let ((result,), peak, live) = measured_live(|| {
+            let mut cmg = FullCmgPlanOptions::production(threads, 1e-10, None);
+            cmg.memory_budget = MemoryBudget::Unspecified;
+            (run_jla_no_controls_planned(
+                &problem,
+                PlannedJlaEngineOptions {
+                    estimator: JlaEngineOptions {
+                        probes: 33,
+                        memory_budget: MemoryBudget::Unspecified,
+                        memory_limit_bytes: 0,
+                        ..Default::default()
+                    },
+                    full_cmg: Some(cmg),
+                    ..Default::default()
+                },
+            )
+            .unwrap(),)
+        });
+        let forecast = result.execution.memory.solve_peak_forecast_bytes;
+        eprintln!("compressed-statistics threads={threads} heap_peak={peak} retained={live} forecast={forecast}");
+        assert!(peak as u64 <= forecast);
+        assert!(live <= peak);
+        assert!(result.estimator.receipt.max_complete_residual <= 1e-5);
+        assert_eq!(result.execution.full_cmg.as_ref().unwrap().rhs_count, 100);
+        assert_eq!(
+            result.execution.batch.plan.selected_command_peak_bytes,
+            forecast
+        );
+        drop(result);
+    }
 }
 
 fn q32_problem(large_match_block: bool) -> CompressedProblem {
@@ -315,6 +464,558 @@ fn cmg_options(estimator: GenericJlaOptions) -> GenericJlaExecutionOptions {
         leverage_batch: BatchRequest::Explicit(estimator.leverage_batch_width),
         target_batch: BatchRequest::Explicit(estimator.target_batch_width),
         wallseconds: None,
+    }
+}
+
+#[test]
+fn controlled_direct_forecasts_cover_q32_allocator_peaks() {
+    let _serial = TEST_LOCK.lock().expect("memory tests serialize");
+    let selected = std::env::var("FEVC_CONTROL_DIRECT_MEMORY_CASE").ok();
+    if selected.is_none() {
+        for deletion in ["Observation", "Match"] {
+            for threads in [1, 7] {
+                let status = std::process::Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "controlled_direct_forecasts_cover_q32_allocator_peaks",
+                        "--nocapture",
+                    ])
+                    .env(
+                        "FEVC_CONTROL_DIRECT_MEMORY_CASE",
+                        format!("{deletion}-{threads}"),
+                    )
+                    .status()
+                    .unwrap();
+                assert!(status.success());
+            }
+        }
+        return;
+    }
+    for deletion in [DeletionMode::Observation, DeletionMode::Match] {
+        for threads in [1, 7] {
+            if selected.as_deref() != Some(format!("{deletion:?}-{threads}").as_str()) {
+                continue;
+            }
+            let problem = q32_problem(true);
+            let mut estimator = options(deletion, NuisanceMode::Joint);
+            estimator.memory_budget = MemoryBudget::Unspecified;
+            estimator.memory_limit_bytes = 0;
+            let mut request = cmg_options(estimator);
+            request.leverage_batch = BatchRequest::Auto;
+            request.target_batch = BatchRequest::Auto;
+            let (result, observed) = measured(|| {
+                run_generic_jla_with_direct_solver_interrupt(
+                    &problem,
+                    request,
+                    None,
+                    None,
+                    None,
+                    Some(FullCmgPlanOptions::production(threads, 1e-10, None)),
+                    &mut vckss_core::interrupt::NeverInterrupt,
+                )
+            });
+            let result = result.expect("controlled direct Q32 fixture estimates");
+            let forecast = result.receipt.execution.memory.peak_bytes;
+            eprintln!("controlled_direct_memory {deletion:?} threads={threads} observed={observed} forecast={forecast}");
+            assert!(observed as u64 <= forecast);
+            assert_eq!(result.receipt.control_rank.projection_rhs.len(), 32);
+            assert_eq!(
+                result
+                    .receipt
+                    .execution
+                    .full_cmg
+                    .as_ref()
+                    .unwrap()
+                    .setup
+                    .admitted_peak_bytes,
+                forecast
+            );
+        }
+    }
+}
+
+#[test]
+fn queued_diagonal_inference_forecast_covers_heap() {
+    use vckss_core::component_inference::{
+        ComponentInferenceOptions, ComponentInferenceUnit, ComponentVarianceSource,
+    };
+    use vckss_core::interrupt::NeverInterrupt;
+    let _serial = TEST_LOCK.lock().unwrap();
+    let selected = std::env::var("FEVC_DIAGONAL_INFERENCE_MEMORY_CASE").ok();
+    if selected.is_none() {
+        for unit in ["Observation", "Match"] {
+            for threads in [1, 7] {
+                let status = std::process::Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "queued_diagonal_inference_forecast_covers_heap",
+                        "--nocapture",
+                    ])
+                    .env(
+                        "FEVC_DIAGONAL_INFERENCE_MEMORY_CASE",
+                        format!("{unit}-{threads}"),
+                    )
+                    .status()
+                    .unwrap();
+                assert!(status.success());
+            }
+        }
+        return;
+    }
+    for (deletion, unit, nuisance) in [
+        (
+            DeletionMode::Observation,
+            ComponentInferenceUnit::Observation,
+            NuisanceMode::Joint,
+        ),
+        (
+            DeletionMode::Match,
+            ComponentInferenceUnit::Match,
+            NuisanceMode::FixedOffset,
+        ),
+    ] {
+        for threads in [1, 7] {
+            if selected.as_deref() != Some(format!("{unit:?}-{threads}").as_str()) {
+                continue;
+            }
+            let mut problem = q32_problem(false);
+            problem.controls.truncate(2);
+            let prepared = vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
+                &problem,
+                unit,
+                ComponentVarianceSource::StructuredLeverage,
+                ComponentInferenceOptions {
+                    probes: 129,
+                    batch_width: 7,
+                    spectrum_probes: 17,
+                    spectrum_iterations: 16,
+                    ..ComponentInferenceOptions::default()
+                },
+                vckss_core::structured_variance::StructuredVarianceOptions::default(),
+                513,
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+            let mut estimator = options(deletion, nuisance);
+            estimator.probes = 200;
+            estimator.memory_budget = MemoryBudget::Unspecified;
+            let mut request = cmg_options(estimator);
+            request.routing.route = ModelSolverRoute::Diagonal;
+            // Capacity four forces seven-column residual callbacks into
+            // partial physical chunks while preserving all logical outputs.
+            request.leverage_batch = BatchRequest::Explicit(2);
+            request.target_batch = BatchRequest::Explicit(2);
+            let (result, observed) = measured(|| {
+                vckss_core::generic_jla::run_generic_jla_with_diagonal_queue_attachments_interrupt(
+                    &problem,
+                    request,
+                    None,
+                    Some(&prepared),
+                    None,
+                    threads,
+                    &mut NeverInterrupt,
+                )
+            });
+            let result = result.unwrap();
+            let queue = result.receipt.execution.diagonal_queue.unwrap();
+            let heap = queue.plan.command_peak_bytes - queue.plan.stack_reservation_bytes;
+            eprintln!("diagonal_inference_heap {unit:?} threads={threads} observed={observed} heap_bound={heap} command_bound={} stack_reservation={}", queue.plan.command_peak_bytes, queue.plan.stack_reservation_bytes);
+            assert!(observed as u64 <= heap);
+            assert_eq!(queue.plan.maximum_rhs, 4);
+            assert_eq!(
+                queue.plan.command_peak_bytes,
+                result.receipt.execution.memory.peak_bytes
+            );
+            let inference = result.component_inference.unwrap();
+            assert_eq!(inference.residual_moments.unwrap().projections.len(), 513);
+            assert_eq!(
+                queue.work.completed_rhs,
+                2 + 600 + 513 + inference.solve_receipts.len()
+            );
+        }
+    }
+}
+
+#[test]
+fn direct_cmg_inference_forecast_covers_q32_heap() {
+    use vckss_core::component_inference::{
+        ComponentInferenceOptions, ComponentInferenceUnit, ComponentVarianceSource,
+    };
+    use vckss_core::interrupt::NeverInterrupt;
+    let _serial = TEST_LOCK.lock().unwrap();
+    let selected = std::env::var("FEVC_DIRECT_INFERENCE_MEMORY_CASE").ok();
+    if selected.is_none() {
+        for unit in ["Observation", "Match"] {
+            for threads in [1, 7] {
+                assert!(std::process::Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "direct_cmg_inference_forecast_covers_q32_heap",
+                        "--nocapture"
+                    ])
+                    .env(
+                        "FEVC_DIRECT_INFERENCE_MEMORY_CASE",
+                        format!("{unit}-{threads}")
+                    )
+                    .status()
+                    .unwrap()
+                    .success());
+            }
+        }
+        return;
+    }
+    for (deletion, unit, nuisance) in [
+        (
+            DeletionMode::Observation,
+            ComponentInferenceUnit::Observation,
+            NuisanceMode::Joint,
+        ),
+        (
+            DeletionMode::Match,
+            ComponentInferenceUnit::Match,
+            NuisanceMode::FixedOffset,
+        ),
+    ] {
+        for threads in [1, 7] {
+            if selected.as_deref() != Some(format!("{unit:?}-{threads}").as_str()) {
+                continue;
+            }
+            let problem = q32_problem(false);
+            let prepared = vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
+                &problem,
+                unit,
+                ComponentVarianceSource::StructuredLeverage,
+                ComponentInferenceOptions {
+                    probes: 129,
+                    batch_width: 7,
+                    spectrum_probes: 17,
+                    spectrum_iterations: 16,
+                    ..ComponentInferenceOptions::default()
+                },
+                vckss_core::structured_variance::StructuredVarianceOptions::default(),
+                513,
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+            let mut estimator = options(deletion, nuisance);
+            estimator.probes = 200;
+            // Minimum physical capacity forces both 32 rank RHSs and seven
+            // Gram columns through the same two-RHS pool. No hard rejection.
+            estimator.memory_budget = MemoryBudget::Explicit {
+                bytes: 1,
+                check: vckss_core::memory::MemoryCheck::Warn,
+            };
+            let mut request = cmg_options(estimator);
+            request.leverage_batch = BatchRequest::Auto;
+            request.target_batch = BatchRequest::Auto;
+            let (result, observed) = measured(|| {
+                vckss_core::generic_jla::run_generic_jla_with_direct_attachments_interrupt(
+                    &problem,
+                    request,
+                    None,
+                    Some(&prepared),
+                    None,
+                    FullCmgPlanOptions::production(threads, 1e-10, None),
+                    &mut NeverInterrupt,
+                )
+            });
+            let result = result.unwrap();
+            let execution = &result.receipt.execution;
+            let cmg = execution.full_cmg.as_ref().unwrap();
+            let work = execution.direct_attachments.unwrap();
+            eprintln!("direct_inference_heap {unit:?} threads={threads} observed={observed} command_bound={} retained_solver={} workspace_pool={} workspace_count={}",
+                execution.memory.peak_bytes, cmg.setup.actual_retained_bytes,
+                cmg.setup.admitted_workspace_pool_bytes, cmg.setup.workspace_count);
+            assert!(observed as u64 <= execution.memory.peak_bytes);
+            assert_eq!(cmg.setup.maximum_batch_rhs, 2);
+            assert_eq!(work.control_projection_rhs, 32);
+            assert_eq!(work.gram_rhs, 513);
+            assert_eq!(cmg.setup.admitted_peak_bytes, execution.memory.peak_bytes);
+        }
+    }
+}
+
+#[test]
+fn automatic_inference_forecast_covers_q32_heap() {
+    use vckss_core::component_inference::{
+        ComponentInferenceOptions, ComponentInferenceUnit, ComponentVarianceSource,
+    };
+    use vckss_core::generic_jla::run_generic_jla_with_automatic_component_batches_interrupt;
+    use vckss_core::interrupt::NeverInterrupt;
+    let _serial = TEST_LOCK.lock().unwrap();
+    let selected = std::env::var("FEVC_AUTO_INFERENCE_MEMORY_CASE").ok();
+    if selected.is_none() {
+        for unit in ["Observation", "Match"] {
+            for threads in [1, 7] {
+                for cmg in [false, true] {
+                    assert!(std::process::Command::new(std::env::current_exe().unwrap())
+                        .args([
+                            "--exact",
+                            "automatic_inference_forecast_covers_q32_heap",
+                            "--nocapture"
+                        ])
+                        .env(
+                            "FEVC_AUTO_INFERENCE_MEMORY_CASE",
+                            format!("{unit}-{threads}-{cmg}")
+                        )
+                        .status()
+                        .unwrap()
+                        .success());
+                }
+            }
+        }
+        return;
+    }
+    for (deletion, unit, nuisance) in [
+        (
+            DeletionMode::Observation,
+            ComponentInferenceUnit::Observation,
+            NuisanceMode::Joint,
+        ),
+        (
+            DeletionMode::Match,
+            ComponentInferenceUnit::Match,
+            NuisanceMode::FixedOffset,
+        ),
+    ] {
+        for threads in [1, 7] {
+            for cmg in [false, true] {
+                if selected.as_deref() != Some(format!("{unit:?}-{threads}-{cmg}").as_str()) {
+                    continue;
+                }
+                let problem = q32_problem(false);
+                let prepared =
+                    vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
+                        &problem,
+                        unit,
+                        ComponentVarianceSource::StructuredLeverage,
+                        ComponentInferenceOptions {
+                            probes: 129,
+                            batch_width: 8,
+                            spectrum_probes: 17,
+                            spectrum_iterations: 16,
+                            ..ComponentInferenceOptions::default()
+                        },
+                        vckss_core::structured_variance::StructuredVarianceOptions::default(),
+                        513,
+                        &mut NeverInterrupt,
+                    )
+                    .unwrap();
+                let mut estimator = options(deletion, nuisance);
+                estimator.probes = 33;
+                estimator.memory_budget = MemoryBudget::Unspecified;
+                let mut request = cmg_options(estimator);
+                request.leverage_batch = BatchRequest::Auto;
+                request.target_batch = BatchRequest::Auto;
+                request.routing.route = if cmg {
+                    ModelSolverRoute::Cmg
+                } else {
+                    ModelSolverRoute::Diagonal
+                };
+                let (result, observed) = measured(|| {
+                    run_generic_jla_with_automatic_component_batches_interrupt(
+                        &problem,
+                        request,
+                        &prepared,
+                        threads,
+                        cmg.then(|| FullCmgPlanOptions::production(threads, 1e-10, None)),
+                        &mut NeverInterrupt,
+                    )
+                });
+                let result = result.unwrap();
+                let execution = &result.receipt.execution;
+                let batch = execution.component_batch.unwrap();
+                assert_eq!(
+                    (batch.component_width, batch.gram_width),
+                    (32.max(8 * threads), 32.max(8 * threads))
+                );
+                let stack = execution
+                    .diagonal_queue
+                    .map_or(0, |queue| queue.plan.stack_reservation_bytes);
+                let heap_bound = execution.memory.peak_bytes - stack;
+                eprintln!("automatic_inference_heap {unit:?} threads={threads} cmg={cmg} observed={observed} heap_bound={heap_bound} command_bound={} component_width={} gram_width={}", execution.memory.peak_bytes, batch.component_width, batch.gram_width);
+                assert!(observed as u64 <= heap_bound);
+                assert_eq!(
+                    execution.batch.plan.selected_command_peak_bytes,
+                    execution.memory.peak_bytes
+                );
+                assert_eq!(result.receipt.control_rank.projection_rhs.len(), 32);
+                assert_eq!(
+                    result
+                        .component_inference
+                        .unwrap()
+                        .residual_moments
+                        .unwrap()
+                        .projections
+                        .len(),
+                    513
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn queued_diagonal_estimator_forecast_covers_q32_heap() {
+    let _serial = TEST_LOCK.lock().unwrap();
+    // One process per tracking epoch avoids asynchronous runtime teardown
+    // from a preceding pool being attributed to the next measurement.
+    let selected = std::env::var("FEVC_DIAGONAL_ESTIMATOR_MEMORY_CASE").ok();
+    if selected.is_none() {
+        for deletion in ["Observation", "Match"] {
+            for threads in [1, 7] {
+                let status = std::process::Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "queued_diagonal_estimator_forecast_covers_q32_heap",
+                        "--nocapture",
+                    ])
+                    .env(
+                        "FEVC_DIAGONAL_ESTIMATOR_MEMORY_CASE",
+                        format!("{deletion}-{threads}"),
+                    )
+                    .status()
+                    .unwrap();
+                assert!(status.success());
+            }
+        }
+        return;
+    }
+    for deletion in [DeletionMode::Observation, DeletionMode::Match] {
+        for threads in [1, 7] {
+            if selected.as_deref() != Some(format!("{deletion:?}-{threads}").as_str()) {
+                continue;
+            }
+            let problem = q32_problem(true);
+            let mut estimator = options(deletion, NuisanceMode::Joint);
+            estimator.memory_budget = MemoryBudget::Unspecified;
+            estimator.memory_limit_bytes = 0;
+            let mut request = cmg_options(estimator);
+            request.routing.route = ModelSolverRoute::Diagonal;
+            request.leverage_batch = BatchRequest::Auto;
+            request.target_batch = BatchRequest::Auto;
+            let (result, observed) = measured(|| {
+                vckss_core::generic_jla::run_generic_jla_with_diagonal_queue_interrupt(
+                    &problem,
+                    request,
+                    None,
+                    None,
+                    threads,
+                    &mut vckss_core::interrupt::NeverInterrupt,
+                )
+            });
+            let result = result.unwrap();
+            let queue = result.receipt.execution.diagonal_queue.unwrap();
+            let heap_bound = queue.plan.command_peak_bytes - queue.plan.stack_reservation_bytes;
+            eprintln!("diagonal_estimator_heap {deletion:?} threads={threads} observed={observed} heap_bound={heap_bound} command_bound={} stack_reservation={}", queue.plan.command_peak_bytes, queue.plan.stack_reservation_bytes);
+            assert!(observed as u64 <= heap_bound);
+            assert_eq!(
+                result.receipt.execution.memory.peak_bytes,
+                queue.plan.command_peak_bytes
+            );
+            assert_eq!(result.receipt.control_rank.projection_rhs.len(), 32);
+            assert_eq!(queue.work.completed_rhs, 32 + 3 * estimator.probes as usize);
+        }
+    }
+}
+
+#[test]
+fn deletion_neutral_direct_forecasts_cover_allocator_peaks() {
+    let _serial = TEST_LOCK.lock().expect("memory tests serialize");
+    // Rayon releases some thread-local allocations asynchronously. Isolate each
+    // measurement so a previous pool's teardown cannot cross this allocator's
+    // tracking epoch (the estimator itself has already returned and dropped it).
+    let selected = std::env::var("FEVC_DIRECT_MEMORY_CASE").ok();
+    if selected.is_none() {
+        for firms in [128, 512] {
+            for deletion in ["Observation", "Match"] {
+                for threads in [1, 4, 7] {
+                    let status = std::process::Command::new(std::env::current_exe().unwrap())
+                        .args([
+                            "--exact",
+                            "deletion_neutral_direct_forecasts_cover_allocator_peaks",
+                            "--nocapture",
+                        ])
+                        .env(
+                            "FEVC_DIRECT_MEMORY_CASE",
+                            format!("{deletion}-{firms}-{threads}"),
+                        )
+                        .status()
+                        .unwrap();
+                    assert!(status.success());
+                }
+            }
+        }
+        return;
+    }
+    for firms in [128, 512] {
+        let problem = q0_cmg_setup_problem(firms);
+        for deletion in [DeletionMode::Observation, DeletionMode::Match] {
+            for threads in [1, 4, 7] {
+                if selected.as_deref() != Some(format!("{deletion:?}-{firms}-{threads}").as_str()) {
+                    continue;
+                }
+                let mut estimator = options(deletion, NuisanceMode::Joint);
+                estimator.probes = 33;
+                estimator.memory_limit_bytes = 0;
+                estimator.memory_budget = MemoryBudget::Unspecified;
+                let mut request = cmg_options(estimator);
+                request.leverage_batch = BatchRequest::Auto;
+                request.target_batch = BatchRequest::Auto;
+                struct Trace {
+                    samples: Vec<(&'static str, usize, usize)>,
+                }
+                impl vckss_core::interrupt::InterruptCheck for Trace {
+                    fn checkpoint(&mut self, phase: &'static str) -> vckss_core::error::Result<()> {
+                        let peak = PEAK.load(Ordering::Relaxed);
+                        if self.samples.last().is_none_or(|s| peak > s.2)
+                            && self.samples.len() < self.samples.capacity()
+                        {
+                            self.samples
+                                .push((phase, CURRENT.load(Ordering::Relaxed), peak));
+                        }
+                        Ok(())
+                    }
+                }
+                let mut trace = Trace {
+                    samples: Vec::with_capacity(4096),
+                };
+                let (result, observed) = measured(|| {
+                    run_generic_jla_with_direct_solver_interrupt(
+                        &problem,
+                        request,
+                        None,
+                        None,
+                        None,
+                        Some(FullCmgPlanOptions::production(threads, 1e-10, Some(1e-10))),
+                        &mut trace,
+                    )
+                });
+                let result = result.expect("direct weighted repeated-row fixture estimates");
+                let execution = &result.receipt.execution;
+                if observed as u64 > execution.memory.peak_bytes {
+                    eprintln!(
+                        "trace: {:?}\nmemory: {:?}",
+                        &trace.samples[trace.samples.len().saturating_sub(12)..],
+                        execution.memory
+                    );
+                }
+                assert!(observed as u64 <= execution.memory.peak_bytes,
+                    "{deletion:?}, firms={firms}, threads={threads}: observed {observed} exceeds forecast {}",
+                    execution.memory.peak_bytes);
+                assert_eq!(
+                    execution
+                        .full_cmg
+                        .as_ref()
+                        .unwrap()
+                        .setup
+                        .admitted_peak_bytes,
+                    execution.memory.peak_bytes
+                );
+                eprintln!("direct_memory {deletion:?} firms={firms} threads={threads} observed={observed} forecast={}",
+                    execution.memory.peak_bytes);
+            }
+        }
     }
 }
 

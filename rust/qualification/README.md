@@ -1,12 +1,10 @@
-# Native qualification evidence
+# Native qualification
 
-This tree contains compact, source-bound receipts for alpha gates that are not
-represented by the ordinary GitHub/Stata CI receipt. Each receipt names the
-exact tested source commit and limits its claims. Raw licensed-Stata logs,
-startup banners, temporary binaries, build caches, and disposable traces are
-not tracked here.
+Keep new source-bound receipts and binaries in ignored `.local/` directories.
+The platform qualifiers also accept explicit external evidence directories.
+Do not commit raw logs, installed plugins, or per-run output.
 
-Current evidence is organized by the milestone/gate identifiers in
-[`../TEST_PLAN.md`](../TEST_PLAN.md). A receipt does not transfer to a later
-source commit automatically, and no receipt in this tree constitutes public
-release approval.
+Each receipt must name the tested source, binary hashes, platform, commands,
+and result. A receipt does not qualify later runtime changes automatically.
+See [the native test plan](../TEST_PLAN.md) and
+[historical material](../../docs/ARCHIVE.md).

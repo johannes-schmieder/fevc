@@ -95,9 +95,9 @@ def test_native_adapter_allows_registered_whole_node_grid(tmp_path: Path) -> Non
     output = tmp_path / "fevc.ado"
     receipt = tmp_path / "receipt.json"
     value = build_ado(root / "fevc.ado", output, receipt)
-    assert value["allowed_native_threads"] == [1, 2, 4, 8, 14, 28]
+    assert value["allowed_native_threads"] == [1, 2, 4, 7, 8, 14, 28]
     source = output.read_text(encoding="utf-8")
-    assert "inlist(`benchmark_threads',1,2,4,8,14,28)" in source
+    assert "inlist(`benchmark_threads',1,2,4,7,8,14,28)" in source
 
 
 def test_scc_scripts_pin_registered_platform_without_restricted_data() -> None:

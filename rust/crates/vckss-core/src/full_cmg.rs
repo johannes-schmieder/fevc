@@ -190,10 +190,20 @@ pub enum FullCmgExecution {
     AcrossRightHandSides,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct FullCmgModelDiagnostics {
+    pub explicit_options_rhs_count: u64,
+    pub controlled_rhs_count: u64,
+    pub control_refinement_rhs_count: u64,
+}
+
 #[derive(Clone, Debug)]
 pub struct FullCmgReceipt {
     pub schema: &'static str,
     pub source_commit: &'static str,
+    /// Internal model-adapter diagnostics, deliberately outside the frozen
+    /// native full-CMG receipt and public request layouts.
+    pub model_diagnostics: FullCmgModelDiagnostics,
     pub setup: FullCmgSetupReceipt,
     pub batch_calls: u64,
     pub rhs_count: u64,
@@ -218,6 +228,7 @@ impl FullCmgReceipt {
         Self {
             schema: FULL_CMG_SCHEMA,
             source_commit: CMG_SOURCE_COMMIT,
+            model_diagnostics: FullCmgModelDiagnostics::default(),
             setup,
             batch_calls: 0,
             rhs_count: 0,
@@ -594,6 +605,12 @@ impl FullCmgDirectSolver {
 
     /// Freeze selected capacity while the scalar solve pool is still unallocated.
     pub(crate) fn configure_capacity(&mut self, maximum_rhs: usize) -> Result<()> {
+        self.setup = self.forecast_capacity(maximum_rhs)?;
+        self.refresh_capacity_receipts()
+    }
+
+    /// Price a candidate without allocating or changing the frozen capacity.
+    pub(crate) fn forecast_capacity(&self, maximum_rhs: usize) -> Result<FullCmgSetupReceipt> {
         if !self.pools_deferred || maximum_rhs == 0 || maximum_rhs > self.setup.maximum_batch_rhs {
             return Err(BackendError::invariant(
                 "cmg_capacity",
@@ -606,17 +623,25 @@ impl FullCmgDirectSolver {
             .map_err(|error| map_setup_error(error, "selected capacity"))?;
         let old_pool = self.setup.admitted_workspace_pool_bytes;
         let new_pool = to_u64(execution.workspace_pool_bytes(), "selected scalar pool")?;
-        self.setup.actual_retained_bytes = self
+        let mut setup = self.setup;
+        setup.actual_retained_bytes = self
             .setup
             .actual_retained_bytes
             .checked_sub(old_pool)
             .and_then(|bytes| bytes.checked_add(new_pool))
             .ok_or_else(|| BackendError::invariant("cmg_capacity", "pool accounting mismatch"))?;
-        self.setup.maximum_batch_rhs = maximum_rhs;
-        self.setup.workspace_count = execution.concurrency();
-        self.setup.admitted_workspace_pool_bytes =
+        setup.maximum_batch_rhs = maximum_rhs;
+        setup.workspace_count = execution.concurrency();
+        setup.admitted_workspace_pool_bytes =
             to_u64(execution.workspace_pool_bytes(), "selected scalar pool")?;
-        self.refresh_capacity_receipts()
+        setup.allocator_allowance_bytes = setup.actual_retained_bytes / ALLOCATOR_ALLOWANCE_DIVISOR;
+        setup.admitted_peak_bytes = setup.preparation_peak_bytes.max(checked_sum_u64(&[
+            setup.non_cmg_command_peak_bytes,
+            setup.actual_retained_bytes,
+            setup.allocator_allowance_bytes,
+        ])?);
+        setup.pre_rng_forecast_bytes = setup.admitted_peak_bytes;
+        Ok(setup)
     }
 
     fn refresh_capacity_receipts(&mut self) -> Result<()> {
@@ -673,6 +698,34 @@ impl FullCmgDirectSolver {
             })
     }
 
+    pub(crate) fn record_model_work(
+        &self,
+        explicit: usize,
+        controlled: usize,
+        refined: usize,
+    ) -> Result<()> {
+        let mut receipt = self.receipt.lock().map_err(|_| {
+            BackendError::invariant("cmg_full_v2", "model diagnostics lock poisoned")
+        })?;
+        let d = &mut receipt.model_diagnostics;
+        d.explicit_options_rhs_count = checked_add_receipt(
+            d.explicit_options_rhs_count,
+            to_u64(explicit, "strict RHS count")?,
+            "strict model RHS count",
+        )?;
+        d.controlled_rhs_count = checked_add_receipt(
+            d.controlled_rhs_count,
+            to_u64(controlled, "controlled RHS count")?,
+            "controlled model RHS count",
+        )?;
+        d.control_refinement_rhs_count = checked_add_receipt(
+            d.control_refinement_rhs_count,
+            to_u64(refined, "control refinement count")?,
+            "control refinement RHS count",
+        )?;
+        Ok(())
+    }
+
     pub(crate) fn reconcile_memory(&self, solve_peak: u64) -> Result<()> {
         let mut receipt = self
             .receipt
@@ -706,6 +759,56 @@ impl FullCmgDirectSolver {
         phase: FullCmgPhase,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<FullCmgDirectSolve> {
+        let (pcg, gate) = self.phase_options(phase);
+        self.solve_batch_with_options_and_interrupt(
+            operator, worker_rhs, firm_rhs, columns, pcg, gate, interrupt,
+        )
+    }
+
+    pub(crate) fn phase_options(&self, phase: FullCmgPhase) -> (PcgOptions, f64) {
+        match phase {
+            FullCmgPhase::Fit => (self.tolerances.fit, self.tolerances.fit_complete_residual),
+            FullCmgPhase::Probe => (
+                self.tolerances.probe,
+                self.tolerances.probe_complete_residual,
+            ),
+        }
+    }
+
+    /// Strict preparation/inference solves supply their own frozen options.
+    /// They use the same owned pool, complete-system gate and warm-start
+    /// refinement ladder; ordinary point-probe defaults never override them.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn solve_batch_with_options_and_interrupt(
+        &self,
+        operator: &TwoWayOperator<'_>,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        columns: usize,
+        pcg: PcgOptions,
+        full_residual_tolerance: f64,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<FullCmgDirectSolve> {
+        let _profile =
+            crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::DirectSolve);
+        pcg.validate()?;
+        if !full_residual_tolerance.is_finite()
+            || full_residual_tolerance <= 0.0
+            || full_residual_tolerance
+                > complete_residual_tolerance(pcg.tolerance)
+                    .max(self.maximum_complete_residual_tolerance())
+        {
+            return Err(BackendError::invalid(
+                "cmg_full_v2",
+                "invalid complete residual gate",
+            ));
+        }
+        if self.pools_deferred || columns > self.setup.maximum_batch_rhs {
+            return Err(BackendError::invariant(
+                "cmg_full_v2",
+                "solve exceeds the admitted workspace capacity",
+            ));
+        }
         validate_rhs(operator, worker_rhs, firm_rhs, columns)?;
         interrupt.checkpoint("cmg_full_v2_rhs")?;
         let rhs_start = Instant::now();
@@ -767,13 +870,6 @@ impl FullCmgDirectSolver {
         interrupt.checkpoint("cmg_full_v2_solve")?;
 
         let solve_start = Instant::now();
-        let (pcg, full_residual_tolerance) = match phase {
-            FullCmgPhase::Fit => (self.tolerances.fit, self.tolerances.fit_complete_residual),
-            FullCmgPhase::Probe => (
-                self.tolerances.probe,
-                self.tolerances.probe_complete_residual,
-            ),
-        };
         let full_options = full_pcg_options(pcg)?;
         let (execution, solved_columns) =
             self.solve_scalar_columns(&right_hand_sides, None, columns, full_options)?;
@@ -1837,6 +1933,56 @@ mod tests {
                 + worker_temporaries
                 + queue_metadata_bytes(plan.maximum_batch_rhs).unwrap()
         );
+    }
+
+    #[test]
+    fn deferred_capacity_forecasts_are_pure_and_match_realized_pools() {
+        let problem = fixture();
+        for threads in [1, 2, 3, 4, 7, 14, 28, 64] {
+            let mut plan = test_plan();
+            plan.threads = threads;
+            plan.maximum_batch_rhs = 7;
+            let mut solver = FullCmgDirectSolver::prepare_with_pool_policy(
+                &problem,
+                PcgOptions {
+                    tolerance: 1e-10,
+                    maximum_iterations: 1000,
+                    residual_replacement_interval: 32,
+                },
+                u64::MAX,
+                plan,
+                &mut NeverInterrupt,
+                true,
+            )
+            .unwrap();
+            for capacity in [1, 7, 2, 4, 3] {
+                let predicted = solver.forecast_capacity(capacity).unwrap();
+                assert_eq!(solver.receipt().unwrap().setup.maximum_batch_rhs, 7);
+                assert_eq!(predicted.maximum_batch_rhs, capacity);
+                assert!(predicted.workspace_count <= threads);
+            }
+            assert!(solver.forecast_capacity(0).is_err());
+            assert!(solver.forecast_capacity(8).is_err());
+            assert!(solver.forecast_capacity(usize::MAX).is_err());
+            let predicted = solver.forecast_capacity(3).unwrap();
+            solver.configure_capacity(3).unwrap();
+            solver.allocate_deferred_pools().unwrap();
+            let actual = solver.receipt().unwrap().setup;
+            assert_eq!(
+                predicted.actual_retained_bytes,
+                actual.actual_retained_bytes
+            );
+            assert_eq!(
+                predicted.pre_rng_forecast_bytes,
+                actual.pre_rng_forecast_bytes
+            );
+            assert_eq!(
+                predicted.admitted_workspace_pool_bytes,
+                actual.admitted_workspace_pool_bytes
+            );
+            assert_eq!(predicted.workspace_count, actual.workspace_count);
+            assert!(solver.forecast_capacity(3).is_err());
+        }
     }
 
     #[test]

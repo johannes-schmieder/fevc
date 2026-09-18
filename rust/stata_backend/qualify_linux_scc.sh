@@ -55,6 +55,14 @@ manifest_path=${script_dir}/Cargo.toml
   "${source_commit}" ]] || fail "source commit binding mismatch"
 [[ -f "${repo_root}/SOURCE_FILES.sha256" ]] || \
   fail "immutable bundle lacks SOURCE_FILES.sha256"
+source_kind=CLEAN_COMMIT
+classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION
+if [[ -f "${repo_root}/SOURCE_SNAPSHOT_KIND.txt" ]]; then
+  [[ $(tr -d '[:space:]' < "${repo_root}/SOURCE_SNAPSHOT_KIND.txt") == \
+    DIRTY_WORKTREE_SNAPSHOT_V1 ]] || fail "unknown source snapshot kind"
+  source_kind=DIRTY_WORKTREE_SNAPSHOT_V1
+  classification=DIRTY_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION
+fi
 
 receipt_parent=$(dirname -- "${receipt_path}")
 [[ -d "${receipt_parent}" ]] || fail "receipt parent does not exist"
@@ -360,10 +368,11 @@ source_manifest_binding=$(hash_file "${repo_root}/SOURCE_FILES.sha256")
 receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").tmp.XXXXXX")
 {
   printf 'VCKSS_SCC_LINUX_CANDIDATE_RECEIPT_V1\n'
-  printf 'classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION\n'
+  printf 'classification=%s\n' "${classification}"
   printf 'scope=scheduled BU SCC Linux x86-64 Rust alpha candidate; full public exact, exact stayers(both), compressed JLA, generic JLA, qualified CMG_FULL_V2 explicit and automatic routing, Counter-V1, lifecycle, caller-state, typed-failure, and clean-install coverage under Stata MP 19\n'
   printf 'excluded_claims=public-release,Windows,macOS,native-Intel,representative-scale,human-license-provenance-review\n'
   printf 'source_commit=%s\n' "${source_commit}"
+  printf 'source_kind=%s\n' "${source_kind}"
   printf 'source_bundle_sha256=%s\n' "${bundle_sha256}"
   printf 'source_files_manifest_sha256=%s\n' "${source_manifest_binding}"
   printf 'qualification_source_manifest_sha256=%s\n' "${source_hash_before}"

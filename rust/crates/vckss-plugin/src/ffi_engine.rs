@@ -34,7 +34,7 @@ use vckss_core::component_inference::{
 };
 use vckss_core::counter_accounting::{CounterExecutionReceipt, CounterPhaseExecutionReceipt};
 use vckss_core::engine::{
-    run_jla_no_controls_planned_with_interrupt, run_jla_no_controls_with_interrupt,
+    run_jla_no_controls_planned_with_plan_and_interrupt, run_jla_no_controls_with_interrupt,
     run_jla_no_controls_with_plan_and_interrupt, CompressedJlaExecutionReceipt, JlaEngineOptions,
     JlaEngineResult, JlaRhsReceipt, JlaRhsSide, JlaSolvePhase, NumericalMcse,
     PlannedJlaEngineOptions,
@@ -57,10 +57,13 @@ pub use memory_api::*;
 use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
-    run_generic_jla_routed_with_attachments_and_hybrid_interrupt, run_generic_jla_with_interrupt,
-    GenericJlaExecutionOptions, GenericJlaExecutionReceipt, GenericJlaMemoryPeakPhase,
-    GenericJlaOptions, GenericJlaResult, GenericJlaRhsPhase, GenericJlaRhsReceipt,
-    GenericJlaRhsSide,
+    run_generic_jla_with_automatic_component_batches_interrupt,
+    run_generic_jla_with_diagonal_queue_attachments_interrupt,
+    run_generic_jla_with_direct_attachments_interrupt,
+    run_generic_jla_with_direct_solver_interrupt, run_generic_jla_with_interrupt,
+    run_generic_jla_with_resolved_execution_interrupt, GenericJlaExecutionOptions,
+    GenericJlaExecutionReceipt, GenericJlaMemoryPeakPhase, GenericJlaOptions, GenericJlaResult,
+    GenericJlaRhsPhase, GenericJlaRhsReceipt, GenericJlaRhsSide,
 };
 use vckss_core::interrupt::{
     checkpoint_chunk, CancellationInterrupt, InterruptCheck, NeverInterrupt,
@@ -81,6 +84,13 @@ use vckss_core::types::{
 };
 use vckss_core::wall_plan::{WallAdvisoryStatus, WallWorkReceipt};
 use vckss_core::ABI_VERSION;
+
+#[path = "generic_execution_api.rs"]
+mod generic_execution_api;
+pub use generic_execution_api::*;
+#[path = "exact_execution_api.rs"]
+mod exact_execution_api;
+pub use exact_execution_api::*;
 
 use crate::context::{ContextHandle, ContextPayloadRef, ContextRegistry, ContextStateTag};
 use crate::session::{
@@ -118,9 +128,27 @@ pub const VCKSS_CORE_COUNTER_RNG_READY: u64 = 1 << 6;
 pub const VCKSS_CORE_JLA_PLAN_READY: u64 = 1 << 7;
 pub const VCKSS_CORE_FULL_CMG_V2_READY: u64 = 1 << 8;
 pub const VCKSS_CORE_PROJECTION_JLA_READY: u64 = 1 << 9;
+/// Additive readiness for no-control point solves with explicit generic/CMG
+/// selection, literal frequency/target weights and declared match identifiers.
+pub const VCKSS_CORE_FULL_CMG_POINT_ROUTING_V1_READY: u64 = 1 << 10;
+/// Controlled and fixed-offset point routing plus the additive model receipt.
+pub const VCKSS_CORE_FULL_CMG_MODEL_V1_READY: u64 = 1 << 11;
+/// Additive native V6 execution and complete generic-work receipt. This bit
+/// does not extend the statistical capability profile or old solve semantics.
+pub const VCKSS_CORE_GENERIC_EXECUTION_V1_READY: u64 = 1 << 12;
+/// Additive automatic component-batch augmentation and V7 execution.
+pub const VCKSS_CORE_AUTOMATIC_COMPONENT_BATCH_V1_READY: u64 = 1 << 13;
+/// Resolver-aware V8 execution preserves an original automatic request while
+/// selecting the queued diagonal or direct-CMG executor before estimator RNG.
+pub const VCKSS_CORE_RESOLVED_EXECUTION_V1_READY: u64 = 1 << 14;
 const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 =
     if cfg!(any(target_os = "macos", target_os = "linux")) {
         VCKSS_CORE_FULL_CMG_V2_READY
+            | VCKSS_CORE_FULL_CMG_POINT_ROUTING_V1_READY
+            | VCKSS_CORE_FULL_CMG_MODEL_V1_READY
+            | VCKSS_CORE_GENERIC_EXECUTION_V1_READY
+            | VCKSS_CORE_AUTOMATIC_COMPONENT_BATCH_V1_READY
+            | VCKSS_CORE_RESOLVED_EXECUTION_V1_READY
     } else {
         0
     };
@@ -2073,6 +2101,23 @@ pub struct VckssFullCmgReceiptV1 {
     pub workspace_count: u64,
 }
 
+/// Additive model-work accounting; the original full-CMG receipt stays frozen.
+/// Logical RHSs include strict control projection and the fixed-offset fit.
+/// Outer control corrections are extra FE solves, not extra statistical draws.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[repr(C)]
+pub struct VckssFullCmgModelReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub controls_count: u32,
+    pub nuisance_mode: u32,
+    pub logical_rhs_count: u64,
+    pub explicit_options_rhs_count: u64,
+    pub controlled_rhs_count: u64,
+    pub control_refinement_rhs_count: u64,
+}
+
 // Compile-time ABI fences complement the cross-language layout tests. The
 // array lengths fail to type-check if a field reorders, padding changes, or a
 // supposedly prefix-compatible receipt grows in place.
@@ -2095,6 +2140,8 @@ const _: [(); 1000] = [(); size_of::<VckssExecutionPlanReceiptV1>()];
 const _: [(); 1840] = [(); size_of::<VckssEngineDetailedReceiptV7>()];
 const _: [(); 96] = [(); size_of::<VckssEnginePerformanceReceiptV1>()];
 const _: [(); 400] = [(); size_of::<VckssFullCmgReceiptV1>()];
+const _: [(); 56] = [(); size_of::<VckssFullCmgModelReceiptV1>()];
+const _: [(); 24] = [(); std::mem::offset_of!(VckssFullCmgModelReceiptV1, logical_rhs_count)];
 const _: [(); 448] = [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, applicability_flags)];
 const _: [(); 528] =
     [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, actual_accounting_residual)];
@@ -2279,6 +2326,7 @@ struct EngineSolved {
     retained: Arc<Vec<bool>>,
     stayer_augmentation: Option<EngineStayerAugmentationReceipt>,
     stayer_hybrid: Option<ExactStayerHybridResult>,
+    exact_execution: Option<VckssExactExecutionReceiptV1>,
     performance: NativePhaseTimings,
 }
 
@@ -3688,6 +3736,37 @@ pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_
     )
 }
 
+/// V5 is an opt-in automatic-width attachment. A zero batch width is legal
+/// only here; preparation uses width one and execution chooses the admitted
+/// width before any random draws.
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v5(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+    gram_probes: u32,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Observation,
+        ComponentInferencePolicy::DirectAutomaticV5 { gram_probes },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_v5(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+    gram_probes: u32,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Match,
+        ComponentInferencePolicy::DirectAutomaticV5 { gram_probes },
+    )
+}
+
 fn augment_component_with_unit(
     generation: u64,
     request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
@@ -3695,7 +3774,9 @@ fn augment_component_with_unit(
     policy: ComponentInferencePolicy,
 ) -> i32 {
     ffi_status(|| {
-        if let ComponentInferencePolicy::DirectV4 { gram_probes } = policy {
+        if let ComponentInferencePolicy::DirectV4 { gram_probes }
+        | ComponentInferencePolicy::DirectAutomaticV5 { gram_probes } = policy
+        {
             if !(512..=i32::MAX as u32).contains(&gram_probes) {
                 return Err(BackendError::invalid(
                     "component_inference_augmentation",
@@ -3749,11 +3830,22 @@ fn attach_component_inference_inner(
     }
     let variance_source = component_variance_source_from_code(request.variance_source)?;
     let reference_distribution = component_reference_from_code(request.reference_distribution)?;
+    let automatic_batch = matches!(policy, ComponentInferencePolicy::DirectAutomaticV5 { .. });
+    if automatic_batch && request.batch_width != 0 {
+        return Err(BackendError::invalid(
+            "engine_component_inference_augmentation",
+            "V5 automatic component batches require the zero-width sentinel",
+        ));
+    }
     let options = ComponentInferenceOptions {
         seed: request.seed,
         probes: request.probes,
         batch_width: to_usize(
-            u64::from(request.batch_width),
+            u64::from(if automatic_batch {
+                1
+            } else {
+                request.batch_width
+            }),
             "engine_component_inference_augmentation",
             "component inference batch width",
         )?,
@@ -4353,6 +4445,17 @@ fn solve_engine_v4(
     full_cmg: Option<FullCmgPlanOptions>,
     execution: V4SolveExecution<'_>,
 ) -> Result<()> {
+    solve_engine_v4_with_generic_execution(generation, request, full_cmg, None, execution)
+}
+
+#[allow(clippy::too_many_lines)]
+fn solve_engine_v4_with_generic_execution(
+    generation: u64,
+    request: VckssEngineSolveRequestV4,
+    full_cmg: Option<FullCmgPlanOptions>,
+    generic_execution: Option<GenericExecutionPlan>,
+    execution: V4SolveExecution<'_>,
+) -> Result<()> {
     if request.v3.v2.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV4>()? {
         return Err(abi_error("V4 solve request reports a short structure size"));
     }
@@ -4398,6 +4501,24 @@ fn solve_engine_v4(
     let operation = move |prepared: &PreparedProblemWithMask,
                           interrupt: &mut dyn InterruptCheck|
           -> Result<EngineSolved> {
+        let automatic_component_batch = matches!(
+            generic_execution,
+            Some(
+                GenericExecutionPlan::AutomaticComponentDiagonalQueue(_)
+                    | GenericExecutionPlan::AutomaticComponentDirectAttachments(_)
+            )
+        );
+        if prepared
+            .component_inference
+            .as_ref()
+            .is_some_and(|component| component.automatic_batch)
+            != automatic_component_batch
+        {
+            return Err(BackendError::invalid(
+                "engine_solve",
+                "component inference batch intent differs from the selected execution API",
+            ));
+        }
         if request.v3.probeorder_supplied != u32::from(prepared.problem.probe_order.is_some()) {
             return Err(BackendError::invalid(
                 "engine_solve",
@@ -4407,13 +4528,6 @@ fn solve_engine_v4(
         let controls_count = u32::try_from(prepared.problem.controls.len()).map_err(|_| {
             resource_error("engine_solve", "control count is not representable as u32")
         })?;
-        if full_cmg.is_some() && controls_count != 0 {
-            return Err(BackendError::new(
-                ErrorCode::UnsupportedFeature,
-                "cmg_full_v2",
-                "CMG_FULL_V2 does not yet support controls",
-            ));
-        }
         let capability = capability_request_v3_for_solve(request, controls_count)?;
         let (reason, profile) = request_capability_classification_v3(capability);
         if reason != VCKSS_REQUEST_REASON_SUPPORTED
@@ -4480,6 +4594,17 @@ fn solve_engine_v4(
                 .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
                 && compressed_physical_rng_ready,
         })?;
+        if matches!(
+            generic_execution,
+            Some(GenericExecutionPlan::ExactParallel(_))
+        ) && estimator_plan.engine.selected != SelectedEngine::NotApplicable
+        {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "exact_execution",
+                "resolved exact selector requires a frozen exact plan",
+            ));
+        }
         if (prepared.projection.is_some() || prepared.component_inference.is_some())
             && estimator_plan.engine.selected != SelectedEngine::Generic
         {
@@ -4537,6 +4662,7 @@ fn solve_engine_v4(
             "retained-mask capacity",
         )?;
         let solve_start = Instant::now();
+        let mut exact_execution = None;
         let (result, execution_plan, leverage_active, target_active, stayer_hybrid, full_cmg) =
             match estimator_plan.engine.selected {
                 SelectedEngine::NotApplicable => {
@@ -4563,24 +4689,43 @@ fn solve_engine_v4(
                         memory_limit_bytes,
                         prepared_persistent_bytes,
                     };
-                    let planned = run_exact_estimator_planned_with_interrupt(
-                        &prepared.problem,
-                        PlannedExactEstimatorOptions {
-                            estimator: exact_options,
-                            wallseconds,
-                        },
-                        interrupt,
-                    )?;
-                    let stayer_hybrid = stayer_augmentation
-                        .map(|augmentation| {
-                            run_exact_stayer_hybrid_with_interrupt(
-                                &augmentation.core.problem,
-                                &augmentation.core.plan,
+                    let (planned, stayer_hybrid) =
+                        if let Some(GenericExecutionPlan::ExactParallel(threads)) =
+                            generic_execution
+                        {
+                            let (planned, hybrid, receipt) = exact_execution_api::execute(
+                                generation,
+                                &prepared.problem,
+                                stayer_augmentation
+                                    .map(|value| (&value.core.problem, &value.core.plan)),
                                 exact_options,
+                                wallseconds,
+                                threads,
                                 interrupt,
-                            )
-                        })
-                        .transpose()?;
+                            )?;
+                            exact_execution = Some(receipt);
+                            (planned, hybrid)
+                        } else {
+                            let planned = run_exact_estimator_planned_with_interrupt(
+                                &prepared.problem,
+                                PlannedExactEstimatorOptions {
+                                    estimator: exact_options,
+                                    wallseconds,
+                                },
+                                interrupt,
+                            )?;
+                            let stayer_hybrid = stayer_augmentation
+                                .map(|augmentation| {
+                                    run_exact_stayer_hybrid_with_interrupt(
+                                        &augmentation.core.problem,
+                                        &augmentation.core.plan,
+                                        exact_options,
+                                        interrupt,
+                                    )
+                                })
+                                .transpose()?;
+                            (planned, stayer_hybrid)
+                        };
                     let plan = execution_plan_exact(
                         generation,
                         request.v3.request_signature,
@@ -4614,8 +4759,14 @@ fn solve_engine_v4(
                         prepared_persistent_bytes,
                         full_cmg.is_some(),
                     );
-                    let planned = run_jla_no_controls_planned_with_interrupt(
+                    let planned = run_jla_no_controls_planned_with_plan_and_interrupt(
                         &prepared.problem,
+                        prepared.plan.as_ref().ok_or_else(|| {
+                            BackendError::invariant(
+                                "engine_solve",
+                                "compressed preparation lacks its semantic plan",
+                            )
+                        })?,
                         PlannedJlaEngineOptions {
                             estimator,
                             leverage_batch,
@@ -4662,39 +4813,125 @@ fn solve_engine_v4(
                     let (projection_result_bytes, projection_export_bytes) =
                         projection_result_memory(projection_columns)?;
                     let routing = model_routing_from_request(request.v3.v2.v1)?;
-                    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
-                        plan_problem,
-                        GenericJlaExecutionOptions {
-                            estimator: GenericJlaOptions {
-                                memory_budget: prepared.receipt.memory.budget,
-                                seed: request.v3.v2.v1.seed,
-                                probes: request.v3.v2.v1.probes,
-                                leverage_batch_width: 1,
-                                target_batch_width: 1,
-                                deletion,
-                                nuisance,
-                                rank_tolerance: request.v3.v2.v1.rank_tolerance,
-                                block_tolerance: request.v3.v2.v1.block_tolerance,
-                                blocksize_limit,
-                                memory_limit_bytes,
-                                prepared_persistent_bytes,
-                                retained_mask_bytes,
-                                rhs_export_bytes,
-                                projection_columns,
-                                projection_result_bytes,
-                                projection_export_bytes,
-                                solver: routing.solver,
-                            },
-                            routing,
-                            leverage_batch,
-                            target_batch,
-                            wallseconds,
+                    let options = GenericJlaExecutionOptions {
+                        estimator: GenericJlaOptions {
+                            memory_budget: prepared.receipt.memory.budget,
+                            seed: request.v3.v2.v1.seed,
+                            probes: request.v3.v2.v1.probes,
+                            leverage_batch_width: 1,
+                            target_batch_width: 1,
+                            deletion,
+                            nuisance,
+                            rank_tolerance: request.v3.v2.v1.rank_tolerance,
+                            block_tolerance: request.v3.v2.v1.block_tolerance,
+                            blocksize_limit,
+                            memory_limit_bytes,
+                            prepared_persistent_bytes,
+                            retained_mask_bytes,
+                            rhs_export_bytes,
+                            projection_columns,
+                            projection_result_bytes,
+                            projection_export_bytes,
+                            solver: routing.solver,
                         },
-                        projection.map(|value| &value.core),
-                        component_inference.map(|value| &value.core),
-                        stayer_augmentation.map(|augmentation| &augmentation.core.plan),
-                        interrupt,
-                    )?;
+                        routing,
+                        leverage_batch,
+                        target_batch,
+                        wallseconds,
+                    };
+                    let projection = projection.map(|value| &value.core);
+                    let component = component_inference.map(|value| &value.core);
+                    let hybrid = stayer_augmentation.map(|value| &value.core.plan);
+                    let result = match generic_execution {
+                        Some(GenericExecutionPlan::ExactParallel(_)) => {
+                            return Err(BackendError::invariant(
+                                "exact_execution",
+                                "exact-only executor resolved to JLA",
+                            ))
+                        }
+                        Some(GenericExecutionPlan::AutomaticComponentDiagonalQueue(threads)) => {
+                            run_generic_jla_with_automatic_component_batches_interrupt(
+                                plan_problem,
+                                options,
+                                &component_inference
+                                    .ok_or_else(|| {
+                                        BackendError::invalid(
+                                            "generic_execution",
+                                            "V7 requires component inference attachment",
+                                        )
+                                    })?
+                                    .core,
+                                threads,
+                                None,
+                                interrupt,
+                            )
+                        }
+                        Some(GenericExecutionPlan::AutomaticComponentDirectAttachments(
+                            threads,
+                        )) => run_generic_jla_with_automatic_component_batches_interrupt(
+                            plan_problem,
+                            options,
+                            &component_inference
+                                .ok_or_else(|| {
+                                    BackendError::invalid(
+                                        "generic_execution",
+                                        "V7 requires component inference attachment",
+                                    )
+                                })?
+                                .core,
+                            threads,
+                            full_cmg,
+                            interrupt,
+                        ),
+                        Some(GenericExecutionPlan::DiagonalQueue(threads)) => {
+                            run_generic_jla_with_diagonal_queue_attachments_interrupt(
+                                plan_problem,
+                                options,
+                                projection,
+                                component,
+                                hybrid,
+                                threads,
+                                interrupt,
+                            )
+                        }
+                        Some(GenericExecutionPlan::ResolvedExecution { threads, full_cmg }) => {
+                            run_generic_jla_with_resolved_execution_interrupt(
+                                plan_problem,
+                                options,
+                                projection,
+                                component,
+                                hybrid,
+                                threads,
+                                full_cmg,
+                                interrupt,
+                            )
+                        }
+                        Some(GenericExecutionPlan::DirectAttachments) => {
+                            run_generic_jla_with_direct_attachments_interrupt(
+                                plan_problem,
+                                options,
+                                projection,
+                                component,
+                                hybrid,
+                                full_cmg.ok_or_else(|| {
+                                    BackendError::invariant(
+                                        "generic_execution",
+                                        "missing direct attachment plan",
+                                    )
+                                })?,
+                                interrupt,
+                            )
+                        }
+                        None => run_generic_jla_with_direct_solver_interrupt(
+                            plan_problem,
+                            options,
+                            projection,
+                            component,
+                            hybrid,
+                            full_cmg,
+                            interrupt,
+                        ),
+                    }?;
                     let leverage_active = to_u32(
                         result.receipt.execution.batch.leverage_active_width,
                         "generic leverage batch width",
@@ -4712,13 +4949,14 @@ fn solve_engine_v4(
                         memory_limit_bytes,
                         prepared_persistent_bytes,
                     )?;
+                    let direct_receipt = result.receipt.execution.full_cmg.clone();
                     (
                         EngineEstimate::GenericJla(result),
                         plan,
                         leverage_active,
                         target_active,
                         None,
-                        None,
+                        direct_receipt,
                     )
                 }
             };
@@ -4767,6 +5005,7 @@ fn solve_engine_v4(
                 memory: value.memory,
             }),
             stayer_hybrid,
+            exact_execution,
             performance,
         })
     };
@@ -4972,6 +5211,7 @@ fn solve_engine_v3(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            exact_execution: None,
             performance,
         })
     })
@@ -4982,6 +5222,20 @@ fn solve_engine_v2(
     request: VckssEngineSolveRequestV2,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
+    solve_engine_v2_execution(
+        generation,
+        request,
+        None,
+        V4SolveExecution::Caller(interrupt),
+    )
+}
+
+fn solve_engine_v2_execution(
+    generation: u64,
+    request: VckssEngineSolveRequestV2,
+    exact_threads: Option<usize>,
+    execution: V4SolveExecution<'_>,
+) -> Result<()> {
     if request.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV2>()? {
         return Err(abi_error("V2 solve request reports a short structure size"));
     }
@@ -4990,8 +5244,14 @@ fn solve_engine_v2(
     let algorithm_requested = algorithm_from_code(request.algorithm)?;
     let (exact_limit, blocksize_limit) = validate_exact_request_options(request)?;
     let handle = ContextHandle::from_generation(generation)?;
-    let mut state = lock_engine("engine_solve")?;
-    state.registry.solve_preserving(handle, |prepared| {
+    let operation = |prepared: &PreparedProblemWithMask, interrupt: &mut dyn InterruptCheck| {
+        if exact_threads.is_some() && prepared.stayer_augmentation.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "exact_execution",
+                "legacy exact execution cannot consume a mixed-deletion augmentation",
+            ));
+        }
         if prepared.projection.is_some() || prepared.component_inference.is_some() {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -5027,6 +5287,7 @@ fn solve_engine_v2(
             _ => unreachable!("algorithm code was validated before lifecycle transition"),
         };
         let solve_start = Instant::now();
+        let mut exact_execution = None;
         let result = if algorithm == VCKSS_ALGORITHM_EXACT {
             if full_parameters > exact_limit {
                 return Err(BackendError::new(
@@ -5046,28 +5307,39 @@ fn solve_engine_v2(
                     "a deletion block exceeds blocksize_limit()",
                 ));
             }
-            let exact = run_exact_estimator_with_interrupt(
-                &prepared.problem,
-                ExactEstimatorOptions {
-                    memory_budget: prepared.receipt.memory.budget,
-                    deletion: prepared.deletion,
-                    nuisance,
-                    rank_tolerance: request.v1.rank_tolerance,
-                    block_tolerance: request.v1.block_tolerance,
-                    solver_tolerance: request.v1.pcg_tolerance,
-                    exact_limit,
-                    blocksize_limit,
-                    memory_limit_bytes: if prepared.receipt.memory.budget == MemoryBudget::Legacy
-                        && prepared.receipt.memory.hard_limit_bytes == 0
-                    {
-                        u64::MAX
-                    } else {
-                        prepared.receipt.memory.hard_limit_bytes
-                    },
-                    prepared_persistent_bytes: prepared.receipt.memory.prepared_resident_bytes,
+            let options = ExactEstimatorOptions {
+                memory_budget: prepared.receipt.memory.budget,
+                deletion: prepared.deletion,
+                nuisance,
+                rank_tolerance: request.v1.rank_tolerance,
+                block_tolerance: request.v1.block_tolerance,
+                solver_tolerance: request.v1.pcg_tolerance,
+                exact_limit,
+                blocksize_limit,
+                memory_limit_bytes: if prepared.receipt.memory.budget == MemoryBudget::Legacy
+                    && prepared.receipt.memory.hard_limit_bytes == 0
+                {
+                    u64::MAX
+                } else {
+                    prepared.receipt.memory.hard_limit_bytes
                 },
-                interrupt,
-            )?;
+                prepared_persistent_bytes: prepared.receipt.memory.prepared_resident_bytes,
+            };
+            let exact = if let Some(threads) = exact_threads {
+                let (planned, _, receipt) = exact_execution_api::execute(
+                    generation,
+                    &prepared.problem,
+                    None,
+                    options,
+                    None,
+                    threads,
+                    interrupt,
+                )?;
+                exact_execution = Some(receipt);
+                planned.estimator
+            } else {
+                run_exact_estimator_with_interrupt(&prepared.problem, options, interrupt)?
+            };
             EngineEstimate::Exact(exact)
         } else {
             if nuisance != NuisanceMode::Joint {
@@ -5137,9 +5409,23 @@ fn solve_engine_v2(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            exact_execution,
             performance,
         })
-    })
+    };
+    let mut state = lock_engine("engine_solve")?;
+    match execution {
+        V4SolveExecution::Caller(interrupt) => state
+            .registry
+            .solve_preserving(handle, |prepared| operation(prepared, interrupt)),
+        V4SolveExecution::Coordinated(callback) => state.registry.solve_preserving_coordinated(
+            handle,
+            |prepared, cancellation| {
+                operation(prepared, &mut CancellationInterrupt::new(cancellation))
+            },
+            || callback.checkpoint("exact_legacy_coordinator"),
+        ),
+    }
 }
 
 fn solve_engine(
@@ -5230,6 +5516,7 @@ fn solve_engine(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            exact_execution: None,
             performance,
         })
     })
@@ -5639,6 +5926,76 @@ pub extern "C" fn vckss_rust_engine_full_cmg_receipt_v1(
             )
         })?;
         write_output(output, full_cmg_receipt_v1(generation, receipt)?);
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_full_cmg_model_receipt_v1(
+    generation: u64,
+    output: *mut VckssFullCmgModelReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssFullCmgModelReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "full-CMG model receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_full_cmg_model_receipt")?;
+        let solved = state.registry.result(handle)?;
+        let receipt = solved.full_cmg.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_full_cmg_model_receipt",
+                "the solved generation did not use CMG_FULL_V2",
+            )
+        })?;
+        let logical_rhs_count = match &solved.result {
+            EngineEstimate::GenericJla(result) => {
+                if result.receipt.execution.direct_attachments.is_some() {
+                    return Err(BackendError::new(
+                        ErrorCode::UnsupportedFeature,
+                        "engine_full_cmg_model_receipt",
+                        "attachment execution requires the separate generic-work receipt",
+                    ));
+                }
+                to_u64(result.receipt.rhs.len(), "model logical RHS count")?
+            }
+            EngineEstimate::Jla(result) => rhs_receipt_count(&result.receipt)?,
+            EngineEstimate::Exact(_) => {
+                return Err(BackendError::invariant(
+                    "engine_full_cmg_model_receipt",
+                    "full-CMG exact result is invalid",
+                ))
+            }
+        };
+        let diagnostics = &receipt.model_diagnostics;
+        if logical_rhs_count.checked_add(diagnostics.control_refinement_rhs_count)
+            != Some(receipt.rhs_count)
+            || diagnostics.explicit_options_rhs_count != u64::from(solved.controls_count)
+            || diagnostics.controlled_rhs_count > logical_rhs_count
+        {
+            return Err(BackendError::invariant(
+                "engine_full_cmg_model_receipt",
+                "model RHS accounting does not reconcile",
+            ));
+        }
+        write_output(
+            output,
+            VckssFullCmgModelReceiptV1 {
+                struct_size: struct_size_u32::<VckssFullCmgModelReceiptV1>()?,
+                schema_version: 1,
+                generation,
+                controls_count: solved.controls_count,
+                nuisance_mode: nuisance_code(solved.nuisance),
+                logical_rhs_count,
+                explicit_options_rhs_count: diagnostics.explicit_options_rhs_count,
+                controlled_rhs_count: diagnostics.controlled_rhs_count,
+                control_refinement_rhs_count: diagnostics.control_refinement_rhs_count,
+            },
+        );
         Ok(())
     })
 }
@@ -6699,6 +7056,11 @@ fn detailed_receipt_v2(
                     generic_detailed_receipt(generation, solved, result)?,
                     receipt
                         .canonicalization_peak_forecast_bytes
+                        .max(if receipt.execution.full_cmg.is_some() {
+                            receipt.setup_peak_forecast_bytes
+                        } else {
+                            0 // Preserve the frozen legacy V6 setup summary.
+                        })
                         .max(receipt.fit_peak_forecast_bytes)
                         .max(receipt.geometry_peak_forecast_bytes),
                     receipt.leverage_peak_forecast_bytes,
@@ -6848,6 +7210,14 @@ fn detailed_receipt_v3(
                     augmentation.memory.total_prepared_resident_bytes
                 });
             let exact = &result.receipt;
+            // The additive executor admits both passes before either begins.
+            // Its command forecast covers the larger hybrid pass as well;
+            // legacy selectors retain their historical base-pass receipt.
+            let solve_peak = solved
+                .exact_execution
+                .map_or(exact.peak_forecast_bytes, |execution| {
+                    execution.command_peak_forecast_bytes
+                });
             let maximum_fit_residual = exact.full_fit_relres.max(exact.working_fit_relres);
             let base = VckssEngineDetailedReceiptV1 {
                 struct_size: struct_size_u32::<VckssEngineDetailedReceiptV1>()?,
@@ -6946,10 +7316,10 @@ fn detailed_receipt_v3(
                 target_phase_forecast_bytes: 0,
                 result_forecast_bytes: u64::try_from(size_of::<ExactEstimatorResult>())
                     .map_err(|_| resource_error("engine_detailed_receipt", "result size"))?,
-                solve_peak_forecast_bytes: exact.peak_forecast_bytes,
+                solve_peak_forecast_bytes: solve_peak,
                 command_peak_forecast_bytes: preparation
                     .preparation_peak_forecast_bytes
-                    .max(exact.peak_forecast_bytes),
+                    .max(solve_peak),
             };
             Ok(VckssEngineDetailedReceiptV3 {
                 v2,
@@ -6983,7 +7353,11 @@ fn detailed_receipt_v4(
             )?,
             value.receipt.information_rcond,
             value.receipt.inverse_relres,
-            value.receipt.peak_forecast_bytes,
+            solved
+                .exact_execution
+                .map_or(value.receipt.peak_forecast_bytes, |execution| {
+                    execution.command_peak_forecast_bytes
+                }),
         ),
         EngineEstimate::Jla(_) => {
             let parameters = solved
@@ -7029,6 +7403,10 @@ fn detailed_receipt_v5(
     match &solved.result {
         EngineEstimate::Exact(value) => {
             let exact = &value.receipt;
+            let hybrid = solved
+                .stayer_hybrid
+                .as_ref()
+                .filter(|_| solved.exact_execution.is_some());
             let mut applicability_flags = VCKSS_EXACT_DIAGNOSTIC_WORKING_FIT
                 | VCKSS_EXACT_DIAGNOSTIC_DELETION_RANK
                 | VCKSS_EXACT_DIAGNOSTIC_FIRM_ZERO_SUM
@@ -7052,8 +7430,12 @@ fn detailed_receipt_v5(
                 control_basis_forward_error: exact.control_basis_forward_error,
                 deletion_rank_gap: exact.deletion_rank_gap,
                 firm_zero_sum_residual: exact.firm_zero_sum_residual,
-                fit_peak_forecast_bytes: exact.fit_peak_forecast_bytes,
-                correction_peak_forecast_bytes: exact.correction_peak_forecast_bytes,
+                fit_peak_forecast_bytes: exact
+                    .fit_peak_forecast_bytes
+                    .max(hybrid.map_or(0, |h| h.estimator.receipt.fit_peak_forecast_bytes)),
+                correction_peak_forecast_bytes: exact
+                    .correction_peak_forecast_bytes
+                    .max(hybrid.map_or(0, |h| h.estimator.receipt.correction_peak_forecast_bytes)),
                 actual_accounting_residual,
             })
         }
@@ -7980,7 +8362,7 @@ fn generic_rhs_receipt_value(
     let probe = value.probe.map_or(-1_i64, i64::from);
     let controls = u64::from(solved.controls_count);
     let firms = solved.preparation.firms;
-    let (full_residual_tolerance, residual_space, solver_dimension) = match value.phase {
+    let (mut full_residual_tolerance, residual_space, solver_dimension) = match value.phase {
         GenericJlaRhsPhase::ControlProjection => {
             let projection = result
                 .receipt
@@ -8038,6 +8420,19 @@ fn generic_rhs_receipt_value(
             )
         }
     };
+    if let Some(direct) = solved
+        .full_cmg
+        .as_ref()
+        .filter(|_| value.phase != GenericJlaRhsPhase::ControlProjection)
+    {
+        let effective = match value.phase {
+            GenericJlaRhsPhase::FullJointFit | GenericJlaRhsPhase::FixedOffsetWorkingFit => {
+                direct.setup.fit_effective_tolerance
+            }
+            _ => direct.setup.probe_effective_tolerance,
+        };
+        full_residual_tolerance = (10.0 * effective).max(1e-11);
+    }
     Ok(VckssEngineRhsReceiptV2 {
         v1: VckssEngineRhsReceiptV1 {
             phase: generic_rhs_phase_code(value.phase),
@@ -9413,26 +9808,53 @@ fn validate_full_cmg_v2_request(
     }
     let value = request.v4;
     let eligible = value.v3.v2.algorithm == VCKSS_ALGORITHM_JLA
-        && value.v3.engine == VCKSS_ENGINE_AUTO_OR_UNSPECIFIED
-        && value.v3.v2.v1.deletion_mode == VCKSS_DELETION_MATCH
-        && value.v3.v2.nuisance_mode == VCKSS_NUISANCE_JOINT
+        && matches!(
+            value.v3.engine,
+            VCKSS_ENGINE_AUTO_OR_UNSPECIFIED | VCKSS_ENGINE_GENERIC
+        )
+        && matches!(
+            value.v3.v2.v1.deletion_mode,
+            VCKSS_DELETION_MATCH | VCKSS_DELETION_OBSERVATION
+        )
+        && matches!(
+            value.v3.v2.nuisance_mode,
+            VCKSS_NUISANCE_JOINT | VCKSS_NUISANCE_FIXED_OFFSET
+        )
         && value.v3.v2.v1.rng_contract == VCKSS_RNG_COUNTER_V1
-        && value.v3.v2.v1.solver_route == VCKSS_ROUTE_AUTO
+        && matches!(
+            value.v3.v2.v1.solver_route,
+            VCKSS_ROUTE_AUTO | VCKSS_ROUTE_CMG_PCG
+        )
         && value.v3.batch_mode == VCKSS_BATCH_MODE_AUTO
         && value.leverage_batch_mode == VCKSS_BATCH_MODE_AUTO
         && value.target_batch_mode == VCKSS_BATCH_MODE_AUTO
         && value.v3.v2.v1.leverage_batch_width == 0
         && value.v3.v2.v1.target_batch_width == 0
-        && value.v3.stayers_mode == VCKSS_STAYERS_MOVERS
-        && value.v3.target_weight_mode == VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT
-        && value.v3.deletion_unit_source == VCKSS_DELETION_SOURCE_CELL_DEFAULT
-        && value.v3.probeorder_supplied == 1
-        && value.v3.frequency_use == VCKSS_REQUEST_FREQUENCY_UNIT;
+        && matches!(
+            value.v3.stayers_mode,
+            VCKSS_STAYERS_MOVERS | VCKSS_STAYERS_ALL
+        )
+        && matches!(
+            value.v3.target_weight_mode,
+            VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT | VCKSS_TARGET_WEIGHT_STORED_ROW_EXPLICIT
+        )
+        && ((value.v3.v2.v1.deletion_mode == VCKSS_DELETION_MATCH
+            && matches!(
+                value.v3.deletion_unit_source,
+                VCKSS_DELETION_SOURCE_CELL_DEFAULT | VCKSS_DELETION_SOURCE_MATCH_ID_EXPLICIT
+            ))
+            || (value.v3.v2.v1.deletion_mode == VCKSS_DELETION_OBSERVATION
+                && value.v3.deletion_unit_source == VCKSS_DELETION_SOURCE_OBSERVATION_ROW))
+        && value.v3.probeorder_supplied <= 1
+        && matches!(
+            value.v3.frequency_use,
+            VCKSS_REQUEST_FREQUENCY_UNIT | VCKSS_REQUEST_FREQUENCY_LITERAL
+        );
     if !eligible {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "cmg_full_v2",
-            "CMG_FULL_V2 request is outside the qualified JLA/auto/match/joint/movers cell",
+            "CMG_FULL_V2 requires JLA, auto/generic engine, auto/CMG solver and joint/fixed-offset point estimation",
         ));
     }
     let probe_tolerance = (request.tolerance_supplied == 1).then_some(value.v3.v2.v1.pcg_tolerance);

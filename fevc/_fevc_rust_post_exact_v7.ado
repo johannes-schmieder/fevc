@@ -10,7 +10,9 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         rustcoreflags rustsupportflags nodisplay deletionmode nuisance ///
         ranktol blocktol exactlimit physicallimit preconditionerrequested ///
         batchrequested targetweightsupplied cmdline wallsecondssupplied ///
-        wallseconds prepctx graphctx capctx stayersmode plancomplexity
+        wallseconds prepctx graphctx capctx stayersmode plancomplexity exactexecution nativethreads
+    if "`exactexecution'"=="" local exactexecution = 0
+    if "`nativethreads'"=="" local nativethreads = 1
 
     foreach input in `depvar' `frequency' `target' `touse' {
         confirm numeric variable `input'
@@ -148,7 +150,8 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _fevc_rust_public_call result `handle'
+    capture noisily _fevc_rust_public_call result `handle', ///
+        exactexecution(`exactexecution') exactthreads(`nativethreads')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
@@ -188,7 +191,8 @@ program define _fevc_rust_post_exact_v7, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _fevc_rust_public_call result `handle'
+    capture noisily _fevc_rust_public_call result `handle', ///
+        exactexecution(`exactexecution') exactthreads(`nativethreads')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')          ///

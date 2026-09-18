@@ -15,6 +15,7 @@ use crate::error::{BackendError, ErrorCode, Result};
 use crate::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::jla::{plugin_components_with_interrupt, JlaPlan, VarianceComponents};
+use crate::model_operator::reserve_exact;
 use crate::problem::CompressedProblem;
 use crate::rng::{CounterRng, ProbeDomain, MAX_PHYSICAL_WORDS_PER_ATOM};
 use crate::solver::{
@@ -27,6 +28,30 @@ use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkRec
 const ROUNDOFF_GATE: f64 = 4096.0 * f64::EPSILON;
 const LEVERAGE_MOMENT_BLOCK_GROUPS: usize = 4_096;
 const RNG_PROBE_BLOCK_COLUMNS: usize = 4;
+
+fn statistical_buffer<T: Clone>(
+    length: usize,
+    value: T,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<T>> {
+    let mut values = Vec::new();
+    reserve_exact(&mut values, length, "compressed statistical buffer")?;
+    while values.len() < length {
+        interrupt.checkpoint("jla_statistical_buffer")?;
+        let next = values
+            .len()
+            .saturating_add(crate::interrupt::INTERRUPT_CHECK_CHUNK)
+            .min(length);
+        values.resize(next, value.clone());
+    }
+    Ok(values)
+}
+
+fn statistical_metadata(jobs: u64) -> Result<u64> {
+    crate::ordered_work::metadata_bytes(
+        usize::try_from(jobs).map_err(|_| memory_overflow("statistical jobs"))?,
+    )
+}
 #[cfg(test)]
 #[path = "full_cmg_batch_tests.rs"]
 mod full_cmg_batch_tests;
@@ -392,7 +417,31 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     options: PlannedJlaEngineOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PlannedJlaEngineResult> {
+    run_jla_no_controls_planned_impl(problem, None, options, interrupt)
+}
+
+/// Reuse the semantic plan already retained by native preparation. The plan is
+/// validated against this problem before admission or Counter-V1 work; it is
+/// borrowed for the call and never modified. Legacy core callers still build
+/// their own plan through the existing entrypoint.
+#[doc(hidden)]
+pub fn run_jla_no_controls_planned_with_plan_and_interrupt(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: PlannedJlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PlannedJlaEngineResult> {
+    run_jla_no_controls_planned_impl(problem, Some(plan), options, interrupt)
+}
+
+fn run_jla_no_controls_planned_impl(
+    problem: &CompressedProblem,
+    retained_plan: Option<&JlaPlan>,
+    options: PlannedJlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PlannedJlaEngineResult> {
     interrupt.checkpoint("jla_planned_entry")?;
+    let _profile = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Command);
     let estimator = options.estimator.validate()?;
     if options.full_cmg.is_some()
         && (options.leverage_batch != BatchRequest::Auto
@@ -405,12 +454,23 @@ pub fn run_jla_no_controls_planned_with_interrupt(
         ));
     }
     validate_problem_features(problem)?;
-    let plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
+    let built_plan;
+    #[cfg(feature = "pipeline-profile")]
+    eprintln!(
+        "FEVC_PIPELINE_PLAN_REUSE_V1\t{}",
+        u8::from(retained_plan.is_some())
+    );
+    let plan = if let Some(plan) = retained_plan {
+        plan
+    } else {
+        built_plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
+        &built_plan
+    };
     plan.validate_against_problem(problem)?;
-    validate_target_geometry(problem, &plan)?;
+    validate_target_geometry(problem, plan)?;
     preflight_trial_words("leverage", &plan.deletion.physical_count)?;
     preflight_trial_words("target", &plan.target.physical_count)?;
-    let prepared = prepared_problem_bytes(problem, &plan)?;
+    let prepared = prepared_problem_bytes(problem, plan)?;
     interrupt.checkpoint("jla_solver_setup")?;
     let full_cmg_plan = if let Some(mut full_cmg) = options.full_cmg {
         let (leverage_cap, target_cap, maximum_rhs) = crate::full_cmg_batch_policy::caps(
@@ -424,7 +484,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
         memory_estimator.solver.route = LinearSolverRoute::DiagonalPcg;
         memory_estimator.leverage_batch_width = leverage_cap;
         memory_estimator.target_batch_width = target_cap;
-        let memory_preflight = forecast_jla_memory(problem, &plan, memory_estimator, prepared)?;
+        let memory_preflight = forecast_jla_memory(problem, plan, memory_estimator, prepared)?;
         Some(
             FullCmgPlanOptions {
                 memory_budget: estimator.memory_budget,
@@ -455,7 +515,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     }
     let mut batch = plan_compressed_batches(
         problem,
-        &plan,
+        plan,
         forecast_estimator,
         prepared,
         options.leverage_batch,
@@ -490,16 +550,16 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     }
     // Freeze and admit widths, the scalar pool and complete transient memory before
     // allocating solve pools. No RNG or numerical solves have happened yet.
-    let preallocation_memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
+    let preallocation_memory = admit_jla_memory(problem, plan, forecast_selected, prepared)?;
     if forecast_selected.full_cmg_setup.is_some() {
         interrupt.checkpoint("cmg_full_v2_pools_admitted")?;
         solver.allocate_full_cmg_pools()?;
         interrupt.checkpoint("cmg_full_v2_pools_allocated")?;
         solver_setup = solver.receipt().clone();
         forecast_selected.full_cmg_setup = solver.full_cmg_receipt()?.map(|receipt| receipt.setup);
-        refresh_frozen_batch_forecasts(problem, &plan, forecast_selected, prepared, &mut batch)?;
+        refresh_frozen_batch_forecasts(problem, plan, forecast_selected, prepared, &mut batch)?;
     }
-    let memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
+    let memory = admit_jla_memory(problem, plan, forecast_selected, prepared)?;
     if memory.solve_peak_forecast_bytes > preallocation_memory.solve_peak_forecast_bytes {
         return Err(BackendError::invariant(
             "jla_plan",
@@ -516,7 +576,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
         solver.reconcile_full_cmg_memory(memory.solve_peak_forecast_bytes)?;
     }
     let wall = wall_work_receipt(
-        compressed_jla_wall_work(problem, &plan, forecast_selected)?,
+        compressed_jla_wall_work(problem, plan, forecast_selected)?,
         options.wallseconds,
         WallCalibration::Uncalibrated,
     )?;
@@ -533,7 +593,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
         )?,
     )?;
     let estimator_result = run_jla_no_controls_with_prepared_solver(
-        problem, &plan, selected, memory, &solver, interrupt,
+        problem, plan, selected, memory, &solver, interrupt,
     )?;
     let full_cmg = solver.full_cmg_receipt()?;
     let counter = combine_counter_phases(
@@ -917,9 +977,15 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
 
     let rng = CounterRng::new(options.seed);
     let groups = plan.deletion_units();
-    let mut moments = vec![FiveMoments::default(); groups];
-    let mut leverage_receipts = Vec::with_capacity(options.probes as usize);
+    let mut moments = statistical_buffer(groups, FiveMoments::default(), interrupt)?;
+    let mut leverage_receipts = Vec::new();
+    reserve_exact(
+        &mut leverage_receipts,
+        options.probes as usize,
+        "leverage receipts",
+    )?;
     for first in (0..options.probes as usize).step_by(options.leverage_batch_width) {
+        let _phase = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Leverage);
         interrupt.checkpoint("jla_leverage_batch")?;
         let width = options
             .leverage_batch_width
@@ -934,8 +1000,11 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             solver,
             interrupt,
         )?;
-        let (worker_rhs, firm_rhs) =
-            leverage_rhs_with_interrupt(problem, plan, &atoms, width, interrupt)?;
+        let (worker_rhs, firm_rhs) = {
+            let _phase =
+                crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::LeverageRhs);
+            leverage_rhs_with_interrupt(problem, plan, &atoms, width, solver, interrupt)?
+        };
         let solved = solver
             .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, width, interrupt)
             .map_err(|error| {
@@ -955,13 +1024,15 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             )?);
         }
         interrupt.checkpoint("jla_leverage_moment_blocks")?;
-        let blocks = moments
-            .chunks_mut(LEVERAGE_MOMENT_BLOCK_GROUPS)
-            .enumerate()
-            .collect::<Vec<_>>();
-        let updated = solver.map_independent_ordered(blocks, |(block_index, block)| {
+        let _statistics =
+            crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::LeverageStatistics);
+        solver.statistical_work(
+            moments.chunks_mut(LEVERAGE_MOMENT_BLOCK_GROUPS),
+            "jla_leverage_moment_blocks",
+            |block_index, block, check| {
             let first_group = block_index * LEVERAGE_MOMENT_BLOCK_GROUPS;
             for column in 0..width {
+                check.checkpoint("jla_leverage_moment_column")?;
                 let probe = first + column;
                 let solution = &solved.solution[column];
                 for (local_group, moment) in block.iter_mut().enumerate() {
@@ -988,11 +1059,9 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 }
             }
             Ok(())
-        });
-        for result in updated {
-            interrupt.checkpoint("jla_leverage_moment_block_complete")?;
-            result?;
-        }
+            },
+            interrupt,
+        )?;
     }
 
     interrupt.checkpoint("jla_leverage_adjustment")?;
@@ -1005,13 +1074,27 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         interrupt,
     )?;
     drop(moments);
-    let mut target_draws = vec![VarianceComponents::default(); options.probes as usize];
-    let mut target_receipts = Vec::with_capacity(2 * options.probes as usize);
+    let mut target_draws = statistical_buffer(
+        options.probes as usize,
+        VarianceComponents::default(),
+        interrupt,
+    )?;
+    let mut target_receipts = Vec::new();
+    reserve_exact(
+        &mut target_receipts,
+        (options.probes as usize)
+            .checked_mul(2)
+            .ok_or_else(resource_length_error)?,
+        "target receipts",
+    )?;
     for first in (0..options.probes as usize).step_by(options.target_batch_width) {
+        let _phase = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Target);
         interrupt.checkpoint("jla_target_batch")?;
         let width = options
             .target_batch_width
             .min(options.probes as usize - first);
+        let rng_profile =
+            crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::TargetRng);
         let atoms = rademacher_atoms_ordered_with_interrupt(
             rng,
             ProbeDomain::Target,
@@ -1022,9 +1105,13 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             solver,
             interrupt,
         )?;
+        drop(rng_profile);
+        let rhs_profile =
+            crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::TargetRhs);
         let (worker_rhs, firm_rhs) = target_rhs_columns_with_interrupt(
             problem, plan, &atoms, width, first, solver, interrupt,
         )?;
+        drop(rhs_profile);
         let solved = solver
             .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, 2 * width, interrupt)
             .map_err(|error| contextual_batch_error(error, JlaSolvePhase::Target, first, true))?;
@@ -1051,26 +1138,29 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             )?);
         }
         interrupt.checkpoint("jla_target_contraction_chunk")?;
-        let contracted = solver.map_independent_ordered((0..width).collect(), |column| {
-            let probe = first + column;
-            let worker_solution = &solved.solution[2 * column];
-            let firm_solution = &solved.solution[2 * column + 1];
-            let mut worker_interrupt = NeverInterrupt;
-            contract_target_solutions_with_interrupt(
-                problem,
-                &adjustment.cell_correction_weight,
-                &worker_solution.worker,
-                &worker_solution.firm,
-                &firm_solution.worker,
-                &firm_solution.firm,
-                probe,
-                &mut worker_interrupt,
-            )
-        });
-        for (column, draw) in contracted.into_iter().enumerate() {
-            interrupt.checkpoint("jla_target_contraction_complete")?;
-            target_draws[first + column] = draw?;
-        }
+        let _statistics =
+            crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::TargetStatistics);
+        solver.statistical_work(
+            target_draws[first..first + width].iter_mut(),
+            "jla_target_contraction_chunk",
+            |column, output, check| {
+                let probe = first + column;
+                let worker_solution = &solved.solution[2 * column];
+                let firm_solution = &solved.solution[2 * column + 1];
+                *output = contract_target_solutions_with_interrupt(
+                    problem,
+                    &adjustment.cell_correction_weight,
+                    &worker_solution.worker,
+                    &worker_solution.firm,
+                    &firm_solution.worker,
+                    &firm_solution.firm,
+                    probe,
+                    check,
+                )?;
+                Ok(())
+            },
+            interrupt,
+        )?;
     }
 
     interrupt.checkpoint("jla_finalize")?;
@@ -1354,16 +1444,9 @@ fn forecast_jla_memory(
     ])?;
     let leverage_moment_blocks = deletion
         .div_ceil(u64::try_from(LEVERAGE_MOMENT_BLOCK_GROUPS).expect("moment block size fits u64"));
-    let leverage_moment_block_metadata = to_u64_memory(
-        size_of::<(usize, &mut [FiveMoments])>() + size_of::<Result<()>>(),
-        "leverage moment block metadata size",
-    )?;
-    let rng_block_metadata = to_u64_memory(
-        size_of::<(usize, &mut [i64])>() + size_of::<Result<()>>(),
-        "RNG block metadata size",
-    )?;
-    let leverage_rng_blocks = leverage_width
-        .div_ceil(u64::try_from(RNG_PROBE_BLOCK_COLUMNS).expect("RNG block columns fit u64"));
+    // RNG, RHS and moment jobs do not coexist. Row blocks can outnumber RHSs.
+    let leverage_metadata = statistical_metadata(leverage_width.max(leverage_moment_blocks))?;
+    let target_metadata = statistical_metadata(target_width)?;
     let mut leverage_phase_forecast_bytes = checked_memory_sum(&[
         memory_product(
             &[
@@ -1372,15 +1455,8 @@ fn forecast_jla_memory(
             ],
             "leverage moments",
         )?,
-        memory_product(
-            &[leverage_moment_blocks, leverage_moment_block_metadata],
-            "leverage moment block metadata",
-        )?,
+        leverage_metadata,
         memory_product(&[deletion, leverage_width, 8], "leverage atoms")?,
-        memory_product(
-            &[leverage_rng_blocks, rng_block_metadata],
-            "leverage RNG block metadata",
-        )?,
         memory_product(
             &[
                 workers
@@ -1432,6 +1508,7 @@ fn forecast_jla_memory(
             ])
         };
         leverage_phase_forecast_bytes = checked_memory_sum(&[
+            leverage_metadata,
             memory_product(
                 &[
                     deletion,
@@ -1446,23 +1523,19 @@ fn forecast_jla_memory(
         // Target directions are constructed one column per active thread and
         // freed before solving. Only the paired RHSs survive assembly.
         let rhs = memory_product(&[workers + firms, 2 * target_width, 8], "target RHS")?;
-        let assembly = checked_memory_sum(&[
-            rhs,
-            rhs,
-            memory_product(
-                &[
-                    cells + target + 4 * workers + 4 * firms,
-                    target_width.min(threads),
-                    8,
-                ],
-                "target column assembly scratch",
-            )?,
-        ])?;
-        let solve = checked_memory_add(rhs, full_solve(2 * target_width)?)?;
-        target_phase_forecast_bytes = checked_memory_add(
-            memory_product(&[target, target_width, 8], "target atoms")?,
-            assembly.max(solve),
+        let assembly = target_assembly_forecast(
+            workers,
+            firms,
+            cells,
+            target_width,
+            target_width.min(threads),
         )?;
+        let solve = checked_memory_add(rhs, full_solve(2 * target_width)?)?;
+        target_phase_forecast_bytes = checked_memory_sum(&[
+            memory_product(&[target, target_width, 8], "target atoms")?,
+            target_metadata,
+            assembly.max(solve),
+        ])?;
         let ordinary_solve = |columns| -> Result<u64> {
             let hybrid_rhs = memory_product(&[vertices, columns, 8], "full-CMG RHS")?;
             let solutions =
@@ -1481,10 +1554,11 @@ fn forecast_jla_memory(
         };
         let ordinary_leverage = leverage_phase_forecast_bytes - full_solve(leverage_width)?
             + ordinary_solve(leverage_width)?;
-        let ordinary_target = checked_memory_add(
+        let ordinary_target = checked_memory_sum(&[
             memory_product(&[target, target_width, 8], "target atoms")?,
+            target_metadata,
             assembly.max(checked_memory_add(rhs, ordinary_solve(2 * target_width)?)?),
-        )?;
+        ])?;
         expected_largest_phase = Some(full_fit_phase.max(ordinary_leverage).max(ordinary_target));
     }
     let largest_phase = full_fit_phase
@@ -1533,20 +1607,7 @@ fn target_phase_forecast(
     let doubled_target_width = target_width
         .checked_mul(2)
         .ok_or_else(|| memory_overflow("paired target width"))?;
-    let target_rng_blocks = target_width
-        .div_ceil(u64::try_from(RNG_PROBE_BLOCK_COLUMNS).expect("RNG block columns fit u64"));
-    let rng_block_metadata = to_u64_memory(
-        size_of::<(usize, &mut [i64])>() + size_of::<Result<()>>(),
-        "RNG block metadata size",
-    )?;
-    checked_memory_sum(&[
-        memory_product(&[target_strata, target_width, 8], "target atoms")?,
-        memory_product(
-            &[target_rng_blocks, rng_block_metadata],
-            "target RNG block metadata",
-        )?,
-        memory_product(&[cells, target_width, 8], "target directions")?,
-        memory_product(&[target_width, 8], "target reference scale")?,
+    let solve = checked_memory_sum(&[
         memory_product(
             &[
                 workers
@@ -1564,6 +1625,37 @@ fn target_phase_forecast(
             doubled_target_width,
             cmg_batch_workspace_per_column,
         )?,
+    ])?;
+    checked_memory_sum(&[
+        memory_product(&[target_strata, target_width, 8], "target atoms")?,
+        statistical_metadata(target_width)?,
+        solve.max(target_assembly_forecast(
+            workers,
+            firms,
+            cells,
+            target_width,
+            1,
+        )?),
+    ])
+}
+
+fn target_assembly_forecast(
+    workers: u64,
+    firms: u64,
+    cells: u64,
+    width: u64,
+    active: u64,
+) -> Result<u64> {
+    let parameters = checked_memory_add(workers, firms)?;
+    // Final paired RHS plus each active column's compensated cell sums,
+    // direction, transpose scores, paired RHS, balancing copies and reference.
+    // These buffers are released before solving. Reserve the sum of their
+    // peaks conservatively, even though some lifetimes do not overlap.
+    checked_memory_sum(&[
+        memory_product(&[parameters, 2, width, 8], "target output RHS")?,
+        memory_product(&[cells, 3, active, 8], "target compensated directions")?,
+        memory_product(&[parameters, 4, active, 8], "target active score scratch")?,
+        memory_product(&[active, 8], "target active reference scales")?,
     ])
 }
 
@@ -2061,39 +2153,35 @@ fn rademacher_atoms_ordered_with_interrupt(
         .len()
         .checked_mul(RNG_PROBE_BLOCK_COLUMNS)
         .ok_or_else(resource_length_error)?;
-    let mut atoms = vec![0_i64; length];
+    let mut atoms = statistical_buffer(length, 0_i64, interrupt)?;
     interrupt.checkpoint("jla_rng_probe_blocks")?;
-    let blocks = atoms
-        .chunks_mut(block_length)
-        .enumerate()
-        .collect::<Vec<_>>();
-    let completed = solver.map_independent_ordered(blocks, |(block_index, output)| {
-        let first_column = block_index * RNG_PROBE_BLOCK_COLUMNS;
-        let block_width = output.len() / entity.len();
-        let logical_probe = first_probe.checked_add(first_column).ok_or_else(|| {
-            BackendError::new(
-                ErrorCode::ResourceLimit,
-                "jla_rng",
-                "logical probe index overflow",
+    solver.statistical_work(
+        atoms.chunks_mut(block_length),
+        "jla_rng_probe_blocks",
+        |block_index, output, check| {
+            let first_column = block_index * RNG_PROBE_BLOCK_COLUMNS;
+            let block_width = output.len() / entity.len();
+            let logical_probe = first_probe.checked_add(first_column).ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "jla_rng",
+                    "logical probe index overflow",
+                )
+            })?;
+            rng.fill_rademacher_sums_with_interrupt(
+                domain,
+                u64::try_from(logical_probe).map_err(|_| {
+                    BackendError::new(ErrorCode::ResourceLimit, "jla_rng", "probe index overflow")
+                })?,
+                block_width,
+                entity,
+                trials,
+                output,
+                check,
             )
-        })?;
-        let mut worker_interrupt = NeverInterrupt;
-        rng.fill_rademacher_sums_with_interrupt(
-            domain,
-            u64::try_from(logical_probe).map_err(|_| {
-                BackendError::new(ErrorCode::ResourceLimit, "jla_rng", "probe index overflow")
-            })?,
-            block_width,
-            entity,
-            trials,
-            output,
-            &mut worker_interrupt,
-        )
-    });
-    for result in completed {
-        interrupt.checkpoint("jla_rng_probe_block_complete")?;
-        result?;
-    }
+        },
+        interrupt,
+    )?;
     Ok(atoms)
 }
 
@@ -2102,6 +2190,7 @@ fn leverage_rhs_with_interrupt(
     plan: &JlaPlan,
     atoms: &[i64],
     width: usize,
+    solver: &PreparedTwoWaySolver<'_>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<f64>, Vec<f64>)> {
     let groups = plan.deletion_units();
@@ -2123,27 +2212,35 @@ fn leverage_rhs_with_interrupt(
         .firms()
         .checked_mul(width)
         .ok_or_else(resource_length_error)?;
-    let mut worker_rhs = vec![0.0; worker_length];
-    let mut firm_rhs = vec![0.0; firm_length];
-    for column in 0..width {
-        for group in 0..groups {
-            let work = column
-                .checked_mul(groups)
-                .and_then(|value| value.checked_add(group))
-                .ok_or_else(resource_length_error)?;
-            checkpoint_chunk(interrupt, work, "jla_leverage_rhs")?;
-            let cell = usize::try_from(plan.deletion.cell[group]).expect("validated cell");
-            let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
-            let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
-            let atom = atoms[column * groups + group] as f64;
-            // Counter atoms and their complete worker/firm sums are exact
-            // binary64 integers under the permanent 2^53 physical-mass gate.
-            // Direct scatter is therefore bit-identical to materializing the
-            // sparse cell score and transposing it in cell order.
-            worker_rhs[column * problem.workers() + worker] += atom;
-            firm_rhs[column * problem.firms() + firm] += atom;
-        }
-    }
+    let mut worker_rhs = statistical_buffer(worker_length, 0.0, interrupt)?;
+    let mut firm_rhs = statistical_buffer(firm_length, 0.0, interrupt)?;
+    solver.statistical_work(
+        worker_rhs
+            .chunks_mut(problem.workers())
+            .zip(firm_rhs.chunks_mut(problem.firms())),
+        "jla_leverage_rhs_columns",
+        |column, (worker_rhs, firm_rhs), check| {
+            for group in 0..groups {
+                let work = column
+                    .checked_mul(groups)
+                    .and_then(|value| value.checked_add(group))
+                    .ok_or_else(resource_length_error)?;
+                checkpoint_chunk(check, work, "jla_leverage_rhs")?;
+                let cell = usize::try_from(plan.deletion.cell[group]).expect("validated cell");
+                let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
+                let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
+                let atom = atoms[column * groups + group] as f64;
+                // Counter atoms and their complete worker/firm sums are exact
+                // binary64 integers under the permanent 2^53 physical-mass gate.
+                // Direct scatter is therefore bit-identical to materializing the
+                // sparse cell score and transposing it in cell order.
+                worker_rhs[worker] += atom;
+                firm_rhs[firm] += atom;
+            }
+            Ok(())
+        },
+        interrupt,
+    )?;
     Ok((worker_rhs, firm_rhs))
 }
 
@@ -2166,10 +2263,17 @@ fn target_directions_with_interrupt(
             "target atom matrix has the wrong size",
         ));
     }
-    let mut direction = vec![0.0; problem.cells() * width];
-    let mut reference_scale = vec![0.0; width];
+    let mut direction = statistical_buffer(
+        problem
+            .cells()
+            .checked_mul(width)
+            .ok_or_else(resource_length_error)?,
+        0.0,
+        interrupt,
+    )?;
+    let mut reference_scale = statistical_buffer(width, 0.0, interrupt)?;
     for column in 0..width {
-        let mut first = vec![StableSum::default(); problem.cells()];
+        let mut first = statistical_buffer(problem.cells(), StableSum::default(), interrupt)?;
         for stratum in 0..strata {
             let work = column
                 .checked_mul(strata)
@@ -2180,10 +2284,10 @@ fn target_directions_with_interrupt(
             let scale = (plan.target.per_copy_mass[stratum] / problem.target_total).sqrt();
             first[cell].add(scale * atoms[column * strata + stratum] as f64);
         }
-        let mut first_values = Vec::with_capacity(first.len());
+        let first_values = &mut direction[column * problem.cells()..(column + 1) * problem.cells()];
         for (cell, value) in first.into_iter().enumerate() {
             checkpoint_chunk(interrupt, cell, "jla_target_direction_reduce")?;
-            first_values.push(value.finish());
+            first_values[cell] = value.finish();
         }
         let mut total = StableSum::default();
         let mut absolute = StableSum::default();
@@ -2218,7 +2322,7 @@ fn target_directions_with_interrupt(
                     ),
                 ));
             }
-            direction[column * problem.cells() + cell] = value;
+            first_values[cell] = value;
         }
     }
     Ok((direction, reference_scale))
@@ -2246,26 +2350,6 @@ fn target_rhs_columns_with_interrupt(
         ));
     }
     interrupt.checkpoint("jla_target_prepare_columns")?;
-    let prepared = solver.map_independent_ordered((0..width).collect(), |column| {
-        let mut worker_interrupt = NeverInterrupt;
-        let first = column * strata;
-        let (direction, reference_scale) = target_directions_with_interrupt(
-            problem,
-            plan,
-            &atoms[first..first + strata],
-            1,
-            first_probe + column,
-            &mut worker_interrupt,
-        )?;
-        target_rhs_with_interrupt(
-            problem,
-            &direction,
-            &reference_scale,
-            1,
-            first_probe + column,
-            &mut worker_interrupt,
-        )
-    });
     let worker_length = problem
         .workers()
         .checked_mul(2)
@@ -2276,14 +2360,44 @@ fn target_rhs_columns_with_interrupt(
         .checked_mul(2)
         .and_then(|value| value.checked_mul(width))
         .ok_or_else(resource_length_error)?;
-    let mut worker_rhs = Vec::with_capacity(worker_length);
-    let mut firm_rhs = Vec::with_capacity(firm_length);
-    for column in prepared {
-        interrupt.checkpoint("jla_target_prepare_complete")?;
-        let (mut worker, mut firm) = column?;
-        worker_rhs.append(&mut worker);
-        firm_rhs.append(&mut firm);
-    }
+    let mut worker_rhs = statistical_buffer(worker_length, 0.0, interrupt)?;
+    let mut firm_rhs = statistical_buffer(firm_length, 0.0, interrupt)?;
+    solver.statistical_work(
+        worker_rhs
+            .chunks_mut(2 * problem.workers())
+            .zip(firm_rhs.chunks_mut(2 * problem.firms())),
+        "jla_target_prepare_columns",
+        |column, (worker, firm), check| {
+            let first = column * strata;
+            let (direction, reference_scale) = target_directions_with_interrupt(
+                problem,
+                plan,
+                &atoms[first..first + strata],
+                1,
+                first_probe + column,
+                check,
+            )?;
+            let (prepared_worker, prepared_firm) = target_rhs_with_interrupt(
+                problem,
+                &direction,
+                &reference_scale,
+                1,
+                first_probe + column,
+                check,
+            )?;
+            for (index, (output, input)) in worker
+                .iter_mut()
+                .zip(prepared_worker)
+                .chain(firm.iter_mut().zip(prepared_firm))
+                .enumerate()
+            {
+                checkpoint_chunk(check, index, "jla_target_prepare_copy")?;
+                *output = input;
+            }
+            Ok(())
+        },
+        interrupt,
+    )?;
     debug_assert_eq!(worker_rhs.len(), worker_length);
     debug_assert_eq!(firm_rhs.len(), firm_length);
     Ok((worker_rhs, firm_rhs))
@@ -2337,15 +2451,30 @@ fn target_rhs_with_interrupt(
         transpose_cell_rhs_with_interrupt(problem, direction, width, interrupt)?;
     let workers = problem.workers();
     let firms = problem.firms();
-    let mut worker_rhs = vec![0.0; workers * 2 * width];
-    let mut firm_rhs = vec![0.0; firms * 2 * width];
+    let columns = width.checked_mul(2).ok_or_else(resource_length_error)?;
+    let mut worker_rhs = statistical_buffer(
+        workers
+            .checked_mul(columns)
+            .ok_or_else(resource_length_error)?,
+        0.0,
+        interrupt,
+    )?;
+    let mut firm_rhs = statistical_buffer(
+        firms
+            .checked_mul(columns)
+            .ok_or_else(resource_length_error)?,
+        0.0,
+        interrupt,
+    )?;
     for column in 0..width {
-        let mut worker = Vec::with_capacity(workers);
+        let mut worker = Vec::new();
+        reserve_exact(&mut worker, workers, "target worker balance")?;
         for index in 0..workers {
             checkpoint_chunk(interrupt, index, "jla_target_worker_copy")?;
             worker.push(score_worker[column * workers + index]);
         }
-        let mut firm = Vec::with_capacity(firms);
+        let mut firm = Vec::new();
+        reserve_exact(&mut firm, firms, "target firm balance")?;
         for index in 0..firms {
             checkpoint_chunk(interrupt, index, "jla_target_firm_copy")?;
             firm.push(score_firm[column * firms + index]);
@@ -2434,8 +2563,22 @@ fn transpose_cell_rhs_with_interrupt(
             "cell RHS matrix has the wrong size",
         ));
     }
-    let mut worker = vec![0.0; problem.workers() * width];
-    let mut firm = vec![0.0; problem.firms() * width];
+    let mut worker = statistical_buffer(
+        problem
+            .workers()
+            .checked_mul(width)
+            .ok_or_else(resource_length_error)?,
+        0.0,
+        interrupt,
+    )?;
+    let mut firm = statistical_buffer(
+        problem
+            .firms()
+            .checked_mul(width)
+            .ok_or_else(resource_length_error)?,
+        0.0,
+        interrupt,
+    )?;
     for column in 0..width {
         for cell in 0..problem.cells() {
             let work = column
@@ -3809,8 +3952,12 @@ mod tests {
         }
         let expected = transpose_cell_rhs_with_interrupt(&problem, &cell, width, &mut interrupt)
             .expect("materialized transpose");
-        let actual = leverage_rhs_with_interrupt(&problem, &plan, &atoms, width, &mut interrupt)
-            .expect("direct leverage RHS");
+        let solver =
+            PreparedTwoWaySolver::prepare(&problem, audit_options(LinearSolverRoute::Exact).solver)
+                .unwrap();
+        let actual =
+            leverage_rhs_with_interrupt(&problem, &plan, &atoms, width, &solver, &mut interrupt)
+                .expect("direct leverage RHS");
         assert_eq!(actual, expected);
     }
 
@@ -4110,7 +4257,12 @@ mod tests {
 
         let atoms = vec![1_i64; plan.deletion_units()];
         let mut rhs = BreakOnPhase::new("jla_leverage_rhs", 2);
-        let error = leverage_rhs_with_interrupt(&problem, &plan, &atoms, 1, &mut rhs)
+        let solver = PreparedTwoWaySolver::prepare(
+            &problem,
+            audit_options(LinearSolverRoute::DiagonalPcg).solver,
+        )
+        .unwrap();
+        let error = leverage_rhs_with_interrupt(&problem, &plan, &atoms, 1, &solver, &mut rhs)
             .expect_err("RHS construction must poll beyond one chunk");
         assert_eq!(error.code, ErrorCode::UserBreak);
         assert_eq!(rhs.calls, 2);

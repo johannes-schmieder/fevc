@@ -1,0 +1,84 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 14
+#$ -binding linear:14
+#$ -l mem_per_core=3G
+#$ -l h_rt=00:45:00
+#$ -N fevc_opdev
+
+set -euo pipefail
+: "${OP_RUN_DIR:?}"
+: "${OP_CANDIDATE_SOURCE_SHA256:?}"
+: "${SGE_TASK_ID:?}"
+[[ "${OP_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${SGE_TASK_ID}" =~ ^([1-9]|1[0-6])$ ]]
+test "${NSLOTS}" = 14
+test -f "${OP_RUN_DIR}/campaign/smoke.pass"
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+"${python_bin}" --version
+module purge
+module load stata-mp/19
+export OP_PYTHON=${python_bin}
+harness=${OP_RUN_DIR}/source/rust/experiments/optimization_parity_20260913
+profiles=(mover_match_both pooled_stayer_match observation_stayers \
+  controlled_weighted_match controlled_weighted_observation \
+  observation_projection structured_observation_inference \
+  fixed_offset_match_inference)
+index=$(( (SGE_TASK_ID - 1) / 2 ))
+profile=${profiles[$index]}
+if (( SGE_TASK_ID % 2 == 1 )); then threads=1; else threads=7; fi
+input=${OP_RUN_DIR}/input/development/${profile}.csv
+input_sha=$(tr -d '[:space:]' < "${input}.sha256")
+task_dir=${OP_RUN_DIR}/campaign/tasks/task-$(printf '%02d' "${SGE_TASK_ID}")
+test ! -e "${task_dir}"
+mkdir -p "${task_dir}"
+seeds=(104729 8675309 20260819)
+call_count=0
+run_call() {
+  variant=$1 seed=$2 warmup=$3 repetition=$4 label=$5
+  export OP_PACKAGE=${OP_RUN_DIR}/campaign/packages/${variant}
+  export OP_INPUT=${input}
+  export OP_OUTPUT_DIR=${task_dir}/${label}
+  export OP_PROFILE=${profile} OP_VARIANT=${variant} OP_THREADS=${threads}
+  export OP_SEED=${seed} OP_WARMUP=${warmup} OP_REPETITION=${repetition}
+  export OP_INPUT_SHA256=${input_sha} OP_HARNESS_DIR=${harness}
+  if test "${variant}" = baseline; then
+    export OP_SOURCE_SHA256=4bdba22c0e6da99b3fd597aabab8df4d01307d01704951f3d5d2c089885cd2ad
+  else
+    export OP_SOURCE_SHA256=${OP_CANDIDATE_SOURCE_SHA256}
+  fi
+  "${harness}/development_call.sh"
+  call_count=$((call_count + 1))
+}
+
+if (( SGE_TASK_ID % 2 == 1 )); then warm_order=(baseline candidate); else warm_order=(candidate baseline); fi
+for variant in "${warm_order[@]}"; do
+  run_call "${variant}" "${seeds[0]}" 1 0 "warmup-${variant}"
+done
+for repetition in 1 2 3; do
+  offset=$(( (SGE_TASK_ID + repetition) % 2 ))
+  if (( offset == 0 )); then order=(baseline candidate); else order=(candidate baseline); fi
+  for variant in "${order[@]}"; do
+    run_call "${variant}" "${seeds[$((repetition - 1))]}" 0 "${repetition}" \
+      "rep-${repetition}-${variant}"
+  done
+done
+test "${call_count}" = 8
+{
+  printf 'schema\tFEVC-OPTIMIZATION-DEVELOPMENT-TASK-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "${JOB_ID}"
+  printf 'task_id\t%s\n' "${SGE_TASK_ID}"
+  printf 'profile\t%s\n' "${profile}"
+  printf 'threads\t%s\n' "${threads}"
+  printf 'calls\t%s\n' "${call_count}"
+  printf 'host\t%s\n' "${HOSTNAME}"
+  printf 'slots\t%s\n' "${NSLOTS}"
+} > "${task_dir}/task.tsv"
+printf 'FEVC OPTIMIZATION DEVELOPMENT TASK PASS: task=%s profile=%s threads=%s\n' \
+  "${SGE_TASK_ID}" "${profile}" "${threads}"

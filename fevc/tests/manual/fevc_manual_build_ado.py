@@ -11,7 +11,12 @@ from pathlib import Path
 
 SCHEMA = "FEVC-MANUAL-BENCHMARK-ADO-V1"
 THREAD_CONTRACT = "FEVC-MANUAL-BENCHMARK-THREADS-V1"
-INSERT_AFTER = "    local implicit_match = (`fullcmg' == 1)\n"
+INSERT_AFTER = (
+    "    local implicit_match = (`fullcmg' == 1 & \"`deletionmode'\"==\"match\" & ///\n"
+    "        \"`stayersmode'\"==\"movers\" & \"`probeorder'\"!=\"\" & ///\n"
+    "        !`frequencyused' & !`targetweightsupplied' & !`deletionidsupplied' & ///\n"
+    "        strtrim(`\"`controls'\"')==\"\" & \"`nuisance'\"==\"joint\")\n"
+)
 THREAD_CALL = "        fullcmg(`fullcmg') threads(`=c(processors)')                 ///\n"
 THREAD_CALL_ADAPTED = (
     "        fullcmg(`fullcmg') threads(`manual_rust_threads')                ///\n"
@@ -78,12 +83,18 @@ def build(source_path: Path, output_path: Path, receipt_path: Path) -> dict[str,
     if output_path.exists() or receipt_path.exists():
         raise ValueError("temporary benchmark output already exists")
     source = source_path.read_text(encoding="utf-8")
+    # Public dispatch now carries an explicit native context. Accept that
+    # source shape or the historical one, but never silently guess anchors.
+    explicit_context = source.count("    local native_threads = c(processors)\n") == 2
+    thread_call = THREAD_CALL.replace("`=c(processors)'", "`native_threads'") if explicit_context else THREAD_CALL
+    request_check = REQUEST_CHECK.replace("c(processors)", "`native_threads'") if explicit_context else REQUEST_CHECK
+    used_check = USED_CHECK.replace("c(processors)", "`native_threads'") if explicit_context else USED_CHECK
     adapted = replace_once(source, INSERT_AFTER, INSERT_AFTER + ADAPTER, "insertion")
-    adapted = replace_once(adapted, THREAD_CALL, THREAD_CALL_ADAPTED, "thread call")
+    adapted = replace_once(adapted, thread_call, THREAD_CALL_ADAPTED, "thread call")
     adapted = replace_once(
-        adapted, REQUEST_CHECK, REQUEST_CHECK_ADAPTED, "requested-thread receipt"
+        adapted, request_check, REQUEST_CHECK_ADAPTED, "requested-thread receipt"
     )
-    adapted = replace_once(adapted, USED_CHECK, USED_CHECK_ADAPTED, "used-thread receipt")
+    adapted = replace_once(adapted, used_check, USED_CHECK_ADAPTED, "used-thread receipt")
     output_path.write_text(adapted, encoding="utf-8")
     receipt = {
         "schema": SCHEMA,

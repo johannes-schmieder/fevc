@@ -34,6 +34,13 @@ pub trait InterruptCheck {
     fn cancellation_token(&self) -> Option<CancellationToken> {
         None
     }
+
+    /// True only for a checker with no callback or other observable behavior.
+    /// Owned statistical pools may replace an inert checker with a worker-safe
+    /// token. Custom caller-thread checkers remain synchronous without a token.
+    fn is_inert(&self) -> bool {
+        false
+    }
 }
 
 /// Inert checker used by every pre-existing core entry point.
@@ -44,6 +51,10 @@ impl InterruptCheck for NeverInterrupt {
     #[inline]
     fn checkpoint(&mut self, _phase: &'static str) -> Result<()> {
         Ok(())
+    }
+
+    fn is_inert(&self) -> bool {
+        true
     }
 }
 

@@ -2,7 +2,7 @@
 
 This harness compares FEVC Rust, maintained KSS Matlab, Julia
 VarianceComponentsHDFE.jl, R LeaveOutKSS, and PyTwoWay on the frozen protocol
-in [PROTOCOL.md](PROTOCOL.md).
+in [PROTOCOL.md](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/five_way_scaling/PROTOCOL.md).
 
 The normal sequence is:
 

@@ -315,7 +315,7 @@ def test_production_full_cmg_reconciles_phase_specific_tolerances_explicitly() -
     planned = public.split(
         "program define _fevc_rust_generic_planned", maxsplit=1
     )[1].split("program define _vckss_rexact", maxsplit=1)[0]
-    assert "local full_cmg_active = (`fullcmg' == 1)" in planned
+    assert "local full_cmg_active = (`fullcmg' == 1 | `generic_execution'==2)" in planned
     assert "full_cmg_result_reconcile" in planned
     assert "full_cmg_receipt" in planned
     assert "resource_peak_bytes = `cmg_pre_rng_forecast'" in planned

@@ -1,2 +1,0 @@
-Sanitized Stata logs begin at the first batch prompt.
-Startup banners, license identifiers, raw logs, and build caches were deleted.

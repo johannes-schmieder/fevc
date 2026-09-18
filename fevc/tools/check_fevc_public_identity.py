@@ -14,8 +14,6 @@ HISTORICAL_PREFIXES = (
     ".ci/stata/",
     "docs/history/",
     "docs/migration/",
-    "fevc/qualification/fevc_rename_equivalence/",
-    "reviews/",
     "rust/experiments/",
     "rust/qualification/evidence/",
 )
@@ -32,10 +30,6 @@ OPERATIONAL_EXACT = {
     "rust/stata_backend/scc/deploy_linux_bundle.sh",
     "rust/stata_backend/scc/run_linux_qualifier.sge",
     "rust/stata_backend/scc/submit_linux_qualifier.sh",
-}
-EQUIVALENCE_EXACT = {
-    "fevc/tests/equivalence/fevc_equivalence_driver.do",
-    "fevc/tools/run_fevc_rename_equivalence.py",
 }
 PUBLIC_BOUNDARY_FILES = {
     "AGENTS.md",
@@ -101,7 +95,6 @@ def is_exempt(relative: str) -> bool:
     return (
         relative in HISTORICAL_EXACT
         or relative in OPERATIONAL_EXACT
-        or relative in EQUIVALENCE_EXACT
         or any(relative.startswith(prefix) for prefix in HISTORICAL_PREFIXES)
     )
 

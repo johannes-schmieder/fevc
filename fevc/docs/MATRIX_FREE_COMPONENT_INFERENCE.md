@@ -319,7 +319,7 @@ full joint model, fixes `gamma_hat`, and forms
 realized offset fixed and omits sampling uncertainty from estimating
 `gamma_hat`. This is a working approximation, not a proof of conditional
 coverage given a same-sample estimate; see the
-[repair erratum](INFERENCE_REPAIR_ERRATUM_2026-09-04.md).
+[repair erratum](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/INFERENCE_REPAIR_ERRATUM_2026-09-04.md).
 
 For declared match `g`, let `F_g=sum_(i in g) f_i`. Because every row in the
 match has the same FE row `x_g`, define
@@ -597,7 +597,8 @@ to observation deletion or `q=0`.
 ## Rust implementation and evidence
 
 The internal oracle layer and public structured-variance attachment support generic JLA,
-observation deletion, mover-only samples, independent rows, unit frequency,
+observation deletion, the retained observation population or explicit mover-only
+selection, independent rows, unit frequency,
 joint nuisance treatment, low-dimensional controls, and explicit diagonal-PCG
 or generic-CMG routes. It preserves atomic generation, cancellation,
 Counter-V1 addressing, exactly-once prepared-session release, policy-aware
@@ -610,12 +611,14 @@ admission tests and source-bound evidence retain their original semantics.
 
 The public Stata surface requires the separately named inference model and
 the following supported effective tuple. Backend, RNG, algorithm, deletion,
-and preconditioner must be explicit; mover-only and joint nuisance may use
-their observation-deletion defaults:
+and preconditioner must be explicit; `stayers(both)` and joint nuisance may use
+their observation-deletion defaults. Explicit `stayers(movers)` selects only
+original movers before graph preparation. This corrects the earlier misleading
+population label without changing the default observation sample or formula:
 
 ```text
 backend(rust) rng(counter_v1) algorithm(jla)
-deletion(observation) stayers(movers)
+deletion(observation) stayers(both|movers)
 preconditioner(diagonal|cmg)
 inference(highrank|q1)
 inferencemodel(structured_common|structured_leverage)

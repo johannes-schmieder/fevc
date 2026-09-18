@@ -131,6 +131,13 @@ use vckss_plugin::ffi_engine::{
 
 static TEST_LOCK: Mutex<()> = Mutex::new(());
 
+#[path = "engine_ffi/exact_execution.rs"]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+mod exact_execution;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[path = "engine_ffi/generic_execution.rs"]
+mod generic_execution;
+
 #[derive(Debug)]
 #[repr(C)]
 struct PollState {
@@ -555,7 +562,7 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     assert_eq!(capabilities.struct_size, 32);
     assert_eq!(capabilities.abi_version, ABI_VERSION);
     let expected_ready_flags = if cfg!(any(target_os = "macos", target_os = "linux")) {
-        1023
+        32767
     } else {
         767
     };
@@ -1859,6 +1866,14 @@ fn prepare_with_implicit_match_probe_order_memory(
     columns: &OwnedColumns,
     memory_limit_bytes: u64,
 ) -> u64 {
+    prepare_with_deletion_probe_order_memory(columns, memory_limit_bytes, VCKSS_DELETION_MATCH)
+}
+
+fn prepare_with_deletion_probe_order_memory(
+    columns: &OwnedColumns,
+    memory_limit_bytes: u64,
+    deletion: u32,
+) -> u64 {
     let probe_order = (0..columns.worker.len())
         .map(|row| (row + 1) as f64)
         .collect::<Vec<_>>();
@@ -1886,9 +1901,9 @@ fn prepare_with_implicit_match_probe_order_memory(
     request.options.v3.v2.rows = rows;
     request.options.v3.v2.memory_limit_bytes = memory_limit_bytes;
     request.options.v3.v2.caller_copy_bytes = rows * 7 * 8;
-    request.options.v3.deletion_mode = VCKSS_DELETION_MATCH;
+    request.options.v3.deletion_mode = deletion;
     request.options.v3.controls_count = 0;
-    request.options.implicit_match = 1;
+    request.options.implicit_match = u32::from(deletion == VCKSS_DELETION_MATCH);
     assert_eq!(
         vckss_rust_engine_admit_prepare_v4(&request.options, 1),
         ErrorCode::Ok as i32
@@ -1916,7 +1931,7 @@ fn prepare_with_implicit_match_probe_order_memory(
     );
     assert_eq!(
         receipt.preparation_peak_forecast_bytes,
-        rows * 7 * 8 + rows * (768 + 16 + 16) + 4096
+        rows * 7 * 8 + rows * (768 + 16 + 16 * u64::from(deletion == VCKSS_DELETION_MATCH)) + 4096
     );
     generation
 }
@@ -4870,6 +4885,391 @@ fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
     assert!(receipt.workspace_count > 0);
 }
 
+#[test]
+fn v5_observation_direct_keeps_generic_family_and_phase_residual_gates() {
+    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+        return;
+    }
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let generation =
+        prepare_with_deletion_probe_order_memory(&columns, 1_u64 << 30, VCKSS_DELETION_OBSERVATION);
+    let mut capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_OBSERVATION,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    capability.v2.v1.frequency_use = VCKSS_REQUEST_FREQUENCY_UNIT;
+    capability.v2.target_weight_mode = VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT;
+    capability.v2.deletion_unit_source = VCKSS_DELETION_SOURCE_OBSERVATION_ROW;
+    capability.v2.probeorder_supplied = 1;
+    let mut request = VckssEngineSolveRequestV5 {
+        v4: planned_solve_request(capability, 0, 0),
+        threads: 4,
+        tolerance_supplied: 0,
+        full_cmg_v2: 1,
+        reserved_5: 0,
+    };
+    request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+    request.v4.v3.v2.v1.pcg_tolerance = 1e-10;
+    assert_eq!(
+        vckss_rust_engine_solve_v5(generation, &request),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let mut plan = VckssExecutionPlanReceiptV1::default();
+    assert_eq!(
+        vckss_rust_engine_execution_plan_receipt_v1(
+            generation,
+            &mut plan,
+            bytes::<VckssExecutionPlanReceiptV1>()
+        ),
+        0
+    );
+    assert_eq!(plan.solver.threads_requested, 4);
+    assert_eq!(plan.solver.threads_used, 4);
+    assert_eq!(plan.resolution.engine_selected, VCKSS_ENGINE_GENERIC);
+    assert_eq!(plan.solver.applicability, VCKSS_PLAN_APPLICABILITY_GENERIC);
+    let mut rhs = vec![VckssEngineRhsReceiptV2::default(); 16];
+    assert_eq!(
+        vckss_rust_engine_rhs_receipts_v2(generation, rhs.as_mut_ptr(), 16),
+        0
+    );
+    for row in rhs {
+        let expected = if row.v1.phase == 1 {
+            10.0 * 1e-10
+        } else {
+            10.0 * 1e-6
+        };
+        assert_eq!(row.full_residual_tolerance, expected);
+        assert!(row.v1.complete_residual <= expected);
+    }
+    let mut receipt = unsafe { std::mem::zeroed::<VckssFullCmgReceiptV1>() };
+    assert_eq!(
+        vckss_rust_engine_full_cmg_receipt_v1(
+            generation,
+            &mut receipt,
+            bytes::<VckssFullCmgReceiptV1>()
+        ),
+        0
+    );
+    assert_eq!(receipt.fit_effective_tolerance, 1e-10);
+    assert_eq!(receipt.probe_effective_tolerance, 1e-6);
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+}
+
+#[test]
+fn v5_point_full_cmg_preserves_explicit_routes_weights_and_declared_matches() {
+    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+        return;
+    }
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    for deletion in [VCKSS_DELETION_MATCH, VCKSS_DELETION_OBSERVATION] {
+        for engine in [VCKSS_ENGINE_GENERIC, VCKSS_ENGINE_AUTO_OR_UNSPECIFIED] {
+            for route in [VCKSS_ROUTE_CMG_PCG, VCKSS_ROUTE_AUTO] {
+                for weighted in [false, true] {
+                    let mut columns = OwnedColumns::generic_dense();
+                    if !weighted {
+                        columns.frequency.fill(1.0);
+                        columns.target_weight.fill(1.0);
+                    }
+                    let mut capability = planned_capability_request(
+                        VCKSS_ALGORITHM_JLA,
+                        engine,
+                        route,
+                        deletion,
+                        VCKSS_NUISANCE_JOINT,
+                        0,
+                        VCKSS_BATCH_MODE_AUTO,
+                        VCKSS_BATCH_MODE_AUTO,
+                    );
+                    if !weighted {
+                        capability.v2.v1.frequency_use = VCKSS_REQUEST_FREQUENCY_UNIT;
+                        capability.v2.target_weight_mode = VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT;
+                    }
+                    // No semantic key or implicit ingestion. The declared match
+                    // identifier remains distinct from the coefficient cell.
+                    let mut reference = None;
+                    for direct in [false, true] {
+                        reset();
+                        let generation =
+                            prepare_with_controls_memory(&columns, &[], deletion, 1_u64 << 30);
+                        let mut v4 = planned_solve_request(capability, 0, 0);
+                        v4.v3.v2.v1.pcg_tolerance = 1e-10;
+                        let status = if direct {
+                            let mut request = VckssEngineSolveRequestV5 {
+                                v4,
+                                threads: 4,
+                                tolerance_supplied: 1,
+                                full_cmg_v2: 1,
+                                reserved_5: 0,
+                            };
+                            request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+                            vckss_rust_engine_solve_v5(generation, &request)
+                        } else {
+                            vckss_rust_engine_solve_v4(generation, &v4)
+                        };
+                        assert_eq!(status, 0, "deletion={deletion} engine={engine} route={route} weighted={weighted} direct={direct}: {}",
+                            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy());
+                        let mut result = VckssEngineResultV1::default();
+                        assert_eq!(
+                            vckss_rust_engine_result_v1(
+                                generation,
+                                &mut result,
+                                bytes::<VckssEngineResultV1>(),
+                            ),
+                            0
+                        );
+                        let values = component_bits(result.corrected).map(f64::from_bits);
+                        let mut plan = VckssExecutionPlanReceiptV1::default();
+                        assert_eq!(
+                            vckss_rust_engine_execution_plan_receipt_v1(
+                                generation,
+                                &mut plan,
+                                bytes::<VckssExecutionPlanReceiptV1>(),
+                            ),
+                            0
+                        );
+                        if let Some((expected, selected)) = reference {
+                            let expected: [f64; 4] = expected;
+                            for (actual, reference) in values.into_iter().zip(expected) {
+                                assert!(
+                                    (actual - reference).abs() <= 1e-8 * reference.abs().max(1.0)
+                                );
+                            }
+                            assert_eq!(plan.resolution.engine_selected, selected);
+                            assert_eq!(plan.solver.threads_requested, 4);
+                            assert_eq!(plan.solver.threads_used, 4);
+                            let mut cmg = unsafe { std::mem::zeroed::<VckssFullCmgReceiptV1>() };
+                            assert_eq!(
+                                vckss_rust_engine_full_cmg_receipt_v1(
+                                    generation,
+                                    &mut cmg,
+                                    bytes::<VckssFullCmgReceiptV1>(),
+                                ),
+                                0
+                            );
+                            assert_eq!(cmg.rhs_count, 16);
+                            assert!(cmg.maximum_complete_residual <= 1e-9);
+                        } else {
+                            reference = Some((values, plan.resolution.engine_selected));
+                        }
+                        assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn v5_controlled_point_model_accounting_and_strict_rank_gates() {
+    use vckss_plugin::ffi_engine::{
+        vckss_rust_engine_full_cmg_model_receipt_v1, VckssFullCmgModelReceiptV1,
+    };
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    assert_eq!(bytes::<VckssFullCmgModelReceiptV1>(), 56);
+    let columns = OwnedColumns::generic_dense();
+    for deletion in [VCKSS_DELETION_MATCH, VCKSS_DELETION_OBSERVATION] {
+        for nuisance in [VCKSS_NUISANCE_JOINT, VCKSS_NUISANCE_FIXED_OFFSET] {
+            for q in [0, 1] {
+                let controls = if q == 0 {
+                    vec![]
+                } else {
+                    vec![one_generic_control(&columns)]
+                };
+                let mut reference = None;
+                for threads in [0, 1, 4, 7] {
+                    reset();
+                    let generation =
+                        prepare_with_controls_memory(&columns, &controls, deletion, 1_u64 << 30);
+                    let capability = planned_capability_request(
+                        VCKSS_ALGORITHM_JLA,
+                        VCKSS_ENGINE_GENERIC,
+                        VCKSS_ROUTE_CMG_PCG,
+                        deletion,
+                        nuisance,
+                        q,
+                        VCKSS_BATCH_MODE_AUTO,
+                        VCKSS_BATCH_MODE_AUTO,
+                    );
+                    let mut v4 = planned_solve_request(capability, 0, 0);
+                    v4.v3.v2.v1.pcg_tolerance = 1e-10;
+                    let status = if threads == 0 {
+                        vckss_rust_engine_solve_v4(generation, &v4)
+                    } else {
+                        let mut request = VckssEngineSolveRequestV5 {
+                            v4,
+                            threads,
+                            tolerance_supplied: u32::from(q == 0),
+                            full_cmg_v2: 1,
+                            reserved_5: 0,
+                        };
+                        request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+                        vckss_rust_engine_solve_v5(generation, &request)
+                    };
+                    assert_eq!(
+                        status,
+                        0,
+                        "deletion={deletion} nuisance={nuisance} q={q} threads={threads}: {}",
+                        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+                    );
+                    let mut result = VckssEngineResultV1::default();
+                    assert_eq!(
+                        vckss_rust_engine_result_v1(
+                            generation,
+                            &mut result,
+                            bytes::<VckssEngineResultV1>()
+                        ),
+                        0
+                    );
+                    let values = component_bits(result.corrected).map(f64::from_bits);
+                    let mut model = VckssFullCmgModelReceiptV1::default();
+                    if let Some(expected) = reference {
+                        let expected: [f64; 4] = expected;
+                        for (actual, reference) in values.into_iter().zip(expected) {
+                            assert!((actual - reference).abs() <= 1e-8 * reference.abs().max(1.0));
+                        }
+                        assert_eq!(
+                            vckss_rust_engine_full_cmg_model_receipt_v1(generation, &mut model, 55),
+                            ErrorCode::AbiMismatch as i32
+                        );
+                        assert_eq!(
+                            vckss_rust_engine_full_cmg_model_receipt_v1(generation, &mut model, 56),
+                            0
+                        );
+                        assert_eq!(model.generation, generation);
+                        assert_eq!(model.controls_count, q);
+                        assert_eq!(model.nuisance_mode, nuisance);
+                        assert_eq!(model.explicit_options_rhs_count, u64::from(q));
+                        assert_eq!(
+                            model.controlled_rhs_count,
+                            if q == 0 {
+                                0
+                            } else if nuisance == VCKSS_NUISANCE_JOINT {
+                                11
+                            } else {
+                                1
+                            }
+                        );
+                        assert_eq!(
+                            model.logical_rhs_count,
+                            u64::from(
+                                16 + q
+                                    + u32::from(q > 0 && nuisance == VCKSS_NUISANCE_FIXED_OFFSET)
+                            )
+                        );
+                        let mut cmg = unsafe { std::mem::zeroed::<VckssFullCmgReceiptV1>() };
+                        assert_eq!(
+                            vckss_rust_engine_full_cmg_receipt_v1(
+                                generation,
+                                &mut cmg,
+                                bytes::<VckssFullCmgReceiptV1>()
+                            ),
+                            0
+                        );
+                        assert_eq!(
+                            cmg.rhs_count,
+                            model.logical_rhs_count + model.control_refinement_rhs_count
+                        );
+                        assert_eq!(cmg.probe_effective_tolerance, 1e-10);
+                        let mut rhs = vec![
+                            VckssEngineRhsReceiptV2::default();
+                            model.logical_rhs_count as usize
+                        ];
+                        assert_eq!(
+                            vckss_rust_engine_rhs_receipts_v2(
+                                generation,
+                                rhs.as_mut_ptr(),
+                                model.logical_rhs_count
+                            ),
+                            0
+                        );
+                        for (i, row) in rhs.iter().enumerate() {
+                            assert_eq!(
+                                row.full_residual_tolerance,
+                                if i < (q as usize) {
+                                    1e-11
+                                } else {
+                                    10.0 * 1e-10
+                                }
+                            );
+                            assert!(row.v1.complete_residual <= row.full_residual_tolerance);
+                        }
+                    } else {
+                        reference = Some(values);
+                        assert_eq!(
+                            vckss_rust_engine_full_cmg_model_receipt_v1(generation, &mut model, 56),
+                            ErrorCode::UnsupportedFeature as i32
+                        );
+                    }
+                    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+                    assert_ne!(
+                        vckss_rust_engine_full_cmg_model_receipt_v1(generation, &mut model, 56),
+                        0
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn v5_point_explicit_diagonal_rejects_full_cmg_but_keeps_legacy_thread_semantics() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let generation =
+        prepare_with_controls_memory(&columns, &[], VCKSS_DELETION_OBSERVATION, 1_u64 << 30);
+    let capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_GENERIC,
+        VCKSS_ROUTE_DIAGONAL_PCG,
+        VCKSS_DELETION_OBSERVATION,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    let mut request = VckssEngineSolveRequestV5 {
+        v4: planned_solve_request(capability, 0, 0),
+        threads: 4,
+        tolerance_supplied: 0,
+        full_cmg_v2: 1,
+        reserved_5: 0,
+    };
+    request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+    assert_eq!(
+        vckss_rust_engine_solve_v5(generation, &request),
+        ErrorCode::UnsupportedFeature as i32
+    );
+    // V5's thread field never authorized a threaded generic/diagonal solver
+    // when full_cmg_v2 is false. Preserve that frozen meaning; its eventual
+    // worker-queue capability needs a separate versioned request.
+    request.full_cmg_v2 = 0;
+    assert_eq!(vckss_rust_engine_solve_v5(generation, &request), 0);
+    let mut plan = VckssExecutionPlanReceiptV1::default();
+    assert_eq!(
+        vckss_rust_engine_execution_plan_receipt_v1(
+            generation,
+            &mut plan,
+            bytes::<VckssExecutionPlanReceiptV1>(),
+        ),
+        0
+    );
+    assert_eq!(plan.solver.threads_requested, 1);
+    assert_eq!(plan.solver.threads_used, 1);
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+}
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 #[test]
 fn v5_full_cmg_user_break_is_coordinated_and_generation_is_releasable_once() {
@@ -5208,16 +5608,43 @@ fn exact_stayer_augmentation_is_reconciled_solved_and_released_once() {
 
 #[test]
 fn generic_jla_stayer_augmentation_is_the_primary_combined_result() {
+    check_generic_jla_stayer_primary_result(false);
+}
+
+#[test]
+fn v5_direct_stayer_augmentation_preserves_generic_family_and_pooled_memory() {
+    if cfg!(any(target_os = "macos", target_os = "linux")) {
+        check_generic_jla_stayer_primary_result(true);
+    }
+}
+
+fn check_generic_jla_stayer_primary_result(direct: bool) {
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
     let columns = OwnedColumns::generic_dense();
     let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
 
-    let firm = [1.0, 1.0, 2.0];
-    let worker = [1.0, 1.0, 2.0];
+    let firm = if direct {
+        [1.0, 1.0, 1.0]
+    } else {
+        [1.0, 1.0, 2.0]
+    };
+    let worker = if direct {
+        [1.0, 1.0, 1.0]
+    } else {
+        [1.0, 1.0, 2.0]
+    };
     let outcome = [0.25, 1.75, -0.5];
-    let frequency = [1.0, 1.0, 2.0];
-    let target_weight = [0.75, 1.25, 2.5];
+    let frequency = if direct {
+        [1.0, 1.0, 1.0]
+    } else {
+        [1.0, 1.0, 2.0]
+    };
+    let target_weight = if direct {
+        [1.0, 1.0, 1.0]
+    } else {
+        [0.75, 1.25, 2.5]
+    };
     let descriptor = VckssStayerAugmentationColumnsV1 {
         struct_size: bytes::<VckssStayerAugmentationColumnsV1>(),
         reserved: 0,
@@ -5264,9 +5691,29 @@ fn generic_jla_stayer_augmentation_is_the_primary_combined_result() {
         VCKSS_BATCH_MODE_AUTO,
     );
     capability.v2.stayers_mode = VCKSS_STAYERS_ALL;
+    if direct {
+        capability.v2.engine = VCKSS_ENGINE_AUTO_OR_UNSPECIFIED;
+        capability.v2.v1.solver_route = VCKSS_ROUTE_AUTO;
+        capability.v2.v1.frequency_use = VCKSS_REQUEST_FREQUENCY_UNIT;
+        capability.v2.target_weight_mode = VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT;
+        capability.v2.deletion_unit_source = VCKSS_DELETION_SOURCE_CELL_DEFAULT;
+    }
     let solve = planned_solve_request(capability, 0, 0);
+    let status = if direct {
+        let mut request = VckssEngineSolveRequestV5 {
+            v4: solve,
+            threads: 4,
+            tolerance_supplied: 1,
+            full_cmg_v2: 1,
+            reserved_5: 0,
+        };
+        request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+        vckss_rust_engine_solve_v5(generation, &request)
+    } else {
+        vckss_rust_engine_solve_v4(generation, &solve)
+    };
     assert_eq!(
-        vckss_rust_engine_solve_v4(generation, &solve),
+        status,
         ErrorCode::Ok as i32,
         "{}",
         unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
@@ -5315,6 +5762,21 @@ fn generic_jla_stayer_augmentation_is_the_primary_combined_result() {
     assert_eq!(detailed.execution.counter.completed, 1);
     assert!(detailed.execution.counter.total.actual_logical_atoms > 0);
     assert!(detailed.v6.v5.actual_accounting_residual <= 1.0e-10);
+
+    if direct {
+        let mut cmg = unsafe { std::mem::zeroed::<VckssFullCmgReceiptV1>() };
+        assert_eq!(
+            vckss_rust_engine_full_cmg_receipt_v1(
+                generation,
+                &mut cmg,
+                bytes::<VckssFullCmgReceiptV1>()
+            ),
+            0
+        );
+        assert_eq!(cmg.threads_used, 4);
+        assert_eq!(detailed.execution.solver.threads_used, 4);
+        assert!(cmg.prepared_persistent_bytes >= augmentation.total_prepared_resident_bytes);
+    }
 
     let mut exact_only = VckssStayerHybridResultV1::default();
     assert_eq!(

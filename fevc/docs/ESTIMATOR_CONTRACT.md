@@ -183,7 +183,7 @@ Match deletion permits unrestricted dependence within a declared match and
 treats distinct declared matches as independent. It does not permit arbitrary
 dependence across all matches belonging to one worker.
 
-With match deletion, `stayers(both)` is the default so that the target
+Both deletion modes default to `stayers(both)`. With match deletion the target
 population matches the KSS Matlab package. Let M denote the final
 mover rows. Eligible stayers are workers who were one-firm stayers in the
 frozen complete-case sample, are attached to a retained mover firm, and have
@@ -193,8 +193,21 @@ Mover matches are deleted as declared blocks; each eligible stayer is
 corrected by deleting one literal physical observation. The latter component
 is explicitly not match-robust. `stayers(movers)` opts out and restores a
 mover-only fit, target, correction, and `e(sample)`. If no stayer is eligible,
-the default reduces exactly to that mover result. Observation deletion keeps
-the retained-observation population and defaults to `stayers(movers)`.
+the default reduces exactly to that mover result. Observation deletion with
+`stayers(both)` keeps the retained-observation population, including eligible
+one-firm workers, and applies physical-observation deletion throughout.
+Observation `stayers(movers)` excludes original one-firm workers from the frozen
+complete-case input before the existing observation graph selector. It does not
+switch to match-deletion graph pruning or match corrections.
+
+This September 12 option contract intentionally changes explicit observation
+`stayers(movers)` requests from the earlier prerelease's misleading full-sample
+interpretation. Omitted stayers options preserve the former default observation
+sample and estimator. `e(N_complete)` describes original complete cases;
+`e(N_graph_input)` and `e(N_stayer_option_dropped)` separately record population
+selection before graph pruning. Native ABI receipts remain source-compatible:
+their legacy stayer flag denotes mixed-deletion augmentation; public population
+selection is explicit in `e(stayers)` and `e(stayer_option_schema)`.
 
 ## Scope of the result
 

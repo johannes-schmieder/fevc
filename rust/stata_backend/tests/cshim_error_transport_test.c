@@ -14,6 +14,17 @@ static int mock_cleanup_clear(void);
 
 ST_plugin *_stata_;
 
+uint32_t vckss_rust_abi_version(void) { return VCKSS_RUST_ABI_VERSION_V1; }
+const char *vckss_rust_backend_version(void) { return VCKSS_RUST_RUNTIME_BUILD_ID; }
+int32_t vckss_rust_backend_capabilities_v1(VckssBackendCapabilitiesV1 *output, uint32_t capacity)
+{
+    assert(capacity == sizeof(*output));
+    *output = (VckssBackendCapabilitiesV1){
+        .struct_size = sizeof(*output), .abi_version = VCKSS_RUST_ABI_VERSION_V1,
+        .core_ready_flags = 32767, .support_flags = 38, .deterministic_parallelism = 1};
+    return 0;
+}
+
 int32_t vckss_rust_engine_memory_policy_v1(uint64_t generation, VckssMemoryPolicyV1 *output, uint32_t capacity)
 {
     (void)generation;
@@ -32,6 +43,8 @@ int32_t vckss_rust_engine_memory_forecast_v1(uint64_t generation, VckssMemoryFor
 
 static int fail_scalar;
 static int fail_plan_scalar;
+static int fail_execution_api_scalar;
+static double saved_execution_api;
 static int fail_matrix;
 static int error_calls;
 static int release_calls;
@@ -68,11 +81,20 @@ static char saved_error_status[VCKSS_ERROR_STATUS_CAPACITY];
 static char saved_error_detail[VCKSS_ERROR_DETAIL_CAPACITY];
 static int solve_v4_calls;
 static int solve_v5_calls;
+static int solve_v6_calls;
+static int solve_v8_calls;
+static VckssEngineSolveRequestInterruptV6 captured_solve_v6;
+static VckssEngineSolveRequestInterruptV8 captured_solve_v8;
+static VckssGenericExecutionReceiptV1 execution_receipt;
+static VckssExactExecutionReceiptV1 exact_execution_receipt;
+static VckssExactExecutionRequestInterruptV1 captured_exact_execution;
+static int exact_execution_calls;
 static uint64_t solved_generation;
 static VckssEngineSolveRequestInterruptV4 captured_solve_v4;
 static VckssEngineSolveRequestInterruptV5 captured_solve_v5;
 static int full_cmg_receipt_status;
 static int corrupt_full_cmg_receipt;
+static int corrupt_full_cmg_model_receipt;
 static char saved_cmg_backend[32];
 static char saved_cmg_source[64];
 
@@ -300,6 +322,119 @@ int32_t vckss_rust_engine_solve_interrupt_v5(
     return 0;
 }
 
+int32_t vckss_rust_engine_default_solve_request_interrupt_v6(
+    VckssEngineSolveRequestInterruptV6 *output, uint32_t capacity)
+{
+    assert(output != NULL && capacity == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->options.v4.v3.v2.v1.struct_size = sizeof(*output);
+    return 0;
+}
+
+int32_t vckss_rust_engine_solve_interrupt_v6(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV6 *request)
+{
+    assert(generation != 0 && request != NULL);
+    ++solve_v6_calls;
+    solved_generation = generation;
+    captured_solve_v6 = *request;
+    return 0;
+}
+
+int32_t vckss_rust_engine_default_solve_request_interrupt_v7(
+    VckssEngineSolveRequestInterruptV7 *output, uint32_t capacity)
+{
+    assert(output != NULL && capacity == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->options.v6.v4.v3.v2.v1.struct_size = sizeof(*output);
+    output->options.component_batch_mode = 1u;
+    return 0;
+}
+
+int32_t vckss_rust_engine_solve_interrupt_v7(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV7 *request)
+{
+    assert(generation != 0 && request != NULL);
+    ++solve_v6_calls;
+    solved_generation = generation;
+    captured_solve_v6 = (VckssEngineSolveRequestInterruptV6){0};
+    captured_solve_v6.options = request->options.v6;
+    return 0;
+}
+
+int32_t vckss_rust_engine_default_solve_request_interrupt_v8(
+    VckssEngineSolveRequestInterruptV8 *output, uint32_t capacity)
+{
+    assert(output != NULL && capacity == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->options.v7.v6.v4.v3.v2.v1.struct_size = sizeof(*output);
+    output->options.v7.v6.execution_mode = VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO;
+    output->options.resolved_execution_mode = VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO;
+    return 0;
+}
+
+int32_t vckss_rust_engine_solve_interrupt_v8(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV8 *request)
+{
+    assert(generation != 0 && request != NULL);
+    ++solve_v8_calls;
+    solved_generation = generation;
+    captured_solve_v8 = *request;
+    return 0;
+}
+
+uint32_t vckss_rust_exact_execution_schema_v1(void) { return 1u; }
+uint32_t vckss_rust_exact_legacy_execution_schema_v1(void) { return 1u; }
+int32_t vckss_rust_engine_solve_exact_legacy_execution_interrupt_v1(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV2 *request, uint32_t threads)
+{
+    assert(threads > 0 && request->options.algorithm == VCKSS_ALGORITHM_EXACT);
+    return vckss_rust_engine_solve_interrupt_v2(generation, request);
+}
+uint32_t vckss_rust_exact_resolved_execution_schema_v2(void) { return 2u; }
+int32_t vckss_rust_engine_solve_exact_execution_interrupt_v1(
+    uint64_t generation, const VckssExactExecutionRequestInterruptV1 *request)
+{
+    assert(generation != 0 && request != NULL);
+    ++exact_execution_calls;
+    solved_generation = generation;
+    captured_exact_execution = *request;
+    return 0;
+}
+int32_t vckss_rust_engine_solve_exact_resolved_execution_interrupt_v2(
+    uint64_t generation, const VckssExactExecutionRequestInterruptV1 *request)
+{
+    assert(request->options.v4.v3.v2.algorithm == VCKSS_ALGORITHM_AUTO);
+    assert(request->options.v4.v3.v2.v1.rng_contract == VCKSS_RNG_COUNTER_V1);
+    return vckss_rust_engine_solve_exact_execution_interrupt_v1(generation, request);
+}
+int32_t vckss_rust_engine_exact_execution_receipt_v1(
+    uint64_t generation, VckssExactExecutionReceiptV1 *output, uint32_t capacity)
+{
+    assert(generation == active_generation && capacity == sizeof(*output));
+    *output = exact_execution_receipt;
+    return 0;
+}
+
+int32_t vckss_rust_engine_component_batch_receipt_v1(
+    uint64_t generation, VckssComponentBatchReceiptV1 *output, uint32_t capacity)
+{
+    assert(generation == active_generation && output != NULL && capacity == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->struct_size = sizeof(*output);
+    output->schema_version = 1u;
+    output->generation = generation;
+    return 0;
+}
+
+int32_t vckss_rust_engine_generic_execution_receipt_v1(
+    uint64_t generation, VckssGenericExecutionReceiptV1 *output, uint32_t capacity)
+{
+    assert(generation == active_generation && capacity == sizeof(*output));
+    *output = execution_receipt;
+    return 0;
+}
+
 const char *vckss_rust_last_error(void)
 {
     return selftest_error;
@@ -486,6 +621,24 @@ int32_t vckss_rust_engine_performance_receipt_v1(
     return 0;
 }
 
+int32_t vckss_rust_engine_full_cmg_model_receipt_v1(
+    uint64_t generation, VckssFullCmgModelReceiptV1 *output, uint32_t output_capacity_bytes)
+{
+    assert(generation == active_generation);
+    assert(output != NULL);
+    assert(output_capacity_bytes == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->struct_size = (uint32_t)sizeof(*output);
+    output->schema_version = 1;
+    output->generation = generation;
+    output->nuisance_mode = VCKSS_NUISANCE_JOINT;
+    output->logical_rhs_count = 16;
+    if (corrupt_full_cmg_model_receipt == 1) output->schema_version = 2;
+    if (corrupt_full_cmg_model_receipt == 2) output->explicit_options_rhs_count = 1;
+    if (corrupt_full_cmg_model_receipt == 3) output->control_refinement_rhs_count = 1;
+    return 0;
+}
+
 int32_t vckss_rust_engine_full_cmg_receipt_v1(
     uint64_t generation,
     VckssFullCmgReceiptV1 *output,
@@ -593,6 +746,10 @@ static ST_int mock_error(char *message)
 static ST_int mock_scalar_save(char *name, ST_double value)
 {
     ++scalar_calls;
+    if (strcmp(name, "__vckss_rust_execution_api") == 0) {
+        if (fail_execution_api_scalar) return 1;
+        saved_execution_api = value;
+    }
     if (strcmp(name, "__vckss_rust_error_code") == 0) saved_error_code = value;
     if (fail_plan_scalar && strcmp(name, "__vckss_plan_struct") == 0) return 1;
     return fail_scalar;
@@ -655,6 +812,8 @@ static void reset_transport(void)
 {
     fail_scalar = 0;
     fail_plan_scalar = 0;
+    fail_execution_api_scalar = 0;
+    saved_execution_api = -1;
     fail_matrix = 0;
     error_calls = 0;
     release_calls = 0;
@@ -691,11 +850,24 @@ static void reset_transport(void)
     saved_error_detail[0] = '\0';
     solve_v4_calls = 0;
     solve_v5_calls = 0;
+    solve_v6_calls = 0;
+    solve_v8_calls = 0;
+    memset(&captured_solve_v6, 0, sizeof(captured_solve_v6));
+    memset(&captured_solve_v8, 0, sizeof(captured_solve_v8));
+    execution_receipt = (VckssGenericExecutionReceiptV1){
+        .struct_size = sizeof(execution_receipt), .schema_version = 1, .generation = 705,
+        .execution_mode = 1, .permitted_threads = 7, .planned_workers = 4,
+        .maximum_active_workers = 3, .maximum_rhs_capacity = 4,
+        .leverage_batch_width = 3, .target_batch_width = 2,
+        .fit_rhs_count = 1, .point_probe_rhs_count = 51, .logical_rhs_count = 52,
+        .queued_rhs_count = 51, .command_peak_forecast_bytes = 4096,
+        .maximum_complete_residual = 1e-12};
     solved_generation = 0;
     memset(&captured_solve_v4, 0, sizeof(captured_solve_v4));
     memset(&captured_solve_v5, 0, sizeof(captured_solve_v5));
     full_cmg_receipt_status = 0;
     corrupt_full_cmg_receipt = 0;
+    corrupt_full_cmg_model_receipt = 0;
     saved_cmg_backend[0] = '\0';
     saved_cmg_source[0] = '\0';
     vckss_test_fail_allocation = 0;
@@ -745,6 +917,175 @@ int main(void)
     plugin.rowsof = mock_matrix_rows;
     plugin.colsof = mock_matrix_columns;
     _stata_ = &plugin;
+
+    {
+        reset_transport();
+        char *args[] = {"solve", "1", "81227", "7", "0", "0", "auto", "1e-12", "10000",
+            "exact", "observation", "joint", "500", "5000", "1e-10", "1e-10", "auto",
+            "auto", "movers", "explicit", "observation", "0", "0", "50000000", "3",
+            "4", "1", "2290599403", "1137066349", "auto", "auto", "1", "0"};
+        assert(vckss_solve(33, args) == 0);
+        assert(solve_v4_calls == 1);
+    }
+
+    {
+        reset_transport();
+        char *args[] = {"solveexactexecution", "705", "17", "17", "0", "0", "auto",
+            "1e-10", "100", "exact", "observation", "joint", "1000", "100",
+            "1e-12", "1e-10", "auto", "auto", "all", "explicit", "observation",
+            "0", "0", "50000000", "3", "4", "1", "270544960", "1348497536",
+            "auto", "auto", "1", "0", "7"};
+        assert(vckss_solve_generic_execution(34, args, 3) == 0);
+        assert(exact_execution_calls == 1 && solve_v4_calls == 0 && solve_v8_calls == 0);
+        assert(captured_exact_execution.options.v4.v3.v2.v1.struct_size == 320);
+        assert(captured_exact_execution.options.threads == 7);
+        assert(captured_exact_execution.options.reserved == 0 && captured_exact_execution.reserved == 0);
+        assert(captured_exact_execution.options.v4.v3.request_signature == UINT64_C(0x1020304050607080));
+        assert(captured_exact_execution.interrupt_poll == vckss_stata_interrupt_poll);
+        assert(captured_exact_execution.checkpoint_interval == 1);
+        assert(vckss_solve_generic_execution(33, args, 3) == 198);
+        args[9] = "jla";
+        assert(vckss_solve_generic_execution(34, args, 3) == 198);
+        args[9] = "exact"; args[33] = "0";
+        assert(vckss_solve_generic_execution(34, args, 3) == 198);
+        assert(exact_execution_calls == 1);
+        args[0] = "solveexactresolvedv2"; args[9] = "auto"; args[33] = "7";
+        assert(vckss_solve_generic_execution(34, args, 4) == 0);
+        assert(exact_execution_calls == 2);
+        assert(captured_exact_execution.options.v4.v3.request_signature == UINT64_C(0x1020304050607080));
+        assert(vckss_solve_generic_execution(33, args, 4) == 198);
+        args[9] = "exact";
+        assert(vckss_solve_generic_execution(34, args, 4) == 198);
+    }
+    for (int corrupt = 0; corrupt <= 9; ++corrupt) {
+        reset_transport();
+        active_generation = 705;
+        exact_execution_receipt = (VckssExactExecutionReceiptV1){
+            sizeof(VckssExactExecutionReceiptV1), 1, 705, 7, 7, 20, 2, 4096, 8192, 1e-12};
+        switch (corrupt) {
+            case 1: exact_execution_receipt.struct_size = 63; break;
+            case 2: exact_execution_receipt.schema_version = 2; break;
+            case 3: exact_execution_receipt.generation = 706; break;
+            case 4: exact_execution_receipt.worker_limit = 8; break;
+            case 5: exact_execution_receipt.worker_limit = 1; break;
+            case 6: exact_execution_receipt.estimator_passes = 3; break;
+            case 7: exact_execution_receipt.command_peak_forecast_bytes = 1; break;
+            case 8: exact_execution_receipt.maximum_original_fit_residual = NAN; break;
+            case 9: exact_execution_receipt.parallel_regions = UINT64_MAX; break;
+        }
+        assert(vckss_exact_execution_receipt(705) == (corrupt ? 498 : 0));
+        assert(release_calls == (corrupt ? 1 : 0));
+        if (corrupt) assert(scalar_calls == 0);
+    }
+
+    reset_transport();
+    assert(vckss_probe() == 0);
+    assert(saved_execution_api == 3 && scalar_calls == 9);
+    reset_transport();
+    fail_execution_api_scalar = 1;
+    assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
+    assert(saved_execution_api == -1 && release_calls == 0 && clear_calls == 0);
+
+    for (int mode = 1; mode <= 2; ++mode) {
+        reset_transport();
+        char *args[] = {"solveexecution", "705", "17", "17", "3", "2", "diagonal",
+            "1e-11", "100", "jla", "observation", "fixedoffset", "1000", "100",
+            "1e-12", "1e-10", "generic", "explicit", "all", "explicit", "observation",
+            "1", "0", "50000000", "3", "4", "1", "270544960", "1348497536",
+            "explicit", "explicit", "0", "0", "7", "1"};
+        if (mode == 2) {
+            args[4] = "0"; args[5] = "0"; args[6] = "cmg"; args[17] = "auto";
+            args[29] = "auto"; args[30] = "auto"; args[34] = "2";
+        }
+        assert(vckss_solve_generic_execution(35, args, 0) == 0);
+        assert(solve_v6_calls == 1 && solve_v5_calls == 0 && solve_v4_calls == 0);
+        assert(solved_generation == 705 && captured_solve_v6.options.threads == 7);
+        assert(captured_solve_v6.options.execution_mode == (uint32_t)mode);
+        assert(captured_solve_v6.options.v4.v3.request_signature == UINT64_C(0x1020304050607080));
+        assert(captured_solve_v6.options.v4.v3.v2.v1.rng_contract == VCKSS_RNG_COUNTER_V1);
+        assert(captured_solve_v6.interrupt_poll == vckss_stata_interrupt_poll);
+        assert(captured_solve_v6.interrupt_context == NULL && captured_solve_v6.checkpoint_interval == 1);
+        assert(vckss_solve_generic_execution(34, args, 0) == 198);
+        args[33] = "0";
+        assert(vckss_solve_generic_execution(35, args, 0) == 198);
+        args[33] = "7"; args[34] = "3";
+        assert(vckss_solve_generic_execution(35, args, 0) == 198);
+        args[34] = "0";
+        assert(vckss_solve_generic_execution(35, args, 0) == 198);
+        assert(solve_v6_calls == 1);
+    }
+    {
+        reset_transport();
+        char *args[] = {"solveexecutionv8", "705", "17", "17", "0", "0", "auto",
+            "1e-10", "100", "auto", "observation", "joint", "1000", "100",
+            "1e-12", "1e-10", "auto", "auto", "all", "explicit", "observation",
+            "0", "0", "50000000", "3", "4", "1", "270544960", "1348497536",
+            "auto", "auto", "1", "0", "7", "3", "0"};
+        assert(vckss_solve_generic_execution(36, args, 2) == 0);
+        assert(solve_v8_calls == 1 && solve_v6_calls == 0 && solve_v5_calls == 0 && solve_v4_calls == 0);
+        assert(solved_generation == 705 && captured_solve_v8.options.v7.v6.threads == 7);
+        assert(captured_solve_v8.options.v7.v6.execution_mode == VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO);
+        assert(captured_solve_v8.options.resolved_execution_mode == VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO);
+        assert(captured_solve_v8.options.tolerance_supplied == 0);
+        assert(captured_solve_v8.options.v7.v6.v4.v3.request_signature == UINT64_C(0x1020304050607080));
+        assert(captured_solve_v8.interrupt_poll == vckss_stata_interrupt_poll);
+        assert(vckss_solve_generic_execution(35, args, 2) == 198);
+        args[35] = "2";
+        assert(vckss_solve_generic_execution(36, args, 2) == 198);
+        assert(solve_v8_calls == 1);
+    }
+    for (int mode = 1; mode <= 2; ++mode) {
+        for (int corrupt = 0; corrupt <= 14; ++corrupt) {
+            reset_transport();
+            active_generation = 705;
+            if (mode == 2) {
+                execution_receipt.execution_mode = 2;
+                execution_receipt.maximum_active_workers = 0;
+                execution_receipt.cmg_selected_concurrency = 4;
+                execution_receipt.projection_rhs_count = 2;
+                execution_receipt.logical_rhs_count = 54;
+                execution_receipt.queued_rhs_count = 0;
+                execution_receipt.cmg_rhs_count = 55;
+                execution_receipt.control_refinement_rhs_count = 1;
+            }
+            switch (corrupt) {
+                case 1: execution_receipt.struct_size = 159; break;
+                case 2: execution_receipt.schema_version = 2; break;
+                case 3: execution_receipt.generation = 706; break;
+                case 4: execution_receipt.reserved = 1; break;
+                case 5: execution_receipt.planned_workers = 8; break;
+                case 6: execution_receipt.maximum_rhs_capacity = 3; break;
+                case 7: execution_receipt.logical_rhs_count++; break;
+                case 8: execution_receipt.queued_rhs_count++; break;
+                case 9: execution_receipt.cmg_rhs_count++; break;
+                case 10: execution_receipt.maximum_complete_residual = NAN; break;
+                case 11: execution_receipt.command_peak_forecast_bytes = UINT64_MAX; break;
+                case 12: execution_receipt.component_rhs_count = UINT64_MAX; break;
+                case 13: execution_receipt.maximum_active_workers = mode == 1 ? 0 : 1; break;
+                case 14: execution_receipt.execution_mode = 0; break;
+            }
+            assert(vckss_generic_execution_receipt(705) == (corrupt ? 498 : 0));
+            if (corrupt) assert_released_idle(705);
+            else assert(active_generation == 705 && scalar_calls == 23);
+        }
+    }
+    reset_transport();
+    active_generation = 705;
+    fail_scalar = 1;
+    assert(vckss_generic_execution_receipt(705) != 0);
+    assert_released_idle(705);
+
+    reset_transport();
+    active_generation = UINT64_C(701);
+    assert(vckss_full_cmg_model_receipt(active_generation) == 0);
+    assert(active_generation == UINT64_C(701));
+    for (int corrupt = 1; corrupt <= 3; ++corrupt) {
+        reset_transport();
+        active_generation = UINT64_C(701);
+        corrupt_full_cmg_model_receipt = corrupt;
+        assert(vckss_full_cmg_model_receipt(active_generation) == 498);
+        assert_released_idle(UINT64_C(701));
+    }
 
     reset_transport();
     {

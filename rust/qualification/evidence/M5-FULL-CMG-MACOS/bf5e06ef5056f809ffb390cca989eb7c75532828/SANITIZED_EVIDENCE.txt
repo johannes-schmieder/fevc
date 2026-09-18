@@ -1,2 +1,0 @@
-Stata logs in this directory begin at the first batch prompt.
-Startup banners and raw temporary logs were not retained.

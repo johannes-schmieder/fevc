@@ -4,6 +4,9 @@
 
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck};
+use crate::model_operator::{
+    checked_matrix_length, copy_f64_with_interrupt, zeroed_f64_with_interrupt,
+};
 
 #[derive(Clone, Debug)]
 pub(crate) struct DenseInverse {
@@ -42,7 +45,7 @@ pub(crate) fn symmetric_eigen_extremes(
             "symmetric eigenvalue dimensions disagree",
         ));
     }
-    let mut symmetric = matrix.to_vec();
+    let mut symmetric = copy_f64_with_interrupt(matrix, phase, interrupt, phase)?;
     symmetrize_with_interrupt(&mut symmetric, dimension, interrupt, phase)?;
     let spectrum = symmetric_spectrum(&symmetric, dimension, interrupt, phase)?;
     Ok(EigenExtremes {
@@ -118,7 +121,7 @@ pub(crate) fn invert_scaled_zero_sum_quotient(
     drop(spectrum);
     drop(scaled);
 
-    let mut augmented = matrix.to_vec();
+    let mut augmented = copy_f64_with_interrupt(matrix, phase, interrupt, phase)?;
     let width = null_range.len() as f64;
     let projector = width.recip();
     for row in null_range.clone() {
@@ -175,7 +178,7 @@ fn diagonally_scale(
             "dense symmetric matrix has invalid dimensions or values",
         ));
     }
-    let mut scale = vec![0.0; dimension];
+    let mut scale = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
     for index in 0..dimension {
         checkpoint_chunk(interrupt, index, phase)?;
         let diagonal = matrix[index * dimension + index];
@@ -188,7 +191,7 @@ fn diagonally_scale(
         }
         scale[index] = diagonal.sqrt().recip();
     }
-    let mut scaled = vec![0.0; entries];
+    let mut scaled = zeroed_f64_with_interrupt(entries, phase, interrupt, phase)?;
     for row in 0..dimension {
         for column in 0..dimension {
             checkpoint_chunk(interrupt, row * dimension + column, phase)?;
@@ -207,7 +210,7 @@ fn symmetric_spectrum(
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<Spectrum> {
-    let mut work = matrix.to_vec();
+    let mut work = copy_f64_with_interrupt(matrix, phase, interrupt, phase)?;
     let mut norm_square = 0.0;
     for (index, value) in work.iter().enumerate() {
         checkpoint_chunk(interrupt, index, phase)?;
@@ -287,10 +290,14 @@ fn symmetric_spectrum(
         )
     })? * matrix_norm.max(1.0);
     let error_bound = terminal_off_diagonal + roundoff_bound;
-    let mut eigenvalues = (0..dimension)
-        .map(|index| work[index * dimension + index])
-        .collect::<Vec<_>>();
-    eigenvalues.sort_by(f64::total_cmp);
+    let mut eigenvalues = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
+    for (index, value) in eigenvalues.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, index, phase)?;
+        *value = work[index * dimension + index];
+    }
+    // No stable-order contract exists between equal scalar eigenvalues. The
+    // unstable sort avoids a hidden temporary allocation in this small kernel.
+    eigenvalues.sort_unstable_by(f64::total_cmp);
     if eigenvalues.iter().any(|value| !value.is_finite()) {
         return Err(BackendError::new(
             ErrorCode::SymmetricEigensolverFailed,
@@ -315,8 +322,16 @@ fn invert_from_scaled(
     phase: &'static str,
 ) -> Result<DenseInverse> {
     cholesky_in_place(&mut scaled, dimension, interrupt, phase)?;
-    let mut inverse = vec![0.0; dimension * dimension];
-    let mut basis = vec![0.0; dimension];
+    let mut inverse = zeroed_f64_with_interrupt(
+        checked_matrix_length(dimension, dimension, phase)?,
+        phase,
+        interrupt,
+        phase,
+    )?;
+    let mut basis = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
+    // Every inverse column uses the same triangular scratch after its previous
+    // solve has completed. Keep one fallibly allocated buffer for the loop.
+    let mut intermediate = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
     for column in 0..dimension {
         checkpoint_chunk(interrupt, column, phase)?;
         basis.fill(0.0);
@@ -325,12 +340,15 @@ fn invert_from_scaled(
             &scaled,
             dimension,
             &basis,
+            &mut intermediate,
             &mut inverse[column..],
             dimension,
             interrupt,
             phase,
         )?;
     }
+    drop(intermediate);
+    drop(basis);
     let scaled_relres =
         scaled_inverse_residual(original, &inverse, scale, dimension, interrupt, phase)?;
     for row in 0..dimension {
@@ -373,7 +391,7 @@ pub(crate) fn cholesky_factor(
             "Cholesky input dimensions disagree",
         ));
     }
-    let mut factor = matrix.to_vec();
+    let mut factor = copy_f64_with_interrupt(matrix, phase, interrupt, phase)?;
     cholesky_in_place(&mut factor, dimension, interrupt, phase)?;
     Ok(factor)
 }
@@ -421,12 +439,16 @@ fn solve_cholesky_into(
     factor: &[f64],
     dimension: usize,
     rhs: &[f64],
+    intermediate: &mut [f64],
     output: &mut [f64],
     stride: usize,
     interrupt: &mut dyn InterruptCheck,
     phase: &'static str,
 ) -> Result<()> {
-    if rhs.len() != dimension
+    if dimension == 0
+        || stride == 0
+        || rhs.len() != dimension
+        || intermediate.len() != dimension
         || factor.len() != dimension.saturating_mul(dimension)
         || output.len() < (dimension - 1).saturating_mul(stride) + 1
     {
@@ -435,7 +457,6 @@ fn solve_cholesky_into(
             "dense factor solve dimensions disagree",
         ));
     }
-    let mut intermediate = vec![0.0; dimension];
     let mut work = 0_usize;
     for row in 0..dimension {
         let mut value = rhs[row];
@@ -587,7 +608,7 @@ fn quotient_scaled_inverse_residual(
         ));
     }
 
-    let mut null = vec![0.0; dimension];
+    let mut null = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
     let mut null_norm_square = 0.0;
     for index in null_range {
         checkpoint_chunk(interrupt, index, phase)?;
@@ -608,8 +629,8 @@ fn quotient_scaled_inverse_residual(
         *value *= null_norm_inverse;
     }
 
-    let mut rhs = vec![0.0; dimension];
-    let mut solution = vec![0.0; dimension];
+    let mut rhs = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
+    let mut solution = zeroed_f64_with_interrupt(dimension, phase, interrupt, phase)?;
     let mut maximum = 0.0_f64;
     let mut work = 0_usize;
     for column in 0..dimension {

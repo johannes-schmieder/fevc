@@ -1,5 +1,31 @@
 # Pending changes
 
+## Symmetric stayer population options — 2026-09-12
+
+- Default to `stayers(both)` for observation and match deletion. Observation
+  deletion keeps its existing full retained population and physical-row
+  corrections; it does not use the match/stayer mixed correction.
+- Make explicit `stayers(movers)` exclude original one-firm workers in both
+  modes. This intentionally changes explicit observation/movers calls from
+  earlier prereleases; omission or `stayers(both)` retains the prior population.
+- Preserve native ABI and raw receipts; reconcile public population, option
+  presence and pre-graph exclusion counts independently. Correct display and
+  `estat sample` so observation/both is not described as mixed deletion.
+- Qualify supported point/projection surfaces without changing solver kernels,
+  tolerances, inference algorithms, fusion, installed binaries or paper figures.
+
+## Observation/match solver symmetry — 2026-09-12
+
+- Share degree-four full CMG, thread-aware batching and the ordered unfused
+  queue beneath eligible observation and match JLA point estimation. Preserve
+  the separate statistical probes, deletion units and correction formulas.
+- Add generic-route pool, output and construction-peak accounting; preserve
+  optional budgets, phase-specific residual gates and cancellation/reuse.
+- Test both modes on repeated-match and weighted mixed-degree fixtures across
+  eight thread counts. Keep controlled/inference capabilities and fusion
+  unchanged. See the [implementation report](docs/DELETION_SYMMETRY_2026-09-12.md)
+  for source-bound qualification and bounded comparison evidence.
+
 ## Thread-aware full-CMG batching and queue — 2026-09-12
 
 - Integrate the tested k=2 automatic batching policy for full CMG, scaling
@@ -12,7 +38,7 @@
   public options, statistical targets and default tolerances are unchanged.
 - Qualify exact runtime source on Mac arm64/Rosetta and SCC Linux, plus the
   integrated package and clean installs. Record evidence and limitations in
-  the [integration report](docs/BATCH_QUEUE_2026-09-12.md).
+  the [integration report](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/BATCH_QUEUE_2026-09-12.md).
 
 ## Exact degree-four full CMG — 2026-09-11
 
@@ -21,7 +47,7 @@
 - Charge a checked conservative edge bound before construction and preserve
   optional-memory, residual, RNG, cancellation and lifecycle contracts.
 - Add independent weighted Schur and edge-forecast regressions. Selected
-  1.6m/6.4m SCC checks pass; see the [development report](docs/DEGREE_FOUR_CMG_2026-09-11.md).
+  1.6m/6.4m SCC checks pass; see the [development report](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/DEGREE_FOUR_CMG_2026-09-11.md).
 - Leave scheduling, smaller aligned batches and fused RHS experimental rather
   than assuming their earlier gains compose with the reduced graph.
 
@@ -37,7 +63,7 @@
 - Preserve real control-preparation UserBreak as return code 1, clear estimates
   and run ordinary caller-state cleanup; do not report a runtime mismatch.
   Preserve the captured ordinary exact-Mata return code as well as JLA's.
-- The [follow-up validation](docs/CONTROL_LANES_256_2026-09-10.md) records
+- The [follow-up validation](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/CONTROL_LANES_256_2026-09-10.md) records
   passing audits, arithmetic/invariance/lifecycle/memory gates, integrated
   Stata checks, Rosetta coverage and measured 64/256-lane comparisons.
 
@@ -53,7 +79,7 @@
   `vckss-api23-certified-control-basis`; command and native layouts are unchanged.
 - Validate the original 50,000-row AKM example through Mata, Rust and automatic
   routing, with local arm64/Rosetta qualification. The
-  [checkpoint report](docs/CONTROL_BASIS_REPAIR_2026-09-10.md) records unrelated
+  [checkpoint report](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/CONTROL_BASIS_REPAIR_2026-09-10.md) records unrelated
   aggregate-audit failures and remaining large-control Mata performance cost.
 
 

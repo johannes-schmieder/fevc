@@ -24,6 +24,12 @@ test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/bundle.sha256")" = \
   "${VCKSS_BUNDLE_SHA256}"
 test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/bundle.kind")" = \
   VCKSS-SCC-LINUX-BUNDLE-V1
+classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION
+if test -f "${VCKSS_RUN_DIR}/source/SOURCE_SNAPSHOT_KIND.txt"; then
+  test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/source/SOURCE_SNAPSHOT_KIND.txt")" = \
+    DIRTY_WORKTREE_SNAPSHOT_V1
+  classification=DIRTY_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION
+fi
 
 module purge
 module load stata-mp/19
@@ -57,7 +63,7 @@ started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   --stata "${stata_binary}" \
   --artifacts-dir "${artifacts}"
 finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-grep -Fqx 'classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION' \
+grep -Fqx "classification=${classification}" \
   "${receipt}"
 grep -Fqx "source_commit=${VCKSS_SOURCE_COMMIT}" "${receipt}"
 grep -Fqx "source_bundle_sha256=${VCKSS_BUNDLE_SHA256}" "${receipt}"

@@ -103,7 +103,7 @@ program define _fevc_component_model_route, rclass
         exit 498
     }
     local observation_tuple = lower(strtrim("`deletion'"))=="observation" & ///
-        inlist(lower(strtrim("`stayers'")),"","movers") &       ///
+        inlist(lower(strtrim("`stayers'")),"","movers","both") & ///
         inlist(lower(strtrim("`nuisance'")),"","joint")
     local match_tuple = lower(strtrim("`deletion'"))=="match" &  ///
         lower(strtrim("`stayers'"))=="movers" &                  ///

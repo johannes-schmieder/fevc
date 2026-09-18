@@ -201,7 +201,66 @@ pub fn prepare_with_interrupt<'a, F>(
     exact_leverage: &'a [f64],
     addresses: &[(u64, u64)],
     options: ResidualMomentOptions,
+    project: F,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PreparedResidualMoments<'a>>
+where
+    F: FnMut(&[f64], usize, &mut [f64], &mut [f64], &mut dyn InterruptCheck) -> Result<()>,
+{
+    prepare_impl(
+        basis,
+        terms,
+        exact_leverage,
+        addresses,
+        options,
+        project,
+        None,
+        interrupt,
+    )
+}
+
+/// Already-admitted statistical work on the attachment's owned solver pool.
+/// The caller includes `parallel_work_bytes` in its callback memory envelope.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn prepare_with_executor_interrupt<'a, F>(
+    basis: &'a [f64],
+    terms: usize,
+    exact_leverage: &'a [f64],
+    addresses: &[(u64, u64)],
+    options: ResidualMomentOptions,
+    project: F,
+    executor: &crate::model_solver::PreparedModelSolver<'_>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PreparedResidualMoments<'a>>
+where
+    F: FnMut(&[f64], usize, &mut [f64], &mut [f64], &mut dyn InterruptCheck) -> Result<()>,
+{
+    let active = executor.owned_batch_capacity()?.map(|_| executor);
+    prepare_impl(
+        basis,
+        terms,
+        exact_leverage,
+        addresses,
+        options,
+        project,
+        active,
+        interrupt,
+    )
+}
+
+pub(crate) fn parallel_work_bytes(width: usize) -> Result<usize> {
+    checked_add(checked_mul(width, size_of::<[Sum; MAX_TERMS]>())?, 1024)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_impl<'a, F>(
+    basis: &'a [f64],
+    terms: usize,
+    exact_leverage: &'a [f64],
+    addresses: &[(u64, u64)],
+    options: ResidualMomentOptions,
     mut project: F,
+    executor: Option<&crate::model_solver::PreparedModelSolver<'_>>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PreparedResidualMoments<'a>>
 where
@@ -237,6 +296,22 @@ where
     let mut gaussian = zeroed(checked_mul(rows, width)?, interrupt)?;
     let mut projected = zeroed(gaussian.len(), interrupt)?;
     let mut residuals = zeroed(width, interrupt)?;
+    let parallel_width = executor
+        .map(|executor| executor.owned_batch_capacity())
+        .transpose()?
+        .flatten()
+        .unwrap_or(1)
+        .min(width)
+        .max(1);
+    let mut parallel_values = Vec::new();
+    if executor.is_some() {
+        crate::model_operator::reserve_exact(
+            &mut parallel_values,
+            parallel_width,
+            "residual ordered moments",
+        )?;
+        parallel_values.resize(parallel_width, [Sum::default(); MAX_TERMS]);
+    }
     let mut moments = CenteredMoments::new(terms);
     let full_residual_gate = (10.0 * options.effective_projection_tolerance).max(1.0e-11);
     let mut maximum_full_residual: f64 = 0.0;
@@ -244,16 +319,42 @@ where
     for first in (0..options.probes).step_by(width) {
         interrupt.checkpoint("observation_residual_moment_probes")?;
         let columns = width.min(options.probes - first);
-        for column in 0..columns {
+        let fill = |column: usize,
+                    (gaussian, projected): (&mut [f64], &mut [f64]),
+                    interrupt: &mut dyn InterruptCheck| {
             for (row, &(entity, subdraw)) in addresses.iter().enumerate() {
                 checkpoint_chunk(interrupt, row, PHASE)?;
-                gaussian[column * rows + row] =
-                    normal(rng, (first + column) as u64, entity, subdraw);
+                gaussian[row] = normal(rng, (first + column) as u64, entity, subdraw);
                 // Detect partial callbacks even when the previous batch was valid.
-                projected[column * rows + row] = f64::NAN;
+                projected[row] = f64::NAN;
             }
-            residuals[column] = f64::NAN;
+            Ok(())
+        };
+        if let Some(executor) = executor {
+            for (batch, (gaussian, projected)) in gaussian[..rows * columns]
+                .chunks_mut(rows * parallel_width)
+                .zip(projected[..rows * columns].chunks_mut(rows * parallel_width))
+                .enumerate()
+            {
+                executor.statistical_work(
+                    gaussian.chunks_mut(rows).zip(projected.chunks_mut(rows)),
+                    "residual_moment_gaussian",
+                    |column, input, interrupt| {
+                        fill(batch * parallel_width + column, input, interrupt)
+                    },
+                    interrupt,
+                )?;
+            }
+        } else {
+            for (column, input) in gaussian[..rows * columns]
+                .chunks_mut(rows)
+                .zip(projected[..rows * columns].chunks_mut(rows))
+                .enumerate()
+            {
+                fill(column, input, interrupt)?;
+            }
         }
+        residuals[..columns].fill(f64::NAN);
         project(
             &gaussian[..rows * columns],
             columns,
@@ -261,34 +362,59 @@ where
             &mut residuals[..columns],
             interrupt,
         )?;
-        for column in 0..columns {
-            let residual = residuals[column];
-            if !residual.is_finite() || residual < 0.0 || residual > full_residual_gate {
-                return Err(BackendError::new(
-                    ErrorCode::FullResidualFailed,
-                    PHASE,
-                    "projected probe lacks an acceptable complete-system residual",
-                ));
-            }
-            maximum_full_residual = maximum_full_residual.max(residual);
-            let mut value = [Sum::default(); MAX_TERMS];
-            for row in 0..rows {
-                checkpoint_chunk(interrupt, row, PHASE)?;
-                let index = column * rows + row;
-                let square = match options.gram_method {
-                    GramMethod::LegacyProjectedCovariance => projected[index].powi(2),
-                    GramMethod::DirectResidualCovariance => {
-                        (gaussian[index] - projected[index]).powi(2)
+        let reduce =
+            |column: usize, value: &mut [Sum; MAX_TERMS], interrupt: &mut dyn InterruptCheck| {
+                let residual = residuals[column];
+                if !residual.is_finite() || residual < 0.0 || residual > full_residual_gate {
+                    return Err(BackendError::new(
+                        ErrorCode::FullResidualFailed,
+                        PHASE,
+                        "projected probe lacks an acceptable complete-system residual",
+                    ));
+                }
+                value.fill(Sum::default());
+                for row in 0..rows {
+                    checkpoint_chunk(interrupt, row, PHASE)?;
+                    let index = column * rows + row;
+                    let square = match options.gram_method {
+                        GramMethod::LegacyProjectedCovariance => projected[index].powi(2),
+                        GramMethod::DirectResidualCovariance => {
+                            (gaussian[index] - projected[index]).powi(2)
+                        }
+                    };
+                    if !square.is_finite() {
+                        return Err(numerical("nonfinite projected probe"));
                     }
-                };
-                if !square.is_finite() {
-                    return Err(numerical("nonfinite projected probe"));
+                    for term in 0..terms {
+                        value[term].add(basis[row * terms + term] * square);
+                    }
                 }
-                for term in 0..terms {
-                    value[term].add(basis[row * terms + term] * square);
+                Ok(())
+            };
+        if let Some(executor) = executor {
+            for offset in (0..columns).step_by(parallel_width) {
+                let count = parallel_width.min(columns - offset);
+                executor.statistical_work(
+                    parallel_values[..count].iter_mut(),
+                    "residual_moment_reduce",
+                    |column, value, interrupt| reduce(offset + column, value, interrupt),
+                    interrupt,
+                )?;
+                // Centered covariance is an ordered recurrence, not a parallel
+                // reduction. Within each probe row order is also unchanged.
+                for (column, value) in parallel_values[..count].iter().enumerate() {
+                    interrupt.checkpoint(PHASE)?;
+                    maximum_full_residual = maximum_full_residual.max(residuals[offset + column]);
+                    moments.push(&value[..terms])?;
                 }
             }
-            moments.push(&value[..terms])?;
+        } else {
+            for column in 0..columns {
+                let mut value = [Sum::default(); MAX_TERMS];
+                reduce(column, &mut value, interrupt)?;
+                maximum_full_residual = maximum_full_residual.max(residuals[column]);
+                moments.push(&value[..terms])?;
+            }
         }
     }
     let gram = direct

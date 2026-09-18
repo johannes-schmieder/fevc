@@ -15,6 +15,7 @@
 use crate::dense::symmetric_eigen_extremes;
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::model_operator::zeroed_f64_with_interrupt;
 use crate::model_solver::ModelCoefficients;
 use crate::problem::CompressedProblem;
 use crate::rng::{CounterRng, ProbeDomain};
@@ -567,8 +568,18 @@ pub fn primitive_target_rhs(
         return Err(invalid("primitive target RHS dimensions are invalid"));
     }
     let (worker_mean, firm_mean) = coefficient_means(problem, coefficients, interrupt)?;
-    let mut worker = vec![0.0; problem.workers()];
-    let mut firm = vec![0.0; problem.firms()];
+    let mut worker = zeroed_f64_with_interrupt(
+        problem.workers(),
+        "primitive worker RHS",
+        interrupt,
+        "component_inference_target_rhs",
+    )?;
+    let mut firm = zeroed_f64_with_interrupt(
+        problem.firms(),
+        "primitive firm RHS",
+        interrupt,
+        "component_inference_target_rhs",
+    )?;
     for cell in 0..problem.cells() {
         checkpoint_chunk(interrupt, cell, "component_inference_target_rhs")?;
         let worker_index = problem.cell_worker[cell] as usize;
@@ -589,7 +600,16 @@ pub fn primitive_target_rhs(
     if worker.iter().chain(&firm).any(|value| !value.is_finite()) {
         return Err(nonfinite("primitive target RHS is nonfinite"));
     }
-    Ok((worker, firm, vec![0.0; problem.controls.len()]))
+    Ok((
+        worker,
+        firm,
+        zeroed_f64_with_interrupt(
+            problem.controls.len(),
+            "primitive control RHS",
+            interrupt,
+            "component_inference_target_rhs",
+        )?,
+    ))
 }
 
 /// Apply one of the four reported targets. The fourth action is assembled
@@ -606,21 +626,21 @@ pub fn reported_target_rhs(
     if target != REPORTED_TARGETS - 1 {
         return Err(invalid("reported component target index is invalid"));
     }
-    let worker = primitive_target_rhs(problem, coefficients, 0, interrupt)?;
+    let mut worker = primitive_target_rhs(problem, coefficients, 0, interrupt)?;
     let firm = primitive_target_rhs(problem, coefficients, 1, interrupt)?;
     let covariance = primitive_target_rhs(problem, coefficients, 2, interrupt)?;
-    let combine = |left: &[f64], middle: &[f64], right: &[f64]| {
-        left.iter()
-            .zip(middle)
-            .zip(right)
-            .map(|((&left, &middle), &right)| left + middle + 2.0 * right)
-            .collect::<Vec<_>>()
+    let mut combine = |left: &mut [f64], middle: &[f64], right: &[f64]| -> Result<()> {
+        for (index, ((left, &middle), &right)) in left.iter_mut().zip(middle).zip(right).enumerate()
+        {
+            checkpoint_chunk(interrupt, index, "component_inference_target_rhs")?;
+            *left = *left + middle + 2.0 * right;
+        }
+        Ok(())
     };
-    Ok((
-        combine(&worker.0, &firm.0, &covariance.0),
-        combine(&worker.1, &firm.1, &covariance.1),
-        combine(&worker.2, &firm.2, &covariance.2),
-    ))
+    combine(&mut worker.0, &firm.0, &covariance.0)?;
+    combine(&mut worker.1, &firm.1, &covariance.1)?;
+    combine(&mut worker.2, &firm.2, &covariance.2)?;
+    Ok(worker)
 }
 
 /// Evaluate all three primitive quadratic targets for a coefficient vector.

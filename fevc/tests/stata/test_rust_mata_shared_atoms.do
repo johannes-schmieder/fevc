@@ -51,7 +51,7 @@ local caller_rng_state `"`c(rngstate)'"'
 
 fevc_rust clear
 fevc_rust probe
-assert r(core_ready_flags) == 1023
+assert r(core_ready_flags) == 32767
 assert r(support_flags) == 38
 
 fevc_rust prepare worker firm deletion outcome frequency          ///

@@ -28,6 +28,13 @@ use crate::model_operator::{
 use crate::problem::{CompressedProblem, GroupIndex};
 use crate::types::Dimensions;
 
+/// Development-only diagonal execution; not selected by an estimator or ABI.
+#[doc(hidden)]
+#[path = "model_diagonal_queue.rs"]
+pub mod diagonal_queue;
+#[path = "model_full_cmg.rs"]
+mod direct;
+
 const RANK_PROJECTION_PCG_TOLERANCE: f64 = 1.0e-13;
 const RANK_PROJECTION_MAXIMUM_ITERATIONS: u32 = 100_000;
 const RANK_PROJECTION_REPLACEMENT_INTERVAL: u32 = 100;
@@ -210,6 +217,9 @@ struct PreparedControlSchur {
     /// is retained only by the generic-JLA preparation path and is moved into
     /// its geometry phase without cloning.
     residualized_controls: Option<Vec<f64>>,
+    /// Only the direct adapter retains the strict FE inverse actions. Legacy
+    /// diagonal/block-PCG preparation retains exactly its previous storage.
+    direct_geometry: Option<direct::DirectControlGeometry>,
 }
 
 #[derive(Debug)]
@@ -446,6 +456,8 @@ pub struct PreparedModelSolver<'a> {
     options: ModelSolverOptions,
     control_schur: PreparedControlSchur,
     receipt: PreparedModelSolverReceipt,
+    direct: Option<direct::SharedDirectSolver<'a>>,
+    diagonal_queue: Option<Arc<diagonal_queue::DiagonalQueueRuntime>>,
 }
 
 /// Specialized pre-RNG solver preparation for generic JLA. The full model
@@ -598,6 +610,8 @@ impl<'a> PreparedModelSolver<'a> {
         };
         let cmg = Some(preconditioner.receipt().clone());
         let full = Self {
+            direct: None,
+            diagonal_queue: None,
             operator,
             backend: PreparedModelBackend::Cmg(Box::new(preconditioner)),
             options: options.solver,
@@ -653,6 +667,121 @@ impl<'a> PreparedModelSolver<'a> {
             fe,
             fe_hierarchy_reused: false,
         })
+    }
+
+    pub(crate) fn prepare_generic_jla_queued_diagonal(
+        data: CanonicalModelData<'a>,
+        options: ModelRoutingOptions,
+        queue: Arc<diagonal_queue::DiagonalQueueRuntime>,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<PreparedGenericJlaSolvers<'a>> {
+        let options = options.validate()?;
+        if !matches!(
+            options.route,
+            ModelSolverRoute::Diagonal | ModelSolverRoute::Auto
+        ) {
+            return Err(BackendError::invalid(
+                "model_diagonal_queue",
+                "diagonal or structurally resolved automatic route required",
+            ));
+        }
+        let mut fe = Self::prepare_with_interrupt(
+            CanonicalModelData {
+                controls: &[],
+                ..data
+            },
+            options.solver,
+            interrupt,
+        )?;
+        fe.diagonal_queue = Some(Arc::clone(&queue));
+        let operator = ModelOperator::new_with_interrupt(data, interrupt)?;
+        // The runtime and complete rank lifetime have already been admitted.
+        // Certification keeps its strict options and uses the same FE solver.
+        let control_schur =
+            certify_control_rank(&operator, options.solver, true, Some(&fe), interrupt)?;
+        let diagonal = ModelDiagonalPreconditioner::new_with_interrupt(
+            operator.reduced_diagonal(),
+            interrupt,
+        )?;
+        let full = Self {
+            receipt: PreparedModelSolverReceipt {
+                requested: options.route,
+                selected: ModelSolverRoute::Diagonal,
+                dimension: operator.parameter_count(),
+                cmg: None,
+                fallback: None,
+            },
+            operator,
+            backend: PreparedModelBackend::Diagonal(diagonal),
+            options: options.solver,
+            control_schur,
+            direct: None,
+            diagonal_queue: Some(queue),
+        };
+        Ok(PreparedGenericJlaSolvers {
+            full,
+            fe,
+            fe_hierarchy_reused: false,
+        })
+    }
+
+    pub(crate) fn owned_batch_capacity(&self) -> Result<Option<usize>> {
+        if let Some(queue) = &self.diagonal_queue {
+            return Ok(Some(queue.plan().maximum_rhs));
+        }
+        Ok(self
+            .full_cmg_receipt()?
+            .map(|receipt| receipt.setup.maximum_batch_rhs))
+    }
+
+    pub(crate) fn owned_batch_workers(&self) -> Result<usize> {
+        if let Some(queue) = &self.diagonal_queue {
+            return Ok(queue.plan().workers);
+        }
+        Ok(self
+            .full_cmg_receipt()?
+            .map_or(1, |receipt| receipt.setup.workspace_count))
+    }
+
+    /// Independent statistical work borrows the existing solver's pool. No
+    /// nested solve is permitted in `operation`, and payloads stay caller-owned.
+    pub(crate) fn statistical_work<I, Iter, F>(
+        &self,
+        input: Iter,
+        phase: &'static str,
+        operation: F,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()>
+    where
+        I: Send,
+        Iter: ExactSizeIterator<Item = I>,
+        F: Fn(usize, I, &mut dyn InterruptCheck) -> Result<()> + Sync,
+    {
+        let count = input.len();
+        if let Some(capacity) = self.owned_batch_capacity()? {
+            if count > capacity {
+                return Err(BackendError::invariant(
+                    phase,
+                    "statistical queue exceeds solver admission",
+                ));
+            }
+        }
+        if let Some(direct) = &self.direct {
+            return direct.statistical_work(input, phase, operation, interrupt);
+        }
+        if let Some(queue) = &self.diagonal_queue {
+            return queue.statistical_work(input, phase, operation, interrupt);
+        }
+        crate::ordered_work::run(None, count, input, phase, operation, interrupt)
+    }
+
+    pub(crate) fn diagonal_queue_receipt(
+        &self,
+    ) -> Result<Option<diagonal_queue::DiagonalQueueWorkReceipt>> {
+        self.diagonal_queue
+            .as_ref()
+            .map(|queue| queue.work_receipt())
+            .transpose()
     }
 
     pub fn prepare_routed(
@@ -763,6 +892,8 @@ impl<'a> PreparedModelSolver<'a> {
             fallback,
         };
         Ok(Self {
+            direct: None,
+            diagonal_queue: None,
             operator,
             backend,
             options: options.solver,
@@ -849,6 +980,9 @@ impl<'a> PreparedModelSolver<'a> {
         rhs: ModelRhs<'_>,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<ModelSolve> {
+        if let Some(direct) = &self.direct {
+            return direct.solve(self, rhs, interrupt);
+        }
         let reduced_rhs = self.operator.reduce_rhs_with_interrupt(rhs, interrupt)?;
         let solved = model_batched_pcg_with_interrupt(
             &self.operator,
@@ -902,6 +1036,17 @@ impl<'a> PreparedModelSolver<'a> {
         batch_width: usize,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<ModelBatchSolve> {
+        if let Some(direct) = &self.direct {
+            return direct.solve_batch(
+                self,
+                worker_rhs,
+                firm_rhs,
+                control_rhs,
+                columns,
+                batch_width,
+                interrupt,
+            );
+        }
         self.solve_batch_with_options_and_interrupt(
             worker_rhs,
             firm_rhs,
@@ -915,6 +1060,78 @@ impl<'a> PreparedModelSolver<'a> {
 
     #[allow(clippy::too_many_arguments)]
     fn solve_batch_with_options_and_interrupt(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        control_rhs: &[f64],
+        columns: usize,
+        batch_width: usize,
+        solve_options: ModelSolverOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<ModelBatchSolve> {
+        if let Some(direct) = &self.direct {
+            return direct.solve_batch_with_options(
+                self,
+                worker_rhs,
+                firm_rhs,
+                control_rhs,
+                columns,
+                batch_width,
+                solve_options,
+                interrupt,
+            );
+        }
+        if let Some(queue) = &self.diagonal_queue {
+            validate_batch_rhs(
+                &self.operator,
+                worker_rhs,
+                firm_rhs,
+                control_rhs,
+                columns,
+                batch_width,
+                interrupt,
+            )?;
+            let capacity = batch_width.min(queue.plan().maximum_rhs);
+            let mut solution = Vec::new();
+            reserve_exact(&mut solution, columns, "queued model batch solutions")?;
+            for first in (0..columns).step_by(capacity) {
+                let width = capacity.min(columns - first);
+                let range = |rows: usize| first * rows..(first + width) * rows;
+                let (mut batch, _) = queue
+                    .solve_batch_with_interrupt(
+                        self,
+                        &worker_rhs[range(self.operator.workers())],
+                        &firm_rhs[range(self.operator.firms())],
+                        &control_rhs[range(self.operator.controls())],
+                        width,
+                        solve_options,
+                        interrupt,
+                    )
+                    .map_err(|error| {
+                        BackendError::new(
+                            error.code,
+                            "model_solver",
+                            format!(
+                                "physical batch beginning at zero-based column {first}: {error}"
+                            ),
+                        )
+                    })?;
+                solution.append(&mut batch.solution);
+            }
+            return Ok(ModelBatchSolve { columns, solution });
+        }
+        self.solve_batch_serial_with_options_and_interrupt(
+            worker_rhs,
+            firm_rhs,
+            control_rhs,
+            columns,
+            batch_width,
+            solve_options,
+            interrupt,
+        )
+    }
+
+    fn solve_batch_serial_with_options_and_interrupt(
         &self,
         worker_rhs: &[f64],
         firm_rhs: &[f64],
@@ -1103,6 +1320,7 @@ fn certify_control_rank(
             },
             information: Vec::new(),
             residualized_controls: retain_residualized_controls.then(Vec::new),
+            direct_geometry: None,
         });
     }
 
@@ -1428,6 +1646,16 @@ fn certify_control_rank(
             "FE-residualized generalized control information is singular or numerically unresolved",
         ));
     }
+    let direct_geometry = if prepared_fe_solver.is_some_and(|solver| solver.direct.is_some()) {
+        Some(direct::DirectControlGeometry::from_projections(
+            projected,
+            &information,
+            controls,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
     Ok(PreparedControlSchur {
         receipt: ControlRankReceipt {
             controls,
@@ -1445,6 +1673,7 @@ fn certify_control_rank(
         },
         information,
         residualized_controls,
+        direct_geometry,
     })
 }
 
@@ -1883,7 +2112,7 @@ fn rank_resource(message: &str) -> BackendError {
     BackendError::new(ErrorCode::ResourceLimit, "model_rank", message)
 }
 
-fn is_model_cmg_setup_fallback_error(error: &BackendError) -> bool {
+pub(crate) fn is_model_cmg_setup_fallback_error(error: &BackendError) -> bool {
     matches!(
         error.code,
         ErrorCode::CmgSetupFailed | ErrorCode::ResourceLimit | ErrorCode::AllocationFailed

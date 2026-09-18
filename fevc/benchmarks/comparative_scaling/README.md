@@ -189,7 +189,7 @@ or unrelated workflow-only corrections revalidate and reuse retained evidence
 under the repository compatibility-review policy; they do not automatically
 trigger another 300-task array.
 
-The immutable measurement and scientific policy is in [PROTOCOL.md](PROTOCOL.md).
+The immutable measurement and scientific policy is in [PROTOCOL.md](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/benchmarks/comparative_scaling/PROTOCOL.md).
 The harness is deliberately separate from historical evidence:
 
 - `build_run.py` creates a clean-commit source archive, source/SPI manifests,

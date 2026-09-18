@@ -24,6 +24,24 @@ program define fevc_rust, rclass
         exit 0
     }
     local subcommand = lower(strtrim("`subcommand'"))
+    if "`subcommand'" == "probe" {
+        // Unrelated fault modes must advertise the new exact transports so
+        // they still reach the specific capability under test.
+        return scalar exact_api = 1
+        return scalar exact_resolved_api = 2
+        return scalar exact_legacy_api = 1
+        if inlist("$VCKSS_ROUTING_PROXY_MODE","stale_exact","stale_auto_exact") {
+            return scalar abi_compiled = 1
+            return scalar abi_runtime = 1
+            return scalar core_ready_flags = 32767
+            return scalar support_flags = 38
+            return scalar deterministic_parallelism = 1
+            return scalar execution_api = 3
+            if "$VCKSS_ROUTING_PROXY_MODE"=="stale_exact" return scalar exact_legacy_api = 0
+            if "$VCKSS_ROUTING_PROXY_MODE"=="stale_auto_exact" return scalar exact_resolved_api = 0
+            exit 0
+        }
+    }
     if "`subcommand'" == "prepare" {
         global VCKSS_ROUTING_PREPARE_CALLED 1
     }
@@ -40,9 +58,33 @@ program define fevc_rust, rclass
         "cap_corrupt") & "`subcommand'" == "probe" {
         return scalar abi_compiled = 1
         return scalar abi_runtime = 1
-        return scalar core_ready_flags = 511
+        // Reach the request-capability fault, not stale-runtime rejection.
+        // The dedicated stale_runtime proxy below deliberately keeps 255.
+        return scalar core_ready_flags = 8191
         return scalar support_flags = 38
         return scalar deterministic_parallelism = 1
+        return scalar execution_api = 1
+        exit 0
+    }
+    if "$VCKSS_ROUTING_PROXY_MODE" == "stale_transport" & "`subcommand'" == "probe" {
+        return scalar abi_compiled = 1
+        return scalar abi_runtime = 1
+        return scalar core_ready_flags = 8191
+        return scalar support_flags = 38
+        return scalar deterministic_parallelism = 1
+        return scalar execution_api = 0
+        exit 0
+    }
+    if inlist("$VCKSS_ROUTING_PROXY_MODE","stale_resolved_bit", ///
+        "stale_resolved_api") & "`subcommand'" == "probe" {
+        return scalar abi_compiled = 1
+        return scalar abi_runtime = 1
+        return scalar core_ready_flags = cond(                    ///
+            "$VCKSS_ROUTING_PROXY_MODE"=="stale_resolved_bit",16383,32767)
+        return scalar support_flags = 38
+        return scalar deterministic_parallelism = 1
+        return scalar execution_api = cond(                       ///
+            "$VCKSS_ROUTING_PROXY_MODE"=="stale_resolved_api",2,3)
         exit 0
     }
     if "$VCKSS_ROUTING_PROXY_MODE" == "stale_runtime" &       ///
@@ -444,6 +486,48 @@ global VCKSS_ROUTING_NATIVE_CALLED 0
 
 // Exact fails closed when the typed request query is missing or when any
 // echoed tuple/signature field is corrupted.  Neither path reaches prepare.
+if strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix" {
+    foreach alg in exact auto {
+        global VCKSS_ROUTING_PROXY_MODE stale_exact
+        if "`alg'"=="auto" global VCKSS_ROUTING_PROXY_MODE stale_auto_exact
+        global VCKSS_ROUTING_PREPARE_CALLED 0
+        capture quietly fevc y, worker(worker) firm(firm) deletion(observation) ///
+            algorithm(`alg') backend(rust) stayers(movers) nodisplay
+        assert _rc==498
+        assert "`e(withholding_status)'"=="RUST_BACKEND_UNAVAILABLE"
+        assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+        quietly fevc y, worker(worker) firm(firm) deletion(observation) ///
+            algorithm(`alg') backend(auto) stayers(movers) nodisplay
+        assert "`e(backend_selected)'"=="mata"
+        assert "`e(backend_fallback_phase)'"=="preflight"
+        assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+    }
+    global VCKSS_ROUTING_PROXY_MODE stale_transport
+    global VCKSS_ROUTING_PREPARE_CALLED 0
+    capture quietly fevc y, worker(worker) firm(firm) deletion(observation) ///
+        algorithm(jla) engine(generic) preconditioner(diagonal) batch(2) ///
+        probes(4) backend(rust) rng(counter_v1) stayers(movers) nodisplay
+    assert _rc==498
+    assert "`e(withholding_status)'"=="RUST_BACKEND_UNQUALIFIED"
+    assert e(rust_core_ready_flags)==8191
+    assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+
+    // Automatic executor resolution requires both its additive readiness bit
+    // and transport API V3.  Either stale runtime is rejected before prepare.
+    foreach stale_mode in stale_resolved_bit stale_resolved_api {
+        global VCKSS_ROUTING_PROXY_MODE `stale_mode'
+        global VCKSS_ROUTING_PREPARE_CALLED 0
+        capture quietly fevc y c1 c2, worker(worker) firm(firm) ///
+            deletion(observation) algorithm(auto) engine(generic) ///
+            preconditioner(auto) batch(auto) probes(4)             ///
+            backend(rust) rng(counter_v1) stayers(movers) nodisplay
+        local stale_resolved_rc = _rc
+        display as txt "stale resolved mode=`stale_mode' rc=`stale_resolved_rc' status=`e(withholding_status)' prepare=$VCKSS_ROUTING_PREPARE_CALLED"
+        assert `stale_resolved_rc'==498
+        assert "`e(withholding_status)'"=="RUST_BACKEND_UNQUALIFIED"
+        assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+    }
+}
 foreach capability_mode in cap_missing cap_corrupt {
     global VCKSS_ROUTING_PROXY_MODE `capability_mode'
     global VCKSS_ROUTING_NATIVE_CALLED 0

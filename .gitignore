@@ -82,3 +82,16 @@ windows-plus/
 # Private review UI state
 reviews/**/screenshots/private/
 reviews/**/browser-session/
+
+# Private research workspace and generated qualification output
+/KSS_Veneto_replication/
+/.ci/stata/results/
+/rust/qualification/evidence/
+
+# Historical material removed from the public checkout
+/reviews/
+/qualification/gpt-pro/
+/docs/history/
+/docs/migration/
+/rust/progress/
+/fevc/qualification/
