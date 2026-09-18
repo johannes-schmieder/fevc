@@ -49,6 +49,21 @@ The native builder generates the complete manifest only after validating all
 five binary inputs. The public installation will use root `fevc.pkg` and
 `stata.toc` files that reference the runtime and binaries under `fevc/`.
 Both `net install` and `github install` must deliver that same payload.
+Generated native manifests use `F` entries for the license and notices so
+Stata installs them with the runtime instead of treating them as ancillary files.
+
+When a later packaging or documentation commit leaves the tested native
+source unchanged, retain each binary's original `source_commit`. An explicit
+compatibility record may bind it to the new package source under the registered
+acceptance policy. The binary row must provide `compatibility_evidence` and
+`compatibility_sha256`. The referenced JSON uses schema
+`FEVC-BINARY-COMPATIBILITY-V1`, records `build_source_commit`,
+`package_source_commit`, `status: PASS`, a `binaries` name-to-SHA-256 mapping,
+`unchanged_source_manifest_sha256`, `changed_paths`, `checks`, and `limitations`.
+Verify the unchanged production, build, input, and acceptance identities before
+writing that record. The packager verifies its bindings; it does not establish
+the truth of its qualification claims. Final installation checks still apply
+to the new package bytes.
 
 To prepare the repository layout in a new directory, use `--repository-dir`
 instead of `--output-dir`:

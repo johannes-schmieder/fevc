@@ -67,12 +67,44 @@ def test_native_payload_rejects_symlink(inputs):
         build(inputs)
 
 
+@pytest.mark.parametrize("change", [None, "target", "build", "binary", "failed", "hash"])
+def test_compatibility_review_binds_original_build_and_new_package(inputs, change):
+    root, manifest = inputs
+    row = manifest["binaries"][0]
+    row["source_commit"] = "b" * 40
+    review = {
+        "schema": "FEVC-BINARY-COMPATIBILITY-V1", "status": "PASS",
+        "build_source_commit": "b" * 40, "package_source_commit": "a" * 40,
+        "binaries": {row["name"]: row["sha256"]},
+        "unchanged_source_manifest_sha256": "c" * 64,
+        "changed_paths": ["README.md"], "checks": ["test fixture only"],
+        "limitations": ["No real qualification is represented by this fixture."],
+    }
+    if change == "target": review["package_source_commit"] = "d" * 40
+    if change == "build": review["build_source_commit"] = "d" * 40
+    if change == "binary": review["binaries"][row["name"]] = "0" * 64
+    if change == "failed": review["status"] = "FAIL"
+    data = json.dumps(review).encode()
+    (root / "compatibility.json").write_bytes(data)
+    row.update(compatibility_evidence="compatibility.json",
+               compatibility_sha256=portable.sha256(data))
+    if change == "hash": row["compatibility_sha256"] = "0" * 64
+    if change is None:
+        assert len(build(inputs)) == len(portable.package_files(portable.PACKAGE_ROOT)) + 5
+        assert row["source_commit"] == "b" * 40
+    else:
+        with pytest.raises(ValueError, match="compatibility"):
+            build(inputs)
+
+
 def test_repository_install_manifest_resolves_to_the_complete_payload(inputs, tmp_path):
     files = build(inputs)
     destination = tmp_path / "repository"
     native.write_repository(destination, files)
     pkg = (destination / "fevc.pkg").read_text()
-    listed = [line[2:] for line in pkg.splitlines() if line.startswith("f ")]
+    listed = [line[2:] for line in pkg.splitlines() if line.startswith(("f ", "F "))]
+    assert "F fevc/LICENSE\n" in pkg
+    assert "F fevc/THIRD_PARTY_NOTICES.txt\n" in pkg
     assert len(listed) == len(set(listed))
     expected = {f"fevc/{item.relative}": item.data for item in files
                 if str(item.relative) not in {"fevc.pkg", "stata.toc"}}

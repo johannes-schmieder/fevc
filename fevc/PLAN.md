@@ -8,7 +8,7 @@ responses, and adjudications are removed at the owner's request.
 ## Preserved implementation work
 
 The uncommitted optimization and symmetric deletion/stayer work remains in
-place. The last recorded SCC launch is September 16: 400k array `7589985`,
+place. The preserved optimization campaigns launched September 16: 400k array `7589985`,
 1.6m array `7589987`, and private Veneto array `7589989`, with success-gated
 aggregators `7589986`, `7589988`, and `7589990`. These are last recorded
 launches, not a claim about their present scheduler status.
@@ -26,6 +26,12 @@ The owner authorized purging review history, creating qualified platform
 binaries, and verifying installers. Use the current preserved implementation
 as the candidate; freeze its exact source before platform qualification.
 Results and run manifests belong in ignored `.local/public-release-20260918/`.
+Mac arm64, Rosetta x86-64, universal, and Linux x86-64 qualification passed
+for source `6a8ddc9dce6eb6c40ffeb9e4f34787de36340fda`; Linux job `7637232`
+finished with scheduler failure and exit status both zero. The four collected
+binaries match their qualification hashes. Windows collection still needs the
+prepared controller extension and owner approval. Remote history replacement
+also awaits explicit force-push approval; GitHub PR refs need support cleanup.
 Do not infer success from historical binaries or change scientific acceptance
 criteria. Repository visibility and public distribution are not changed by
 this preparation.

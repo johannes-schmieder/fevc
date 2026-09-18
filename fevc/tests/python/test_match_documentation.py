@@ -7,7 +7,7 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[3]
-QUALIFIED_SOURCE = "53f22a109effee87467b4ef0602b21d0b8ec1ca9"
+QUALIFIED_SOURCE = "e9573ffe6346620318596c74461921b74cd5c231"  # Review-purged equivalent of 53f22a109effee87467b4ef0602b21d0b8ec1ca9
 
 
 @pytest.mark.parametrize("path,obsolete", [

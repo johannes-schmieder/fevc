@@ -4,7 +4,9 @@ import gzip
 import hashlib
 import importlib.util
 import io
+import os
 import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -36,6 +38,41 @@ def test_linux_scc_shell_entrypoints_are_syntactically_valid() -> None:
     subprocess.run(["bash", "-n", *map(str, scripts)], check=True)
     for script in scripts:
         assert script.stat().st_mode & 0o111
+
+
+def test_clean_deploy_reaches_remote_preflight_with_empty_snapshot_arguments(tmp_path):
+    source = tmp_path / "source"
+    builder = source / "rust/stata_backend/scc/build_linux_bundle.py"
+    builder.parent.mkdir(parents=True)
+    (source / ".venv/bin").mkdir(parents=True)
+    (source / ".venv/bin/python").symlink_to(sys.executable)
+    builder.write_text(
+        "import hashlib, pathlib, sys\n"
+        "assert '--snapshot' not in sys.argv\n"
+        "path = pathlib.Path(sys.argv[sys.argv.index('--output') + 1])\n"
+        "path.write_bytes(b'source-fixture')\n"
+        "print('bundle_sha256=' + hashlib.sha256(path.read_bytes()).hexdigest())\n"
+    )
+    commands = tmp_path / "commands"
+    commands.mkdir()
+    stubs = {
+        "git": "case \"$3\" in symbolic-ref) echo main;; status) :;; "
+        "rev-parse) echo 1111111111111111111111111111111111111111;; *) exit 90;; esac\n",
+        "ssh": "echo REACHED_REMOTE_PREFLIGHT; exit 19\n",
+    }
+    for name, body in stubs.items():
+        executable = commands / name
+        executable.write_text("#!/bin/sh\n" + body)
+        executable.chmod(0o755)
+    environment = os.environ.copy()
+    environment["PATH"] = str(commands) + os.pathsep + environment["PATH"]
+    result = subprocess.run(
+        ["/bin/bash", str(SCC / "deploy_linux_bundle.sh"), str(source),
+         "20260918T000000Z-fixture"],
+        env=environment, text=True, capture_output=True,
+    )
+    assert result.returncode == 19, result.stderr
+    assert "REACHED_REMOTE_PREFLIGHT" in result.stdout
 
 
 def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:

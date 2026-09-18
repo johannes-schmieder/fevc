@@ -46,3 +46,8 @@ old reflogs were expired and unreachable objects pruned. The pre-purge source
 unchanged because they describe their original tested artifacts. GitHub-managed
 pull-request refs require server-side removal before a complete remote purge
 can be claimed. Audit the exact history and references before public visibility.
+
+The [commit map](HISTORY_MAP.txt) resolves original source identifiers to their
+review-purged equivalents. It contains commit hashes only, not review content.
+Use it to locate preserved scientific records without changing their original
+tested-source identifiers.

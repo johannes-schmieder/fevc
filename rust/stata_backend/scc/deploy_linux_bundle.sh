@@ -45,7 +45,7 @@ trap 'rm -rf "${temporary}"' EXIT
 archive=${temporary}/source.tar.gz
 builder_output=$("${source_root}/.venv/bin/python" "${builder}" \
   --root "${source_root}" --commit "${source_commit}" \
-  --output "${archive}" "${snapshot_arguments[@]}")
+  --output "${archive}" ${snapshot_arguments[@]+"${snapshot_arguments[@]}"})
 bundle_sha256=$(sed -nE \
   's/^.*bundle_sha256=([0-9a-f]{64}).*$/\1/p' <<< "${builder_output}")
 [[ "${bundle_sha256}" =~ ^[0-9a-f]{64}$ ]]

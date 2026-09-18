@@ -39,8 +39,9 @@ def native_files(package_root: Path, binary_root: Path, manifest: dict,
         raise ValueError("portable source manifest must not contain native binaries")
     for row in rows:
         name = row["name"]
-        if row.get("status") != "PASS" or row.get("source_commit") != source_commit:
-            raise ValueError(f"unqualified or wrong-source binary: {name}")
+        if (row.get("status") != "PASS"
+                or not portable.COMMIT_RE.fullmatch(row.get("source_commit", ""))):
+            raise ValueError(f"unqualified binary: {name}")
         payload = portable._read_regular(binary_root, PurePosixPath(name))
         if not payload or portable.sha256(payload) != row.get("sha256"):
             raise ValueError(f"native hash mismatch: {name}")
@@ -49,12 +50,33 @@ def native_files(package_root: Path, binary_root: Path, manifest: dict,
         if (not evidence_data or not SHA256.fullmatch(row.get("evidence_sha256", ""))
                 or portable.sha256(evidence_data) != row["evidence_sha256"]):
             raise ValueError(f"qualification evidence hash mismatch: {name}")
+        if row.get("source_commit") != source_commit:
+            # Preserve the actual build SHA when a recorded compatibility
+            # review carries qualification across packaging-only changes.
+            review_path = portable._safe_relative(row.get("compatibility_evidence", ""))
+            review_data = portable._read_regular(binary_root, review_path)
+            if portable.sha256(review_data) != row.get("compatibility_sha256"):
+                raise ValueError(f"compatibility evidence hash mismatch: {name}")
+            review = json.loads(review_data)
+            if (review.get("schema") != "FEVC-BINARY-COMPATIBILITY-V1"
+                    or review.get("status") != "PASS"
+                    or review.get("build_source_commit") != row.get("source_commit")
+                    or review.get("package_source_commit") != source_commit
+                    or review.get("binaries", {}).get(name) != row["sha256"]
+                    or not SHA256.fullmatch(review.get("unchanged_source_manifest_sha256", ""))
+                    or not review.get("changed_paths") or not review.get("checks")
+                    or "limitations" not in review):
+                raise ValueError(f"invalid compatibility review: {name}")
         files.append(portable.PackageFile(PurePosixPath(name), payload))
     for index, item in enumerate(files):
         if str(item.relative) == "fevc.pkg":
-            data = item.data.rstrip(b"\n") + b"\n" + "".join(
-                f"f {name}\n" for name in BINARY_NAMES
-            ).encode()
+            # Stata otherwise treats these notices as optional ancillary files.
+            lines = item.data.decode("utf-8").splitlines()
+            lines = ["F " + line[2:] if line in {
+                "f LICENSE", "f THIRD_PARTY_NOTICES.txt"
+            } else line for line in lines]
+            lines.extend(f"f {name}" for name in BINARY_NAMES)
+            data = ("\n".join(lines) + "\n").encode("utf-8")
             files[index] = portable.PackageFile(item.relative, data)
     return tuple(sorted(files, key=lambda item: str(item.relative)))
 
@@ -67,7 +89,7 @@ def repository_files(files: tuple[portable.PackageFile, ...]) -> tuple[portable.
         if name == "fevc.pkg":
             lines = item.data.decode("utf-8").splitlines()
             data = "\n".join(
-                "f fevc/" + line[2:] if line.startswith("f ") else line
+                line[:2] + "fevc/" + line[2:] if line.startswith(("f ", "F ")) else line
                 for line in lines
             ) + "\n"
             output.append(portable.PackageFile(item.relative, data.encode("utf-8")))

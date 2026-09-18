@@ -121,7 +121,7 @@ def test_dirty_confirmation_rejected(tmp_path, monkeypatch):
         MODULE.create_manifest(ROOT, "confirmation", tmp_path / "manifest.json", preflight, None)
 
 
-CONFIRMATION_SOURCE = "bb580fe69085d1f98c9151cea2de038aec0a8ba6"
+CONFIRMATION_SOURCE = "eedc2d662022c887994c6943ee76fc70ac756cd5"  # Review-purged equivalent of bb580fe69085d1f98c9151cea2de038aec0a8ba6
 
 
 def _confirmed_file(relative):
