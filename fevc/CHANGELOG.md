@@ -1,5 +1,12 @@
 # Pending changes
 
+## Command-wide runtime progress — 2026-09-19
+
+- Label one command-wide wall clock as `Total elapsed`, spanning Stata and
+  native work, with a completion line after successful cleanup.
+- Show leverage and target probe counts together, marking targets pending
+  until they begin. Preserve throttling, quiet modes, and older plugin support.
+
 ## Rust runtime reporting — 2026-09-18
 
 - Add default sample, planning, memory, and coarse phase/probe progress messages.

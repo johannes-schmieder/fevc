@@ -200,12 +200,18 @@ remain deferred pending their own gates and human review.
 
 ## Runtime reporting
 
-The optional `progress_api=1` probe field identifies the `reportv1` Stata
-selector and `vckss_rust_report_call_v1` synchronous scope. Its 32-byte
-`VckssProgressOptionsV1` supplies schema 1, display level (0/1/2), a zero
+The optional `progress_api=2` probe field identifies the `reportv2` Stata
+selector and includes support for the existing `reportv1` selector and
+`vckss_rust_report_call_v1` synchronous scope. Its 32-byte
+`VckssProgressOptionsV1` supplies schema 1 or 2, display level (0/1/2), a zero
 reserved field, and a caller-owned callback/context. Level zero requires a
-null display/context. Each callback receives a borrowed 96-byte update, phase
+null display/context. Each callback receives a borrowed 96-byte update,
 elapsed milliseconds, and the display level; return values are Stata statuses.
+Schema 1 retains phase-relative times and separate probe messages. Schema 2
+reports elapsed time for the entire synchronous call and coalesces paired
+leverage/target counts in update values 0--3; value 4 is zero while targets
+are pending. The C formatter adds the command's elapsed time before this call,
+supplied by `reportv2 level elapsed_ms operation ...`.
 Existing estimator requests, signatures, receipts, and entrypoints are unchanged.
 
 The scope owns fixed stack storage. Numerical coordinators borrow it through
@@ -220,3 +226,10 @@ cleared on entry and every captured exit, so internal hybrid `nodisplay` calls
 do not overwrite the public display choice. Direct `fevc_rust` calls remain
 silent unless invoked inside that public scope. Old probe fields default to
 zero after cached transport scalars are cleared.
+
+The public wrapper owns an unused Stata timer for the command's lifetime,
+including native preparation, solving, inference, Ado validation, and cleanup.
+Running and accumulated caller timers are never borrowed. At native call
+boundaries it samples that timer; Rust uses its monotonic clock within the
+call. The timer is cleared on success, error, and Break. If no reporting timer
+is free, estimation continues with one notice instead of live updates.

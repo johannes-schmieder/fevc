@@ -8,9 +8,16 @@ adopath ++ `"`package_dir'"'
 quietly run `"`package_dir'/fevc.ado"'
 scalar __vckss_rust_progress_api = 999
 quietly fevc_rust probe
-assert r(progress_api)==1
+assert r(progress_api)==2
 capture confirm scalar __vckss_rust_progress_api
 assert _rc!=0
+local plugin fevc__rust_macos
+if "`c(os)'"=="Windows" local plugin fevc__rust_windows
+if "`c(os)'"=="Unix" & strpos("`c(machine_type)'","Mac")!=1 local plugin fevc__rust_linux
+capture plugin call `plugin', reportv2 1 -1 solve 705
+assert _rc==198
+capture plugin call `plugin', reportv2 1 0 reportv1 1
+assert _rc==198
 
 program define _progress_read_log, rclass
     args filename
@@ -21,6 +28,11 @@ program define _progress_read_log, rclass
     local allocations = 0
     local exclusions = 0
     local warnings = 0
+    local pairs = 0
+    local pending = 0
+    local complete = 0
+    local times = 0
+    local previous = 0
     file read `stream' line
     while r(eof)==0 {
         if strpos(`"`line'"',"Warning: forecast direct allocations")==1 local ++warnings
@@ -33,6 +45,15 @@ program define _progress_read_log, rclass
             if strpos(`"`line'"',"allocations") local ++allocations
             if strpos(`"`line'"',"Stayer exclusions: 1 physical-singleton workers; 1 workers outside retained firms") local ++exclusions
         }
+        if regexm(`"`line'"', "^  Total elapsed +([0-9]+[.][0-9]+)s [|] ") {
+            local elapsed = real(regexs(1))
+            assert `elapsed' >= `previous'
+            local previous = `elapsed'
+            local ++times
+            if strpos(`"`line'"', "| Leverage: ") & strpos(`"`line'"', "| Target: ") local ++pairs
+            if strpos(`"`line'"', "(pending)") local ++pending
+            if strpos(`"`line'"', "| Complete") local ++complete
+        }
         file read `stream' line
     }
     file close `stream'
@@ -41,8 +62,16 @@ program define _progress_read_log, rclass
     return scalar allocations = `allocations'
     return scalar exclusions = `exclusions'
     return scalar warnings = `warnings'
+    return scalar pairs = `pairs'
+    return scalar pending = `pending'
+    return scalar complete = `complete'
+    return scalar times = `times'
+    return scalar elapsed = `previous'
 end
 
+// A running caller timer is never selected, stopped, or cleared by reporting.
+timer clear 51
+timer on 51
 set processors 4
 set obs 288
 generate long key = _n
@@ -98,19 +127,41 @@ foreach deletion in observation match {
             assert `"`e(algorithm)'|`e(engine_selected)'|`e(preconditioner_selected)'"'==`"`selected'"'
             assert `"`c(rngstate)'"'==`"`state'"'
             assert `"`c(sortrngstate)'"'==`"`sortstate'"'
-            assert "$VCKSS_REPORT_LEVEL$VCKSS_REPORT_API$VCKSS_REPORT_NOTICE$VCKSS_REPORT_ALLOWED"==""
+            assert "$VCKSS_REPORT_LEVEL$VCKSS_REPORT_API$VCKSS_REPORT_NOTICE$VCKSS_REPORT_ALLOWED$VCKSS_REPORT_TIMER"==""
             quietly _progress_read_log `"`transcript'"'
             if inlist("`output'","default","verbose") {
                 assert r(messages)>0 & r(allocations)>0
+                assert r(times)>0 & r(complete)==1
+                if "`algorithm'"=="jla" assert r(pairs)>0
+                else assert r(pairs)==0
                 if "`output'"=="verbose" assert r(selection)>0
                 else assert r(selection)==0
             }
-            else assert r(messages)==0 & r(selection)==0 & r(allocations)==0
+            else assert r(messages)==0 & r(selection)==0 & r(allocations)==0 & r(times)==0
         }
         drop retained
         quietly fevc_rust snapshot
         assert r(state)==0 & r(handle)==0
     }
+}
+
+timer off 51
+quietly timer list 51
+assert r(t51)>0 & r(nt51)==1
+timer clear 51
+
+// Exhausting only reporting timers must leave estimation available.
+foreach id of numlist 51/79 1/30 {
+    quietly timer on `id'
+}
+fevc y, worker(worker) firm(firm) backend(rust) algorithm(exact)
+assert e(N)>0
+assert "$VCKSS_REPORT_TIMER$VCKSS_REPORT_LEVEL"==""
+foreach id of numlist 51/79 1/30 {
+    quietly timer off `id'
+    quietly timer list `id'
+    assert r(nt`id')==1
+    quietly timer clear `id'
 }
 
 // Stayer exclusions precede augmentation and are distinct from graph pruning.
@@ -153,7 +204,11 @@ foreach deletion in observation match {
     matrix inference = e(component_inference)
     local posted = e(inference_joint_posted)
     if `posted' matrix covariance = e(V)
+    quietly log using `"`transcript'"', text replace name(progress_test)
     fevc y x, `common'
+    quietly log close progress_test
+    quietly _progress_read_log `"`transcript'"'
+    assert r(times)>0 & r(pairs)>0 & r(complete)==1
     assert mreldif(e(kss),reference)<1e-12
     assert mreldif(e(component_inference),inference)<1e-12
     assert e(inference_joint_posted)==`posted'
@@ -178,7 +233,7 @@ assert _rc!=0
 assert "`e(status)'"=="WITHHELD"
 capture noisily fevc y, worker(worker) firm(firm) backend(rust) probes(1)
 assert _rc!=0
-assert "$VCKSS_REPORT_LEVEL$VCKSS_REPORT_API$VCKSS_REPORT_NOTICE$VCKSS_REPORT_ALLOWED"==""
+assert "$VCKSS_REPORT_LEVEL$VCKSS_REPORT_API$VCKSS_REPORT_NOTICE$VCKSS_REPORT_ALLOWED$VCKSS_REPORT_TIMER"==""
 quietly _datasignature
 assert `"`r(datasignature)'"'==`"`signature'"'
 quietly fevc_rust snapshot

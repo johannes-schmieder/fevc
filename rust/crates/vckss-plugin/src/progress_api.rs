@@ -88,41 +88,93 @@ struct Reporter<'a> {
 
 impl Reporter<'_> {
     fn drain(&mut self, finish: bool) -> i32 {
+        let now = self.start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
+        self.drain_at(now, finish)
+    }
+
+    fn drain_at(&mut self, now: u64, finish: bool) -> i32 {
         if self.status != 0 {
             return self.status;
         }
-        let now = self.start.elapsed().as_millis().min(u128::from(u64::MAX)) as u64;
         if !finish && now < self.next_check_ms {
             return 0;
         }
         self.next_check_ms = now.saturating_add(50);
         let mut updates = self.progress.snapshot();
+        let leverage = updates[progress::LEVERAGE as usize];
+        let targets = updates[progress::TARGETS as usize];
         let active = updates
             .iter()
             .filter(|u| u.kind < 20)
             .max_by_key(|u| u.sequence)
             .map_or(0, |u| u.kind);
         updates.sort_unstable_by_key(|u| u.sequence);
-        for update in updates {
+        for mut update in updates {
+            if self.options.schema == 2
+                && matches!(update.kind, progress::LEVERAGE | progress::TARGETS)
+            {
+                // Emit one coherent pair from the snapshot, without replaying
+                // coalesced counts or guessing an overall command percentage.
+                if update.sequence != leverage.sequence.max(targets.sequence)
+                    || ![leverage, targets].iter().any(|u| {
+                        self.trackers[u.kind as usize].due(*u, now, u.kind == active, finish)
+                    })
+                {
+                    continue;
+                }
+                for u in [leverage, targets] {
+                    if u.sequence != 0 {
+                        self.trackers[u.kind as usize].record(u, now);
+                    }
+                }
+                update.values = [
+                    leverage.completed,
+                    leverage.total,
+                    targets.completed,
+                    if targets.sequence == 0 {
+                        leverage.total
+                    } else {
+                        targets.total
+                    },
+                    targets.sequence,
+                    0,
+                    0,
+                    0,
+                ];
+                self.display(&update, now);
+                if self.status != 0 {
+                    break;
+                }
+                continue;
+            }
             let tracker = &mut self.trackers[update.kind as usize];
             if tracker.due(update, now, update.kind == active, finish) {
                 tracker.record(update, now);
-                // SAFETY: validated callback and context are borrowed for this
-                // synchronous call; Reporter is only accessed on its owner.
-                self.status = unsafe {
-                    (self.options.display.expect("validated display"))(
-                        self.options.context,
-                        &update,
-                        now.saturating_sub(tracker.start_ms),
-                        self.options.level,
-                    )
+                let elapsed = if self.options.schema == 2 {
+                    now
+                } else {
+                    now.saturating_sub(tracker.start_ms)
                 };
+                self.display(&update, elapsed);
                 if self.status != 0 {
                     break;
                 }
             }
         }
         self.status
+    }
+
+    fn display(&mut self, update: &Update, elapsed: u64) {
+        // SAFETY: callback/context are borrowed for this synchronous call;
+        // Reporter is accessed only on the Stata caller thread.
+        self.status = unsafe {
+            (self.options.display.expect("validated display"))(
+                self.options.context,
+                update,
+                elapsed,
+                self.options.level,
+            )
+        };
     }
 }
 
@@ -167,7 +219,7 @@ pub unsafe extern "C" fn vckss_rust_report_call_v1(
         return 198;
     };
     if options.struct_size as usize != size_of::<VckssProgressOptionsV1>()
-        || options.schema != 1
+        || !matches!(options.schema, 1 | 2)
         || options.reserved != 0
         || options.level > 2
         || (options.level != 0 && options.display.is_none())
@@ -246,6 +298,7 @@ mod tests {
     struct Capture {
         owner: std::thread::ThreadId,
         events: Vec<Update>,
+        elapsed: Vec<u64>,
         operation_status: i32,
         display_status: i32,
     }
@@ -253,13 +306,14 @@ mod tests {
     unsafe extern "C" fn display(
         context: *mut c_void,
         event: *const Update,
-        _: u64,
+        elapsed: u64,
         _: u32,
     ) -> i32 {
         // SAFETY: the fixture passes its live Capture and a synchronous event.
         let capture = unsafe { &mut *context.cast::<Capture>() };
         assert_eq!(capture.owner, std::thread::current().id());
         capture.events.push(unsafe { *event });
+        capture.elapsed.push(elapsed);
         capture.display_status
     }
 
@@ -298,6 +352,7 @@ mod tests {
         let mut capture = Capture {
             owner: std::thread::current().id(),
             events: vec![],
+            elapsed: vec![],
             operation_status: 0,
             display_status: 0,
         };
@@ -327,7 +382,7 @@ mod tests {
         capture.events.clear();
         assert_eq!(call(&options), 0);
         assert_eq!(capture.events.len(), 2);
-        options.schema = 2;
+        options.schema = 3;
         assert_eq!(call(&options), 198);
         options.schema = 1;
         options.reserved = 1;
@@ -341,5 +396,58 @@ mod tests {
         assert!(capture.events.is_empty());
         assert_eq!(poll(), 0);
         progress::with_current(|state| assert!(state.is_none()));
+    }
+
+    #[test]
+    fn schema_two_pairs_probes_and_keeps_elapsed_across_phases() {
+        let progress = Progress::default();
+        let mut capture = Capture {
+            owner: std::thread::current().id(),
+            events: vec![],
+            elapsed: vec![],
+            operation_status: 0,
+            display_status: 0,
+        };
+        let mut reporter = Reporter {
+            options: VckssProgressOptionsV1 {
+                struct_size: 32,
+                schema: 2,
+                level: 1,
+                reserved: 0,
+                display: Some(display),
+                context: (&mut capture as *mut Capture).cast(),
+            },
+            progress: &progress,
+            start: Instant::now(),
+            trackers: [Tracker::default(); SLOTS],
+            next_check_ms: 0,
+            status: 0,
+        };
+        progress::with_progress(Some(&progress), || {
+            progress::stage(progress::SETUP);
+            assert_eq!(reporter.drain_at(1700, false), 0);
+            progress::advance(progress::LEVERAGE, 200, 4500);
+            reporter.drain_at(3200, false);
+            assert_eq!(
+                &capture.events.last().unwrap().values[..5],
+                &[200, 4500, 0, 4500, 0]
+            );
+            // Coalescing both counters must print one consistent pair.
+            progress::advance(progress::LEVERAGE, 4500, 4500);
+            progress::advance(progress::TARGETS, 640, 4500);
+            reporter.drain_at(4200, false);
+            assert_eq!(capture.events.len(), 3);
+            assert_eq!(
+                &capture.events.last().unwrap().values[..4],
+                &[4500, 4500, 640, 4500]
+            );
+            assert_ne!(capture.events.last().unwrap().values[4], 0);
+            progress::advance(progress::TARGETS, 4500, 4500);
+            reporter.drain_at(4300, false); // Completion bypasses periodic throttle.
+            progress::stage(progress::VALIDATION);
+            reporter.drain_at(4500, true);
+        });
+        assert_eq!(capture.elapsed, [1700, 3200, 4200, 4300, 4500]);
+        assert_eq!(capture.events.last().unwrap().kind, progress::VALIDATION);
     }
 }

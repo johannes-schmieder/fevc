@@ -2,19 +2,53 @@
 
 program define fevc, eclass
     version 18.0
-
     if lower(strtrim(`"`0'"')) == ", version" {
         _vckss_impl `0'
         exit
     }
 
-    // Reporting follows the public invocation, including internal nodisplay
-    // calls used to assemble hybrid results. Like memory context, it is
-    // command-local and cleared on every captured success/error/Break exit.
-    foreach key in LEVEL API NOTICE ALLOWED {
+    // Own one unused timer for the entire public invocation, including Ado
+    // work between native calls. Never borrow an active or accumulated timer.
+    foreach key in LEVEL API NOTICE ALLOWED TIMER {
         capture macro drop VCKSS_REPORT_`key'
     }
-    local report_allowed = c(noisily)
+    global VCKSS_REPORT_ALLOWED = c(noisily)
+    local report_timer
+    foreach id of numlist 51/79 1/30 {
+        mata: st_local("report_free", strofreal(timer_value(`id')[2]==0))
+        if `report_free' {
+            local report_timer `id'
+            continue, break
+        }
+    }
+    if "`report_timer'" != "" {
+        global VCKSS_REPORT_TIMER `report_timer'
+        quietly timer on `report_timer'
+    }
+    capture noisily _fevc_command `0'
+    local command_rc = _rc
+    if "`report_timer'" != "" {
+        quietly timer off `report_timer'
+        if !`command_rc' & inlist("$VCKSS_REPORT_LEVEL","1","2") & ///
+            "$VCKSS_REPORT_API"=="2" & "`e(backend_selected)'"=="rust" {
+            mata: st_local("elapsed", strofreal(timer_value(`report_timer')[1], "%9.1f"))
+            di as txt "  Total elapsed `elapsed's | Complete"
+        }
+        quietly timer clear `report_timer'
+    }
+    foreach key in LEVEL API NOTICE ALLOWED TIMER {
+        capture macro drop VCKSS_REPORT_`key'
+    }
+    exit `command_rc'
+end
+
+program define _fevc_command, eclass
+    version 18.0
+
+    if lower(strtrim(`"`0'"')) == ", version" {
+        _vckss_impl `0'
+        exit
+    }
 
     // Routing metadata is command-local failure context.  Clear it before
     // any runtime work so an interrupted earlier command cannot leak into a
@@ -88,12 +122,8 @@ program define fevc, eclass
     local stage_validation_timer = r(validation_timer)
     global VCKSS_STAGE_SELECTION_TIMER `stage_selection_timer'
     global VCKSS_STAGE_VALIDATION_TIMER `stage_validation_timer'
-    global VCKSS_REPORT_ALLOWED `report_allowed'
     capture noisily _vckss_impl `0'
     local command_rc = _rc
-    foreach key in LEVEL API NOTICE ALLOWED {
-        capture macro drop VCKSS_REPORT_`key'
-    }
     if !`command_rc' quietly fevc__stayer_population_post
     if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
         if real("$VCKSS_MEMORY_FORECAST") > 0 & real("$VCKSS_MEMORY_FORECAST") < . {
@@ -1730,7 +1760,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         quietly count if `complete_worker_tag' & `originalstayer' &   ///
             !`retained_firm_member'
         local N_hyb_unattached = r(N)
-        if inlist("$VCKSS_REPORT_LEVEL","1","2") & "$VCKSS_REPORT_API"=="1" & c(noisily) {
+        if inlist("$VCKSS_REPORT_LEVEL","1","2") & inlist("$VCKSS_REPORT_API","1","2") & c(noisily) {
             di as txt "  Stayer exclusions: " as result `N_hyb_singleton_drop' ///
                 as txt " physical-singleton workers; " as result `N_hyb_unattached' ///
                 as txt " workers outside retained firms"

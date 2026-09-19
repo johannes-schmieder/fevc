@@ -894,7 +894,7 @@ static int vckss_probe(void)
         (status = vckss_save_u64("__vckss_rust_deterministic", capabilities.deterministic_parallelism)) != 0 ||
         /* Native bit 12 alone also exists in the earlier FFI-only build.
          * Identify the Stata selectors independently, without reusing ABI bits. */
-        (status = vckss_save_u64("__vckss_rust_progress_api", 1u)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_progress_api", 2u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_execution_api", 3u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_api", vckss_rust_exact_execution_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_resolved_api", vckss_rust_exact_resolved_execution_schema_v2())) != 0 ||
@@ -3890,18 +3890,23 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
         vckss_clear_error_transport();
         return vckss_usage("Rust plugin command required");
     }
-    if (strcmp(argv[0], "reportv1") == 0) {
+    if (strcmp(argv[0], "reportv1") == 0 || strcmp(argv[0], "reportv2") == 0) {
         uint32_t level;
-        VckssProgressCall call;
+        int version2 = strcmp(argv[0], "reportv2") == 0;
+        int offset = version2 ? 3 : 2;
+        VckssProgressCall call = {0};
         VckssProgressOptionsV1 options = {0};
-        if (argc < 4 || vckss_parse_u32(argv[1], &level) != 0 || level < 1 || level > 2 ||
-            strcmp(argv[2], "reportv1") == 0) return vckss_usage("invalid reporting request");
-        call.argc = argc - 2;
-        call.argv = argv + 2;
+        if (argc < offset + 2 || vckss_parse_u32(argv[1], &level) != 0 || level < 1 || level > 2 ||
+            (version2 && vckss_parse_u64(argv[2], &call.elapsed_ms) != 0) ||
+            strcmp(argv[offset], "reportv1") == 0 || strcmp(argv[offset], "reportv2") == 0)
+            return vckss_usage("invalid reporting request");
+        call.argc = argc - offset;
+        call.argv = argv + offset;
         options.struct_size = sizeof(options);
-        options.schema = 1;
+        options.schema = version2 ? 2 : 1;
         options.level = level;
-        options.display = vckss_progress_display;
+        options.display = version2 ? vckss_progress_display_v2 : vckss_progress_display;
+        options.context = &call;
         return vckss_rust_report_call_v1(&options, vckss_progress_operation, &call);
     }
     if (strcmp(argv[0], "lasterror") == 0) {

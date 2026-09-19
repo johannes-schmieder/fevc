@@ -17,7 +17,7 @@ ST_plugin *_stata_;
 int32_t vckss_rust_report_call_v1(const VckssProgressOptionsV1 *options,
     VckssProgressOperationV1 operation, void *context)
 {
-    assert(options->struct_size == sizeof(*options) && options->schema == 1u);
+    assert(options->struct_size == sizeof(*options) && (options->schema == 1u || options->schema == 2u));
     return operation(context);
 }
 
@@ -751,6 +751,13 @@ static ST_int mock_error(char *message)
     return 0;
 }
 
+static char progress_line[768];
+static ST_int mock_display(char *message)
+{
+    (void)snprintf(progress_line, sizeof(progress_line), "%s", message);
+    return 0;
+}
+
 static ST_int mock_scalar_save(char *name, ST_double value)
 {
     ++scalar_calls;
@@ -920,6 +927,7 @@ int main(void)
 {
     ST_plugin plugin = {0};
     plugin.spouterr = mock_error;
+    plugin.spoutsml = mock_display;
     plugin.macresave = mock_macro_save;
     plugin.scalsave = mock_scalar_save;
     plugin.safematstore = mock_matrix_store;
@@ -927,6 +935,29 @@ int main(void)
     plugin.rowsof = mock_matrix_rows;
     plugin.colsof = mock_matrix_columns;
     _stata_ = &plugin;
+
+    {
+        VckssProgressCall call = {0};
+        VckssProgressUpdateV1 update = {0};
+        call.elapsed_ms = 2100;
+        update.kind = 4;
+        update.values[0] = 200;
+        update.values[1] = update.values[3] = 4500;
+        assert(vckss_progress_display_v2(&call, &update, 1100, 1) == 0);
+        assert(strcmp(progress_line, "  Total elapsed 3.2s | Leverage: 200/4500 | Target: 0/4500 (pending)\n") == 0);
+        update.kind = 5;
+        update.values[0] = 4500;
+        update.values[2] = 640;
+        update.values[4] = 1;
+        assert(vckss_progress_display_v2(&call, &update, 2400, 1) == 0);
+        assert(strcmp(progress_line, "  Total elapsed 4.5s | Leverage: 4500/4500 | Target: 640/4500\n") == 0);
+        update.kind = 11;
+        assert(vckss_progress_display_v2(&call, &update, 3100, 1) == 0);
+        assert(strcmp(progress_line, "  Total elapsed 5.2s | Validating results\n") == 0);
+        /* Legacy schema keeps its phase-relative formatter. */
+        assert(vckss_progress_display(&call, &update, 100, 1) == 0);
+        assert(strcmp(progress_line, "  Validating results; 0.1s elapsed\n") == 0);
+    }
 
     {
         reset_transport();
@@ -990,7 +1021,7 @@ int main(void)
 
     reset_transport();
     assert(vckss_probe() == 0);
-    assert(saved_execution_api == 3 && saved_progress_api == 1 && scalar_calls == 10);
+    assert(saved_execution_api == 3 && saved_progress_api == 2 && scalar_calls == 10);
     reset_transport();
     fail_execution_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);

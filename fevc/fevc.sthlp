@@ -114,20 +114,27 @@ and descriptive full-model fit accounting.
 
 {pstd}
 Compatible Rust plugins report sample preparation, selected computation choices,
-allocation forecasts, and coarse progress by default. Progress percentages refer
-to the current probe phase, not the whole command. Periodic updates follow roughly 10%
+allocation forecasts, and coarse progress by default. {cmd:Total elapsed}
+is wall-clock time since the public command began, including Stata work between
+native calls; it does not reset between phases. During point estimation,
+each update shows both leverage and target probe counts, with targets marked
+pending until they start. Other counted stages show their own progress.
+Periodic updates follow roughly 10%
 milestones (at most once per second), with a status line after 30 seconds without
 output. Stage starts and completions are reported immediately.
-Stages without a denominator report elapsed time. No total-time estimate
-is implied. {cmd:verbose} adds detail without increasing update frequency.
+Stages without a denominator show their name and total elapsed time. A final
+{cmd:Complete} line follows successful command cleanup. No overall percentage
+or remaining-time estimate is implied. {cmd:verbose} adds detail without
+increasing update frequency.
 
 {pstd}
 {cmd:nolog} takes precedence over {cmd:verbose}; {cmd:nodisplay} also suppresses
 final successful output. {cmd:quietly} suppresses runtime reporting. Existing
 memory warnings and errors retain their own policies. Reporting does not change
 estimation or stored scientific results. Mata retains its existing output.
-An otherwise compatible older Rust plugin continues estimating with a notice
-that live reporting is unavailable. Allocation forecasts exclude process RSS.
+Earlier reporting plugins retain their phase-based display; plugins without
+reporting continue estimating with a notice that live reporting is unavailable.
+Allocation forecasts exclude process RSS.
 
 {marker backend}
 {title:Backend routing}

@@ -30,7 +30,7 @@ do `"`pkgroot'/tests/stata/test_stayers_hybrid.do"'
 do `"`pkgroot'/tests/stata/test_backend_routing.do"' `"`pkgroot'"'
 capture quietly fevc_rust probe
 if !_rc {
-    if r(progress_api)==1 do `"`pkgroot'/tests/stata/test_rust_progress.do"' `"`pkgroot'"'
+    if r(progress_api)==2 do `"`pkgroot'/tests/stata/test_rust_progress.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_memory_policy.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_exact_controls.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_generic_jla.do"' `"`pkgroot'"'

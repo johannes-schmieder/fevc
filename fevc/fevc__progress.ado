@@ -10,7 +10,7 @@ program define fevc__progress, rclass
     local reports = inlist("`operation'", "prepare", "augmentstayers", "augmentprojection") | ///
         substr("`operation'",1,5)=="solve" | substr("`operation'",1,16)=="augmentcomponent"
     if `reports' & inlist("`level'","1","2") & c(noisily) {
-        if "$VCKSS_REPORT_API" == "1" {
+        if inlist("$VCKSS_REPORT_API","1","2") {
             if "`level'"=="2" & "`operation'"=="prepare" {
                 if "$VCKSS_MEMORY_PRESENT"=="1" {
                     di as txt "  Memory budget: " as result %9.3f (real("$VCKSS_MEMORY_BYTES")/1024^3) ///
@@ -18,7 +18,22 @@ program define fevc__progress, rclass
                 }
                 else di as txt "  Memory budget: not supplied; automatic batches are not memory-limited"
             }
-            plugin call `plugin' `data', reportv1 `level' `options'
+            if "$VCKSS_REPORT_API"=="2" & "$VCKSS_REPORT_TIMER"!="" {
+                quietly timer off $VCKSS_REPORT_TIMER
+                mata: st_local("elapsed_ms", strofreal(floor(1000*timer_value(strtoreal(st_global("VCKSS_REPORT_TIMER")))[1]), "%21.0f"))
+                quietly timer on $VCKSS_REPORT_TIMER
+                plugin call `plugin' `data', reportv2 `level' `elapsed_ms' `options'
+            }
+            else if "$VCKSS_REPORT_API"=="1" {
+                plugin call `plugin' `data', reportv1 `level' `options'
+            }
+            else {
+                if "$VCKSS_REPORT_NOTICE"!="1" {
+                    di as txt "Note: live progress unavailable because command timers are in use."
+                    global VCKSS_REPORT_NOTICE 1
+                }
+                plugin call `plugin' `0'
+            }
             exit
         }
         if "$VCKSS_REPORT_NOTICE" != "1" {

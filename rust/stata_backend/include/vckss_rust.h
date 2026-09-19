@@ -280,7 +280,10 @@ typedef struct VckssEnginePrepareRequestV4 {
 
 typedef int32_t (*VckssInterruptPollV1)(void *context);
 
-/* Additive synchronous reporting scope. Existing estimator layouts are frozen. */
+/* Additive synchronous reporting scope. Existing estimator layouts are frozen.
+   Schema 1: phase-relative milliseconds. Schema 2: call-relative milliseconds;
+   kinds 4/5 pair leverage done/total and target done/total in values[0..3],
+   with values[4] == 0 while targets are pending. */
 typedef struct VckssProgressUpdateV1 {
     uint64_t sequence;
     uint32_t kind;

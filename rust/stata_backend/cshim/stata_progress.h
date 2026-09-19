@@ -70,7 +70,37 @@ static int32_t vckss_progress_display(void *context, const VckssProgressUpdateV1
 typedef struct VckssProgressCall {
     int argc;
     char **argv;
+    uint64_t elapsed_ms;
 } VckssProgressCall;
+
+static int32_t vckss_progress_display_v2(void *context, const VckssProgressUpdateV1 *u,
+                                       uint64_t elapsed_ms, uint32_t level)
+{
+    VckssProgressCall *call = (VckssProgressCall *)context;
+    static const char *phases[] = {"", "Preparing sample", "Setting up solver",
+        "Fitting model", "Leverage probes", "Target probes", "Projection",
+        "Component inference", "Component spectrum", "Variance-model probes",
+        "Exact calculation", "Validating results", "Spectrum iterations"};
+    char line[768];
+    double seconds = (double)call->elapsed_ms / 1000.0 + (double)elapsed_ms / 1000.0;
+    if (u->kind == 4 || u->kind == 5) {
+        snprintf(line, sizeof(line), "  Total elapsed %.1fs | Leverage: %llu/%llu | Target: %llu/%llu%s\n",
+            seconds, (unsigned long long)u->values[0], (unsigned long long)u->values[1],
+            (unsigned long long)u->values[2], (unsigned long long)u->values[3],
+            u->values[4] == 0 ? " (pending)" : "");
+    } else if (u->kind > 0 && u->kind <= 12) {
+        if (u->total != 0) {
+            snprintf(line, sizeof(line), "  Total elapsed %.1fs | %s: %llu/%llu (%.0f%%)\n",
+                seconds, phases[u->kind], (unsigned long long)u->completed,
+                (unsigned long long)u->total, 100.0*(double)u->completed/(double)u->total);
+        } else {
+            snprintf(line, sizeof(line), "  Total elapsed %.1fs | %s\n", seconds, phases[u->kind]);
+        }
+    } else {
+        return vckss_progress_display(context, u, elapsed_ms, level);
+    }
+    return SF_display(line);
+}
 
 ST_retcode vckss_stata_call_impl(int argc, char *argv[]);
 static int32_t vckss_progress_operation(void *context)

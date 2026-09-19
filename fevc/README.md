@@ -60,7 +60,9 @@ is a forecast of command allocations, not an operating-system memory cap.
 See the [memory guide](docs/MEMORY.md).
 
 Rust runs display sample preparation, selected algorithms and batches, memory
-forecasts, and coarse progress. Add `nolog` to retain only final results, or
+forecasts, and coarse progress. `Total elapsed` spans the entire command;
+leverage and target probe counts appear together while point estimation runs.
+Add `nolog` to retain only final results, or
 `verbose` for routing and memory-policy details. `nodisplay` suppresses successful
 runtime and final output; `quietly` also suppresses progress. These options do
 not change estimation. Live progress requires a reporting-capable native build;

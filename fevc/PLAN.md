@@ -37,6 +37,13 @@ maximum median overhead was 0.16% versus baseline and 0.48% versus `nolog`.
 These are local timing results, not a platform-wide performance guarantee.
 The live Results-window check remains pending because the Mac is locked.
 
+The September 19 display follow-up uses one command-wide `Total elapsed`
+clock, paired leverage/target counts, and a completion line after cleanup.
+The existing reporting schema remains available for older callers/plugins.
+Focused and integrated validation for this follow-up is recorded separately
+in `.local/runtime-reporting-total/`; the earlier timing evidence does not
+qualify the changed native binary.
+
 ## Preserved implementation work
 
 The uncommitted optimization and symmetric deletion/stayer work remains in
