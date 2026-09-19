@@ -12,6 +12,8 @@ mod allocation_meter;
 pub mod context;
 #[path = "../../crates/vckss-plugin/src/ffi_engine.rs"]
 pub mod ffi_engine;
+#[path = "../../crates/vckss-plugin/src/progress_api.rs"]
+pub mod progress_api;
 #[path = "../../crates/vckss-plugin/src/session.rs"]
 pub mod session;
 #[path = "../../crates/vckss-plugin/src/session_retained.rs"]

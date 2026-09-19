@@ -59,11 +59,18 @@ program define fevc_rust, rclass
         }
         // Old FFI-only builds advertise native V6 but omit this shim field.
         // Drop any stale scalar first so absence cannot inherit readiness.
+        capture scalar drop __vckss_rust_progress_api
         capture scalar drop __vckss_rust_execution_api
         capture scalar drop __vckss_rust_exact_api
         capture scalar drop __vckss_rust_exact_resolved_api
         capture scalar drop __vckss_rust_exact_legacy_api
         fevc__rust_plugin_call `plugin', probe
+        local progress_api = 0
+        capture confirm scalar __vckss_rust_progress_api
+        if !_rc local progress_api = scalar(__vckss_rust_progress_api)
+        if "$VCKSS_REPORT_LEVEL" != "" global VCKSS_REPORT_API `progress_api'
+        return scalar progress_api = `progress_api'
+        capture scalar drop __vckss_rust_progress_api
         local execution_api = 0
         capture confirm scalar __vckss_rust_execution_api
         if !_rc local execution_api = scalar(__vckss_rust_execution_api)

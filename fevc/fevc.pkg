@@ -16,6 +16,7 @@ f fevc_resource.mata
 f fevc_scale_engine.mata
 f fevc_scale_runtime.mata
 f fevc__display.ado
+f fevc__progress.ado
 f fevc__lifecycle.ado
 f fevc_estat.ado
 f fevc_run.ado

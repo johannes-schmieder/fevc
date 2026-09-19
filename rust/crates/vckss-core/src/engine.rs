@@ -471,6 +471,7 @@ fn run_jla_no_controls_planned_impl(
     preflight_trial_words("leverage", &plan.deletion.physical_count)?;
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, plan)?;
+    crate::progress::stage(crate::progress::SETUP);
     interrupt.checkpoint("jla_solver_setup")?;
     let full_cmg_plan = if let Some(mut full_cmg) = options.full_cmg {
         let (leverage_cap, target_cap, maximum_rhs) = crate::full_cmg_batch_policy::caps(
@@ -925,6 +926,7 @@ fn run_jla_no_controls_with_validated_plan(
     } else {
         None
     };
+    crate::progress::stage(crate::progress::SETUP);
     interrupt.checkpoint("jla_solver_setup")?;
     let solver = PreparedTwoWaySolver::prepare_with_interrupt(problem, options.solver, interrupt)?;
     let memory = if let Some(memory) = legacy_memory {
@@ -947,6 +949,45 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
     solver: &PreparedTwoWaySolver<'a>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<JlaEngineResult> {
+    crate::progress::stage(crate::progress::FIT);
+    if crate::progress::enabled() {
+        crate::progress::report(
+            crate::progress::PLAN,
+            [
+                2,
+                1,
+                match solver.receipt().selected {
+                    LinearSolverRoute::DiagonalPcg => 1,
+                    LinearSolverRoute::CmgPcg => 2,
+                    _ => 0,
+                },
+                solver
+                    .full_cmg_receipt()
+                    .ok()
+                    .flatten()
+                    .map_or(1, |r| r.setup.threads as u64),
+                options.leverage_batch_width as u64,
+                options.target_batch_width as u64,
+                0,
+                0,
+            ],
+        );
+        crate::progress::report(
+            crate::progress::MEMORY,
+            [
+                memory.expected_peak_forecast_bytes,
+                memory.solve_peak_forecast_bytes,
+                memory
+                    .solve_peak_forecast_bytes
+                    .saturating_sub(memory.expected_peak_forecast_bytes),
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+        );
+    }
     interrupt.checkpoint("jla_full_fit")?;
     let (outcome_worker_rhs, outcome_firm_rhs) =
         solver.operator().outcome_rhs_with_interrupt(interrupt)?;
@@ -985,6 +1026,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         "leverage receipts",
     )?;
     for first in (0..options.probes as usize).step_by(options.leverage_batch_width) {
+        crate::progress::advance(crate::progress::LEVERAGE, first, options.probes as usize);
         let _phase = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Leverage);
         interrupt.checkpoint("jla_leverage_batch")?;
         let width = options
@@ -1063,6 +1105,11 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             interrupt,
         )?;
     }
+    crate::progress::advance(
+        crate::progress::LEVERAGE,
+        options.probes as usize,
+        options.probes as usize,
+    );
 
     interrupt.checkpoint("jla_leverage_adjustment")?;
     let adjustment = leverage_adjustment_with_interrupt(
@@ -1088,6 +1135,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         "target receipts",
     )?;
     for first in (0..options.probes as usize).step_by(options.target_batch_width) {
+        crate::progress::advance(crate::progress::TARGETS, first, options.probes as usize);
         let _phase = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Target);
         interrupt.checkpoint("jla_target_batch")?;
         let width = options
@@ -1162,7 +1210,13 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             interrupt,
         )?;
     }
+    crate::progress::advance(
+        crate::progress::TARGETS,
+        options.probes as usize,
+        options.probes as usize,
+    );
 
+    crate::progress::stage(crate::progress::VALIDATION);
     interrupt.checkpoint("jla_finalize")?;
     let correction = mean_components_with_interrupt(&target_draws, interrupt)?;
     let corrected = subtract_components(plugin, correction)?;

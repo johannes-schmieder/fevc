@@ -56,6 +56,7 @@ def test_catalog_preserves_match_install_inventory():
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.pkg"], cwd=ROOT, text=True
     )
     additive_helpers = {
+        "f fevc__progress.ado",
         "f fevc__memory_options.ado",
         "f fevc__observation_population.ado",
         "f fevc__stayer_population_post.ado",

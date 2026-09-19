@@ -92,6 +92,7 @@ fevc/fevc__failure_guidance.ado
 fevc/fevc__lifecycle.ado
 fevc/fevc__memory_options.ado
 fevc/fevc__observation_population.ado
+fevc/fevc__progress.ado
 fevc/fevc__rust_capture_stayers.ado
 fevc/fevc__rust_cmg_model.ado
 fevc/fevc__rust_comp_batch_receipt.ado

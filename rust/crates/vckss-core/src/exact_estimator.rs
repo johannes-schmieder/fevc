@@ -489,6 +489,7 @@ fn run_exact_estimator_internal(
     parallel: Option<&parallel::Runtime>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(ExactEstimatorResult, Option<[VarianceComponents; 2]>)> {
+    crate::progress::stage(crate::progress::EXACT);
     interrupt.checkpoint("exact_estimator_entry")?;
     let _profile = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Exact);
     let options = options.validate()?;
@@ -527,6 +528,38 @@ fn run_exact_estimator_internal(
         full_embedding
     };
     let memory = exact_peak_forecast(problem, full_embedding, working_embedding, options)?;
+    if crate::progress::enabled() {
+        crate::progress::report_if_absent(
+            crate::progress::CHOICES,
+            [
+                1,
+                1,
+                0,
+                full_parameters as u64,
+                options.exact_limit as u64,
+                0,
+                0,
+                0,
+            ],
+        );
+        crate::progress::report(
+            crate::progress::PLAN,
+            [
+                1,
+                0,
+                0,
+                parallel.map_or(1, |r| r.workers()) as u64,
+                0,
+                0,
+                0,
+                0,
+            ],
+        );
+        crate::progress::report(
+            crate::progress::MEMORY,
+            [memory.peak, memory.peak, 0, 0, 0, 0, 0, 0],
+        );
+    }
     if options
         .memory_budget
         .rejects(memory.peak, options.memory_limit_bytes)
@@ -1073,6 +1106,7 @@ fn run_exact_estimator_internal(
         ));
     }
 
+    crate::progress::stage(crate::progress::VALIDATION);
     interrupt.checkpoint("exact_estimator_final")?;
     let firm_zero_sum_residual = beta[workers..workers + firms].iter().sum::<f64>().abs();
     let result = ExactEstimatorResult {

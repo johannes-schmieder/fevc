@@ -54,6 +54,11 @@ fn main() {
         shim_include.join("vckss_rust.h").display()
     );
 
+    println!(
+        "cargo:rerun-if-changed={}",
+        manifest.join("cshim/stata_progress.h").display()
+    );
+
     let objects = if target.contains("windows-msvc") {
         compile_msvc(
             &target,

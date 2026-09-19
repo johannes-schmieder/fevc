@@ -9,6 +9,7 @@
 mod allocation_meter;
 pub mod context;
 pub mod ffi_engine;
+pub mod progress_api;
 pub mod session;
 pub mod session_retained;
 

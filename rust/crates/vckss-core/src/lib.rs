@@ -34,6 +34,7 @@ mod ordered_work;
 pub mod parallel;
 mod pipeline_profile;
 pub mod problem;
+pub mod progress;
 pub mod projection;
 pub mod receipt;
 #[doc(hidden)]

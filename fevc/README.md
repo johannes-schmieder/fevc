@@ -59,6 +59,13 @@ default. Add `memorycheck(error)` to enforce forecast admission. The budget
 is a forecast of command allocations, not an operating-system memory cap.
 See the [memory guide](docs/MEMORY.md).
 
+Rust runs display sample preparation, selected algorithms and batches, memory
+forecasts, and coarse progress. Add `nolog` to retain only final results, or
+`verbose` for routing and memory-policy details. `nodisplay` suppresses successful
+runtime and final output; `quietly` also suppresses progress. These options do
+not change estimation. Live progress requires a reporting-capable native build;
+Mata retains its current output.
+
 ## Results and inference
 
 ```stata

@@ -1002,6 +1002,7 @@ fn run_generic_jla_with_execution_interrupt(
     component_policy: ComponentBatchPolicy,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
+    crate::progress::stage(crate::progress::SETUP);
     interrupt.checkpoint("generic_jla_entry")?;
     let _profile = ProfileScope::new(ProfilePhase::Command);
     let component_prepared = component_inference;
@@ -1316,6 +1317,7 @@ fn run_generic_jla_with_execution_interrupt(
                     code: error.code,
                     message: error.to_string(),
                 };
+                crate::progress::report(crate::progress::FALLBACK, [1, 0, 0, 0, 0, 0, 0, 0]);
                 let mut fallback_options = execution_options;
                 fallback_options.routing.route = ModelSolverRoute::Diagonal;
                 fallback_options.routing.allow_automatic_cmg_setup_fallback = false;
@@ -1568,6 +1570,30 @@ fn run_generic_jla_with_execution_interrupt(
             parallel_regions: 0,
         },
     };
+    if crate::progress::enabled() {
+        crate::progress::report(
+            crate::progress::PLAN,
+            [
+                2,
+                2,
+                if full_solver.receipt().selected == ModelSolverRoute::Cmg {
+                    2
+                } else {
+                    1
+                },
+                full_solver.owned_batch_workers().unwrap_or(1) as u64,
+                options.leverage_batch_width as u64,
+                options.target_batch_width as u64,
+                0,
+                0,
+            ],
+        );
+        crate::progress::report(
+            crate::progress::MEMORY,
+            [memory.peak, memory.peak, 0, 0, 0, 0, 0, 0],
+        );
+    }
+    crate::progress::stage(crate::progress::FIT);
     let full_rhs = transpose_outcome_rhs(
         problem,
         &canonical.columns,
@@ -2232,6 +2258,7 @@ fn run_generic_jla_with_execution_interrupt(
     };
     let projection = match (projection, projection_coefficients) {
         (Some(prepared), Some(coefficients)) => {
+            crate::progress::stage(crate::progress::PROJECTION);
             let _profile = ProfileScope::new(ProfilePhase::Projection);
             let q = prepared.columns;
             let active_controls: &[Vec<f64>] = if options.nuisance == NuisanceMode::Joint {
@@ -2417,6 +2444,7 @@ fn run_generic_jla_with_execution_interrupt(
     drop(row_order);
     drop(weights);
     drop(canonical);
+    crate::progress::stage(crate::progress::VALIDATION);
     interrupt.checkpoint("generic_jla_final")?;
     execution.counter = combine_counter_phases(
         execution.counter.leverage.completed(),
@@ -4346,6 +4374,7 @@ fn match_leverage_moments(
     )?;
     let mut maximum_relres = 0.0_f64;
     for first in (0..options.probes as usize).step_by(options.leverage_batch_width) {
+        crate::progress::advance(crate::progress::LEVERAGE, first, options.probes as usize);
         interrupt.checkpoint("generic_jla_leverage_batch")?;
         let width = options
             .leverage_batch_width
@@ -4433,6 +4462,11 @@ fn match_leverage_moments(
             interrupt,
         )?;
     }
+    crate::progress::advance(
+        crate::progress::LEVERAGE,
+        options.probes as usize,
+        options.probes as usize,
+    );
     Ok((moments, maximum_relres))
 }
 
@@ -4614,6 +4648,11 @@ fn observation_and_match_leverage_moments(
     let mut maximum_relres = 0.0_f64;
     let addresses = statistical_batches::observation_addresses(problem, classes, interrupt)?;
     for first_probe in (0..options.probes as usize).step_by(options.leverage_batch_width) {
+        crate::progress::advance(
+            crate::progress::LEVERAGE,
+            first_probe,
+            options.probes as usize,
+        );
         interrupt.checkpoint("generic_jla_observation_leverage_batch")?;
         let rhs_profile = ProfileScope::new(ProfilePhase::LeverageRhs);
         let width = options
@@ -4761,6 +4800,11 @@ fn observation_and_match_leverage_moments(
             )?;
         }
     }
+    crate::progress::advance(
+        crate::progress::LEVERAGE,
+        options.probes as usize,
+        options.probes as usize,
+    );
     finish_stable_vector(
         &mut first_correlation,
         &first_correction,
@@ -6044,6 +6088,7 @@ fn run_component_spectrum(
     let trace_offset = u64::from(prepared.options.probes);
     let mut trace_moments = [ComponentTraceMoments::default(); REPORTED_TARGETS];
     for first in (0..trace_probes).step_by(batch_width) {
+        crate::progress::advance(crate::progress::SPECTRUM, first, trace_probes);
         interrupt.checkpoint("generic_jla_component_spectrum_trace_batch")?;
         let width = batch_width.min(trace_probes - first);
         let mut outcome = vec![0.0; rows * width];
@@ -6147,6 +6192,7 @@ fn run_component_spectrum(
             }
         }
     }
+    crate::progress::advance(crate::progress::SPECTRUM, trace_probes, trace_probes);
     let trace = trace_moments.map(ComponentTraceMoments::finish);
     let trace: [(f64, f64); REPORTED_TARGETS] = trace
         .into_iter()
@@ -6154,6 +6200,7 @@ fn run_component_spectrum(
         .try_into()
         .map_err(|_| BackendError::invariant("component_inference_spectrum", "trace width"))?;
 
+    crate::progress::stage(crate::progress::SPECTRUM_ITERATIONS);
     let start_offset = trace_offset + u64::from(prepared.options.spectrum_probes);
     let mut start_worker_rhs = vec![0.0; 2 * problem.workers()];
     let mut start_firm_rhs = vec![0.0; 2 * problem.firms()];
@@ -6704,6 +6751,7 @@ fn run_component_inference_attachment(
     counter_plan: ComponentInferenceCounterPlan,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ComponentInferenceResult> {
+    crate::progress::stage(crate::progress::INFERENCE);
     interrupt.checkpoint("generic_jla_component_inference_entry")?;
     let _profile = ProfileScope::new(ProfilePhase::Component);
     let rows = inference_rows.len(problem);
@@ -6978,6 +7026,7 @@ fn run_component_inference_attachment(
     let probes = prepared.options.probes as usize;
     let batch_width = prepared.options.batch_width.min(probes);
     for first in (0..probes).step_by(batch_width) {
+        crate::progress::advance(crate::progress::INFERENCE, first, probes);
         interrupt.checkpoint("generic_jla_component_covariance_batch")?;
         let prepare_profile = ProfileScope::new(ProfilePhase::ComponentPrepare);
         let width = batch_width.min(probes - first);
@@ -7062,6 +7111,7 @@ fn run_component_inference_attachment(
             ));
         }
     }
+    crate::progress::advance(crate::progress::INFERENCE, probes, probes);
     let mut result = finish_component_covariance_with_reporting(
         &influence,
         variance,
@@ -7348,6 +7398,7 @@ fn target_correction(
         None
     };
     for first in (0..probes).step_by(options.target_batch_width) {
+        crate::progress::advance(crate::progress::TARGETS, first, probes);
         interrupt.checkpoint("generic_jla_target_batch")?;
         let rng_profile = ProfileScope::new(ProfilePhase::TargetRng);
         let width = options.target_batch_width.min(probes - first);
@@ -7562,6 +7613,7 @@ fn target_correction(
             statistical_batches::target_diagonal(solver, &solved.solution, diagonal, interrupt)?;
         }
     }
+    crate::progress::advance(crate::progress::TARGETS, probes, probes);
     let mean = component_mean(&draws, interrupt)?;
     let mcse = component_mcse(&draws, mean, interrupt)?;
     Ok(TargetCorrection {

@@ -197,3 +197,26 @@ The macOS qualifier makes no Linux, Windows, native-Intel,
 representative-scale, production, inference, or public-release claim. Linux is
 qualified separately on SCC for the alpha; Windows and public distribution
 remain deferred pending their own gates and human review.
+
+## Runtime reporting
+
+The optional `progress_api=1` probe field identifies the `reportv1` Stata
+selector and `vckss_rust_report_call_v1` synchronous scope. Its 32-byte
+`VckssProgressOptionsV1` supplies schema 1, display level (0/1/2), a zero
+reserved field, and a caller-owned callback/context. Level zero requires a
+null display/context. Each callback receives a borrowed 96-byte update, phase
+elapsed milliseconds, and the display level; return values are Stata statuses.
+Existing estimator requests, signatures, receipts, and entrypoints are unchanged.
+
+The scope owns fixed stack storage. Numerical coordinators borrow it through
+joined thread scopes; no worker receives a host pointer or calls Stata. Counts
+are published at batch boundaries, not inside numerical kernels. The existing
+host poll drains coalesced updates, with final draining only on success. Errors
+and Break retain their existing cleanup path. Publishing never changes
+`is_inert()`, cancellation timing, pool selection, or memory admission.
+
+The Ado reporting policy uses the existing command-local context pattern,
+cleared on entry and every captured exit, so internal hybrid `nodisplay` calls
+do not overwrite the public display choice. Direct `fevc_rust` calls remain
+silent unless invoked inside that public scope. Old probe fields default to
+zero after cached transport scalars are cleared.

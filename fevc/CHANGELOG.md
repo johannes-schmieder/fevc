@@ -1,5 +1,15 @@
 # Pending changes
 
+## Rust runtime reporting — 2026-09-18
+
+- Add default sample, planning, memory, and coarse phase/probe progress messages.
+- Add `nolog` and `verbose`; respect public `nodisplay` and `quietly` while
+  preserving memory warnings, errors, and all estimator decisions.
+- Add an optional synchronous reporting ABI with caller-thread-only Stata
+  output, bounded stack storage, and unchanged legacy entrypoints. Older
+  compatible binaries continue estimating without live reporting.
+
+
 ## Package-prefixed helper filenames — 2026-09-18
 
 - Rename all 28 shipped `_fevc*.ado` helpers and their entrypoints to

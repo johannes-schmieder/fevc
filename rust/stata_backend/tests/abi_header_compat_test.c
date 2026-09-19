@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 
 #include "vckss_rust.h"
+_Static_assert(sizeof(VckssProgressOptionsV1) == 32, "progress scope layout");
+_Static_assert(sizeof(VckssProgressUpdateV1) == 96, "progress update layout");
 
 _Static_assert(sizeof(VckssExactExecutionRequestV1) == 296, "exact opt-in request layout");
 _Static_assert(sizeof(VckssExactExecutionRequestInterruptV1) == 320, "exact opt-in callback layout");

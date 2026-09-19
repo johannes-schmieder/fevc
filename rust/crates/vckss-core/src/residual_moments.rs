@@ -317,6 +317,7 @@ where
     let mut maximum_full_residual: f64 = 0.0;
     let rng = CounterRng::new(options.seed);
     for first in (0..options.probes).step_by(width) {
+        crate::progress::advance(crate::progress::GRAM, first, options.probes);
         interrupt.checkpoint("observation_residual_moment_probes")?;
         let columns = width.min(options.probes - first);
         let fill = |column: usize,
@@ -417,6 +418,7 @@ where
             }
         }
     }
+    crate::progress::advance(crate::progress::GRAM, options.probes, options.probes);
     let gram = direct
         .into_iter()
         .zip(moments.cross)

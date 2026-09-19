@@ -169,6 +169,9 @@ pub(super) struct Runtime {
 }
 
 impl Runtime {
+    pub(super) fn workers(&self) -> usize {
+        self.workers
+    }
     fn new(workers: usize) -> Result<Self> {
         let pool = if workers == 1 {
             None

@@ -322,6 +322,7 @@ source_inputs=(
   "${package_dir}/fevc_scale_engine.mata"
   "${package_dir}/fevc_scale_runtime.mata"
   "${package_dir}/fevc__display.ado"
+  "${package_dir}/fevc__progress.ado"
   "${package_dir}/fevc__memory_options.ado"
   "${package_dir}/fevc__lifecycle.ado"
   "${package_dir}/fevc_run.ado"
@@ -373,6 +374,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_point_routes_full_cmg.do"
   "${package_dir}/tests/stata/test_rust_controlled_full_cmg.do"
   "${package_dir}/tests/stata/test_rust_execution_paths.do"
+  "${package_dir}/tests/stata/test_rust_progress.do"
   "${package_dir}/tests/stata/test_stayer_option_symmetry.do"
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
@@ -782,6 +784,9 @@ run_stata_case arm64 public-controlled-full-cmg \
 run_stata_case arm64 public-generic-execution \
   "${package_dir}/tests/stata/test_rust_execution_paths.do" \
   'PASS test_rust_execution_paths.do' "${test_package_dir}"
+run_stata_case arm64 public-runtime-reporting \
+  "${package_dir}/tests/stata/test_rust_progress.do" \
+  'PASS test_rust_progress.do' "${test_package_dir}"
 run_stata_case arm64 public-stayer-options \
   "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
   'STAYER_OPTION_SYMMETRY_PASS' "${test_package_dir}"
@@ -845,6 +850,9 @@ run_stata_case arm64 universal-public-controlled-full-cmg \
 run_stata_case arm64 universal-public-generic-execution \
   "${package_dir}/tests/stata/test_rust_execution_paths.do" \
   'PASS test_rust_execution_paths.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-runtime-reporting \
+  "${package_dir}/tests/stata/test_rust_progress.do" \
+  'PASS test_rust_progress.do' "${universal_test_package_dir}"
 run_stata_case arm64 universal-public-stayer-options \
   "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
   'STAYER_OPTION_SYMMETRY_PASS' "${universal_test_package_dir}"
@@ -920,6 +928,9 @@ run_stata_case x86_64 public-controlled-full-cmg \
 run_stata_case x86_64 public-generic-execution \
     "${package_dir}/tests/stata/test_rust_execution_paths.do" \
     'PASS test_rust_execution_paths.do' "${test_package_dir}"
+run_stata_case x86_64 public-runtime-reporting \
+  "${package_dir}/tests/stata/test_rust_progress.do" \
+  'PASS test_rust_progress.do' "${test_package_dir}"
   run_stata_case x86_64 public-stayer-options \
     "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
     'STAYER_OPTION_SYMMETRY_PASS' "${test_package_dir}"
@@ -983,6 +994,9 @@ run_stata_case x86_64 universal-public-controlled-full-cmg \
 run_stata_case x86_64 universal-public-generic-execution \
     "${package_dir}/tests/stata/test_rust_execution_paths.do" \
     'PASS test_rust_execution_paths.do' "${universal_test_package_dir}"
+run_stata_case x86_64 universal-public-runtime-reporting \
+  "${package_dir}/tests/stata/test_rust_progress.do" \
+  'PASS test_rust_progress.do' "${universal_test_package_dir}"
   run_stata_case x86_64 universal-public-stayer-options \
     "${package_dir}/tests/stata/test_stayer_option_symmetry.do" \
     'STAYER_OPTION_SYMMETRY_PASS' "${universal_test_package_dir}"
@@ -1223,6 +1237,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_public_point_routes_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_controlled_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic_execution=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_progress=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
@@ -1244,6 +1259,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_public_point_routes_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_controlled_full_cmg=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic_execution=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_progress=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
@@ -1267,6 +1283,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_public_point_routes_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_controlled_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic_execution=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_progress=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
@@ -1288,6 +1305,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_public_point_routes_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_controlled_full_cmg=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic_execution=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_progress=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'

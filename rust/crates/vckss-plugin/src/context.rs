@@ -306,23 +306,30 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
         if initial_callback_error.is_some() {
             cancellation.cancel();
         }
-        let (callback_error, worker_outcome) = thread::scope(|scope| {
-            let worker = scope
-                .spawn(|| catch_unwind(AssertUnwindSafe(|| solve(&prepared, worker_cancellation))));
-            let mut callback_error = initial_callback_error;
-            while !worker.is_finished() {
-                if callback_error.is_none() {
-                    if let Err(error) = poll() {
-                        cancellation.cancel();
-                        callback_error = Some(error);
+        let (callback_error, worker_outcome) = vckss_core::progress::with_current(|progress| {
+            thread::scope(|scope| {
+                let worker = scope.spawn(|| {
+                    catch_unwind(AssertUnwindSafe(|| {
+                        vckss_core::progress::with_progress(progress, || {
+                            solve(&prepared, worker_cancellation)
+                        })
+                    }))
+                });
+                let mut callback_error = initial_callback_error;
+                while !worker.is_finished() {
+                    if callback_error.is_none() {
+                        if let Err(error) = poll() {
+                            cancellation.cancel();
+                            callback_error = Some(error);
+                        }
                     }
+                    thread::park_timeout(Duration::from_millis(5));
                 }
-                thread::park_timeout(Duration::from_millis(5));
-            }
-            let outcome = worker
-                .join()
-                .unwrap_or_else(|_| Err(Box::new("coordinator worker panic escaped containment")));
-            (callback_error, outcome)
+                let outcome = worker.join().unwrap_or_else(|_| {
+                    Err(Box::new("coordinator worker panic escaped containment"))
+                });
+                (callback_error, outcome)
+            })
         });
 
         let active = self

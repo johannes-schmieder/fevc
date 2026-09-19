@@ -1435,7 +1435,17 @@ impl InterruptCheck for CallbackInterrupt {
         // SAFETY: the ABI caller guarantees that the synchronous callback and
         // context remain valid for this solve. Neither value is retained.
         match unsafe { (self.poll)(self.context) } {
-            VCKSS_INTERRUPT_CONTINUE => Ok(()),
+            VCKSS_INTERRUPT_CONTINUE => {
+                if crate::progress_api::poll() == 0 {
+                    Ok(())
+                } else {
+                    Err(BackendError::new(
+                        ErrorCode::UserBreak,
+                        phase,
+                        "output interrupted",
+                    ))
+                }
+            }
             VCKSS_INTERRUPT_USER_BREAK => Err(BackendError::new(
                 ErrorCode::UserBreak,
                 phase,
@@ -3231,6 +3241,7 @@ fn prepare_v2_value(
     )?;
     // A failed preparation never exposes a stale or partial generation.
     write_output(output_handle, 0);
+    vckss_core::progress::stage(vckss_core::progress::PREPARATION);
     interrupt.checkpoint("engine_prepare_entry")?;
     let memory = validate_prepare_request_v2(request)?;
     let columns = copy_sized_struct(columns, "engine column descriptor")?;
@@ -3247,6 +3258,37 @@ fn prepare_v2_value(
     let mut prepared =
         PreparedProblemWithMask::from_columns_with_memory_and_interrupt(input, memory, interrupt)?;
     prepared.performance.ingest_ns = ingest_ns;
+    let graph = prepared.receipt.graph;
+    vckss_core::progress::report(
+        vckss_core::progress::SAMPLE,
+        [
+            graph.input_rows,
+            graph.retained_rows,
+            prepared.problem.workers() as u64,
+            prepared.problem.firms() as u64,
+            0,
+            0,
+            0,
+            0,
+        ],
+    );
+    vckss_core::progress::report(
+        vckss_core::progress::PRUNING,
+        [
+            graph.insufficient_workers_removed,
+            graph.articulation_workers_removed,
+            graph.bridge_units_removed,
+            graph.bridge_rows_removed,
+            if prepared.deletion == DeletionMode::Observation {
+                1
+            } else {
+                2
+            },
+            0,
+            0,
+            0,
+        ],
+    );
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -3268,6 +3310,7 @@ fn prepare_v3_value(
         "engine output handle",
     )?;
     write_output(output_handle, 0);
+    vckss_core::progress::stage(vckss_core::progress::PREPARATION);
     interrupt.checkpoint("engine_prepare_entry")?;
     let (deletion, memory) = validate_prepare_request_v3(request)?;
     let columns = copy_sized_struct(columns, "V2 engine column descriptor")?;
@@ -3295,6 +3338,37 @@ fn prepare_v3_value(
         input, deletion, memory, interrupt,
     )?;
     prepared.performance.ingest_ns = ingest_ns;
+    let graph = prepared.receipt.graph;
+    vckss_core::progress::report(
+        vckss_core::progress::SAMPLE,
+        [
+            graph.input_rows,
+            graph.retained_rows,
+            prepared.problem.workers() as u64,
+            prepared.problem.firms() as u64,
+            0,
+            0,
+            0,
+            0,
+        ],
+    );
+    vckss_core::progress::report(
+        vckss_core::progress::PRUNING,
+        [
+            graph.insufficient_workers_removed,
+            graph.articulation_workers_removed,
+            graph.bridge_units_removed,
+            graph.bridge_rows_removed,
+            if prepared.deletion == DeletionMode::Observation {
+                1
+            } else {
+                2
+            },
+            0,
+            0,
+            0,
+        ],
+    );
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -3365,6 +3439,7 @@ fn prepare_columns_value(
         "engine output handle",
     )?;
     write_output(output_handle, 0);
+    vckss_core::progress::stage(vckss_core::progress::PREPARATION);
     interrupt.checkpoint("engine_prepare_entry")?;
     if columns.v2.v1.reserved != 0
         || columns.v2.reserved_2 != 0
@@ -3444,6 +3519,37 @@ fn prepare_columns_value(
         prepared.receipt.memory.preparation_peak_forecast_bytes = peak;
     }
     prepared.performance.ingest_ns = ingest_ns;
+    let graph = prepared.receipt.graph;
+    vckss_core::progress::report(
+        vckss_core::progress::SAMPLE,
+        [
+            graph.input_rows,
+            graph.retained_rows,
+            prepared.problem.workers() as u64,
+            prepared.problem.firms() as u64,
+            0,
+            0,
+            0,
+            0,
+        ],
+    );
+    vckss_core::progress::report(
+        vckss_core::progress::PRUNING,
+        [
+            graph.insufficient_workers_removed,
+            graph.articulation_workers_removed,
+            graph.bridge_units_removed,
+            graph.bridge_rows_removed,
+            if prepared.deletion == DeletionMode::Observation {
+                1
+            } else {
+                2
+            },
+            0,
+            0,
+            0,
+        ],
+    );
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -3496,6 +3602,7 @@ fn attach_projection_inner(
     columns: *const VckssProjectionColumnsV1,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
+    vckss_core::progress::stage(vckss_core::progress::PROJECTION);
     interrupt.checkpoint("engine_projection_augmentation_entry")?;
     require_abi(request.abi_version)?;
     if request.struct_size < struct_size_u32::<VckssProjectionAugmentationRequestV1>()?
@@ -3818,6 +3925,7 @@ fn attach_component_inference_inner(
     policy: ComponentInferencePolicy,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
+    vckss_core::progress::stage(vckss_core::progress::INFERENCE);
     interrupt.checkpoint("engine_component_inference_augmentation_entry")?;
     require_abi(request.abi_version)?;
     if request.struct_size < struct_size_u32::<VckssComponentInferenceAugmentationRequestV1>()?
@@ -3968,6 +4076,7 @@ fn augment_stayers_value(
     columns: *const VckssStayerAugmentationColumnsV1,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
+    vckss_core::progress::stage(vckss_core::progress::PREPARATION);
     interrupt.checkpoint("engine_stayer_augmentation_entry")?;
     require_abi(request.abi_version)?;
     if request.struct_size < struct_size_u32::<VckssStayerAugmentationRequestV1>()?
@@ -4008,7 +4117,24 @@ fn augment_stayers_value(
             request.caller_copy_bytes,
             prepared.receipt.memory.budget,
         )?;
-        prepared.augment_stayers_with_memory_and_interrupt(input, memory, interrupt)
+        prepared.augment_stayers_with_memory_and_interrupt(input, memory, interrupt)?;
+        if let Some(stayers) = &prepared.stayer_augmentation {
+            let r = stayers.core.receipt;
+            vckss_core::progress::report(
+                vckss_core::progress::STAYERS,
+                [
+                    r.stayer_stored_rows,
+                    r.stayer_workers,
+                    r.combined_stored_rows,
+                    r.combined_workers,
+                    r.firms,
+                    0,
+                    0,
+                    0,
+                ],
+            );
+        }
+        Ok(())
     })
 }
 
@@ -4501,6 +4627,24 @@ fn solve_engine_v4_with_generic_execution(
     let operation = move |prepared: &PreparedProblemWithMask,
                           interrupt: &mut dyn InterruptCheck|
           -> Result<EngineSolved> {
+        vckss_core::progress::report(
+            vckss_core::progress::MEMORY_FLOOR,
+            [
+                prepared.receipt.memory.preparation_peak_forecast_bytes.max(
+                    prepared
+                        .stayer_augmentation
+                        .as_ref()
+                        .map_or(0, |a| a.memory.augmentation_peak_forecast_bytes),
+                ),
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+        );
         let automatic_component_batch = matches!(
             generic_execution,
             Some(
@@ -4594,6 +4738,19 @@ fn solve_engine_v4_with_generic_execution(
                 .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
                 && compressed_physical_rng_ready,
         })?;
+        vckss_core::progress::report(
+            vckss_core::progress::CHOICES,
+            [
+                algorithm_reason_code(estimator_plan.algorithm.reason) as u64,
+                engine_reason_code(estimator_plan.engine.reason) as u64,
+                compressed_eligibility_code(estimator_plan.engine.compressed_eligibility) as u64,
+                estimator_plan.algorithm.identified_complexity as u64,
+                exact_limit as u64,
+                request.leverage_batch_mode as u64,
+                request.target_batch_mode as u64,
+                0,
+            ],
+        );
         if matches!(
             generic_execution,
             Some(GenericExecutionPlan::ExactParallel(_))
@@ -5245,6 +5402,24 @@ fn solve_engine_v2_execution(
     let (exact_limit, blocksize_limit) = validate_exact_request_options(request)?;
     let handle = ContextHandle::from_generation(generation)?;
     let operation = |prepared: &PreparedProblemWithMask, interrupt: &mut dyn InterruptCheck| {
+        vckss_core::progress::report(
+            vckss_core::progress::MEMORY_FLOOR,
+            [
+                prepared.receipt.memory.preparation_peak_forecast_bytes.max(
+                    prepared
+                        .stayer_augmentation
+                        .as_ref()
+                        .map_or(0, |a| a.memory.augmentation_peak_forecast_bytes),
+                ),
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            ],
+        );
         if exact_threads.is_some() && prepared.stayer_augmentation.is_some() {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,

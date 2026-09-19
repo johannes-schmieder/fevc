@@ -8,6 +8,14 @@ program define fevc, eclass
         exit
     }
 
+    // Reporting follows the public invocation, including internal nodisplay
+    // calls used to assemble hybrid results. Like memory context, it is
+    // command-local and cleared on every captured success/error/Break exit.
+    foreach key in LEVEL API NOTICE ALLOWED {
+        capture macro drop VCKSS_REPORT_`key'
+    }
+    local report_allowed = c(noisily)
+
     // Routing metadata is command-local failure context.  Clear it before
     // any runtime work so an interrupted earlier command cannot leak into a
     // later typed failure.
@@ -80,8 +88,12 @@ program define fevc, eclass
     local stage_validation_timer = r(validation_timer)
     global VCKSS_STAGE_SELECTION_TIMER `stage_selection_timer'
     global VCKSS_STAGE_VALIDATION_TIMER `stage_validation_timer'
+    global VCKSS_REPORT_ALLOWED `report_allowed'
     capture noisily _vckss_impl `0'
     local command_rc = _rc
+    foreach key in LEVEL API NOTICE ALLOWED {
+        capture macro drop VCKSS_REPORT_`key'
+    }
     if !`command_rc' quietly fevc__stayer_population_post
     if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
         if real("$VCKSS_MEMORY_FORECAST") > 0 & real("$VCKSS_MEMORY_FORECAST") < . {
@@ -1718,6 +1730,11 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         quietly count if `complete_worker_tag' & `originalstayer' &   ///
             !`retained_firm_member'
         local N_hyb_unattached = r(N)
+        if inlist("$VCKSS_REPORT_LEVEL","1","2") & "$VCKSS_REPORT_API"=="1" & c(noisily) {
+            di as txt "  Stayer exclusions: " as result `N_hyb_singleton_drop' ///
+                as txt " physical-singleton workers; " as result `N_hyb_unattached' ///
+                as txt " workers outside retained firms"
+        }
         quietly summarize `frequency' if `hybrid_stayer', meanonly
         local hybrid_stayer_physical = r(sum)
         local hybrid_total_physical =                              ///
@@ -4181,7 +4198,7 @@ program define _vckss_impl, eclass sortpreserve
         INFERENCEGRAMProbes(string)                               ///
         INFERENCEBins(integer 1000)                               ///
         PROJECT(varlist numeric) PROJECTEffect(string)            ///
-        PROJECTWeight(string) NODISPlay                           ///
+        PROJECTWeight(string) NODISPlay NOLOG VERBOSE                           ///
     ]
     local syntax_rc = _rc
     if `syntax_rc' {
@@ -4189,6 +4206,10 @@ program define _vckss_impl, eclass sortpreserve
             "Stata rejected the command syntax, variable list, weight, qualifier, or option."
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
+    }
+    global VCKSS_REPORT_LEVEL 0
+    if "$VCKSS_REPORT_ALLOWED" == "1" & "`nodisplay'`nolog'" == "" {
+        global VCKSS_REPORT_LEVEL = cond("`verbose'" != "", 2, 1)
     }
     local tolerance_supplied = (strtrim(`"`tolerance'"') != "")
     if !`tolerance_supplied' local tolerance = 1e-10

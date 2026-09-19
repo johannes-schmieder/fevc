@@ -280,6 +280,28 @@ typedef struct VckssEnginePrepareRequestV4 {
 
 typedef int32_t (*VckssInterruptPollV1)(void *context);
 
+/* Additive synchronous reporting scope. Existing estimator layouts are frozen. */
+typedef struct VckssProgressUpdateV1 {
+    uint64_t sequence;
+    uint32_t kind;
+    uint32_t reserved;
+    uint64_t completed;
+    uint64_t total;
+    uint64_t values[8];
+} VckssProgressUpdateV1;
+typedef int32_t (*VckssProgressDisplayV1)(void *, const VckssProgressUpdateV1 *, uint64_t, uint32_t);
+typedef int32_t (*VckssProgressOperationV1)(void *);
+typedef struct VckssProgressOptionsV1 {
+    uint32_t struct_size;
+    uint32_t schema;
+    uint32_t level;
+    uint32_t reserved;
+    VckssProgressDisplayV1 display;
+    void *context;
+} VckssProgressOptionsV1;
+int32_t vckss_rust_report_call_v1(const VckssProgressOptionsV1 *, VckssProgressOperationV1, void *);
+
+
 typedef struct VckssEnginePrepareRequestInterruptV1 {
     VckssEnginePrepareRequestV2 options;
     VckssInterruptPollV1 interrupt_poll;

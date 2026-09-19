@@ -1,4 +1,4 @@
-# Current checkpoint — 2026-09-18
+# Current checkpoint — 2026-09-19
 
 Prepare a clean public-facing checkout: concise user documentation, one-step
 installation with native binaries, maintained source and regression tests,
@@ -13,6 +13,29 @@ identities unchanged. Installation migration requires uninstalling the old
 registered package before reinstalling, followed by a Stata restart.
 Local evidence belongs in `.local/helper-rename-20260918/`; this change does
 not publish a release or establish new Linux/Windows qualification.
+
+## Rust runtime reporting — September 18
+
+The implementation adds default Rust sample, pruning, method, allocation,
+and phase/probe messages, with `nolog`, `verbose`, and public display-policy
+handling. The additive reporting interface preserves existing estimator ABIs
+and supports older plugins without live output. `fevc__progress.ado` is the
+29th shipped helper. All output remains on Stata's caller thread.
+
+Local checks and timing evidence belong in `.local/runtime-reporting/`.
+The macOS qualifier completed for a dirty source checkpoint, which is not a
+clean-SHA qualification or a new Linux/Windows claim. Existing repository
+plugin binaries are restored to their original hashes; newly built candidates
+remain in the local evidence directory. The owner authorized committing and
+pushing this source on September 19; release and native binary distribution
+remain separate decisions.
+
+Rust/source/Stata checks and final arm64, Rosetta, and universal reporting
+replays passed. Ninety measured CLI calls across compressed JLA, controlled
+generic JLA, and inference (1/4 threads) had identical numerical output;
+maximum median overhead was 0.16% versus baseline and 0.48% versus `nolog`.
+These are local timing results, not a platform-wide performance guarantee.
+The live Results-window check remains pending because the Mac is locked.
 
 ## Preserved implementation work
 

@@ -14,6 +14,13 @@ static int mock_cleanup_clear(void);
 
 ST_plugin *_stata_;
 
+int32_t vckss_rust_report_call_v1(const VckssProgressOptionsV1 *options,
+    VckssProgressOperationV1 operation, void *context)
+{
+    assert(options->struct_size == sizeof(*options) && options->schema == 1u);
+    return operation(context);
+}
+
 uint32_t vckss_rust_abi_version(void) { return VCKSS_RUST_ABI_VERSION_V1; }
 const char *vckss_rust_backend_version(void) { return VCKSS_RUST_RUNTIME_BUILD_ID; }
 int32_t vckss_rust_backend_capabilities_v1(VckssBackendCapabilitiesV1 *output, uint32_t capacity)
@@ -45,6 +52,7 @@ static int fail_scalar;
 static int fail_plan_scalar;
 static int fail_execution_api_scalar;
 static double saved_execution_api;
+static double saved_progress_api;
 static int fail_matrix;
 static int error_calls;
 static int release_calls;
@@ -750,6 +758,7 @@ static ST_int mock_scalar_save(char *name, ST_double value)
         if (fail_execution_api_scalar) return 1;
         saved_execution_api = value;
     }
+    if (strcmp(name, "__vckss_rust_progress_api") == 0) saved_progress_api = value;
     if (strcmp(name, "__vckss_rust_error_code") == 0) saved_error_code = value;
     if (fail_plan_scalar && strcmp(name, "__vckss_plan_struct") == 0) return 1;
     return fail_scalar;
@@ -814,6 +823,7 @@ static void reset_transport(void)
     fail_plan_scalar = 0;
     fail_execution_api_scalar = 0;
     saved_execution_api = -1;
+    saved_progress_api = -1;
     fail_matrix = 0;
     error_calls = 0;
     release_calls = 0;
@@ -980,7 +990,7 @@ int main(void)
 
     reset_transport();
     assert(vckss_probe() == 0);
-    assert(saved_execution_api == 3 && scalar_calls == 9);
+    assert(saved_execution_api == 3 && saved_progress_api == 1 && scalar_calls == 10);
     reset_transport();
     fail_execution_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
