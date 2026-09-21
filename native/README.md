@@ -4,8 +4,10 @@ The repository installation includes macOS arm64, macOS x86-64, macOS
 universal, and Linux x86-64 plugins. Windows binaries and testing are deferred.
 Intel Mac execution is checked under Rosetta, not on native Intel hardware.
 
-The input manifest and qualification receipts in this directory record each
-binary's actual build source and SHA-256. Later packaging and evidence commits
+The [input manifest](manifest.json) and qualification receipts record each
+binary's actual build source and SHA-256.
+[Installation verification](installation.json) records fresh and replacement
+installs with both public commands on Mac and Linux under Stata/MP 19. Later packaging and evidence commits
 do not change that build identity. Root `fevc.pkg` selects the native package;
 `fevc/fevc.pkg` remains the portable source manifest.
 

@@ -1,0 +1,249 @@
+{
+  "binary_manifest_sha256": "7fffe73d9f6d060d1c838b7fbaf3fb315749aa4264c221b6b0ee104c2e6aacbb",
+  "catalog_sha256": "807a66abcc4ee3b87605b64d8735a3403d8b270b4589bd7a5a668e99ba5e25db",
+  "compatibility_review": {
+    "affected_surface": "Root installation catalogs, committed qualified binaries, dependency notices, provenance, and installer verification tooling/tests.",
+    "build_source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+    "changed_paths": [
+      ".gitignore",
+      "fevc.pkg",
+      "fevc/PLAN.md",
+      "fevc/THIRD_PARTY_NOTICES.txt",
+      "fevc/docs/RC_BINARY_PAYLOAD.md",
+      "fevc/fevc_rust_linux_x64.plugin",
+      "fevc/fevc_rust_macos.plugin",
+      "fevc/fevc_rust_macos_arm64.plugin",
+      "fevc/fevc_rust_macos_x86_64.plugin",
+      "fevc/tests/python/test_native_installers.py",
+      "fevc/tools/verify_native_installers.py",
+      "native/README.md",
+      "native/compatibility.json",
+      "native/dependencies.json",
+      "native/linux-qualification.txt",
+      "native/linux-scheduler.json",
+      "native/macos-qualification.txt",
+      "native/macos-source.sha256",
+      "native/manifest.json",
+      "native/package.receipt.json",
+      "stata.toc"
+    ],
+    "claims_reused": "The original macOS and Linux native qualification at the actual build source; no later commit is called the binary build source.",
+    "limitations": [
+      "Windows binaries and testing deferred.",
+      "Mac Intel native execution qualified under Rosetta, not native Intel hardware.",
+      "Public command verification uses Stata/MP 19; no new Stata 18 execution claim.",
+      "No tag or GitHub release created."
+    ],
+    "new_checks": "Both actual public installers, fresh and replacement, native reporting API 2 and execution, example/data restoration, help/decomposition, q0/q1, and all 50 installed-file hashes.",
+    "reviewed_repository_commit": "3392aea57ac86ecfb88dbadf259c4d3ad994ffbb",
+    "status": "PASS",
+    "unchanged_identities": [
+      "All 219 native source/build/runtime/test manifest entries match qualified hashes.",
+      "No Rust source, build script, Cargo lock, Stata regression fixture, or registered acceptance policy differs from the qualified build.",
+      "All 52 root catalog/payload files match the staged package receipt, including all four exact qualified binaries."
+    ],
+    "unchanged_source_manifest_sha256": "1ba3d82bd3ccfcafe4cc8036e30133ff5eabe2414a1169ff962ea2ca403d45de"
+  },
+  "date": "2026-09-21",
+  "limitations": [
+    "Windows binaries and testing deferred.",
+    "Mac Intel native execution qualified under Rosetta, not native Intel hardware.",
+    "Public command verification uses Stata/MP 19; no new Stata 18 execution claim.",
+    "No tag or GitHub release created."
+  ],
+  "linux_scheduler": {
+    "exit_status": "0",
+    "failed": "0",
+    "jobnumber": "7674561",
+    "ru_wallclock": "810",
+    "slots": "4"
+  },
+  "payload_introduction_commit": "19fb3c308e9e3e1cfa704db49770770f52e318d3",
+  "platforms": [
+    {
+      "checks": [
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "net",
+          "mode": "fresh",
+          "status": "PASS",
+          "transcript_sha256": "6fe767631709926496b36dd1fcec1227933b8e902f4722c1eaf22a06e343d21c"
+        },
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "net",
+          "mode": "replace",
+          "status": "PASS",
+          "transcript_sha256": "0f2e71938d582f7010a2567a8b5dabfec50bf5f73c5cbd0d7686831b248b0053"
+        },
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "github",
+          "mode": "fresh",
+          "status": "PASS",
+          "transcript_sha256": "8bdd95d69248ae7f58d8ffb2f929a4d12c9dad3b19c8f8cb4f4fba327dae11ce"
+        },
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "github",
+          "mode": "replace",
+          "status": "PASS",
+          "transcript_sha256": "a8c68edd2482c5bdac4676ae3536b4236b81c6a767164ee1ce49f3fd893af7b1"
+        }
+      ],
+      "platform": "macOS arm64",
+      "status": "PASS",
+      "verifier_commit": "055d7b2bf9c4668c90906ef80bfc0257123f9739",
+      "verifier_sha256": "8c3aeb53ceb7220690a0da9dd7c17937b335451f504c5ea1a0718a64f907cfcc"
+    },
+    {
+      "checks": [
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "net",
+          "mode": "fresh",
+          "status": "PASS",
+          "transcript_sha256": "4523274b5c0095bc0cd3b50c5d13fe703718b593e4e17ffd7c7ddd127cac3f1f"
+        },
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "net",
+          "mode": "replace",
+          "status": "PASS",
+          "transcript_sha256": "2e90bc1ef664a298f3d0118825f2be6aa165e4f7126097c80161232c57e86819"
+        },
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "github",
+          "mode": "fresh",
+          "status": "PASS",
+          "transcript_sha256": "5bb0f5517e5e07baf3dd43ad1583b30cd99e558061810e589e686785500248b8"
+        },
+        {
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "idle native registry",
+            "all installed file hashes"
+          ],
+          "installed_file_count": 50,
+          "method": "github",
+          "mode": "replace",
+          "status": "PASS",
+          "transcript_sha256": "feab78cb2b9a4b3ecde86f36a726fada0938347d7a8ef77f9461a245edb5d99b"
+        }
+      ],
+      "platform": "Linux x86-64",
+      "status": "PASS",
+      "verifier_commit": "3392aea57ac86ecfb88dbadf259c4d3ad994ffbb",
+      "verifier_sha256": "a0f34fc9ef05d028c03070e86db32c1ecf55b7e3c71bdce73d68d24f6a52e5f5"
+    }
+  ],
+  "prior_attempts": [
+    {
+      "job": "7674452",
+      "reason": "Stata normalized LICENSE to lowercase; all Stata application checks passed before the case-sensitive Python filename lookup failed.",
+      "resolution": "Verifier now matches normalized names, rejects duplicates, and still compares all 50 complete file contents.",
+      "status": "VERIFIER_FAILED"
+    },
+    {
+      "job": "7674473",
+      "reason": "Dependent public run cancelled before the one narrow verifier fix and retest.",
+      "status": "CANCELLED_BEFORE_EXECUTION"
+    }
+  ],
+  "profile": "macos-linux",
+  "public_endpoints": [
+    "https://raw.githubusercontent.com/johannes-schmieder/fevc/main/",
+    "https://raw.githubusercontent.com/johannes-schmieder/fevc/master/"
+  ],
+  "qualified_build_source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+  "repository": "https://github.com/johannes-schmieder/fevc",
+  "repository_package_receipt_sha256": "9444911144870479adce5b71f55dd7641fdd8745c1cfa9a4f1103bd438e288d0",
+  "schema": "FEVC-INSTALLATION-VERIFICATION-V1",
+  "source_checks": {
+    "commit": "3392aea57ac86ecfb88dbadf259c4d3ad994ffbb",
+    "generated_cmg_check": "PASS",
+    "python_passed": 818,
+    "python_skipped": 9,
+    "skipped_reason": "local/licensed Stata is unavailable on public GitHub runners",
+    "status": "PASS",
+    "url": "https://github.com/johannes-schmieder/fevc/actions/runs/35617667488"
+  },
+  "status": "PASS",
+  "visibility": "public"
+}

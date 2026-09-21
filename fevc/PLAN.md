@@ -1,43 +1,45 @@
 # Current checkpoint — 2026-09-21
 
-Prepare and publish the existing repository with working `net install fevc`
-and `github install johannes-schmieder/fevc` routes. The owner accepted that
-old GitHub pull-request refs retain the deleted reviews and explicitly deferred
-Windows binaries and testing. Do not restore review files into the checkout.
-
-## Current source
-
-The committed implementation includes the September 18 helper rename to
-`fevc__*.ado` and the September 19 Rust runtime reporting and total-elapsed
-updates. Qualify current Mac/Linux builds for the public installation package;
-September 18 binaries do not represent these later native changes.
-
-Preserve existing scientific contracts, routes, thresholds, and limitations.
-Previous optimization and reporting evidence remains in ignored `.local/`
-directories; do not overwrite or relabel historical receipts.
+The existing repository is public with working `net install fevc` and
+`github install johannes-schmieder/fevc` routes. `main` is the development
+branch; `master` is the matching compatibility ref for the community installer.
+The owner accepted the retained historical GitHub PR reviews. Do not restore
+review files into the cleaned checkout. Windows binaries and testing remain
+deferred. No tag or GitHub release has been created.
 
 ## Qualified package
 
-Native build source: `f2a15dea9fe5715d654a00976e97c8d706efe63f`.
-Mac arm64, Rosetta x86-64, universal, and Linux x86-64 qualification passed.
-Linux job `7674352` passed the full Stata suite and isolated native install,
-with scheduler `failed=0` and `exit_status=0`. All 825 Python source tests and
-generated-source checks passed. Packaging source `055d7b2b` adds dependency
-notices and installer verification without changing native/runtime sources.
-The exact binaries and evidence are indexed in [`native/`](../native/README.md).
+Native build source: `f2a15dea9fe5715d654a00976e97c8d706efe63f`, including the
+latest runtime reporting and total-elapsed updates. Mac arm64, Rosetta x86-64,
+universal, and Linux x86-64 qualification passed. Linux job `7674352` passed
+the full Stata suite and isolated native install with scheduler `failed=0`
+and `exit_status=0`. All 825 original local Python tests and generated-source
+checks passed. Public CI after the two verifier regressions were added passed
+818 tests, with 9 licensed/local Stata checks skipped on GitHub.
 
-## Publication work
+Root catalogs and the four binary files are committed. Dependency notices,
+actual build identities, hashes, compatibility review, and compact qualification
+receipts live in [`native/`](../native/README.md). Packaging and later evidence
+commits do not redefine the binaries' original tested source.
 
-- Explicit `macos-linux` packaging profile with all four required binaries;
-  the default complete profile still requires Windows.
-- Clean-source macOS arm64/Rosetta/universal and Linux x86-64 qualification.
-- Root installation catalogs, corresponding native source, licensing notices,
-  and reviewed binary hashes/evidence; keep both installer refs synchronized.
-- Fresh and replacement installation checks using both advertised commands,
-  native execution, help, the README example, and installed-file hashes.
-- Scan the final publication tree and history before changing visibility.
+## Installer verification
 
-Run manifests and detailed installation evidence belong in ignored
-`.local/public-install-20260921/`. Keep the public README focused on use and
-installation. Candidate promotion and evidence reuse follow
-[`development_acceptance_v1.json`](docs/development_acceptance_v1.json).
+Both advertised public commands passed fresh and replacement installation
+checks on Mac and Linux under Stata/MP 19. Checks cover all 50 installed-file
+hashes, native reporting API 2, the README example and caller-data restoration,
+help, decomposition, match q0/q1 regression, and an idle native registry.
+See [`native/installation.json`](../native/installation.json).
+
+The first Linux HTTP attempt passed all Stata application checks but failed a
+case-sensitive Python lookup of LICENSE; Stata installs lowercase filenames.
+The verifier fix preserves duplicate rejection and exact byte comparisons.
+Its bounded public retest is recorded separately from the failed first attempt.
+
+The final publication tree, rewritten local history, and all remote refs,
+including the accepted historical PR refs, passed redacted Gitleaks scans.
+Detailed logs remain in ignored `.local/public-install-20260921/`.
+
+Preserve scientific contracts, routes, thresholds, and limitations. Native
+build evidence does not create new statistical coverage, native Intel hardware,
+Windows, or representative-scale claims. Candidate promotion and evidence reuse
+follow [`development_acceptance_v1.json`](docs/development_acceptance_v1.json).
