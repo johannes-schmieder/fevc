@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage a complete, source-bound native RC; never publish or accept partial platforms."""
+"""Stage a source-bound native package for an explicitly selected platform profile."""
 from __future__ import annotations
 
 import argparse
@@ -17,11 +17,12 @@ BINARY_NAMES = (
     "fevc_rust_linux_x64.plugin",
     "fevc_rust_windows_x64.plugin",
 )
+PROFILES = {"complete": BINARY_NAMES, "macos-linux": BINARY_NAMES[:-1]}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 def native_files(package_root: Path, binary_root: Path, manifest: dict,
-                 source_commit: str) -> tuple[portable.PackageFile, ...]:
+                 source_commit: str, profile: str = "complete") -> tuple[portable.PackageFile, ...]:
     """Require reviewed evidence bindings; this does not create qualification evidence."""
     if not portable.COMMIT_RE.fullmatch(source_commit):
         raise ValueError("invalid source commit")
@@ -29,10 +30,13 @@ def native_files(package_root: Path, binary_root: Path, manifest: dict,
         raise ValueError("invalid native input schema")
     if manifest.get("source_commit") != source_commit:
         raise ValueError("native source commit mismatch")
+    if profile not in PROFILES or manifest.get("profile", "complete") != profile:
+        raise ValueError("native platform profile mismatch")
+    binary_names = PROFILES[profile]
     rows = manifest.get("binaries")
-    if not isinstance(rows, list) or len(rows) != len(BINARY_NAMES):
-        raise ValueError("complete five-binary payload required")
-    if {row.get("name") for row in rows} != set(BINARY_NAMES):
+    if not isinstance(rows, list) or len(rows) != len(binary_names):
+        raise ValueError(f"all {len(binary_names)} binaries required for {profile}")
+    if {row.get("name") for row in rows} != set(binary_names):
         raise ValueError("missing, duplicate or unexpected native binary")
     files = list(portable.package_files(package_root))
     if any(str(item.relative).endswith(".plugin") for item in files):
@@ -75,7 +79,12 @@ def native_files(package_root: Path, binary_root: Path, manifest: dict,
             lines = ["F " + line[2:] if line in {
                 "f LICENSE", "f THIRD_PARTY_NOTICES.txt"
             } else line for line in lines]
-            lines.extend(f"f {name}" for name in BINARY_NAMES)
+            lines = ["d GPL-3.0-only prerelease package with precompiled native backends."
+                     if line.startswith("d GPL-3.0-only prerelease source package;") else line
+                     for line in lines]
+            if profile == "macos-linux":
+                lines.append("d Native binaries: macOS and Linux x86-64. Windows binaries are deferred.")
+            lines.extend(f"f {name}" for name in binary_names)
             data = ("\n".join(lines) + "\n").encode("utf-8")
             files[index] = portable.PackageFile(item.relative, data)
     return tuple(sorted(files, key=lambda item: str(item.relative)))
@@ -114,6 +123,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary-dir", required=True, type=Path)
     parser.add_argument("--manifest", required=True, type=Path)
+    parser.add_argument("--profile", choices=tuple(PROFILES), default="complete",
+                        help="require every binary in this profile (default: all platforms)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--check", action="store_true")
     group.add_argument("--output-dir", type=Path)
@@ -123,7 +134,8 @@ def main() -> int:
     source_commit = portable.clean_source_identity()
     manifest_data = args.manifest.read_bytes()
     manifest = json.loads(manifest_data)
-    files = native_files(portable.PACKAGE_ROOT, args.binary_dir, manifest, source_commit)
+    files = native_files(portable.PACKAGE_ROOT, args.binary_dir, manifest, source_commit,
+                         args.profile)
     archive = portable.archive_files(files)
     if archive != portable.archive_files(files):
         raise RuntimeError("nondeterministic native archive")
@@ -133,6 +145,7 @@ def main() -> int:
         archive_name=archive_name, archive=archive, files=files, source_commit=source_commit
     ))
     receipt.update(format="FEVC-BINARY-ARTIFACT-V1",
+                   profile=args.profile,
                    native_inputs_sha256=portable.sha256(manifest_data),
                    binaries=manifest["binaries"],
                    status="STAGED_NOT_RELEASED")

@@ -1,14 +1,13 @@
 # Installing fevc
 
-`fevc` requires Stata 18 or 19. The public package is being prepared with
-precompiled native plugins for macOS Apple Silicon and Intel, Linux x86-64,
-and Windows x86-64.
+`fevc` requires Stata 18 or 19. The package includes precompiled native plugins
+for macOS Apple Silicon and Intel, and Linux x86-64. No compiler, Rust
+installation, or separate plugin download is needed. Windows binaries and
+Windows testing are deferred; this distribution makes no Windows native claim.
 
-## Public installation
+## Installation
 
-These are the planned public commands. They are not yet operational: the
-complete native payload, Windows qualification, and final installation checks
-are unfinished, and the repository has not been published.
+Run this in Stata:
 
 ```stata
 net install fevc, replace ///
@@ -21,11 +20,21 @@ With the community-contributed `github` installer already installed:
 github install johannes-schmieder/fevc
 ```
 
-Both routes are intended to install the same complete package. No compiler,
-Rust installation, or separate plugin download will be required. Installer
-compatibility with the repository's `main` branch must be verified before
-publication. The native package preparation process is documented
-[here](fevc/docs/RC_BINARY_PAYLOAD.md).
+Both routes install the same runtime, help, licenses, and four plugin files
+(macOS arm64, Intel, universal, and Linux x86-64). The loader selects the
+appropriate native backend. The `master` compatibility branch serves the
+community installer; `main` remains the development branch.
+
+After installation:
+
+```stata
+help fevc
+fevc_run exact_controls using fevc.sthlp
+```
+
+The example uses simulated data and restores your data afterward. Restart
+Stata after updating a loaded native plugin. This is a prerelease package;
+see [inference support and limitations](fevc/docs/INFERENCE.md).
 
 ## Local source installation
 

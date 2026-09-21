@@ -14,14 +14,11 @@ requests. Point estimation is the default; inference is available for
 ## Requirements
 
 - Stata 18 or 19.
-- The planned binary distribution supports macOS (Apple Silicon and Intel),
-  Linux x86-64, and Windows x86-64, without a compiler or Rust installation.
+- Precompiled native backends for macOS (Apple Silicon and Intel) and
+  Linux x86-64; no compiler or Rust installation is needed.
+- Windows binaries and testing are deferred.
 
 ## Installation
-
-The complete binary distribution is being prepared. The commands below are
-the intended public installation routes and are **not yet available**.
-See the [installation status](INSTALLATION.md) for current availability.
 
 ```stata
 net install fevc, replace ///
@@ -34,7 +31,9 @@ If you already use the Stata `github` command:
 github install johannes-schmieder/fevc
 ```
 
-Both routes will install the command, help, and precompiled native backend.
+Both routes install the command, help, and Mac/Linux native backends.
+Restart Stata after updating. See [installation notes](INSTALLATION.md) if
+you have an older development installation.
 
 ## Example
 

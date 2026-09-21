@@ -51,3 +51,8 @@ The [commit map](HISTORY_MAP.txt) resolves original source identifiers to their
 review-purged equivalents. It contains commit hashes only, not review content.
 Use it to locate preserved scientific records without changing their original
 tested-source identifiers.
+
+On September 21, 2026, the owner accepted leaving the historical GitHub PR
+references in place for public publication. Those references can still expose
+the former reviews. The cleaned current tree and rewritten main history remain
+review-free; no complete server-side purge is claimed.

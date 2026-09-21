@@ -1,10 +1,23 @@
-# Complete RC binary payload
+# Native binary payload
 
 The owner's 2026-09-05 request selects `0.5.0-rc.1` with all five plugin
 files: macOS arm64, macOS x86_64, macOS universal, Linux x86_64 and Windows
 x86_64. This authorizes local candidate preparation and private platform
 tests, not publication or tagging. No current platform success is implied
 by this preparation document.
+
+## Current distribution scope
+
+On September 21 the owner selected a public Mac/Linux prerelease and deferred
+Windows testing and binaries. Use `--profile macos-linux` and put
+`"profile": "macos-linux"` in its input manifest. This profile requires all
+four Mac/Linux plugin files and rejects missing, duplicate, unexpected,
+unqualified, or mismatched inputs. The default `complete` profile retains the
+original five-binary requirement. Never fill a deferred platform with a
+placeholder or call an untested build qualified.
+
+The existing repository may be published with its retained historical GitHub
+PR refs: the owner explicitly accepted those deleted reviews remaining there.
 
 ## Build and acceptance sequence
 
@@ -30,7 +43,7 @@ by this preparation document.
    a separately authorized bounded runner extension. Never bypass that runner,
    upload license material or collect raw Stata startup logs.
 5. Create an input manifest with schema `FEVC-BINARY-INPUTS-V1`, the exact
-   `source_commit`, and five `binaries` rows. Each row names `name`, `sha256`,
+   `source_commit`, and the selected profile’s `binaries` rows. Each row names `name`, `sha256`,
    `source_commit`, `status: PASS`, a relative `evidence` file and its
    `evidence_sha256`. Review those receipts against the actual test results;
    the packaging tool validates bindings, not the scientific truth of a PASS.
@@ -45,8 +58,7 @@ by this preparation document.
    Obtain the owner's exact-artifact approval before distribution.
 
 The tracked `fevc/fevc.pkg` remains a portable development/source manifest.
-The native builder generates the complete manifest only after validating all
-five binary inputs. The public installation will use root `fevc.pkg` and
+The native builder generates the complete manifest only after validating every binary in the selected profile. The public installation will use root `fevc.pkg` and
 `stata.toc` files that reference the runtime and binaries under `fevc/`.
 Both `net install` and `github install` must deliver that same payload.
 Generated native manifests use `F` entries for the license and notices so
@@ -70,11 +82,11 @@ instead of `--output-dir`:
 
 ```bash
 ./.venv/bin/python fevc/tools/build_native_release.py \
-    --binary-dir DIR --manifest MANIFEST \
+    --binary-dir DIR --manifest MANIFEST --profile macos-linux \
     --repository-dir /private/tmp/fevc-install-repository
 ```
 
-This requires a clean committed source and the same complete, source-bound
+This requires a clean committed source and the same profile-specific, source-bound
 binary evidence as the archive builder. It writes root installation metadata,
 the `fevc/` payload, and a hash receipt, and refuses an existing destination.
 It does not copy anything into the live checkout or publish it. Once qualified
@@ -91,3 +103,11 @@ supported platforms, including actual native execution and binary hashes.
 The final receipt binds the package source, native inputs, archive digest and
 every installed file. A later documentation/evidence commit must not be
 reported as the tested binary source. Preserve all accepted earlier records.
+
+For the public prerelease, commit root `fevc.pkg` and `stata.toc`, the four
+selected `fevc/*.plugin` files, and a compact binary manifest linking exact
+build sources and sanitized qualification receipts. Keep the nested portable
+manifest unchanged. Push the same package commit to `main` and the `master`
+compatibility ref whenever publishing an installation update. Verify actual
+HTTP installs after publication; building a staging directory alone is not an
+installer verification.

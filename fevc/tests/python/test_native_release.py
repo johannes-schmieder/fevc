@@ -116,3 +116,33 @@ def test_repository_install_manifest_resolves_to_the_complete_payload(inputs, tm
         portable.PACKAGE_ROOT / "stata.toc").read_bytes()
     with pytest.raises(FileExistsError):
         native.write_repository(destination, files)
+
+
+def test_macos_linux_profile_requires_explicit_selection_and_omits_windows(inputs):
+    root, manifest = inputs
+    manifest["profile"] = "macos-linux"
+    manifest["binaries"] = manifest["binaries"][:-1]
+    with pytest.raises(ValueError, match="profile mismatch"):
+        build(inputs)
+    files = native.native_files(portable.PACKAGE_ROOT, root, manifest, "a" * 40,
+                                "macos-linux")
+    assert {str(f.relative) for f in files if f.relative.suffix == ".plugin"} == set(
+        native.PROFILES["macos-linux"])
+    pkg = next(f.data.decode() for f in files if str(f.relative) == "fevc.pkg")
+    assert "Windows binaries are deferred" in pkg
+    assert "fevc_rust_windows_x64.plugin" not in pkg
+    assert "F LICENSE\n" in pkg and "F THIRD_PARTY_NOTICES.txt\n" in pkg
+
+
+@pytest.mark.parametrize("change", ["missing", "windows", "failed", "hash", "profile"])
+def test_macos_linux_profile_still_rejects_unqualified_or_incomplete_payloads(inputs, change):
+    root, manifest = inputs
+    windows = manifest["binaries"].pop()
+    manifest["profile"] = "macos-linux"
+    if change == "missing": manifest["binaries"].pop()
+    elif change == "windows": manifest["binaries"][-1] = windows
+    elif change == "failed": manifest["binaries"][0]["status"] = "FAIL"
+    elif change == "hash": manifest["binaries"][0]["sha256"] = "0" * 64
+    elif change == "profile": manifest["profile"] = "complete"
+    with pytest.raises(ValueError):
+        native.native_files(portable.PACKAGE_ROOT, root, manifest, "a" * 40, "macos-linux")
