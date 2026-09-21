@@ -1,0 +1,47 @@
+{
+  "binaries": [
+    {
+      "compatibility_evidence": "compatibility.json",
+      "compatibility_sha256": "cfcb311acffea72043fdc7ea01e9ef3e1936e30b82dd2abfa0b40256042f2ed3",
+      "evidence": "macos-qualification.txt",
+      "evidence_sha256": "913f783f16e594d6877de3778306edf1f5b250892c3e34d0b414a1cbce457d95",
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "50c6d64d8790a3501ab4ea7aa5bb5018bd0539d897abae873acd0718c8c4905b",
+      "source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+      "status": "PASS"
+    },
+    {
+      "compatibility_evidence": "compatibility.json",
+      "compatibility_sha256": "cfcb311acffea72043fdc7ea01e9ef3e1936e30b82dd2abfa0b40256042f2ed3",
+      "evidence": "macos-qualification.txt",
+      "evidence_sha256": "913f783f16e594d6877de3778306edf1f5b250892c3e34d0b414a1cbce457d95",
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "69de85070b7a774bb92b6b8454968c95c5fec62fc785b50a7831740a0a690585",
+      "source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+      "status": "PASS"
+    },
+    {
+      "compatibility_evidence": "compatibility.json",
+      "compatibility_sha256": "cfcb311acffea72043fdc7ea01e9ef3e1936e30b82dd2abfa0b40256042f2ed3",
+      "evidence": "macos-qualification.txt",
+      "evidence_sha256": "913f783f16e594d6877de3778306edf1f5b250892c3e34d0b414a1cbce457d95",
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "a7d810c79203286db6e464642b0c3cb29261066adec2a6ae1bc65b1eb4d24d24",
+      "source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+      "status": "PASS"
+    },
+    {
+      "compatibility_evidence": "compatibility.json",
+      "compatibility_sha256": "cfcb311acffea72043fdc7ea01e9ef3e1936e30b82dd2abfa0b40256042f2ed3",
+      "evidence": "linux-qualification.txt",
+      "evidence_sha256": "b7df66f9f297ab68fd9cbdee7e417beb13857f7dbf4d3df0d10693308ab43e91",
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "08227a71c6e7decc988e38cc40a853941f7e59881722258621c98052ce9a9488",
+      "source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+      "status": "PASS"
+    }
+  ],
+  "profile": "macos-linux",
+  "schema": "FEVC-BINARY-INPUTS-V1",
+  "source_commit": "055d7b2bf9c4668c90906ef80bfc0257123f9739"
+}

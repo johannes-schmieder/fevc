@@ -16,6 +16,16 @@ Preserve existing scientific contracts, routes, thresholds, and limitations.
 Previous optimization and reporting evidence remains in ignored `.local/`
 directories; do not overwrite or relabel historical receipts.
 
+## Qualified package
+
+Native build source: `f2a15dea9fe5715d654a00976e97c8d706efe63f`.
+Mac arm64, Rosetta x86-64, universal, and Linux x86-64 qualification passed.
+Linux job `7674352` passed the full Stata suite and isolated native install,
+with scheduler `failed=0` and `exit_status=0`. All 825 Python source tests and
+generated-source checks passed. Packaging source `055d7b2b` adds dependency
+notices and installer verification without changing native/runtime sources.
+The exact binaries and evidence are indexed in [`native/`](../native/README.md).
+
 ## Publication work
 
 - Explicit `macos-linux` packaging profile with all four required binaries;

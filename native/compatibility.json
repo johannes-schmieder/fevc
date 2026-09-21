@@ -1,0 +1,31 @@
+{
+  "binaries": {
+    "fevc_rust_linux_x64.plugin": "08227a71c6e7decc988e38cc40a853941f7e59881722258621c98052ce9a9488",
+    "fevc_rust_macos.plugin": "a7d810c79203286db6e464642b0c3cb29261066adec2a6ae1bc65b1eb4d24d24",
+    "fevc_rust_macos_arm64.plugin": "50c6d64d8790a3501ab4ea7aa5bb5018bd0539d897abae873acd0718c8c4905b",
+    "fevc_rust_macos_x86_64.plugin": "69de85070b7a774bb92b6b8454968c95c5fec62fc785b50a7831740a0a690585"
+  },
+  "build_source_commit": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+  "changed_paths": [
+    "fevc/THIRD_PARTY_NOTICES.txt",
+    "fevc/docs/RC_BINARY_PAYLOAD.md",
+    "fevc/tools/verify_native_installers.py",
+    "native/README.md",
+    "native/dependencies.json"
+  ],
+  "checks": [
+    "All 219 macOS source/build/runtime/test manifest entries retain their qualified hashes.",
+    "Git diff contains only dependency notices, installer verification tooling, and provenance documentation.",
+    "Linux source bundle and qualification receipts bind the same native build commit.",
+    "Production source, Cargo locks, build scripts, scientific inputs, and acceptance policy are unchanged."
+  ],
+  "limitations": [
+    "Intel Mac runtime checked under Rosetta, not native Intel hardware.",
+    "Windows native distribution and testing deferred.",
+    "Final HTTP installation checks are separate from native build qualification."
+  ],
+  "package_source_commit": "055d7b2bf9c4668c90906ef80bfc0257123f9739",
+  "schema": "FEVC-BINARY-COMPATIBILITY-V1",
+  "status": "PASS",
+  "unchanged_source_manifest_sha256": "1ba3d82bd3ccfcafe4cc8036e30133ff5eabe2414a1169ff962ea2ca403d45de"
+}

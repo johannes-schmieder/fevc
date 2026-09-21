@@ -1,0 +1,55 @@
+v 3
+d fevc: KSS point estimates, structured observation-deletion component inference, and block projections
+d Also explicit fixed-offset match q0/q1 inference, omitting nuisance-control estimation uncertainty.
+d GPL-3.0-only prerelease package with precompiled native backends.
+F fevc/LICENSE
+F fevc/THIRD_PARTY_NOTICES.txt
+f fevc/fevc.ado
+f fevc/fevc.mata
+f fevc/fevc_inference.mata
+f fevc/fevc_graph.mata
+f fevc/fevc_cmg.mata
+f fevc/fevc_solver.mata
+f fevc/fevc_rng.mata
+f fevc/fevc_scale.mata
+f fevc/fevc_resource.mata
+f fevc/fevc_scale_engine.mata
+f fevc/fevc_scale_runtime.mata
+f fevc/fevc__display.ado
+f fevc/fevc__progress.ado
+f fevc/fevc__lifecycle.ado
+f fevc/fevc_estat.ado
+f fevc/fevc_run.ado
+f fevc/fevc_rust.ado
+f fevc/fevc__rust_plugin_call.ado
+f fevc/fevc__rust_solve_v4.ado
+f fevc/fevc__rust_solve_v5.ado
+f fevc/fevc__rust_cmg_model.ado
+f fevc/fevc__rust_plan_receipt.ado
+f fevc/fevc__rust_reconcile_comp_v7.ado
+f fevc/fevc__rust_reconcile_exact_v7.ado
+f fevc/fevc__rust_post_comp_v7.ado
+f fevc/fevc__rust_post_exact_v7.ado
+f fevc/fevc__rust_capture_stayers.ado
+f fevc/fevc__rust_post_stayer_hybrid.ado
+f fevc/fevc__rust_macos.ado
+f fevc/fevc__rust_windows.ado
+f fevc/fevc__rust_linux.ado
+f fevc/fevc__rust_public_call.ado
+f fevc/fevc__rust_core_ready.ado
+f fevc/fevc__component_model_route.ado
+f fevc/fevc__observation_population.ado
+f fevc/fevc__stayer_population_post.ado
+f fevc/fevc__exact_inference_model_post.ado
+f fevc/fevc__rust_component_attach.ado
+f fevc/fevc__rust_comp_batch_receipt.ado
+f fevc/fevc__rust_component_fetch.ado
+f fevc/fevc__rust_component_post.ado
+f fevc/fevc__failure_guidance.ado
+f fevc/fevc.sthlp
+f fevc/fevc__memory_options.ado
+d Native binaries: macOS and Linux x86-64. Windows binaries are deferred.
+f fevc/fevc_rust_macos_arm64.plugin
+f fevc/fevc_rust_macos_x86_64.plugin
+f fevc/fevc_rust_macos.plugin
+f fevc/fevc_rust_linux_x64.plugin

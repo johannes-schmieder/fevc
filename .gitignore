@@ -23,6 +23,11 @@ rust/stata_backend/target/
 **/*.rs.bk
 rust/stata_backend/stata-spi/
 fevc/*.plugin
+# Qualified Mac/Linux repository installation payload. Windows is deferred.
+!fevc/fevc_rust_macos_arm64.plugin
+!fevc/fevc_rust_macos_x86_64.plugin
+!fevc/fevc_rust_macos.plugin
+!fevc/fevc_rust_linux_x64.plugin
 
 # Local performance source snapshots, installed fixtures and raw evidence.
 # Promoted runtime/tests and compact reports live in the ordinary source tree.
@@ -55,6 +60,7 @@ Thumbs.db
 *.synctex.gz
 *.toc
 !fevc/stata.toc
+!stata.toc
 *.xdv
 
 # Local configuration and scratch
