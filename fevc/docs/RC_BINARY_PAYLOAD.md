@@ -30,7 +30,8 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    the broader public and isolated-install gates. Linux acceptance requires
    scheduler `failed=0`, `exit_status=0`, all explicit application markers,
    and source/binary hashes. No scaling or Monte Carlo campaign is requested.
-3. Run the private Windows skill's accepted `stata-do` profile against
+3. For the complete profile only (deferred in the current Mac/Linux scope),
+   run the private Windows skill's accepted `stata-do` profile against
    repository-root `windows-ci.do`. The first bounded gate builds with pinned
    Rust 1.85.1, authenticated SPI and static MSVC CRT, checks x86-64 PE format,
    then loads the plugin for the first time from an isolated PLUS installation.
@@ -55,7 +56,9 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    and actual notices alongside the binary artifact. Install the **final
    archive bytes** into empty PLUS directories on each platform and exercise
    q0/q1 and help; separately retain the portable-only missing-native test.
-   Obtain the owner's exact-artifact approval before distribution.
+   Distribution requires owner authorization; the September 21 request
+   authorizes the current Mac/Linux repository installation package. A tag
+   or GitHub release remains a separate decision.
 
 The tracked `fevc/fevc.pkg` remains a portable development/source manifest.
 The native builder generates the complete manifest only after validating every binary in the selected profile. The public installation will use root `fevc.pkg` and
