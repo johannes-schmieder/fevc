@@ -1,5 +1,5 @@
 {
-  "schema": "FEVC-NATIVE-DEPENDENCIES-V1",
+  "schema": "FEVC-BINARY-DEPENDENCIES-V1",
   "rust": "1.85.1",
   "lockfile": "rust/stata_backend/Cargo.lock",
   "lockfile_sha256": "9838a81f68d3af903a859160bf9961948ff0a716765d9577a81d594a5ac3e944",

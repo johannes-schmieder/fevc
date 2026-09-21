@@ -25,6 +25,16 @@ def sanitize(text):
                      if 'Licensed to:' not in line and 'Serial number:' not in line) + '\n'
 
 
+def installed_file(plus, name):
+    # Stata normalizes installed names (including LICENSE) to lowercase.
+    # Match that behavior on case-sensitive filesystems, rejecting duplicates.
+    found = [p for p in plus.rglob('*')
+             if p.is_file() and p.name.casefold() == name.casefold()]
+    if len(found) != 1:
+        raise ValueError(f'expected one installed {name}, found {len(found)}')
+    return found[0]
+
+
 def verify(catalog, test_root, output, stata, url, methods):
     entries = [line[2:] for line in (catalog / 'fevc.pkg').read_text().splitlines()
                if line.startswith(('f ', 'F '))]
@@ -105,10 +115,10 @@ exit 0
                 assert not list(plus.rglob('_fevc*.ado')), 'obsolete package helpers installed'
                 inventory = []
                 for name, payload in expected.items():
-                    found = list(plus.rglob(name))
-                    assert len(found) == 1, (label, name, len(found))
-                    assert found[0].read_bytes() == payload, (label, name, 'hash mismatch')
-                    inventory.append({'name': name, 'sha256': sha(payload)})
+                    found = installed_file(plus, name)
+                    assert found.read_bytes() == payload, (label, name, 'hash mismatch')
+                    inventory.append({'name': name, 'installed_name': found.name,
+                                      'sha256': sha(payload)})
                 results.append({'method': method, 'mode': mode, 'status': 'PASS',
                     'installed_files': inventory, 'stata_process_rc': completed.returncode,
                     'transcript_sha256': sha(transcript.encode()),
