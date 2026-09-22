@@ -326,6 +326,7 @@ source_inputs=(
   "${package_dir}/fevc__memory_options.ado"
   "${package_dir}/fevc__lifecycle.ado"
   "${package_dir}/fevc_run.ado"
+  "${package_dir}/fevc__simulate_data.ado"
   "${package_dir}/fevc_rust.ado"
   "${package_dir}/fevc__rust_plugin_call.ado"
   "${package_dir}/fevc__rust_solve_v4.ado"

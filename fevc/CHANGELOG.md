@@ -1,5 +1,15 @@
 # Pending changes
 
+## Applied help and example data — 2026-09-22
+
+- Shorten the help, place a runnable example first, explain the leave-out sample
+  and main options, and group advanced options by purpose. Refer technical
+  discussion to the companion paper and existing implementation guides.
+- Add `fevc, simulate_data(ex1)` through `ex5`, with readable installed source,
+  true realized variance components, seed control for random examples, explicit
+  data replacement, RNG restoration, and data rollback on failure. Keep all
+  five clickable examples and their data-restoration behavior.
+
 ## Command-wide runtime progress — 2026-09-19
 
 - Label one command-wide wall clock as `Total elapsed`, spanning Stata and

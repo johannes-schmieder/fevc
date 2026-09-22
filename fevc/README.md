@@ -90,15 +90,28 @@ calibration retains a documented limitation. Read the
 
 ## Runnable examples
 
-The installed help contains examples that generate their own synthetic data:
+The installed help starts with a clickable example and contains five short,
+runnable examples. Clicked examples restore your data. To generate example
+data and explore them yourself:
 
 ```stata
-fevc_run exact_controls using fevc.sthlp
-fevc_run jla_controls using fevc.sthlp
-fevc_run weights_targets using fevc.sthlp
+fevc, simulate_data(ex1) clear
+fevc log_wage productivity i.period, worker(worker_id) firm(firm_id)
+estat decomposition, full
 ```
 
-Each restores the caller's data. The first two illustrate positive sorting
-and compare estimated components with the known simulated effects.
+`ex1` is a larger positive-sorting panel; `ex2` is its small exact-calculation
+counterpart. `ex3` illustrates frequency and target weights, `ex4` a projection
+on firm size, and `ex5` component-inference syntax on a fixed small dataset.
+The helper prints observations, workers, firms, and the true variance components
+for the realized data and example weighting. It retains `worker_fe`, `firm_fe`,
+and `error`; inspect the construction with `viewsource fevc__simulate_data.ado`.
+`clear` is required to replace existing data. Random examples accept `seed()`;
+all generation calls preserve the caller's RNG state and restore old data on failure.
+
+Use `estat sample` after estimation: leave-out identification can require
+excluding observations, and the decomposition describes the retained sample.
+The companion paper, *fevc: Leave-out bias-corrected variance decompositions in
+Stata* (Schmieder, September 2026), explains the method and sample construction.
 
 The package code is GPL-3.0-only; see [licensing](../CODE_LICENSE.md).

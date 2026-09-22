@@ -25,17 +25,18 @@ def test_active_guidance_has_no_superseded_match_restriction(path, obsolete):
     assert obsolete not in text
 
 
-def test_help_retains_scope_warning_and_both_confirmation_outcomes():
+def test_help_retains_scope_warning_and_links_to_detailed_inference():
     text = " ".join((ROOT / "fevc/fevc.sthlp").read_text().split())
-    for option in ("deletion(match)", "nuisance(fixedoffset)", "stayers(movers)",
-                   "engine(generic)", "inference(q1)", "inference(highrank)"):
-        assert option in text
+    reference = " ".join((ROOT / "fevc/docs/INFERENCE.md").read_text().split())
     assert "ignoring nuisance-control estimation uncertainty" in text
-    assert "corrected observation-q1 confirmation has one failed SE-ratio gate" in text
-    assert "eligible q1 confirmations pass their registered gates" in text
+    assert "Observation-q1 calibration retains a documented limitation" in text
+    assert "docs/INFERENCE.md" in text
+    # Confirmation history belongs in the detailed reference, not the applied help.
+    assert "one failed SE-ratio gate" in reference
+    assert "Independent q0 and repaired eligible q1 confirmations pass" in reference
 
 
-def test_help_preserves_weighted_and_component_inference_examples():
+def test_help_preserves_all_runnable_example_names():
     old = subprocess.check_output(
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.sthlp"], cwd=ROOT, text=True
     )
@@ -45,9 +46,10 @@ def test_help_preserves_weighted_and_component_inference_examples():
     current_examples = dict(re.findall(pattern, current, re.S))
     assert len(old_examples) == len(current_examples) == 5
     assert old_examples.keys() == current_examples.keys()
-    # Revised sorting and firm-size DGPs have numerical Stata regressions.
-    for name in ("weights_targets", "component_inference"):
-        assert old_examples[name] == current_examples[name]
+    # Numerical fixture and truth checks run in Stata after moving generation
+    # into the installed helper; example text is no longer byte-identical.
+    for name, number in (("weights_targets", 3), ("component_inference", 5)):
+        assert f"simulate_data(ex{number})" in current_examples[name]
 
 
 def test_catalog_preserves_match_install_inventory():
@@ -56,6 +58,7 @@ def test_catalog_preserves_match_install_inventory():
         ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.pkg"], cwd=ROOT, text=True
     )
     additive_helpers = {
+        "f fevc__simulate_data.ado",
         "f fevc__progress.ado",
         "f fevc__memory_options.ado",
         "f fevc__observation_population.ado",

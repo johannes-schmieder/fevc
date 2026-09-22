@@ -20,6 +20,7 @@ f fevc__progress.ado
 f fevc__lifecycle.ado
 f fevc_estat.ado
 f fevc_run.ado
+f fevc__simulate_data.ado
 f fevc_rust.ado
 f fevc__rust_plugin_call.ado
 f fevc__rust_solve_v4.ado

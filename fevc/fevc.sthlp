@@ -1,1273 +1,514 @@
 {smcl}
-{* *! version 0.5.0-rc.1 10sep2026}{...}
+{* *! version 0.5.0-rc.1 22sep2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
 
 {title:Title}
 
-{p 4 4 2}
-{cmd:fevc} {hline 2} KSS leave-out variance decompositions and
-fixed-effect projection inference for linear two-way fixed-effect models
+{pstd}
+{cmd:fevc} {hline 2} Leave-out bias-corrected variance decompositions
+for two-way fixed-effect models
+
+{pstd}
+{cmd:fevc} estimates the variance of worker effects, the variance of firm
+effects, their covariance, and the variance of their sum. It corrects the
+bias that arises because individual fixed effects are estimated with error,
+using the method of Kline, Saggio, and Sølvsten (2020). The two dimensions
+can also represent other linked groups, such as patients and physicians.
+For methodological details, see the {help fevc##reference:companion fevc paper}.
+
+{pstd}
+{help fevc##quickstart:Example} | {help fevc##syntax:Syntax} |
+{help fevc##options:Main options} | {help fevc##sample:Leave-out sample} |
+{help fevc##advanced:Advanced options} | {help fevc##examples:More examples}
 
 {marker quickstart}
-{title:Quick start}
+{title:Start with an example}
 
 {pstd}
-{cmd:fevc} estimates the variance of worker effects, the variance of
-firm effects, their covariance, and the variance of their sum.  The labels
-{cmd:worker()} and {cmd:firm()} follow the classic AKM application, but the
-two dimensions can instead be patients and physicians, products and stores,
-authors and institutions, or any other linked pair.
+This example creates 60,000 observations on 10,000 workers and 3,001 firms,
+with positive sorting between worker and firm effects. The helper prints
+the true variance components before estimation. With the default seeds,
+the correction brings the estimates closer to those true values.
+
+{cmd}{...}
+        preserve
+{* example_start - jla_controls}{...}
+        fevc, simulate_data(ex1) clear
+        fevc log_wage productivity i.period, ///
+            worker(worker_id) firm(firm_id)
+        estat decomposition, full
+{* example_end}{...}
+        restore
+{txt}{...}
+{pstd}
+{stata fevc_run jla_controls using fevc.sthlp:Click to run this example}
+(your data are restored afterward).
+{stata viewsource fevc__simulate_data.ado:View the data-generation code}.
 
 {pstd}
-A minimal call is
-
-{phang2}{cmd:. fevc log_wage, worker(worker_id) firm(firm_id)}{p_end}
-
-{pstd}
-This uses match deletion, joint nuisance handling, the combined
-mover-plus-eligible-stayer target, 200 JLA probes, and automatic backend,
-engine, preconditioner, and batch selection. No memory budget is assumed;
-forecasts do not adjust the computation for memory when {cmd:memory_gib()}
-is omitted. A call with controls and an explicit dependence-block identifier is
-
-{phang2}{cmd:. fevc log_wage i.year, worker(worker_id) firm(firm_id) ///}{p_end}
-{phang3}{cmd:deletion(match) deletionid(match_id) nuisance(joint)}{p_end}
-
-{pstd}
-The default output reports sample retention, the estimand, the selected
-computation route, and one additive table built around the identity
-
-{p 8 12 2}
-worker variance + firm variance + 2 x worker-firm covariance
-= total worker-firm variance.
-
-{pstd}
-The table shows plug-in values, estimated bias, corrected KSS values, and
-corrected shares of target-weighted outcome variance.  Type
-{cmd:estat decomposition, full} for raw covariance, all share denominators,
-and descriptive full-model fit accounting.
+With your own data, the basic command is
+{cmd:fevc log_wage, worker(worker_id) firm(firm_id)}.
+Put additional controls after the outcome, as in the example; Stata
+factor-variable notation such as {cmd:i.year} is supported. Controls enter
+the regression, but the corrected components concern the worker and firm
+effects. Computational settings are selected automatically.
 
 {marker syntax}
 {title:Syntax}
 
 {p 8 16 2}
 {cmd:fevc} {it:depvar} [{it:controls}]
-[{cmd:[fw=}{it:frequency}{cmd:]}] [{help if}] [{help in}],
+[{help if}] [{help in}] [{it:weight}],
 {cmd:worker(}{it:varname}{cmd:)} {cmd:firm(}{it:varname}{cmd:)}
 [{it:options}]
 
-  {it:option}{col 36}description
+{pstd}
+Only frequency weights ({cmd:[fw=}{it:frequency}{cmd:]}) are supported.
+
+  {it:Main options}{col 40}Description
   {hline 76}
-  {ul:Required identifiers}
-    {cmd:worker(}{it:varname}{cmd:)}{col 36}first fixed-effect dimension
-    {cmd:firm(}{it:varname}{cmd:)}{col 36}second fixed-effect dimension
-
-  {ul:Deletion and target population}
-    {cmd:deletion(match|observation)}{col 36}delete a declared match or one physical observation
-    {cmd:deletionid(}{it:varname}{cmd:)}{col 36}dependence-block ID for match deletion
-    {cmd:stayers(both|movers)}{col 36}include eligible stayers (default in both modes) or movers only
-    {cmd:targetweight(}{it:varname}{cmd:)}{col 36}stored-row target mass, separate from regression weight
-
-  {ul:Controls and numerical method}
-    {cmd:nuisance(joint|fixedoffset)}{col 36}re-estimate controls after deletion or hold their index fixed
-    {cmd:algorithm(auto|exact|jla)}{col 36}automatic, dense deterministic, or randomized calculation
-    {cmd:backend(auto|mata|rust)}{col 36}public estimator backend routing
-    {cmd:rng(auto|stata|counter_v1)}{col 36}automatic or explicit RNG contract; Counter-V1 is Rust-only
-    {cmd:engine(auto|compressed|generic)}{col 36}automatic or forced JLA representation
-    {cmd:preconditioner(auto|diagonal|cmg)}{col 36}automatic or forced iterative-solver route
-
-  {ul:JLA reproducibility and work}
-    {cmd:probes(}{it:#}{cmd:)}{col 36}number of random projections; default 200
-    {cmd:batch(auto|}{it:#}{cmd:)}{col 36}simultaneous right-hand-side width
-    {cmd:seed(}{it:#}{cmd:)}{col 36}registered master seed; default 8675309
-    {cmd:probeorder(}{it:varname}{cmd:)}{col 36}optional semantic tie-breaker
-    {cmd:tolerance(}{it:#}{cmd:)}{col 36}PCG tolerance override; phase defaults are documented below
-    {cmd:maxiter(}{it:#}{cmd:)}{col 36}maximum PCG iterations; default 10,000
-
-  {ul:Component inference and fixed-effect projections}
-    {cmd:inference(none|highrank|q1)}{col 36}component covariance and intervals; default none
-    {cmd:inferencemodel(}{it:mode}{cmd:)}{col 36}explicit variance model; see below
-    {cmd:level(}{it:#}{cmd:)}{col 36}component/projection confidence level; default 95
-    {cmd:inferencesimulations(}{it:#}{cmd:)}{col 36}component variance simulations; default 1,000
-    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 36}structured Gram precision; default 2,048
-    {cmd:inferenceseed(}{it:#}{cmd:)}{col 36}component-inference seed; default 8675309
-    {cmd:inferencebins(}{it:#}{cmd:)}{col 36}component smoothing resolution; default 1,000
-    {cmd:project(}{it:varlist}{cmd:)}{col 36}covariates plus an automatic constant
-    {cmd:projecteffect(worker|firm)}{col 36}dimension to project; required with project()
-    {cmd:projectweight(frequency|target)}{col 36}projection weighting; default frequency
-
-  {ul:Safety and resource envelopes}
-    {cmd:memory_gib(}{it:#}{cmd:)}{col 36}optional direct-allocation budget; omitted by default
-    {cmd:memorycheck(warn|error|off)}{col 36}budget policy; default warn
-    {cmd:wallseconds(}{it:#}{cmd:)}{col 36}optional advisory wall-time envelope
-    {cmd:exact_limit(}{it:#}{cmd:)}{col 36}maximum exact identified dimension; default 500
-    {cmd:rank_tolerance(}{it:#}{cmd:)}{col 36}rank gate; default 1e-10
-    {cmd:block_tolerance(}{it:#}{cmd:)}{col 36}deleted-block gate; default 1e-10
-    {cmd:blocksize_limit(}{it:#}{cmd:)}{col 36}stored match-block limit; default 5,000
-    {cmd:physical_limit(}{it:#}{cmd:)}{col 36}generic JLA literal-copy limit; default 50,000,000
-    {cmd:nolog}{col 36}suppress Rust runtime messages; keep final results
-    {cmd:verbose}{col 36}explain Rust routing, batches, and memory policy
-    {cmd:nodisplay}{col 36}suppress runtime messages and successful final output
+    {cmd:worker(}{it:varname}{cmd:)}{col 40}worker identifier (required)
+    {cmd:firm(}{it:varname}{cmd:)}{col 40}firm identifier (required)
+    {cmd:deletion(match|observation)}{col 40}unit left out; default match
+    {cmd:deletionid(}{it:varname}{cmd:)}{col 40}optional match identifier
+    {cmd:stayers(both|movers)}{col 40}include eligible stayers or movers only
+    {cmd:probes(}{it:#}{cmd:)}{col 40}approximation precision; default 200
+    {cmd:seed(}{it:#}{cmd:)}{col 40}estimation seed; default 8675309
+    {cmd:nolog}{col 40}suppress progress messages
   {hline 76}
 
-{pstd}
-Compatible Rust plugins report sample preparation, selected computation choices,
-allocation forecasts, and coarse progress by default. {cmd:Total elapsed}
-is wall-clock time since the public command began, including Stata work between
-native calls; it does not reset between phases. During point estimation,
-each update shows both leverage and target probe counts, with targets marked
-pending until they start. Other counted stages show their own progress.
-Periodic updates follow roughly 10%
-milestones (at most once per second), with a status line after 30 seconds without
-output. Stage starts and completions are reported immediately.
-Stages without a denominator show their name and total elapsed time. A final
-{cmd:Complete} line follows successful command cleanup. No overall percentage
-or remaining-time estimate is implied. {cmd:verbose} adds detail without
-increasing update frequency.
-
-{pstd}
-{cmd:nolog} takes precedence over {cmd:verbose}; {cmd:nodisplay} also suppresses
-final successful output. {cmd:quietly} suppresses runtime reporting. Existing
-memory warnings and errors retain their own policies. Reporting does not change
-estimation or stored scientific results. Mata retains its existing output.
-Earlier reporting plugins retain their phase-based display; plugins without
-reporting continue estimating with a notice that live reporting is unavailable.
-Allocation forecasts exclude process RSS.
-
-{marker backend}
-{title:Backend routing}
-
-{pstd}
-Omitting {cmd:backend()} is equivalent to {cmd:backend(auto)}.  Both prefer
-Rust when the complete effective request passes native preflight.  A missing
-plugin or structurally unsupported request may fall back to Mata only before
-native preparation and estimator RNG.  The fallback is recorded in
-{cmd:e(backend_fallback)}, {cmd:e(backend_fallback_reason)}, and
-{cmd:e(backend_fallback_phase)}.
-
-{pstd}
-Omitted {cmd:rng()} means {cmd:rng(auto)}: Counter-V1 is selected on Rust and
-the Stata RNG contract is selected on Mata.  Explicit {cmd:rng(counter_v1)}
-pins a strict Rust request and disables Mata fallback.  Explicit
-{cmd:rng(stata)} selects Mata and conflicts with {cmd:backend(rust)}.
-{cmd:backend(mata)} always selects Mata; {cmd:backend(rust)} is strict.
-
-{pstd}
-The Rust backend exposes three result families:
+{marker options}
+{title:Main options}
 
 {phang}
-{cmd:backend(rust) algorithm(exact)} runs deterministic dense exact
-estimation.  It accepts {cmd:engine(auto|generic)} and the ordinary control,
-factor-variable, match/observation deletion, joint/fixed-offset, frequency
-weight, stored target weight, {cmd:if}/{cmd:in}, and deletion-ID inputs.
-Counter-V1 consent is not required: exact consumes no estimator RNG and
-records the selected RNG contract as not applicable.
+{cmd:worker()} and {cmd:firm()} identify the two fixed-effect dimensions.
+Repeated observations of a worker at a firm are allowed; a separate
+identifier for each observation is not required.
 
 {phang}
-The frozen compressed JLA form requires explicit
-{cmd:backend(rust) rng(counter_v1) algorithm(jla)}
-{cmd:preconditioner(diagonal) batch(}{it:#}{cmd:)} and
-{cmd:engine(auto|compressed)}.  It remains limited to match deletion, joint
-nuisance handling, movers, and no controls.  It supports {cmd:if}/{cmd:in},
-frequency and stored target weights, deletion IDs, and the ordinary seed,
-probe, tolerance, iteration, and memory options.
+{cmd:deletion(match)}, the default, leaves out an entire worker-firm match
+when correcting mover contributions. It allows errors to be correlated
+within a match and assumes independence across matches, including different
+matches of the same worker. It is not worker-level clustering.
+{cmd:deletion(observation)} instead leaves out one observation at a time
+and assumes independent errors across observations. Choose this option
+according to the dependence in your data.
 
 {phang}
-The generic JLA form requires the fully explicit tuple
-{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)}
-{cmd:preconditioner(diagonal) batch(}{it:#}{cmd:)}.  It supports up to 32
-materialized nonomitted controls, including factor-variable columns; match or
-observation deletion; joint or fixed-offset nuisance handling; frequency and
-stored target weights; {cmd:if}/{cmd:in}; and deletion IDs for match deletion.
-For match deletion it also supports {cmd:stayers(both)} through the combined
-mover-match/stayer-observation correction.  The compressed JLA specialization
-remains mover-only.
+{cmd:deletionid()} is needed only when your match units differ from the
+default worker-firm pairs, for example when distinct employment spells at
+the same firm are treated as independent matches. Each ID must belong to
+one worker-firm pair. It applies to match deletion.
+
+{phang}
+{cmd:stayers(both)}, the default, includes movers and eligible workers who
+never change firms. With match deletion, stayer contributions use a separate
+observation-level correction and are {it:not} robust to within-match error
+correlation. Use {cmd:stayers(movers)} for a decomposition restricted to
+movers. This changes the estimation sample and the population described by
+the estimates. With observation deletion, all retained observations use the
+same observation-level correction.
+
+{phang}
+{cmd:probes()} controls the precision of the default randomized calculation
+(JLA). More probes reduce numerical approximation error but take longer.
+Start with the default 200; increase it if the reported numerical MCSE is
+large relative to the components you wish to interpret. Numerical MCSE is
+{bf:not a sampling standard error}; it also excludes uncertainty from the
+initial leverage approximation.
+
+{phang}
+{cmd:seed()} makes the randomized calculation reproducible within the
+selected runtime. The default is 8675309. Different backends need not give
+identical randomized estimates with the same seed. Estimation restores the
+caller's random-number state.
+
+{phang}
+{cmd:nolog} hides progress messages while retaining the final results.
+
+{marker sample}
+{title:Which observations are used? The leave-out sample}
 
 {pstd}
-Planned Rust JLA supports automatic compressed/generic representation,
-diagonal/CMG preconditioning, and automatic batching for admitted effective
-tuples.  Explicit {cmd:algorithm(auto) engine(auto)} may select the exact
-result family before estimator RNG.  {cmd:probeorder()} is a supported
-semantic tie-breaker for mover-only Rust JLA.  Exact and generic JLA
-{cmd:stayers(both)} routes use the versioned native augmentation lifecycle.
-On qualified macOS and Linux builds, the no-control, unit-frequency,
-default-target joint/movers JLA point cell with either observation or match
-deletion and {cmd:engine(auto)},
-{cmd:preconditioner(auto)}, {cmd:batch(auto)}, and an explicit
-{cmd:probeorder()} selects {cmd:CMG_FULL_V2} through either strict
-{cmd:backend(rust) rng(counter_v1)} or automatic
-{cmd:backend(auto) rng(auto)} routing.  Both deletion modes share degree-four
-elimination, thread-aware batches and the ordered scalar queue, while retaining
-their distinct statistical probes and corrections.  Other requests retain their existing
-routes.  Counter-V1 JLA never changes the caller's Stata RNG.  The default
-full-CMG fit and probe tolerances are {cmd:1e-10} and {cmd:1e-6}; an explicit
-{cmd:tolerance()} overrides both.  Failed columns are deterministically
-re-solved only on the frozen full-CMG route.  These alpha routes make no
-Windows, license, or public-release claim.  Component-inference requests select
-the capability-gated Mata exact runtime described below.  Projection requests
-also select Mata exact unless they use the explicit scalable tuple documented
-below.  Point-only calls do not post {cmd:e(V)}.
-
-{marker description}
-{title:What the command estimates}
+The correction requires enough connections between workers and firms for
+the model to remain identified when a match or observation is removed.
+{cmd:fevc} starts from complete cases satisfying your {cmd:if}/{cmd:in}
+restrictions, selects a largest connected component, and removes observations
+that do not meet its leave-out requirements. Merely restricting the data to
+a connected component beforehand need not be sufficient.
 
 {pstd}
-On the retained sample, the fitted model is
-
-{p 8 12 2}
-{it:y} = worker effect + firm effect + nuisance controls + error.
-
-{pstd}
-For each target, the plug-in estimate is the corresponding quadratic form in
-the full-sample least-squares coefficients.  Plug-in variance components are
-upward biased when many worker and firm effects are estimated imprecisely.
-The Kline--Saggio--Sølvsten correction uses outcomes from each declared
-deletion block together with residuals evaluated against a fit that excludes
-that block.  The reported estimate is
-
-{p 8 12 2}
-KSS corrected = plug-in - bias correction.
+Under default match deletion, the command first constructs the retained
+mover sample, then includes eligible original stayers at retained firms
+with at least two observations (counting frequency weights). Removed movers are not reclassified as
+stayers. Controls must also remain identified under the requested deletions;
+if that cannot be established, the command reports a failure.
 
 {pstd}
-The four stored targets are worker variance, firm variance, raw worker-firm
-covariance, and total worker-firm variance.  The additive output uses twice
-the covariance as the sorting contribution so that its components add to the
-total.
+The decomposition describes the {bf:retained sample}, which can differ from
+your original data. The output reports sample counts. Use {cmd:estat sample}
+to inspect exclusions and {cmd:e(sample)} to identify retained observations:
 
-{pstd}
-{cmd:stayers(both)} is the default for both deletion modes.  With match deletion,
-it matches the KSS Matlab package and uses one pooled mover-stayer fit and target normalization,
-deletes retained mover matches as blocks, and deletes eligible stayer
-observations one literal physical copy at a time.  Thus the mover part uses
-the declared match-dependence convention, while the stayer part is explicitly
-{it:not} match-robust.  Specify {cmd:stayers(movers)} to recover the
-mover-only fit, target, correction, and estimation sample.
-
-{pstd}
-With observation deletion, {cmd:stayers(both)} retains eligible one-firm workers
-in the ordinary leave-out sample and deletes one physical observation throughout.
-{cmd:stayers(movers)} excludes workers observed at only one firm in the frozen
-complete-case sample before graph selection.  Earlier prereleases also retained
-these workers under explicit observation-deletion {cmd:stayers(movers)}; use
-{cmd:stayers(both)} or omit the option to preserve that previous population.
-Default observation-deletion estimates are unchanged by this option correction.
-
-{pstd}
-Controls are nuisance coefficients and have zero weight in the four KSS
-target matrices.  The corrected worker-firm total is therefore not a
-KSS-corrected decomposition of the controls.  The separate full-model
-explained variance is descriptive: it equals frequency-weighted
-{cmd:Var(Y)} minus {cmd:e(weighted_rss)/e(N_physical)} and includes controls.
+{phang2}{cmd:. estat sample}{p_end}
+{phang2}{cmd:. generate byte fevc_sample = e(sample)}{p_end}
 
 {marker output}
-{title:Reading the output}
+{title:Reading the results}
 
 {pstd}
-The header reports retained versus requested rows, literal physical
-observations when frequency weights make them differ from stored rows,
-worker and firm levels, deletion units, the target population, and the
-selected algorithm and backend.  JLA calls additionally show the engine,
-preconditioner, probes, and seed.  Sample pruning, automatic backend fallback,
-solver fallback, and mixed mover/stayer deletion generate visible notes only
-when relevant.
+The main table shows the uncorrected (plug-in) estimate, estimated bias,
+corrected estimate, and corrected share of outcome variance:
+
+{p 8 12 2}
+KSS corrected = plug-in - estimated bias
 
 {pstd}
-{ul:Additive worker-firm decomposition} is the primary applied-user table.
-Its rows are worker variance, firm variance, sorting
-({cmd:2 x worker-firm covariance}), and their total.  Its columns report the
-plug-in value, estimated bias, KSS-corrected value, and corrected percentage
-of target-weighted outcome variance.  The displayed identity is
-{cmd:corrected = plug-in - estimated bias}.
+The sorting row is {bf:twice the worker-firm covariance}, so the worker
+variance, firm variance, and sorting contribution add to the total
+worker-firm variance. {cmd:estat decomposition, full} also shows the raw
+covariance. Negative corrected variances can occur in finite samples;
+covariance and sorting may be negative. Shares need not lie between 0 and
+100 percent.
 
 {pstd}
-Negative corrected components, negative sorting, and shares outside zero to
-100 percent are possible and can be economically meaningful.  A share is
-missing when target-weighted outcome variance is nonpositive.
-
-{pstd}
-JLA calls show numerical MCSE for worker variance, firm variance, sorting,
-and the total.  Sorting MCSE is twice the raw covariance MCSE.  These values
-describe randomized numerical error conditional on the realized leverage
-sketch.  They are not sampling standard errors and exclude first-pass sketch
-uncertainty.
-
-{pstd}
-When component inference or projection inference is requested, its estimate,
-KSS standard error, p-value, and confidence interval remain in the default
-output.  Rank-one requests also report the weak-identification intervals and
-diagnostics.  Point-only and projection-only calls do not post component
-{cmd:e(V)}; projection covariance is stored separately.
+With controls, this total concerns the two fixed effects; it is not a
+bias-corrected decomposition of the controls or the full model's R-squared.
+Point estimation remains the default. Standard errors and confidence
+intervals require an explicit {help fevc##inference:inference request}.
 
 {marker postestimation}
 {title:Postestimation display}
 
-{pstd}
-The compact output is backed by four read-only {cmd:estat} views.  They do not
-change the estimates or stored results.
+  {it:Command}{col 40}What it shows
+  {hline 76}
+    {cmd:estat decomposition}{col 40}main decomposition table
+    {cmd:estat decomposition, full}{col 40}raw covariance, shares, and model fit
+    {cmd:estat sample}{col 40}retained sample and exclusions
+    {cmd:estat computation}{col 40}selected computation settings
+    {cmd:estat diagnostics}{col 40}numerical and resource diagnostics
+  {hline 76}
 
-{phang}
-{cmd:estat decomposition} redisplays the compact additive table.
-{cmd:estat decomposition, full} adds the raw covariance targets, additive
-bias accounting, plug-in and corrected shares relative to outcome variance
-and the worker-firm total, and descriptive full-model fit.
-
-{phang}
-{cmd:estat sample} reports requested, complete-case, component, mover, and
-retained rows; physical mass; stayer inclusion; retained dimensions; target
-mass; and the match-graph pruning certificate when applicable.
-
-{phang}
-{cmd:estat computation} reports backend and RNG routing, the selected
-algorithm, engine, preconditioner, JLA work and solver settings, fallback,
-processor count, and the supplied memory budget when applicable.
-
-{phang}
-{cmd:estat diagnostics} reports leverage, conditioning and residual
-certificates when applicable, outcome and residual variance, memory forecast,
-stage timings when available, and JLA numerical MCSE.  Use
-{cmd:ereturn list} for the complete machine-readable record.
-
-{marker sample}
-{title:Sample construction and deletion assumptions}
+{marker advanced}
+{title:Advanced options}
 
 {pstd}
-{cmd:deletion(match)} is the default.  A deletion unit contains every retained
-copy with the same {cmd:deletionid()}.  One ID must not cross worker-firm
-coordinates.  If {cmd:deletionid()} is omitted, the worker-firm coordinate is
-the match.  Match deletion allows arbitrary covariance within a declared
-match and assumes independence across declared matches; it does not allow
-arbitrary dependence across all matches belonging to one worker.
+{bf:Most applications can leave these at their defaults.} The options below
+support alternative estimands, inference, or specialized computation.
+Change statistical options for a substantive reason; changing a numerical
+setting does not resolve an identification or dependence problem.
+
+{dlgtab:Alternative weighting and control treatment}
+
+  {it:Option}{col 40}Description
+  {hline 76}
+    {cmd:targetweight(}{it:varname}{cmd:)}{col 40}weights for the variance components
+    {cmd:nuisance(joint|fixedoffset)}{col 40}control treatment; default joint
+  {hline 76}
 
 {pstd}
-The match graph is constructed from movers.  The command selects a largest connected
-component, removes stayers from that graph, removes insufficient histories
-and worker articulation vertices, and repeatedly removes deletion-unit
-bridges until reaching a fixed point.  Parallel deletion IDs at one
-worker-firm coordinate remain distinct multigraph edges.  A successful match
-sample has a final zero-bridge certificate.  A tied component ranking is
-withheld rather than broken using arbitrary encoded IDs.
+Positive integer {cmd:fweight}s represent repeated physical observations
+and affect the regression. {cmd:targetweight()} instead determines how
+retained rows contribute to the variance components. By default, target
+weights equal frequency weights (or one without weights). Explicit target
+weights are stored-row masses and are {bf:not multiplied by frequency weights}. They change the population described by the decomposition.
 
 {pstd}
-For {cmd:deletion(match) stayers(both)}, let M be exactly those final mover rows.  The
-estimation sample is M plus workers who were one-firm stayers in
-the original frozen complete-case sample, whose firm is represented in M,
-and whose frequency-weighted physical history has at least two observations.
-An original mover removed by graph or component selection is never
-reclassified as a stayer.  A stayer on an unretained firm and a one-copy
-stayer are excluded.  The combined model is refit on this combined sample;
-its target shares use the combined pooled target mass for all four targets.
-The main matrices and {cmd:e(b)} report this combined target, and
-{cmd:e(sample)} marks both M and the eligible attached stayers.  Graph-pruning
-diagnostics continue to describe the mover graph.  If no stayer is eligible,
-the combined convention reduces exactly to the mover result.
-
-{pstd}
-{cmd:deletion(observation)} deletes one literal physical observation and uses
-the retained-observation target.  With frequency weights, one stored row
-represents several physical observations; observation deletion removes one
-copy, while match deletion removes every copy in the block.
-
-{marker controls}
-{title:Nuisance controls}
-
-{pstd}
-{cmd:nuisance(joint)} is the default.  Controls are part of every deleted fit,
-so their coefficients can move when a match or observation is removed.  This
-is the primary joint leave-out convention.
-
-{pstd}
-{cmd:nuisance(fixedoffset)} first estimates the full model, subtracts the
-full-sample control index, and holds that index fixed while correcting the
-two-way effects.  This is a conditional convention and can differ from joint
-deletion in finite samples.
-
-{pstd}
-Submitted numeric or factor-variable controls must have an identified,
-numerically stable materialized span.
-The command does not silently drop ordinary zero or collinear variables.
-Only factor-variable terms explicitly marked omitted by Stata are removed.
-The explicit generic Rust JLA route supports at most 32 materialized controls
-and applies a fail-closed control and deleted-rank certificate.
-
-{marker weights}
-{title:Regression weights and target weights}
-
-{pstd}
-Frequency weights are positive integer physical-copy counts.  They affect the
-least-squares fit, graph mass, deletion blocks, and residual sum of squares.
-Their exact retained total must be representable as a binary64 integer.
-
-{pstd}
-{cmd:targetweight()} instead defines how retained rows are weighted in the
-variance targets.  It is stored-row mass and is not multiplied by the
-frequency weight.  Without the option, target mass equals frequency mass.
-Changing target weights changes the estimand, not merely its efficiency.
-
-{marker algorithms}
-{title:Exact and randomized calculations}
-
-{pstd}
-{cmd:algorithm(exact)} uses deterministic dense linear algebra and is intended
-for smaller designs and validation.  "Exact" means deterministic numerical
-linear algebra, not exact arithmetic.  It is limited by {cmd:exact_limit()}
-and {cmd:blocksize_limit()}.
-
-{pstd}
-{cmd:algorithm(jla)} uses reproducible randomized inverse actions.  It solves
-the full worker-firm normal equations, certifies the original worker and firm
-residuals for every accepted right-hand side, and applies the coefficient-one
-finite-projection correction.  A graph-only or reduced-system residual is not
-sufficient.
-
-{pstd}
-Omitting {cmd:algorithm()} selects MATLAB-like {cmd:algorithm(jla)} with 200
-probes.  Explicit {cmd:algorithm(auto)} chooses exact when the identified
-dimension is within {cmd:exact_limit()} and JLA otherwise.  Automatic JLA
-routing uses the compressed engine only for an exactly representable
-no-control match design; other supported designs use the generic engine.
-{cmd:preconditioner(auto)} chooses diagonal or package-owned CMG from
-structural preflight before the estimator random stream begins.  Rust resolves
-the same frozen plan through versioned capability and plan receipts.
-
-{pstd}
-The {cmd:deletion(match) stayers(both)} mixed correction is implemented by
-Mata and Rust for exact and generic JLA calculations; JLA automatically
-bypasses the mover-only compressed engine.  {cmd:probeorder()} and
-{cmd:wallseconds()} are not supported on the current mixed Rust route.  If the
-combined design or any required mover-match or stayer-observation deletion
-fails a rank, convergence, or numerical gate, the complete request is
-withheld.
-
-{pstd}
-Observation-deletion {cmd:stayers(both)} does not use mixed-deletion augmentation;
-it retains the ordinary observation estimator, including its eligible optimized
-solver route.  In both modes, the public {cmd:e(stayers)} records the population
-option.  Frozen native receipt flags retain their legacy augmentation meaning.
-
-{marker memory}
-{dlgtab:Memory forecasts and optional budgets}
-
-{pstd}
-When {cmd:memory_gib()} is omitted, fevc forecasts memory and continues.
-It assumes no memory budget and performs no memory-based batch, concurrency
-or route adjustment. No implicit 4-GiB limit, detected-RAM limit, or large
-substitute budget is used. Probe, processor and implementation limits still
-apply, including normal performance choices under {cmd:batch(auto)}.
-With an explicit budget, automatic batches may shrink to fit; an explicit
-{cmd:batch()} is preserved. {cmd:memorycheck(warn)}, the default, reports an
-over-budget forecast and continues. {cmd:memorycheck(error)} stops when the
-forecast exceeds the explicit budget. {cmd:memorycheck(off)} suppresses memory
-warnings and forecast-based rejection; an explicit budget still guides
-automatic batching. {cmd:memorycheck()} alone never creates a budget.
-If an advisory budget cannot fit the minimum automatic batch, execution
-continues at the minimum supported width. One GiB is 1024^3 bytes. An explicit
-budget must be finite and positive and specify between 1 and 2^53 bytes.
-
-{pstd}
-The following calls illustrate each policy. Omit {cmd:memory_gib()} to disable
-memory-based planning as well as rejection:
-
-{phang2}{cmd:. fevc wage, worker(id) firm(fid)}{p_end}
-{phang2}{cmd:. fevc wage, worker(id) firm(fid) memory_gib(2)}{p_end}
-{phang2}{cmd:. fevc wage, worker(id) firm(fid) memory_gib(2) memorycheck(error)}{p_end}
-{phang2}{cmd:. fevc wage, worker(id) firm(fid) memory_gib(2) memorycheck(off)}{p_end}
-
-{pstd}
-Native forecasts describe command-owned direct allocations, excluding the
-original Stata dataset, allocator residency, libraries and thread stacks.
-They are not predictions of total process RSS or guarantees against an actual allocation
-failure. The full-CMG forecast is refined after deterministic hierarchy
-construction and before estimator randomness, using the selected batches
-and the hierarchy actually retained. Preparation's Rust allocation peak is
-measured while preparing the actual data; a strict check can therefore stop
-after preparation. {cmd:e(memory_forecast_bytes)} reports expected peak direct
-allocations. {cmd:e(memory_admission_forecast_bytes)} includes conditional
-refinement workspace; the difference is {cmd:e(memory_conditional_reserve_bytes)}.
-Warning and error policies compare this admission forecast with the budget.
-Preparation warnings can appear before the solve; the final forecast warning
-appears with the completed command. Mata models working data separately and
-no longer adds historical fixed runtime-RSS allowances to public forecasts.
-Structural, numerical, overflow and allocation-failure checks remain active
-in every memory policy. An explicit budget is not an operating-system
-memory reservation or cap, and there is no separate forecast-only dry run.
-
-{pstd}
-The four full-CMG development fixtures forecast within 0.17--2.64% above
-independently measured direct allocation peaks. This does not establish
-that precision for other inputs, total process RSS, Mata, or inference.
-Component inference and stayer augmentation retain conservative bounds.
-
-{dlgtab:Routing, timing and random-number state}
-
-{pstd}
-Structural preflight, not routing trial solves, selects the automatic
-preconditioner. Reported setup and fit are disjoint timings.
-
-{pstd}
-The fixed seed is tied to the runtime contract and canonical semantic atom
-order.  Supported batching and solver routes do not change those atoms.  The
-command restores the caller's RNG algorithm, stream, complete state, sort
-jumbler, data, and estimation sample on every supported exit.
+{cmd:nuisance(joint)} allows control coefficients to change in the leave-out
+calculation. {cmd:nuisance(fixedoffset)} first subtracts the fitted control
+index and then holds it fixed. This is a different, conditional convention.
+Controls must be identified; ordinary collinear controls are not silently
+dropped. See the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/ESTIMATOR_CONTRACT.md":estimator reference}.
 
 {marker inference}
-{title:Component inference and fixed-effect projections}
-
 {dlgtab:Component inference}
 
-{pstd}
-The September 2026 q1 repair corrects the curvature formula and reports
-target-specific availability in {cmd:e(q1_status)}. An unavailable q1 interval
-has missing AM endpoints; the high-rank comparator is not a replacement.
-Earlier q1 coverage evidence is source-specific and does not qualify the
-corrected implementation. The subsequent independent match q0 and eligible
-q1 confirmations pass for their recorded sources. The new individual-interval
-implementation and unified residual-moment fitter are development candidates
-pending bounded validation at the default 200 JLA probes. Historical failures
-remain failures. Explicit fixed-offset match inference is
-available. It ignores nuisance-control estimation uncertainty and is an
-approximation, not proven conditional inference given an estimated offset.
+  {it:Option}{col 40}Description
+  {hline 76}
+    {cmd:inference(none|highrank|q1)}{col 40}component intervals; default none
+    {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}optional structured variance model
+    {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
+    {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
+    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}Gram precision; default 2,048
+    {cmd:inferenceseed(}{it:#}{cmd:)}{col 40}inference seed; default 8675309
+    {cmd:inferencebins(}{it:#}{cmd:)}{col 40}exact-route smoothing; default 1,000
+  {hline 76}
 
 {pstd}
-Inference is opt-in. The structured Rust modes report each target separately:
-{cmd:inference(highrank)} supplies Gaussian intervals when that target passes
-its checks; {cmd:inference(q1)} supplies rank-one weak-identification
-diagnostics and specialized interval endpoints. A failed joint covariance
-does not suppress otherwise computable individual intervals. Joint Gaussian
-postestimation is available only for {cmd:highrank} when the joint covariance
-and all four targets pass; structured {cmd:q1} never posts {cmd:e(V)}.
-The separate exact Mata route is unchanged. Point estimation
-remains the default; point-only calls retain their previous behavior and do
-not post {cmd:e(V)}.
+{cmd:inference(highrank)} requests Gaussian component intervals;
+{cmd:inference(q1)} requests intervals allowing one dominant weakly
+identified mode. These require different identification conditions; q1
+does not cover arbitrary multi-mode weakness. Successful computation does
+not establish valid coverage, and there is no automatic choice between them.
 
 {pstd}
-When {cmd:inferencemodel()} is omitted, component inference uses the existing
-Mata exact target-specific smoother and requires
-{cmd:deletion(observation)} and unit frequency
-weights. Omitted or automatic algorithm selection resolves to exact. The
-supported explicit capabilities {cmd:structured_common} and
-{cmd:structured_leverage} instead require {cmd:backend(rust)},
-{cmd:rng(counter_v1)}, {cmd:algorithm(jla)},
-{cmd:deletion(observation)},
-{cmd:nuisance(joint)}, and {cmd:preconditioner(diagonal|cmg)}. They support
-low-dimensional controls but reject frequency weights on observation deletion.
-Both observation-inference routes use {cmd:stayers(both)} by default;
-{cmd:stayers(movers)} requests a mover-only population. This makes the previous
-default population explicit without changing its inference formula.
-A separate explicit match tuple instead requires {cmd:deletion(match)},
-{cmd:nuisance(fixedoffset)}, {cmd:stayers(movers)}, and {cmd:engine(generic)}
-with the same explicit Rust/JLA/Counter-V1, model and solver options.
-Match inference permits positive integer frequencies as regression mass,
-not independent clusters, and preserves {cmd:deletionid()} and
-{cmd:targetweight()} semantics. Joint-control match inference, match/stayer
-hybrid inference, simultaneous {cmd:project()}, and automatic routing remain unsupported. The paper's
-unrestricted variance-product construction is not implemented and has no
-reserved option token. All unsupported tuples fail rather than substitute
-another method.
-
-{pstd}
-The exact target-specific procedure forms the observation-level proxy
-{cmd:y_i e_(i,-i)}, smooths it over leverage and one target diagonal, and
-uses polarization to recover the joint covariance. This MATLAB-compatible
-approximation is not the paper's unrestricted heteroskedastic variance-product
-construction. The structured Rust procedure instead fits one common positive
-variance vector for every primitive target. {cmd:structured_common} uses
-normalized midranks of leverage and the three primitive target diagonals with
-squares and interactions; {cmd:structured_leverage} uses a leverage quadratic
-as a sensitivity model. For both deletion units, a small residual-moment
-system fits squared residuals while accounting for the residual
-projection. It estimates the Gram matrix as half the centered sample covariance of
-{cmd:Z'[(g-Pg)^2]}, using 2,048 Gaussian probes by default, without ridge
-selection or cross-fitting. This direct residual calculation avoids an
-additional subtraction based on estimated leverage. Probe ordering uses design
-information, not outcomes; no new user key is required. For observation deletion, identical designs
-exchange numerical addresses when reordered, so finite-probe results need not
-be identical without a stable outcome-free {cmd:probeorder()} key. The point estimator's
-formula is unchanged, but this ordering can change its finite-probe realization
-relative to a point-only call. Only fitted covariance inputs receive the
-positive floor; target variances and invalid joint matrices are not repaired.
-{cmd:inferencegramprobes(#)} changes only the Gram precision and is separate
-from the 200 point-estimation probes and {cmd:inferencesimulations()}.
-It requires a supported explicit structured Rust component-inference request
-and an integer from 512 through 2,147,483,647, subject to resource admission.
-Values below 2,048 trade precision for speed and are not recommended for
-reported inference. No automatic increase or retry occurs. Comparing a few
-preselected inference seeds can reveal numerical sensitivity; do not select
-seeds or q after seeing preferred intervals. Higher Gram precision can reduce
-numerical error but cannot repair variance-model or q-regime misspecification.
-
-{pstd}
-Spectral diagnostics use 512 iterations for observation inference and match
-high-rank (q0) inference, and 128 for match q1. These fixed pre-RNG budgets
-retain the same spectral residual gate; JLA still defaults to 200 probes.
-For match inference, the same fitter uses squared collapsed fixed-offset
-residuals and the match-level FE projection. Residuals are aggregated before
-squaring; one declared match is one independent inference unit regardless of
-its regression mass. Observation inference uses the full-model projection.
-The common model additionally includes normalized match-mass midrank and its
-polynomial interactions. Only the requested common or leverage model is fitted.
-Outcome-free redundant columns are removed while preserving the model span;
-weakly identified remaining directions still fail the rank checks.
-This fitting method does not make the structured model unrestricted or
-recreates independent sample-split variance products. Rank, solver and shared
-variance-fit failures still withhold the complete inference request.
-
-{pstd}
-{bf:Fixed-offset approximate match inference, ignoring nuisance-control
-estimation uncertainty.} The full joint model is fitted once, its control
-offset is held fixed, and each declared match becomes one scalar inference
-row. The working model permits unrestricted within-match dependence through
-aggregate-match variance and assumes independence across matches, including
-different matches of the same worker. Estimating controls on the same sample
-can violate this working independence. Few controls do not guarantee that
-omitting their estimation uncertainty is harmless. No second-stage correction
-is applied.
-
-{pstd}
-The structured modes impose additional variance-model assumptions. Severe
-omitted variance drivers can invalidate standard errors and intervals even
-when every component point estimate is unchanged. They must not be described
-as unqualified heteroskedasticity-robust inference. The clean preregistered V5
-confirmation passed all primary correct-model {cmd:q=0} and eligible one-mode
-{cmd:q=1} coverage and standard-error gates and its mild-misspecification
-bounds. Its deliberately severe omitted-driver cases failed visibly, as
-intended, and weak or null designs produced typed withholding rather than an
-alternative estimator. Those V5 results refer to their historical source.
-The corrected observation-q1 confirmation has one failed SE-ratio gate
-(1.1012 versus 1.10), with 93.52% coverage in that design; this remains an
-unresolved calibration limitation. The separate fixed-offset match q0 and
-eligible q1 confirmations pass their registered gates. Public interface
-integration does not waive the observation failure or authorize a release.
-
-{pstd}
-Both Rust references report target-specific first and second generalized
-modes, leading spectral share and numerical MCSE, maximum mode weight, and
-influence concentration. {cmd:highrank} ({cmd:q=0}) requires strong
-identification and diffuse kernel and influence contributions. {cmd:q1}
-removes one estimated leading mode and requires the remaining kernel and
-influence contribution to be diffuse. The KSS/Andrews--Mikusheva {cmd:q1}
-reference is asymptotically at least nominal under its assumptions and may
-be conservative; this is not an unconditional guarantee for the fitted
-variance approximation. No universal cutoff validates either request or
-automatically selects {cmd:q1}; successful computation is not proof that a
-target satisfies its asymptotic condition. A multi-mode target with several
-concentrated modes remains outside the confirmed {cmd:q1} coverage claim.
-
-{pstd}
-For structured Rust {cmd:highrank}, Stata's standard {cmd:lincom} is available
-only when {cmd:e(inference_joint_posted)} is one. Otherwise use the reported
-individual intervals; do not reconstruct a joint covariance from their
-standard errors. The unchanged exact Mata route retains its covariance
-posting. An admissible joint Gaussian example is:
-
-{phang2}{cmd:. lincom worker_variance + firm_variance + 2*worker_firm_covariance}{p_end}
-
-{pstd}
-This component combination is distinct from MATLAB's {cmd:lincom_KSS}, which
-computes fixed-effect projection inference.  The FEVC counterpart to that
-MATLAB function is {cmd:project()}.
+Without {cmd:inferencemodel()}, component inference uses exact Mata
+calculation, observation deletion, and unit frequency weights.
+The explicit structured models {cmd:structured_common} and
+{cmd:structured_leverage} impose additional variance assumptions; they are
+not unrestricted heteroskedasticity-robust inference. Observation-q1
+calibration retains a documented limitation. Fixed-offset match inference
+is approximate, ignoring nuisance-control estimation uncertainty.
+Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
+for supported requests, assumptions, and limitations before reporting intervals.
+An {help fevc##component_example:illustrative example} appears below.
 
 {dlgtab:Fixed-effect projection inference}
 
-{pstd}
-{cmd:project()} projects the worker or firm effects selected by
-{cmd:projecteffect()} on an automatic constant and numeric covariates.
-{cmd:projectweight(frequency)} is the default; {cmd:projectweight(target)}
-uses target mass.  Projection coefficients and KSS/naive covariances are
-stored under {cmd:e(projection_*)}.  Projection alone does not populate the
-component {cmd:e(V)}, and Stata's standard {cmd:lincom} therefore does not
-operate on projection rows directly.  The naive covariance is a descriptive
-residual-squared plug-in benchmark; use the KSS covariance for reported
-projection inference.
-
-{pstd}
-A projection-only call with no explicit scalable Rust tuple selects the
-deterministic Mata exact route.  It can use the default match-deletion,
-combined mover/stayer population or explicit observation deletion.  Component
-inference and projection inference can be requested together only on their
-common supported surface: Mata exact, observation deletion, movers, and unit
-frequency weights.
-
-{pstd}
-Projection inference inherits the point estimator's deletion and population
-contract.  With omitted {cmd:deletion()}, declared mover matches are
-independent blocks with unrestricted within-match covariance, while eligible
-attached stayers remain physical-observation deletion units under default
-{cmd:stayers(both)}.  The covariance uses symmetrized block cross-fit
-products.  Explicit observation deletion reduces to the valid uncentered
-{cmd:y_i*e_i,-i} product; the old sample-mean-centered product is not used.
-
-{pstd}
-The automatic constant uses last-retained-firm-zero grounding and is
-normalization-dependent.  Projection slopes are invariant to equivalent
-worker/firm location shifts.
-
-{pstd}
-The scalable projection route is deliberately explicit.  It requires
-{cmd:backend(rust) rng(counter_v1) algorithm(jla)}, the generic engine
-(explicitly or by automatic selection), observation or match deletion,
-explicit {cmd:preconditioner(diagonal)} or forced
-{cmd:preconditioner(cmg)}, and positive integer frequency
-weights interpreted as literal physical copies.  Automatic solver routing is
-not admitted for {cmd:project()}.  Forced projection CMG shares the planned
-generic hierarchy between the full and fixed-effect solvers and fails closed;
-it is distinct from the eligible no-control point-estimation {cmd:CMG_FULL_V2}
-route shared by observation and match deletion.
-For match deletion the explicit generic route also supports the default
-{cmd:stayers(both)} mixed deletion partition.
-Target mass remains stored-row mass and is not multiplied by frequency.  The
-native runtime obtains the requested block variance proxy from the same JLA solve,
-solves the fixed-effect projection loadings without a full inverse, and
-streams the score covariance without retaining an observation-by-coefficient
-design. Complete-system residual, projection-Gram conditioning, PSD, and
-memory-receipt reconciliation fail closed. Forecast admission follows
-{cmd:memorycheck()}; only an explicit budget with {cmd:memorycheck(error)}
-rejects an over-budget forecast.
-
-{pstd}
-The leave-out point estimator and reference-distribution formulas follow the
-published KSS analysis, and the exact target-specific smoother follows
-KSS Matlab behavior. The structured common variance regression is a
-pragmatic FEVC extension with additional conditional-mean assumptions; it is
-not unrestricted KSS inference. All code is independently authored
-GPL-3.0-only source. No MATLAB source or critical-value table is distributed.
-
-{marker troubleshooting}
-{title:Troubleshooting withheld calculations}
-
-{pstd}
-A recognized failure stores {cmd:e(status)="WITHHELD"}, a technical
-{cmd:e(withholding_status)}, the detailed condition, a plain-language reason,
-and a suggested next step.  The command withholds the whole decomposition; it
-does not drop a failed block, add a hidden ridge, change the sample, change
-the deletion unit, reduce probes, or loosen tolerances silently.
-
-  {it:problem}{col 34}what to check
+  {it:Option}{col 40}Description
   {hline 76}
-  {ul:Input or deletion definition}
-    Invalid weights or IDs{col 34}check types, missing values, integer frequency, and target mass
-    Cross-coordinate match{col 34}each deletion ID must stay within one worker-firm coordinate
-    Incomplete match input{col 34}all frozen outcome, ID, control, and weight inputs must be complete
-
-  {ul:Graph and target sample}
-    No mover/leave-out sample{col 34}inspect mover histories, match IDs, and requested restrictions
-    Ambiguous component{col 34}the command will not break an exact ranking tie using encoded IDs
-
-  {ul:Identification and controls}
-    Singular information{col 34}remove substantively redundant controls or repair the design
-    Unverified deletion rank{col 34}try exact on a feasible design or revise weakly supported controls
-    Nonestimable deletion{col 34}inspect thin matches and whether every declared block can be removed
-
-  {ul:Computation and resources}
-    Exact size limit{col 34}use auto/JLA for a large identified design
-    Unsupported mixed correction{col 34}use supported exact or generic JLA match options
-    Unsupported component route{col 34}use Mata exact observation deletion with unit frequency weights
-    Invalid inference covariance{col 34}inspect leverage, support, smoothing fit, and projection rank
-    PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
-    Strict memory admission{col 34}reduce batch width or choose memorycheck(warn|off)
-    Actual allocation failure{col 34}reduce working storage or use more available memory
-    Forced compressed failure{col 34}use the full explicit generic tuple or backend(mata)
-
-  {ul:Installation and runtime}
-    Stale Mata runtime{col 34}run discard or restart Stata, then reinstall one complete build
-    Unregistered JLA runtime{col 34}use supported Stata 18/19 or exact when feasible
-    Unavailable Rust artifact{col 34}build and test a local developer artifact or use backend(mata)
-    Unsupported Rust options{col 34}use exact, frozen compressed JLA, explicit generic JLA, or backend(mata)
+    {cmd:project(}{it:varlist}{cmd:)}{col 40}project fixed effects on covariates
+    {cmd:projecteffect(worker|firm)}{col 40}dimension to project (required)
+    {cmd:projectweight(frequency|target)}{col 40}projection weights; default frequency
   {hline 76}
 
 {pstd}
-An over-budget warning under {cmd:memorycheck(warn)} does not withhold the
-calculation. With {cmd:memorycheck(error)}, revise the explicit budget only
-when it reflects the resources available for the forecast scope, or select
-an advisory policy. External operating-system and scheduler limits still apply.
+These options estimate relationships between fixed effects and observed
+characteristics, such as firm wage premiums and firm size. An intercept is
+included automatically. Slopes are invariant to the fixed-effect
+normalization; the intercept is not. The default calculation is exact and
+suited to small designs. See the {help fevc##projection_example:example}
+and the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
+for the explicit scalable alternative. Projection results are stored
+separately; Stata's {cmd:lincom} does not operate directly on these rows.
+
+{dlgtab:Computation and reproducibility}
+
+  {it:Option}{col 40}Description
+  {hline 76}
+    {cmd:algorithm(jla|exact|auto)}{col 40}calculation method; default jla
+    {cmd:backend(auto|mata|rust)}{col 40}implementation; default auto
+    {cmd:rng(auto|stata|counter_v1)}{col 40}random-number method; default auto
+    {cmd:engine(auto|compressed|generic)}{col 40}internal representation; default auto
+    {cmd:preconditioner(auto|diagonal|cmg)}{col 40}solver method; default auto
+    {cmd:batch(auto|}{it:#}{cmd:)}{col 40}simultaneous calculations; default auto
+    {cmd:probeorder(}{it:varname}{cmd:)}{col 40}stable ordering key for random draws
+  {hline 76}
 
 {pstd}
-Do not treat a conservative rejection as proof that the economic estimand does
-not exist.  It means this implementation did not certify the requested finite
-calculation under its registered gates.  When asking for support, report the
-command line, Stata version, {cmd:e(withholding_status)},
-{cmd:e(withholding_detail)}, and a small reproducible design when possible.
-
-{marker stored}
-{title:Stored results}
+The default {cmd:algorithm(jla)} uses a randomized approximation.
+{cmd:algorithm(exact)} uses deterministic linear algebra for small designs.
+Explicit {cmd:algorithm(auto)} chooses exact when the identified dimension
+is within {cmd:exact_limit()}, and JLA otherwise.
 
 {pstd}
-The existing scientific return contract is unchanged.  {cmd:e(results)} has
-rows {cmd:plugin}, {cmd:bias_correction}, {cmd:corrected}, and
-{cmd:numerical_mcse}; columns are {cmd:worker_variance},
-{cmd:firm_variance}, {cmd:worker_firm_covariance}, and
-{cmd:total_variance}.  The corrected row is also stored in {cmd:e(b)} and
-{cmd:e(kss)}.  Separate matrices are {cmd:e(plugin)},
-{cmd:e(correction)}, and {cmd:e(numerical_mcse)}.
+Automatic backend selection prefers a compatible Rust plugin and otherwise
+uses Mata. {cmd:backend(mata)} selects the portable implementation;
+{cmd:backend(rust)} requires the native implementation. Leave the remaining
+settings automatic unless investigating a specific computational issue.
+The {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/RUST_MATA_PARITY.md":backend reference}
+describes specialized combinations and restrictions.
+
+{dlgtab:Memory and numerical settings}
+
+  {it:Option}{col 40}Description
+  {hline 76}
+    {cmd:memory_gib(}{it:#}{cmd:)}{col 40}optional memory planning budget in GiB
+    {cmd:memorycheck(warn|error|off)}{col 40}budget policy; default warn
+    {cmd:wallseconds(}{it:#}{cmd:)}{col 40}optional advisory time budget
+    {cmd:tolerance(}{it:#}{cmd:)}{col 40}override solver tolerances
+    {cmd:maxiter(}{it:#}{cmd:)}{col 40}iteration limit; default 10,000
+    {cmd:exact_limit(}{it:#}{cmd:)}{col 40}exact dimension limit; default 500
+    {cmd:rank_tolerance(}{it:#}{cmd:)}{col 40}rank threshold; default 1e-10
+    {cmd:block_tolerance(}{it:#}{cmd:)}{col 40}deletion threshold; default 1e-10
+    {cmd:blocksize_limit(}{it:#}{cmd:)}{col 40}stored match-block limit; default 5,000
+    {cmd:physical_limit(}{it:#}{cmd:)}{col 40}generic JLA copies; default 50 million
+  {hline 76}
 
 {pstd}
-Structured Rust {cmd:highrank} posts {cmd:e(V)} only when the joint covariance
-and all four targets pass. {cmd:e(V_primitive)} is absent when the joint
-matrix is inadmissible. {cmd:e(component_inference)} contains individual
-Gaussian estimates, standard errors and endpoints, with missing entries for
-unavailable targets. Under {cmd:q1} these are diagnostic comparators, not the
-reported reference intervals, and {cmd:e(V)} is absent. {cmd:inference(q1)} stores
-{cmd:e(q1_inference)} with weak-identification endpoints, eigen diagnostics,
-rank-one covariance terms, F statistic, curvature, and critical value.
+Without {cmd:memory_gib()}, the command assumes no memory budget. An
+explicit budget guides automatic batching. {cmd:memorycheck(warn)}, the default,
+warns and continues when the forecast exceeds that budget;
+{cmd:memorycheck(error)} stops and {cmd:memorycheck(off)} suppresses the
+warning. The forecast covers command allocations, not total Stata memory,
+and the budget is not an operating-system memory cap.
+See the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEMORY.md":memory guide}.
 
 {pstd}
-The supported explicit structured Rust modes additionally store
-{cmd:e(component_spectrum)}, {cmd:e(component_trace_mcse)},
-{cmd:e(component_inference_receipt)}, and {cmd:e(component_augmentation_receipt)}.
-Both observation and match fits return
-{cmd:e(residual_moment_diagnostics)}, {cmd:e(inference_gram_probes)}, {cmd:e(inference_gram_method)},
-{cmd:e(variance_gram_rcond)}, and {cmd:e(variance_floor_share)}; cross-validation
-matrices are absent because they are inapplicable to residual-moment fitting. With
-{cmd:inference(q1)}, {cmd:e(component_q1_diagnostics)} contains the raw
-leading/remainder decomposition. {cmd:e(inference_model)},
-{cmd:e(inference_kss_scope)}, {cmd:e(inference_reference)},
-{cmd:e(inference_support_status)}, {cmd:e(inference_capability)},
-{cmd:e(inference_population)}, {cmd:e(inference_q_condition)},
-{cmd:e(inference_execution_scope)}, {cmd:e(inference_variance_warning)}, and
-{cmd:e(inference_reference_guarantee)} identify the supported tuple and the
-additional variance-model and reference-distribution assumptions. Paired
-{cmd:e(inference_*_requested)} and {cmd:e(inference_*_selected)} fields
-reconcile deletion, nuisance handling, population, variance model, reference, backend, solver,
-and generic result family.
-{cmd:e(component_spectrum)} also reports the maximum inferential-unit share of the
-full linear-influence variance; the q=1 remainder analogue is in
-{cmd:e(component_q1_diagnostics)}. The latter also reports the raw leave-out
-leading-mode recenter and the numerical error from reproducing the direct
-rank-one-subtracted remainder. The component receipt records the actual q=1
-critical-draw count; the structured Rust route uses at least 100,000 draws.
+Numerical defaults normally need no adjustment. If estimation fails,
+inspect the reported reason before changing a tolerance or limit.
+
+{dlgtab:Additional output}
 
 {pstd}
-{cmd:e(q0_status)} and {cmd:e(q1_status)} distinguish computed and unavailable
-targets; the corresponding {cmd:e(*_status_codes)} macros explain the codes.
-{cmd:e(inference_joint_status)} separately identifies an admissible joint
-matrix (0), nonpositive diagonal (1), or material indefiniteness (2).
-{cmd:e(inference_computed_targets)} counts available intervals for the chosen
-reference. Computability is not evidence of correct coverage. The V5 component
-receipt identifies the actual variance fitter, Gram work and target status;
-an older plugin fails before estimator RNG rather than silently changing method.
-
-{pstd}
-{cmd:e(component_unit_receipt)} records the unit schema, deletion mode,
-independent-unit count, omitted-nuisance-uncertainty flag, and match diagnostics.
-{cmd:e(inference_independent_units)} counts matches for match deletion and
-observations for observation deletion. {cmd:e(inference_nuisance_omitted)} is
-one for fixed-offset match inference. Match calls also store
-{cmd:e(inference_effective_matches)}, {cmd:e(inference_largest_mass_share)},
-{cmd:e(inference_largest_leverage)}, and {cmd:e(inference_smallest_maker)}.
-Effective matches is the inverse sum of squared normalized match regression-mass
-shares: it describes concentration, not degrees of freedom or a validity test.
-{cmd:e(inference_offset_warning)} explains that uncertainty from estimated
-control coefficients is omitted. Within-match dependence is unrestricted;
-independence across the declared matches remains an assumption.
-
-{pstd}
-A projection request stores {cmd:e(projection_b)},
-{cmd:e(projection_V)}, {cmd:e(projection_V_naive)}, and
-{cmd:e(projection_results)}.  The columns of {cmd:e(projection_results)} are
-the estimate, KSS standard error, z statistic, p-value, lower and upper
-confidence endpoints, and naive standard error.  The scalable Rust route
-additionally stores
-{cmd:e(projection_diagnostics)},
-{cmd:e(projection_augmentation_receipt)}, and
-{cmd:e(projection_solver_diagnostics)}.  These bind the projection Gram,
-coefficient solves, complete-system residuals, covariance PSD cleanup, proxy
-range, and admitted memory forecast.  For Mata exact projection,
-{cmd:e(inference_diagnostics)} records applicable component-inference
-settings, confidence level, covariance cleanup magnitudes, variance-proxy
-range, mover/stayer row counts, and tiny fitted-variance floor count.
-
-{pstd}
-{cmd:e(inference_deletion)}, {cmd:e(inference_method)},
-{cmd:e(projection_constant)}, and {cmd:e(grounding_convention)} identify the
-effective deletion partition, exact or JLA block route, and normalization.
-
-{pstd}
-{cmd:e(decomposition)} is the additive applied-user view.  Its rows are
-{cmd:worker_variance}, {cmd:firm_variance},
-{cmd:sorting_2covariance}, and {cmd:total_worker_firm}.  Its columns contain
-plug-in, bias correction, corrected levels, plug-in/corrected shares of
-target-weighted outcome variance, and plug-in/corrected shares of the
-worker-firm total.  Stored shares are proportions; the display multiplies
-them by 100.
-
-{pstd}
-With {cmd:deletion(match) stayers(both)}, the ordinary headline returns have the combined
-mover-stayer meaning.  Compatibility aliases are
-{cmd:e(stayer_hybrid_results)}, {cmd:e(stayer_hybrid_plugin)},
-{cmd:e(stayer_hybrid_correction)}, and {cmd:e(stayer_hybrid_kss)}.
-{cmd:e(stayer_hybrid_decomposition)} is the corresponding additive/share
-view.  {cmd:e(stayer_hybrid_correction_source)} has rows
-{cmd:mover_match} and {cmd:stayer_observation}, making the mixed correction
-accounting explicit for exact calculations; JLA reports that source split as
-missing because its finite-projection correction is estimated jointly.
-{cmd:e(stayer_hybrid_sample_accounting)} has mover,
-stayer, and total rows and reports stored rows, physical observations, worker
-levels, target mass, and deletion units.
-
-{pstd}
-The associated scalars report the combined dimensions and numerical
-diagnostics, the number of included stayers and their stored/physical mass,
-excluded singleton and unattached stayer counts, and mover/stayer target
-mass.  The labels {cmd:e(stayer_hybrid_target_population)},
-{cmd:e(stayer_hybrid_deletion)}, {cmd:e(stayer_hybrid_assumption)}, and
-{cmd:e(stayer_hybrid_esample)} record the population, mixed-deletion
-convention, lack of match robustness for stayers, and the combined meaning
-of {cmd:e(sample)}.  Exact calculations additionally preserve the mover-only
-intermediate under {cmd:e(mover_results)}, {cmd:e(mover_plugin)},
-{cmd:e(mover_correction)}, and {cmd:e(mover_kss)}.
-
-{pstd}
-Outcome and fit scalars are {cmd:e(target_outcome_variance)},
-{cmd:e(regression_outcome_variance)}, {cmd:e(residual_variance)},
-{cmd:e(full_model_explained_variance)}, and
-{cmd:e(full_model_explained_share)}.
-
-{pstd}
-Sample and design scalars include {cmd:e(N_requested)},
-{cmd:e(N_complete)}, {cmd:e(N_initial_component)},
-{cmd:e(N_mover_input)}, {cmd:e(N_retained)}, {cmd:e(N_physical)},
-{cmd:e(worker_levels)}, {cmd:e(firm_levels)},
-{cmd:e(deletion_units)}, {cmd:e(target_weight_sum)},
-{cmd:e(weighted_rss)}, {cmd:e(max_leverage)}, and graph-pruning counts.
-
-{pstd}
-{cmd:e(stayers)} records the public population choice, and
-{cmd:e(stayers_option_supplied)} distinguishes explicit from default selection.
-{cmd:e(N_complete)} counts complete cases before population selection;
-{cmd:e(N_graph_input)} counts rows passed to graph preparation.
-{cmd:e(N_stayer_option_dropped)} counts rows excluded solely by explicit
-observation-deletion {cmd:stayers(movers)}. These returns follow
-{cmd:e(stayer_option_schema)} = {cmd:FEVC-STAYER-POPULATION-V1}; unchanged raw
-native preparation receipts describe graph input, not pre-selection rows.
-
-{pstd}
-Memory returns are posted after successful completion, including with
-{cmd:nodisplay}. {cmd:e(memory_budget_supplied)} is 1 for an explicit budget
-and 0 otherwise. {cmd:e(memory_gib)} is that budget in GiB or missing when
-omitted. {cmd:e(memory_check)} records {cmd:warn}, {cmd:error}, or {cmd:off};
-its default is {cmd:warn} even when no budget is supplied.
-
-{pstd}
-{cmd:e(memory_forecast_bytes)} is the expected peak;
-{cmd:e(memory_admission_forecast_bytes)} includes conditional refinement
-reserve and is used for budget comparisons. Their difference is
-{cmd:e(memory_conditional_reserve_bytes)}. {cmd:e(memory_forecast_scope)}
-describes the accounting scope and {cmd:e(memory_forecast_model)} is
-currently 1. A zero reserve means the model reports no separate reserve,
-not that its forecast is certain. {cmd:e(batch_memory_budget_bytes)} is a
-route-specific planning allowance, which need not equal the whole budget;
-it is missing when {cmd:memory_gib()} is omitted. For example:
-
-{phang2}{cmd:. display e(memory_forecast_bytes)/1024^3}{p_end}
-{phang2}{cmd:. display e(memory_admission_forecast_bytes)/1024^3}{p_end}
-{phang2}{cmd:. display "`e(memory_forecast_scope)'"}{p_end}
-
-{pstd}
-JLA additionally stores the selected engine, preconditioner, routing reason,
-batch, probes, complete residual, per-RHS convergence diagnostics, resource
-forecasts, timing diagnostics, RNG contract, and restoration metadata.  Type
-{cmd:ereturn list} after a successful call for the complete diagnostic set.
-
-{pstd}
-Successful estimates store {cmd:e(estat_cmd)="fevc_estat"}, which makes the
-four postestimation display commands documented above available through
-Stata's standard {cmd:estat} dispatcher.
-
-{pstd}
-Backend routing is recorded in {cmd:e(backend_requested)},
-{cmd:e(backend_selected)}, {cmd:e(backend_routing_reason)}, and
-{cmd:e(backend_option_supplied)}.  The last is zero only when
-{cmd:backend()} was omitted.  Automatic fallback additionally records
-{cmd:e(backend_fallback)}, {cmd:e(backend_fallback_reason)}, and
-{cmd:e(backend_fallback_phase)}.  RNG routing is recorded analogously in
-{cmd:e(rng_requested)}, {cmd:e(rng_selected)}, and
-{cmd:e(rng_option_supplied)}.  Rust results additionally include a
-request-capability receipt and route-appropriate preparation, graph, memory,
-residual, rank, and accounting diagnostics.  JLA results also include
-per-right-hand-side receipts, topology checksum halves, and the Counter-V1
-contract; exact results record RNG as not applicable.  On explicit Rust
-failure, {cmd:e(backend_selected)} is empty and the routing fields accompany
-the typed withholding result.
-
-{pstd}
-Planned Rust results additionally store {cmd:e(rust_phase_profile)} with
-columns {cmd:ingest}, {cmd:canonicalize}, {cmd:graph}, {cmd:compress},
-{cmd:plan}, {cmd:stayer_augmentation}, {cmd:solve}, and {cmd:native_total}.
-Units are seconds and the schema is recorded in
-{cmd:e(rust_phase_profile_schema)}.  These are diagnostic wall-clock values;
-they never affect estimator selection, memory admission, RNG, or results.
-
-{pstd}
-Direct full-CMG point results also retain the frozen 46-column
-{cmd:e(full_cmg_receipt)}. The separate {cmd:e(full_cmg_model_receipt)}
-has columns {cmd:controls}, {cmd:nuisance} (1 joint, 2 fixed offset),
-{cmd:logical_rhs}, {cmd:strict_rhs}, {cmd:controlled_rhs}, and
-{cmd:refinement_rhs}; {cmd:e(full_cmg_model_schema)} is
-{cmd:CMG-FULL-MODEL-V1}. Logical RHSs include the control-rank projections
-and any fixed-offset working fit. Extra control-refinement solves are not
-extra random probes. Rank projections retain their separate strict residual
-gate; controlled point probes do not use the relaxed no-control default.
-
-{pstd}
-On a recognized failure, the principal strings are
-{cmd:e(withholding_status)}, {cmd:e(withholding_detail)},
-{cmd:e(withholding_reason)}, and {cmd:e(withholding_suggestion)}.
+{cmd:verbose} adds computation details. {cmd:nolog} takes precedence over
+it. {cmd:nodisplay} suppresses progress and successful final output;
+{cmd:quietly} is also supported. These options do not change estimates or
+stored results. Memory warnings and errors follow their own policies.
 
 {marker examples}
-{title:Examples}
+{title:More runnable examples}
 
 {pstd}
-Each example creates its own connected AKM-style worker-firm graph.  The
-visible {cmd:preserve}/{cmd:restore} lines make the block safe to copy into a
-do-file.  The clickable link executes the marked inner block through
-{cmd:fevc_run}, which also restores the caller's data.  The first two
-examples construct positive sorting by relating each worker effect to the
-mean firm effect across that worker's jobs.  They display the true components
-for the realized sample, using the same observation-weighted population
-moments as the estimator.  With the specified seeds, the plug-in covariance
-is negative and the bias correction brings it close to the positive truth.
-The correction also brings both variances and their total closer to the
-true values in these simulated samples.
-{cmd:estat decomposition, full} shows raw covariance; the main table reports
-twice the covariance as the sorting contribution.  Example 3 displays the
-population moments implied by its DGP.
+Each link runs the displayed commands and restores your data. The example
+data retain the true {cmd:worker_fe}, {cmd:firm_fe}, and {cmd:error}.
+{stata viewsource fevc__simulate_data.ado:View all data-generation code}.
 
-{space 4}{hline 10} {it:Example 1 - Positive sorting in a larger graph with JLA} {hline 10}
-{cmd}{...}
-          preserve
-{* example_start - jla_controls}{...}
-          clear
-          set seed 20260821
-          local workers 10000
-          local firms 3001
-          local spells 3
-          local periods 2
-          set obs `=`workers'*`spells'*`periods''
-          generate long worker_id = ceil(_n/(`spells'*`periods'))
-          bysort worker_id: generate byte within_worker = _n
-          generate byte spell = ceil(within_worker/`periods')
-          generate byte period = mod(within_worker-1,`periods')+1
-          by worker_id: generate int step = runiformint(1,`firms'-1) if _n==1
-          by worker_id: replace step = step[1]
-          generate long firm_id = mod(worker_id-1+(spell-1)*step,`firms')+1
-          generate long match_id = worker_id*10+spell
-          bysort firm_id (worker_id within_worker): generate double firm_fe = rnormal() if _n==1
-          by firm_id: replace firm_fe = firm_fe[1]
-          bysort worker_id (within_worker): egen double mean_firm_fe = mean(firm_fe)
-          by worker_id: generate double worker_fe = .5*mean_firm_fe+rnormal() if _n==1
-          by worker_id: replace worker_fe = worker_fe[1]
-          generate double productivity = rnormal()
-          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+3*rnormal()
-          quietly correlate worker_fe firm_fe, covariance
-          tempname true_components
-          matrix `true_components' = r(C)*(r(N)-1)/r(N)
-          display as text _newline "True worker-firm components (realized sample):"
-          display as text "  Var(worker effect)       = " as result %7.3f el(`true_components',1,1)
-          display as text "  Var(firm effect)         = " as result %7.3f el(`true_components',2,2)
-          display as text "  Cov(worker, firm)        = " as result %7.3f el(`true_components',1,2)
-          display as text "  Var(worker + firm)       = " as result %7.3f (el(`true_components',1,1)+el(`true_components',2,2)+2*el(`true_components',1,2))
-          fevc log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
-              deletion(match) deletionid(match_id) nuisance(joint) algorithm(jla) ///
-              probes(200) seed(8675309)
-          estat decomposition, full
-{* example_end}{...}
-          restore
-{txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run jla_controls using fevc.sthlp:click to run})}
+{dlgtab:Example 2: Exact calculation on a small sample}
 
-{space 4}{hline 10} {it:Example 2 - Positive sorting with exact bias correction} {hline 10}
+{pstd}
+The same positive-sorting design as Example 1, with 200 workers and 61 firms.
+
 {cmd}{...}
-          preserve
+        preserve
 {* example_start - exact_controls}{...}
-          clear
-          set seed 20260820
-          local workers 200
-          local firms 61
-          local spells 3
-          local periods 2
-          set obs `=`workers'*`spells'*`periods''
-          generate long worker_id = ceil(_n/(`spells'*`periods'))
-          bysort worker_id: generate byte within_worker = _n
-          generate byte spell = ceil(within_worker/`periods')
-          generate byte period = mod(within_worker-1,`periods')+1
-          by worker_id: generate int step = runiformint(1,`firms'-1) if _n==1
-          by worker_id: replace step = step[1]
-          generate long firm_id = mod(worker_id-1+(spell-1)*step,`firms')+1
-          generate long match_id = worker_id*10+spell
-          bysort firm_id (worker_id within_worker): generate double firm_fe = rnormal() if _n==1
-          by firm_id: replace firm_fe = firm_fe[1]
-          bysort worker_id (within_worker): egen double mean_firm_fe = mean(firm_fe)
-          by worker_id: generate double worker_fe = .5*mean_firm_fe+rnormal() if _n==1
-          by worker_id: replace worker_fe = worker_fe[1]
-          generate double productivity = rnormal()
-          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+3*rnormal()
-          quietly correlate worker_fe firm_fe, covariance
-          tempname true_components
-          matrix `true_components' = r(C)*(r(N)-1)/r(N)
-          display as text _newline "True worker-firm components (realized sample):"
-          display as text "  Var(worker effect)       = " as result %7.3f el(`true_components',1,1)
-          display as text "  Var(firm effect)         = " as result %7.3f el(`true_components',2,2)
-          display as text "  Cov(worker, firm)        = " as result %7.3f el(`true_components',1,2)
-          display as text "  Var(worker + firm)       = " as result %7.3f (el(`true_components',1,1)+el(`true_components',2,2)+2*el(`true_components',1,2))
-          fevc log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
-              deletion(match) deletionid(match_id) nuisance(joint) algorithm(exact)
-          estat decomposition, full
+        fevc, simulate_data(ex2) clear
+        fevc log_wage productivity i.period, ///
+            worker(worker_id) firm(firm_id) algorithm(exact)
+        estat decomposition, full
 {* example_end}{...}
-          restore
+        restore
 {txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run exact_controls using fevc.sthlp:click to run})}
+{pstd}{stata fevc_run exact_controls using fevc.sthlp:Click to run}{p_end}
 
-{space 4}{hline 10} {it:Example 3 - Frequency weights, target mass, and fixed controls} {hline 10}
+{dlgtab:Example 3: Frequency weights and target weights}
+
+{pstd}
+Frequency weights enter the regression; target mass weights the variance
+components. This example also illustrates holding the control index fixed.
+
 {cmd}{...}
-          preserve
+        preserve
 {* example_start - weights_targets}{...}
-          clear
-          set seed 20260822
-          local workers 60
-          local firms 15
-          local spells 3
-          set obs `=`workers'*`spells''
-          generate long worker_id = ceil(_n/`spells')
-          bysort worker_id: generate byte spell = _n
-          generate long firm_id = mod(worker_id-1+cond(spell==1,0,cond(spell==2,1,7)),`firms')+1
-          generate long match_id = worker_id*10+spell
-          generate int frequency = 1+mod(worker_id+spell,3)
-          generate double target_mass = 1+spell/2
-          generate double worker_fe = rnormal() if spell==1
-          bysort worker_id: replace worker_fe = worker_fe[1]
-          bysort firm_id: generate double firm_fe = .6*rnormal() if _n==1
-          bysort firm_id: replace firm_fe = firm_fe[1]
-          generate double productivity = rnormal()
-          generate double log_wage = 2+worker_fe+firm_fe+.35*productivity+.45*rnormal()
-          display as text _newline "True DGP worker-firm components (population):"
-          display as text "  Var(worker effect)       = " as result %6.2f 1
-          display as text "  Var(firm effect)         = " as result %6.2f .36
-          display as text "  Cov(worker, firm)        = " as result %6.2f 0
-          display as text "  Var(worker + firm)       = " as result %6.2f 1.36
-          fevc log_wage productivity [fw=frequency], worker(worker_id) firm(firm_id) ///
-              deletion(match) deletionid(match_id) nuisance(fixedoffset) ///
-              targetweight(target_mass) algorithm(exact)
+        fevc, simulate_data(ex3) clear
+        fevc log_wage productivity [fw=frequency], ///
+            worker(worker_id) firm(firm_id) ///
+            deletionid(match_id) nuisance(fixedoffset) ///
+            targetweight(target_mass) algorithm(exact)
 {* example_end}{...}
-          restore
+        restore
 {txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run weights_targets using fevc.sthlp:click to run})}
+{pstd}{stata fevc_run weights_targets using fevc.sthlp:Click to run}{p_end}
 
-{space 4}{hline 10} {it:Example 4 - Project firm effects on firm size} {hline 10}
+{marker projection_example}
+{dlgtab:Example 4: Project firm effects on firm size}
 
 {pstd}
-Each worker is observed for four years and moves once.  Firms start with
-unequal numbers of workers.  Firm size is average annual employment:
-the number of worker-year observations at the firm divided by four.
-The true firm effect is {cmd:0.5*ln(firm_size)}, so larger firms pay a
-higher wage premium.  The projection should recover a slope near 0.5;
-doubling firm size raises the true firm effect by about 0.347 log points.
-{cmd:projectweight(frequency)} weights the projection by worker-year
-observations.  The intercept depends on the fixed-effect normalization.
+Firm size is average annual employment. The true firm effect is
+{cmd:0.5*ln(firm_size)}, so the estimated projection slope should be near 0.5.
+The projection weights firms by worker-year observations.
 
 {cmd}{...}
-          preserve
+        preserve
 {* example_start - projection_inference}{...}
-          clear
-          set seed 20260824
-          set obs 10
-          generate byte origin_firm = _n
-          expand 2*origin_firm
-          generate long worker_id = _n
-          generate double worker_fe = .4*rnormal()
-          expand 4
-          bysort worker_id: generate byte year = _n
-          generate byte firm_id = cond(year<=2,origin_firm,mod(origin_firm,10)+1)
-          bysort firm_id: generate double firm_size = _N/4
-          generate double log_firm_size = ln(firm_size)
-          generate double firm_fe = .5*log_firm_size
-          sort worker_id year
-          generate double log_wage = 2+worker_fe+firm_fe+.15*rnormal()
-          display as text "True slope on log firm size = 0.5"
-          fevc log_wage, worker(worker_id) firm(firm_id) deletion(match) algorithm(exact) ///
-              project(log_firm_size) projecteffect(firm) projectweight(frequency)
+        fevc, simulate_data(ex4) clear
+        fevc log_wage, worker(worker_id) firm(firm_id) algorithm(exact) ///
+            project(log_firm_size) projecteffect(firm)
 {* example_end}{...}
-          restore
+        restore
 {txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run projection_inference using fevc.sthlp:click to run})}
+{pstd}{stata fevc_run projection_inference using fevc.sthlp:Click to run}{p_end}
 
-{space 4}{hline 10} {it:Example 5 - Component inference and lincom} {hline 10}
-{cmd}{...}
-          preserve
-{* example_start - component_inference}{...}
-          clear
-          set obs 24
-          generate long worker_id = floor((_n-1)/4)
-          generate byte period = mod(_n-1,4)
-          generate double productivity = period-1.5
-          generate double policy = period==2
-          generate byte firm_id = .
-          generate double noise = .
-          local firms 0 0 1 1 0 2 2 1 1 2 3 3 2 3 0 0 3 1 1 2 3 3 2 0
-          local noises .2 -.1 .1 -.2 -.2 .3 -.1 .1 .1 -.2 .2 -.1 -.1 .2 -.2 .1 .3 -.2 .1 -.2 -.2 .1 .2 -.1
-          forvalues row = 1/24 {
-              local value : word `row' of `firms'
-              quietly replace firm_id = `value' in `row'
-              local value : word `row' of `noises'
-              quietly replace noise = `value' in `row'
-          }
-          generate double log_wage = 1.5+.3*worker_id-.2*firm_id+.4*productivity-.15*policy+noise
-          fevc log_wage productivity policy, worker(worker_id) firm(firm_id) ///
-              deletion(observation) inference(highrank) ///
-              inferencesimulations(100) inferenceseed(42) inferencebins(16)
-          lincom worker_variance+firm_variance+2*worker_firm_covariance
-{* example_end}{...}
-          restore
-{txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run component_inference using fevc.sthlp:click to run})}
+{marker component_example}
+{dlgtab:Example 5: Component inference and lincom}
 
 {pstd}
-For rank-one weak-identification intervals, replace
-{cmd:inference(highrank)} with {cmd:inference(q1)}.  The command then reports
-both the ordinary component table and the rank-one interval table.
+A small fixed dataset illustrates syntax; it is not evidence of interval
+coverage. This example uses observation deletion and exact inference.
+{cmd:lincom} requires an available joint component covariance {cmd:e(V)}.
+
+{cmd}{...}
+        preserve
+{* example_start - component_inference}{...}
+        fevc, simulate_data(ex5) clear
+        fevc log_wage productivity policy, ///
+            worker(worker_id) firm(firm_id) ///
+            deletion(observation) inference(highrank) ///
+            inferencesimulations(100) inferenceseed(42) inferencebins(16)
+        lincom worker_variance+firm_variance+2*worker_firm_covariance
+{* example_end}{...}
+        restore
+{txt}{...}
+{pstd}{stata fevc_run component_inference using fevc.sthlp:Click to run}{p_end}
+
+{marker simulation}
+{title:Generate example data separately}
+
+{phang2}{cmd:. fevc, simulate_data(ex1) clear}{p_end}
+{phang2}{cmd:. fevc, simulate_data(ex2) clear seed(12345)}{p_end}
+
+{pstd}
+{cmd:simulate_data(ex1)} through {cmd:simulate_data(ex5)} create the datasets
+above and leave them in memory. Specify {cmd:clear} to replace existing data.
+Generation restores the caller's random-number state and restores the old
+data if it fails. Each random example has a fixed default seed;
+{cmd:seed()} here controls the data, separately from the estimation seed.
+Example 5 is fixed and does not accept a seed.
+
+{pstd}
+The printed true components are population moments of the realized effects
+in the generated sample, using the example's target weights (not sample
+variances with an N-1 denominator). Examples 1 and 2 retain the full generated
+sample under their displayed specifications. If you change the sample or
+weights, recompute the truth for that population. The helper returns
+{cmd:r(truth)}, {cmd:r(N)}, {cmd:r(workers)}, {cmd:r(firms)}, {cmd:r(seed)},
+{cmd:r(example)}, and {cmd:r(weighting)}. It does not estimate a model.
+
+{marker stored}
+{title:Key stored results}
+
+{pstd}
+{cmd:e(b)} and {cmd:e(kss)} contain corrected worker variance, firm variance,
+raw worker-firm covariance, and total variance, in that order.
+{cmd:e(plugin)}, {cmd:e(correction)}, and {cmd:e(numerical_mcse)} hold their
+uncorrected estimates, bias corrections, and numerical MCSEs.
+{cmd:e(decomposition)} adds the sorting row and shares; stored shares are
+proportions, while the display reports percentages.
+
+{pstd}
+{cmd:e(sample)} identifies retained rows. Sample counts include
+{cmd:e(N)}, {cmd:e(worker_levels)}, and {cmd:e(firm_levels)}.
+Component covariance is posted in {cmd:e(V)} only for supported successful
+inference requests; q1 intervals have separate returns.
+{cmd:e(projection_b)}, {cmd:e(projection_V)}, and
+{cmd:e(projection_results)} contain projection results.
+Use {cmd:ereturn list} and the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/FAILURES_AND_RETURNS.md":returned-results reference}
+for the complete diagnostic record.
+
+{marker troubleshooting}
+{title:If estimation fails}
+
+{pstd}
+Read the reported reason and suggested next step. Common causes are too few
+connections for leave-out estimation, collinear controls, unsupported option
+combinations, or a numerical or memory limit. The command does not silently
+substitute another estimator after a failed calculation.
+For support, include your command, Stata version, and a small reproducible
+example, together with {cmd:e(withholding_status)} and
+{cmd:e(withholding_detail)} when available.
 
 {marker reference}
-{title:Reference}
+{title:References and further reading}
 
-{p 4 4 2}
+{pstd}
+Schmieder, Johannes. 2026. "fevc: Leave-out bias-corrected variance
+decompositions in Stata." Working paper, September. The companion
+fevc paper and its appendix explain the estimator, sample construction,
+and computational methods.
+
+{pstd}
 Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
 "Leave-Out Estimation of Variance Components." {it:Econometrica}
 88(5): 1859-1898.
 
+{pstd}
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/README.md":Technical documentation}
+provides implementation details and current capability restrictions.
+
 {marker author}
 {title:Author}
 
-{p 4 4 2}
-Johannes F. Schmieder, Boston University, USA
-
-{p 4 4 2}
-Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
-
-{marker status}
-{title:Development status}
+{pstd}
+Johannes F. Schmieder, Boston University.
+{browse "mailto:johannes@bu.edu":johannes@bu.edu}
 
 {pstd}
-Version 0.5.0-rc.1 is public-source prerelease software.  Covered
-implementation source is GPL-3.0-only, and the documented human
-package-boundary and provenance review is complete.  No public package release,
-tag, or native binary distribution has yet been issued.
-Point estimates remain the default. Component inference is limited to the
-exact or structured observation and explicit fixed-offset match assumptions
-documented above; the explicit
-scalable projection route uses the same corrected observation-or-match block
-estimand as exact Mata on its qualified generic-JLA surface.  Neither is a substitute for an
-application-specific assessment of dependence and identification.
+Version 0.5.0-rc.1 is prerelease software. Code is GPL-3.0-only.
 
-{marker also}
 {title:Also see}
 
-{p 0 24}
-Online: {help estat}, {help lincom}, {help regress}, {help xtreg},
-{help areg}, {help fvvarlist}, {help weights}
-{p_end}
-{.-}
+{pstd}
+{help estat}, {help lincom}, {help fvvarlist}, {help weights}

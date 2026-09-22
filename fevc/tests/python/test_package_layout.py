@@ -43,6 +43,7 @@ def test_package_manifest_is_complete() -> None:
         "fevc__memory_options.ado",
         "fevc_estat.ado",
         "fevc_run.ado",
+        "fevc__simulate_data.ado",
         "fevc_rust.ado",
         "fevc__rust_plugin_call.ado",
         "fevc__rust_solve_v4.ado",
@@ -240,6 +241,7 @@ def test_runtime_has_no_external_language_dependency() -> None:
         "fevc__memory_options.ado",
             "fevc_estat.ado",
             "fevc_run.ado",
+            "fevc__simulate_data.ado",
         )
     )
     external_invocation = re.compile(
@@ -269,16 +271,13 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
     assert help_text.index("example_start - jla_controls") < help_text.index(
         "example_start - exact_controls"
     )
-    assert help_text.count(
-        'display as text _newline "True DGP worker-firm components (population):"'
-    ) == 1
-    assert help_text.count(
-        'display as text _newline "True worker-firm components (realized sample):"'
-    ) == 2
-    assert help_text.count('display as text "  Var(worker effect)') == 3
-    assert help_text.count('display as text "  Var(firm effect)') == 3
-    assert help_text.count('display as text "  Cov(worker, firm)') == 3
-    assert help_text.count('display as text "  Var(worker + firm)') == 3
+    # The installed generator replaces the long embedded simulation listings.
+    for i in range(1, 6):
+        assert help_text.count(f"fevc, simulate_data(ex{i}) clear") >= 1
+    assert "viewsource fevc__simulate_data.ado" in help_text
+    assert "generate double" not in help_text
+    assert help_text.index("example_start - jla_controls") < help_text.index("{title:Syntax}")
+    assert "{title:Advanced options}" in help_text
     for text in (
         "{title:Postestimation display}",
         "estat decomposition, full",
@@ -324,7 +323,8 @@ def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None
         encoding="utf-8"
     )
     help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
-    help_words = " ".join(help_text.lower().split())
+    inference = (ROOT / "docs/INFERENCE.md").read_text(encoding="utf-8")
+    help_words = " ".join((help_text + inference).lower().split())
     installer = (ROOT / "tests/stata/test_rust_public_install.do").read_text(
         encoding="utf-8"
     )
@@ -348,11 +348,11 @@ def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None
     ):
         assert field in post
     for statement in (
-        "supported explicit capabilities",
+        "supported explicit Rust",
         "Point estimation remains the default",
-        "No universal cutoff",
+        "universal concentration cutoff",
         "multi-mode",
-        "severe omitted variance drivers",
+        "severe omitted-driver",
         "not unrestricted",
     ):
         assert statement.lower() in help_words

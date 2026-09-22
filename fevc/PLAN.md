@@ -1,5 +1,30 @@
 # Current checkpoint — 2026-09-22
 
+## Applied help and example data (local development)
+
+The help now starts with a runnable example, explains the leave-out sample
+and main user choices, and groups advanced options separately. It is about
+69% shorter by word count. Methodological detail refers to the companion
+paper and the existing technical guides.
+
+`fevc, simulate_data(ex1)` through `ex5` generate the example datasets with
+sample counts and true realized, target-weighted components. The installed
+helper is readable from the help; seeds are configurable for random examples.
+Generation requires explicit replacement of existing data, restores caller RNG
+state, and restores old data on failure. All five clickable examples remain.
+The estimation and native numerical implementations are unchanged.
+
+Focused simulation checks pass, including independent truth calculations,
+seed repeatability, alternate caller RNGs, replacement safeguards, nested
+preservation, and injected-failure rollback. The 827 Python tests and generated
+CMG check pass after adding the helper to the current source-bundle allowlist.
+The integrated `./.venv/bin/python fevc/tools/run_checks.py` passed on Stata 19,
+including quick/full suites, all five help examples, clean installation, both
+helper-migration layouts, and harness smokes. Stata-rendered help has no raw
+markup or wrapped code lines. Diagnostic logs and command/version details are
+in ignored `.local/help-refresh/`. No new platform or native qualification
+claim is made by these help/example changes.
+
 ## Progress-display cleanup
 
 Repeated identical native method/settings and allocation summaries are now

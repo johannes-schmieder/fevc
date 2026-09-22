@@ -46,10 +46,18 @@ capture findfile fevc_estat.ado
 assert _rc == 0
 capture findfile fevc_run.ado
 assert _rc == 0
+capture findfile fevc__simulate_data.ado
+assert _rc == 0
+assert strpos(`"`r(fn)'"',`"`install_root'"') == 1
 capture findfile fevc.sthlp
 assert _rc == 0
 capture noisily help fevc
 assert _rc == 0
+
+fevc, simulate_data(ex2)
+assert r(N)==1200 & r(workers)==200 & r(firms)==61
+assert colsof(r(truth))==4
+clear
 
 local legacy_v_files vckss.mata vckss_inference.mata       ///
     vckss_graph.mata vckss_cmg.mata vckss_solver.mata      ///

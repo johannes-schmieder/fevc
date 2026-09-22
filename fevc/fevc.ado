@@ -2,6 +2,12 @@
 
 program define fevc, eclass
     version 18.0
+    // Example data generation does not initialize the estimator or native runtime.
+    if regexm(strtrim(`"`0'"'), "^,") & ///
+        regexm(lower(`"`0'"'), "(^|[ ,])simulate_data([ (]|$)") {
+        fevc__simulate_data `0'
+        exit
+    }
     if lower(strtrim(`"`0'"')) == ", version" {
         _vckss_impl `0'
         exit

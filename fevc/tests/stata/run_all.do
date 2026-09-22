@@ -24,6 +24,7 @@ if _rc {
 else local pkgroot `"`c(pwd)'/fevc"'
 
 adopath ++ `"`pkgroot'"'
+do `"`pkgroot'/tests/stata/test_simulate_data.do"'
 do `"`pkgroot'/tests/stata/test_load.do"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
 do `"`pkgroot'/tests/stata/test_stayers_hybrid.do"'

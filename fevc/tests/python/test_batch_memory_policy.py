@@ -31,10 +31,9 @@ def test_direct_cmg_guard_binds_api_and_design() -> None:
     assert ado.count(expected) == 1
 
 
-def test_help_documents_direct_memory_gate_and_disjoint_timers() -> None:
+def test_help_documents_user_memory_policy() -> None:
     help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
     assert "{cmd:memorycheck(warn)}, the default" in help_text
     assert "assumes no memory budget" in help_text
-    assert "routing trial solves" in help_text
-    assert "setup and fit are disjoint" in help_text
+    assert "not an operating-system memory cap" in help_text
     assert "Setup is included within fit time" not in help_text

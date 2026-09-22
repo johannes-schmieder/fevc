@@ -1,5 +1,12 @@
 version 18.0
 
+// Check the first example on its actual data: printed truth and estimator
+// describe the same retained population. The runner checks restoration below.
+fevc, simulate_data(ex1) clear
+quietly fevc log_wage productivity i.period, worker(worker_id) firm(firm_id)
+assert e(N)==_N
+assert e(sample)==1
+
 clear
 set obs 3
 generate long sentinel = _n

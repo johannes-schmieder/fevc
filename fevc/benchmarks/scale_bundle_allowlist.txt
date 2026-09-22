@@ -113,6 +113,7 @@ fevc/fevc__rust_reconcile_exact_v7.ado
 fevc/fevc__rust_solve_v4.ado
 fevc/fevc__rust_solve_v5.ado
 fevc/fevc__rust_windows.ado
+fevc/fevc__simulate_data.ado
 fevc/fevc__stayer_population_post.ado
 fevc/fevc_cmg.mata
 fevc/fevc_estat.ado
