@@ -266,6 +266,9 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
             in help_text
         )
     assert help_text.count("{* example_end}{...}") == len(examples)
+    assert help_text.index("example_start - jla_controls") < help_text.index(
+        "example_start - exact_controls"
+    )
     assert help_text.count(
         'display as text _newline "True DGP worker-firm components (population):"'
     ) == 1

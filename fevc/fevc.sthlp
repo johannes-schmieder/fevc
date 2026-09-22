@@ -1033,50 +1033,7 @@ true values in these simulated samples.
 twice the covariance as the sorting contribution.  Example 3 displays the
 population moments implied by its DGP.
 
-{space 4}{hline 10} {it:Example 1 - Positive sorting with exact bias correction} {hline 10}
-{cmd}{...}
-          preserve
-{* example_start - exact_controls}{...}
-          clear
-          set seed 20260820
-          local workers 200
-          local firms 61
-          local spells 3
-          local periods 2
-          set obs `=`workers'*`spells'*`periods''
-          generate long worker_id = ceil(_n/(`spells'*`periods'))
-          bysort worker_id: generate byte within_worker = _n
-          generate byte spell = ceil(within_worker/`periods')
-          generate byte period = mod(within_worker-1,`periods')+1
-          by worker_id: generate int step = runiformint(1,`firms'-1) if _n==1
-          by worker_id: replace step = step[1]
-          generate long firm_id = mod(worker_id-1+(spell-1)*step,`firms')+1
-          generate long match_id = worker_id*10+spell
-          bysort firm_id (worker_id within_worker): generate double firm_fe = rnormal() if _n==1
-          by firm_id: replace firm_fe = firm_fe[1]
-          bysort worker_id (within_worker): egen double mean_firm_fe = mean(firm_fe)
-          by worker_id: generate double worker_fe = .5*mean_firm_fe+rnormal() if _n==1
-          by worker_id: replace worker_fe = worker_fe[1]
-          generate double productivity = rnormal()
-          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+3*rnormal()
-          quietly correlate worker_fe firm_fe, covariance
-          tempname true_components
-          matrix `true_components' = r(C)*(r(N)-1)/r(N)
-          display as text _newline "True worker-firm components (realized sample):"
-          display as text "  Var(worker effect)       = " as result %7.3f el(`true_components',1,1)
-          display as text "  Var(firm effect)         = " as result %7.3f el(`true_components',2,2)
-          display as text "  Cov(worker, firm)        = " as result %7.3f el(`true_components',1,2)
-          display as text "  Var(worker + firm)       = " as result %7.3f (el(`true_components',1,1)+el(`true_components',2,2)+2*el(`true_components',1,2))
-          fevc log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
-              deletion(match) deletionid(match_id) nuisance(joint) algorithm(exact)
-          estat decomposition, full
-{* example_end}{...}
-          restore
-{txt}{...}
-{space 4}{hline 76}
-{space 4}{it:({stata fevc_run exact_controls using fevc.sthlp:click to run})}
-
-{space 4}{hline 10} {it:Example 2 - Positive sorting in a larger graph with JLA} {hline 10}
+{space 4}{hline 10} {it:Example 1 - Positive sorting in a larger graph with JLA} {hline 10}
 {cmd}{...}
           preserve
 {* example_start - jla_controls}{...}
@@ -1119,6 +1076,49 @@ population moments implied by its DGP.
 {txt}{...}
 {space 4}{hline 76}
 {space 4}{it:({stata fevc_run jla_controls using fevc.sthlp:click to run})}
+
+{space 4}{hline 10} {it:Example 2 - Positive sorting with exact bias correction} {hline 10}
+{cmd}{...}
+          preserve
+{* example_start - exact_controls}{...}
+          clear
+          set seed 20260820
+          local workers 200
+          local firms 61
+          local spells 3
+          local periods 2
+          set obs `=`workers'*`spells'*`periods''
+          generate long worker_id = ceil(_n/(`spells'*`periods'))
+          bysort worker_id: generate byte within_worker = _n
+          generate byte spell = ceil(within_worker/`periods')
+          generate byte period = mod(within_worker-1,`periods')+1
+          by worker_id: generate int step = runiformint(1,`firms'-1) if _n==1
+          by worker_id: replace step = step[1]
+          generate long firm_id = mod(worker_id-1+(spell-1)*step,`firms')+1
+          generate long match_id = worker_id*10+spell
+          bysort firm_id (worker_id within_worker): generate double firm_fe = rnormal() if _n==1
+          by firm_id: replace firm_fe = firm_fe[1]
+          bysort worker_id (within_worker): egen double mean_firm_fe = mean(firm_fe)
+          by worker_id: generate double worker_fe = .5*mean_firm_fe+rnormal() if _n==1
+          by worker_id: replace worker_fe = worker_fe[1]
+          generate double productivity = rnormal()
+          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+3*rnormal()
+          quietly correlate worker_fe firm_fe, covariance
+          tempname true_components
+          matrix `true_components' = r(C)*(r(N)-1)/r(N)
+          display as text _newline "True worker-firm components (realized sample):"
+          display as text "  Var(worker effect)       = " as result %7.3f el(`true_components',1,1)
+          display as text "  Var(firm effect)         = " as result %7.3f el(`true_components',2,2)
+          display as text "  Cov(worker, firm)        = " as result %7.3f el(`true_components',1,2)
+          display as text "  Var(worker + firm)       = " as result %7.3f (el(`true_components',1,1)+el(`true_components',2,2)+2*el(`true_components',1,2))
+          fevc log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
+              deletion(match) deletionid(match_id) nuisance(joint) algorithm(exact)
+          estat decomposition, full
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata fevc_run exact_controls using fevc.sthlp:click to run})}
 
 {space 4}{hline 10} {it:Example 3 - Frequency weights, target mass, and fixed controls} {hline 10}
 {cmd}{...}

@@ -196,6 +196,7 @@ def test_exact_commit_bundle_is_deterministic_and_self_verifying() -> None:
     ):
         assert required in files
     assert files["SOURCE_COMMIT.txt"] == f"{commit}\n".encode()
+    assert not any(Path(name).suffix == ".plugin" for name in files)
     manifest = files["SOURCE_FILES.sha256"].decode().splitlines()
     assert len(manifest) + 1 == first_count
     for row in manifest:

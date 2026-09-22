@@ -28,6 +28,7 @@ struct Tracker {
     sequence: u64,
     completed: u64,
     total: u64,
+    values: [u64; 8],
     last_ms: u64,
     start_ms: u64,
 }
@@ -41,7 +42,8 @@ impl Tracker {
             return true;
         }
         if update.kind >= 20 {
-            return self.sequence != update.sequence;
+            // Internal passes may republish unchanged command settings.
+            return self.sequence != update.sequence && self.values != update.values;
         }
         if update.completed < self.completed || update.total != self.total {
             return true;
@@ -73,6 +75,7 @@ impl Tracker {
         self.sequence = update.sequence;
         self.completed = update.completed;
         self.total = update.total;
+        self.values = update.values;
         self.last_ms = now;
     }
 }
@@ -301,6 +304,31 @@ mod tests {
         elapsed: Vec<u64>,
         operation_status: i32,
         display_status: i32,
+    }
+
+    #[test]
+    fn repeated_summary_values_do_not_interrupt_progress() {
+        for kind in [progress::PLAN, progress::MEMORY, progress::CHOICES] {
+            let mut tracker = Tracker::default();
+            let mut update = Update {
+                sequence: 1,
+                kind,
+                values: [1, 0, 0, 4, 0, 0, 0, 0],
+                ..Update::default()
+            };
+            assert!(tracker.due(update, 0, false, false));
+            tracker.record(update, 0);
+            update.sequence += 1;
+            assert!(!tracker.due(update, 30_000, false, false));
+            assert!(!tracker.due(update, 30_000, false, true));
+            // A revised plan or forecast must still be reported.
+            update.values[3] += 1;
+            assert!(tracker.due(update, 30_000, false, false));
+            tracker.record(update, 30_000);
+            assert!(!tracker.due(update, 60_000, false, true));
+            // A new command owns a fresh reporting scope.
+            assert!(Tracker::default().due(update, 0, false, false));
+        }
     }
 
     unsafe extern "C" fn display(

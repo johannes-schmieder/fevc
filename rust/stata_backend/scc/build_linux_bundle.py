@@ -32,6 +32,10 @@ def git_archive(root: Path, commit: str) -> list[tuple[PurePosixPath, bytes, int
             relative = PurePosixPath(member.name)
             if relative.is_absolute() or ".." in relative.parts:
                 raise ValueError(f"unsafe source archive path: {relative}")
+            # Repository installers include prior builds; qualification must
+            # start from source and cannot consume those plugin candidates.
+            if relative.parent == PurePosixPath("fevc") and relative.suffix == ".plugin":
+                continue
             handle = source.extractfile(member)
             if handle is None:
                 raise ValueError(f"could not read source archive path: {relative}")

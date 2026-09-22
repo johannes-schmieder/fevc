@@ -26,6 +26,7 @@ program define _progress_read_log, rclass
     local messages = 0
     local selection = 0
     local allocations = 0
+    local methods = 0
     local exclusions = 0
     local warnings = 0
     local pairs = 0
@@ -42,6 +43,7 @@ program define _progress_read_log, rclass
                 local ++messages
             }
             if strpos(`"`line'"',"Selection:") local ++selection
+            if strpos(`"`line'"',"Method:") local ++methods
             if strpos(`"`line'"',"allocations") local ++allocations
             if strpos(`"`line'"',"Stayer exclusions: 1 physical-singleton workers; 1 workers outside retained firms") local ++exclusions
         }
@@ -60,6 +62,7 @@ program define _progress_read_log, rclass
     return scalar messages = `messages'
     return scalar selection = `selection'
     return scalar allocations = `allocations'
+    return scalar methods = `methods'
     return scalar exclusions = `exclusions'
     return scalar warnings = `warnings'
     return scalar pairs = `pairs'
@@ -95,7 +98,10 @@ foreach deletion in observation match {
         local algorithm jla
         local solver
         local controls
-        if `route'==1 local algorithm exact
+        if `route'==1 {
+            local algorithm exact
+            local controls x
+        }
         if `route'==3 {
             local solver engine(generic) preconditioner(diagonal)
             local controls x
@@ -133,7 +139,10 @@ foreach deletion in observation match {
                 assert r(messages)>0 & r(allocations)>0
                 assert r(times)>0 & r(complete)==1
                 if "`algorithm'"=="jla" assert r(pairs)>0
-                else assert r(pairs)==0
+                else {
+                    assert r(pairs)==0
+                    assert r(methods)==1 & r(allocations)==1
+                }
                 if "`output'"=="verbose" assert r(selection)>0
                 else assert r(selection)==0
             }
