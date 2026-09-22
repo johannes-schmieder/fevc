@@ -1,0 +1,624 @@
+{
+  "schema": "FEVC-NATIVE-REFRESH-V1",
+  "status": "MACOS_AND_WINDOWS_DELIVERED_LINUX_AUTHENTICATION_REQUIRED",
+  "package_commit": "41ad5240a2ac11206437ca9327e7cb74179f7a77",
+  "package_commit_scope": "Exact public runtime and installer payload tested; later documentation/receipt commits preserve these bytes.",
+  "plugin_sha256": {
+    "fevc_rust_macos_x86_64.plugin": "0c0eb96f098c6b7841062f9c57147a772a6f608eb0cfdd758c8fc8de013af219",
+    "fevc_rust_linux_x64.plugin": "08227a71c6e7decc988e38cc40a853941f7e59881722258621c98052ce9a9488",
+    "fevc_rust_macos.plugin": "aca13bfa48dd0e81c7e772bfc20aefab45752920342239816ec344cb2510df38",
+    "fevc_rust_windows_x64.plugin": "7adea236f077be30a28b01dba18d1680b00aa6b8c1cb3d3c4db6acccfcba29f6",
+    "fevc_rust_macos_arm64.plugin": "53400c1c4c4c0624c95ffef377ca4a5637fcce49ecba5a4aade2a530732bb568"
+  },
+  "compatibility_review": {
+    "build_source_commit": "0614534cb3ac3d1e570eb0db72ff6a953ce3f0d9",
+    "runtime_source_commit": "991597f7c89a5ea087cd7501417cb2de605ad12d",
+    "checked_package_commit": "41ad5240a2ac11206437ca9327e7cb74179f7a77",
+    "all_changed_paths": [
+      ".gitattributes",
+      ".github/workflows/windows-test-package.yml",
+      "INSTALLATION.md",
+      "README.md",
+      "fevc.pkg",
+      "fevc/CHANGELOG.md",
+      "fevc/PLAN.md",
+      "fevc/README.md",
+      "fevc/benchmarks/scale_bundle_allowlist.txt",
+      "fevc/docs/RUST_MATA_PARITY.md",
+      "fevc/fevc.ado",
+      "fevc/fevc.pkg",
+      "fevc/fevc.sthlp",
+      "fevc/fevc__simulate_data.ado",
+      "fevc/fevc_rust_macos.plugin",
+      "fevc/fevc_rust_macos_arm64.plugin",
+      "fevc/fevc_rust_macos_x86_64.plugin",
+      "fevc/fevc_rust_windows_x64.plugin",
+      "fevc/tests/python/test_batch_memory_policy.py",
+      "fevc/tests/python/test_helper_naming.py",
+      "fevc/tests/python/test_match_documentation.py",
+      "fevc/tests/python/test_native_installers.py",
+      "fevc/tests/python/test_package_layout.py",
+      "fevc/tests/stata/run_all.do",
+      "fevc/tests/stata/test_help_examples.do",
+      "fevc/tests/stata/test_install.do",
+      "fevc/tests/stata/test_simulate_data.do",
+      "fevc/tools/verify_native_installers.py",
+      "native/README.md",
+      "native/progress-20260922-macos.sha256",
+      "native/progress-20260922-macos.txt",
+      "native/progress-20260922-validation.json",
+      "native/refresh-20260922-windows-build.json",
+      "native/windows-test-20260922.json",
+      "rust/stata_backend/package_windows_test.ps1",
+      "rust/stata_backend/qualify_macos.sh",
+      "rust/stata_backend/scc/build_linux_bundle.py"
+    ],
+    "unchanged_native_source_scopes": [
+      "rust/crates",
+      "rust/vendor",
+      "rust/stata_backend/src",
+      "rust/stata_backend/cshim",
+      "rust/stata_backend/include",
+      "rust/stata_backend/build.rs",
+      "rust/stata_backend/Cargo.toml",
+      "rust/stata_backend/Cargo.lock",
+      "rust/Cargo.toml",
+      "rust/Cargo.lock"
+    ],
+    "original_inventory_unchanged_count": 213,
+    "original_inventory_changed_paths": [
+      "fevc/README.md",
+      "fevc/fevc.ado",
+      "fevc/fevc.pkg",
+      "fevc/fevc.sthlp",
+      "fevc/tests/stata/run_all.do",
+      "rust/stata_backend/qualify_macos.sh"
+    ],
+    "affected_surface": "Help, example data generation, early simulate_data dispatch, packaging, installer verification, and build/test documentation. Native estimator, ABI, solver, dependency locks, native numerical fixtures, and acceptance thresholds are unchanged. Changed help examples are exercised separately with the current generator.",
+    "claims_reused": "Original Mac native qualification at the recorded build SHA; supplemented by current-package isolated installs, help exact/JLA examples, and progress regression on both thin artifacts and universal aliases.",
+    "limitations": [
+      "Intel Mac runtime uses Rosetta, not native Intel hardware.",
+      "Windows evidence covers builds, Rust unit tests, exports, dependencies, and package hashes; Windows Stata testing remains owner work.",
+      "Linux rebuild and runtime testing require renewed SCC authentication; the committed Linux binary is still the September 21 build."
+    ]
+  },
+  "macos": {
+    "status": "PASS",
+    "build_source_commit": "0614534cb3ac3d1e570eb0db72ff6a953ce3f0d9",
+    "original_qualification": "progress-20260922-macos.txt",
+    "runtime_source_commit": "991597f7c89a5ea087cd7501417cb2de605ad12d",
+    "stata": "Stata/MP 19",
+    "cases": [
+      {
+        "case": "thin-arm64",
+        "status": "PASS",
+        "command": [
+          "arch",
+          "-arm64",
+          "stata-mp",
+          "-q",
+          "do",
+          "thin-arm64.do"
+        ],
+        "checks": [
+          "isolated net install",
+          "all installed file hashes",
+          "exact help example",
+          "JLA help example",
+          "progress regression (seed 81227; mreldif < 1e-12)",
+          "idle native registry"
+        ],
+        "log_sha256": "2ff7fe22747ec66ccde2346da7744b3f97e7f5e350b5f6eef0adfc424d6d80a8",
+        "installed_file_count": 49
+      },
+      {
+        "case": "thin-x86_64",
+        "status": "PASS",
+        "command": [
+          "arch",
+          "-x86_64",
+          "stata-mp",
+          "-q",
+          "do",
+          "thin-x86_64.do"
+        ],
+        "checks": [
+          "isolated net install",
+          "all installed file hashes",
+          "exact help example",
+          "JLA help example",
+          "progress regression (seed 81227; mreldif < 1e-12)",
+          "idle native registry"
+        ],
+        "log_sha256": "6b2b84233895d5cfbceb1c59c299a84e2ab3a79666200295acf61c8f3e2cf32c",
+        "installed_file_count": 49
+      },
+      {
+        "case": "universal-arm64",
+        "status": "PASS",
+        "command": [
+          "arch",
+          "-arm64",
+          "stata-mp",
+          "-q",
+          "do",
+          "universal-arm64.do"
+        ],
+        "checks": [
+          "isolated net install",
+          "all installed file hashes",
+          "exact help example",
+          "JLA help example",
+          "progress regression (seed 81227; mreldif < 1e-12)",
+          "idle native registry"
+        ],
+        "log_sha256": "788b2793ab552b9ff6d491d262bcd62dbfe89cd7ab74a27ab8534c9c2865d980",
+        "installed_file_count": 49
+      },
+      {
+        "case": "universal-x86_64",
+        "status": "PASS",
+        "command": [
+          "arch",
+          "-x86_64",
+          "stata-mp",
+          "-q",
+          "do",
+          "universal-x86_64.do"
+        ],
+        "checks": [
+          "isolated net install",
+          "all installed file hashes",
+          "exact help example",
+          "JLA help example",
+          "progress regression (seed 81227; mreldif < 1e-12)",
+          "idle native registry"
+        ],
+        "log_sha256": "1f49cf08d6dcf6f13d67237a7487a84de4772a55cb95f4800dc41aa5fccf0363",
+        "installed_file_count": 49
+      }
+    ]
+  },
+  "windows": {
+    "status": "BUILD_ONLY_NOT_STATA_TESTED",
+    "source_commit": "991597f7c89a5ea087cd7501417cb2de605ad12d",
+    "run_url": "https://github.com/johannes-schmieder/fevc/actions/runs/35759636558",
+    "artifact_id": 10709377558,
+    "artifact_sha256": "7cb48721158508b11c814192bdfd49f0770457b9311c9f6abfbd89b72bb5e18b",
+    "package_zip_sha256": "cfdbb81e92f8bfca276596f456694c664a16c83e721b848951c085787274aff4",
+    "receipt": "refresh-20260922-windows-build.json",
+    "receipt_sha256": "3d9889f36984b8d75d8a2aa35d6dc3de172922e298c714eb158788e406ca3030",
+    "toolchain": "Rust 1.85.1 / MSVC static CRT",
+    "rust_unit_tests_passed": 14,
+    "exports": 129,
+    "dependencies": [
+      "api-ms-win-core-synch-l1-2-0.dll",
+      "KERNEL32.dll",
+      "ntdll.dll"
+    ],
+    "package_hashes_verified": 52,
+    "portable_package_files_match_source": true,
+    "licensed_stata": "Not run; owner will test."
+  },
+  "linux": {
+    "status": "BLOCKED_SCC_AUTHENTICATION",
+    "retained_binary_source": "f2a15dea9fe5715d654a00976e97c8d706efe63f",
+    "retained_qualification": "linux-qualification.txt",
+    "limitation": "Current Linux binary retains its September 21 qualification and lacks the later progress-summary fix. No current Linux rebuild or runtime test is claimed.",
+    "next_step": "Renew ssh scc authentication; deploy a clean source bundle, run the existing scheduled Linux qualifier, collect the exact tested binary and scheduler evidence, then verify both public installers."
+  },
+  "validation": [
+    {
+      "command": "./.venv/bin/python -m pytest -q --basetemp=.local/native-refresh-20260922/pytest-complete",
+      "status": "PASS",
+      "tests_passed": 828,
+      "python": "3.13.0",
+      "log_sha256": "d15adf7f74618b77e2cb5e0f1c70ad3666016aa5c6baf310285048d991b6c993"
+    },
+    {
+      "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "status": "PASS"
+    },
+    {
+      "command": "./.venv/bin/python fevc/tools/run_checks.py",
+      "status": "PASS",
+      "scope": "Earlier completed help/helper validation on the same runtime files: quick/full Stata, all five examples, clean portable install, migration and harness checks.",
+      "log_sha256": "118be54d56d5f2c1897febb6c6c6eb1fb98a862f5d0ba828435682954008381d"
+    }
+  ],
+  "local_installation": {
+    "platform": "Darwin",
+    "architecture": "arm64",
+    "catalog_url": "local loopback HTTP server",
+    "catalog_sha256": "4bd77f86cd95cd4dd9e3a38c9719cc3e601b4f44ffc413482f403a58cd310639",
+    "verifier_sha256": "8b501c63aa443f38a6342198cd11ec2392ff416cd2f28f06c5e962008e1c6d56",
+    "results": [
+      {
+        "method": "net",
+        "mode": "fresh",
+        "status": "PASS",
+        "stata_process_rc": 0,
+        "transcript_sha256": "6db3856077a60aec9599954c41b1198bcd459e0c36d1fd9f0549a8c1039b6b87",
+        "checks": [
+          "native progress API 2",
+          "README example",
+          "caller data restoration",
+          "decomposition",
+          "help",
+          "installed match q0/q1",
+          "idle native registry",
+          "all installed file hashes"
+        ],
+        "installed_file_count": 52
+      },
+      {
+        "method": "net",
+        "mode": "replace",
+        "status": "PASS",
+        "stata_process_rc": 0,
+        "transcript_sha256": "81d1e342708617ade06ff3a624a40460900a109c4a8fff47dc1dc5b741b01698",
+        "checks": [
+          "native progress API 2",
+          "README example",
+          "caller data restoration",
+          "decomposition",
+          "help",
+          "installed match q0/q1",
+          "idle native registry",
+          "all installed file hashes"
+        ],
+        "installed_file_count": 52
+      }
+    ]
+  },
+  "public_installation": {
+    "platform": "Darwin",
+    "architecture": "arm64",
+    "catalog_url": "https://raw.githubusercontent.com/johannes-schmieder/fevc/main/",
+    "catalog_sha256": "4bd77f86cd95cd4dd9e3a38c9719cc3e601b4f44ffc413482f403a58cd310639",
+    "verifier_sha256": "8b501c63aa443f38a6342198cd11ec2392ff416cd2f28f06c5e962008e1c6d56",
+    "results": [
+      {
+        "method": "net",
+        "mode": "fresh",
+        "status": "PASS",
+        "stata_process_rc": 0,
+        "transcript_sha256": "e27ae32d518769542897aaf7591c2e323988394269476faba98dc31b25c09014",
+        "checks": [
+          "native progress API 2",
+          "README example",
+          "caller data restoration",
+          "decomposition",
+          "help",
+          "installed match q0/q1",
+          "idle native registry",
+          "all installed file hashes"
+        ],
+        "installed_file_count": 52
+      },
+      {
+        "method": "net",
+        "mode": "replace",
+        "status": "PASS",
+        "stata_process_rc": 0,
+        "transcript_sha256": "d105a1361f381538a42d2892300970706313c7ba7d4ddf218dbe240b24c60fa7",
+        "checks": [
+          "native progress API 2",
+          "README example",
+          "caller data restoration",
+          "decomposition",
+          "help",
+          "installed match q0/q1",
+          "idle native registry",
+          "all installed file hashes"
+        ],
+        "installed_file_count": 52
+      },
+      {
+        "method": "github",
+        "mode": "fresh",
+        "status": "PASS",
+        "stata_process_rc": 0,
+        "transcript_sha256": "c9755031dd296a1779d5778822a632de8d548c72784df2508bbb51babf3e9e4c",
+        "checks": [
+          "native progress API 2",
+          "README example",
+          "caller data restoration",
+          "decomposition",
+          "help",
+          "installed match q0/q1",
+          "idle native registry",
+          "all installed file hashes"
+        ],
+        "installed_file_count": 52
+      },
+      {
+        "method": "github",
+        "mode": "replace",
+        "status": "PASS",
+        "stata_process_rc": 0,
+        "transcript_sha256": "aab9a383dfc4ca8cab7c075c21362fbf55bf9221fd72b62ae131f7a540017c4a",
+        "checks": [
+          "native progress API 2",
+          "README example",
+          "caller data restoration",
+          "decomposition",
+          "help",
+          "installed match q0/q1",
+          "idle native registry",
+          "all installed file hashes"
+        ],
+        "installed_file_count": 52
+      }
+    ]
+  },
+  "installed_inventory": [
+    {
+      "name": "LICENSE",
+      "installed_name": "license",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "name": "THIRD_PARTY_NOTICES.txt",
+      "installed_name": "third_party_notices.txt",
+      "sha256": "3ff608a89355dd85f5a1f61140a0ec5b107842d373559df2d3d507f2f9918bb9"
+    },
+    {
+      "name": "fevc.ado",
+      "installed_name": "fevc.ado",
+      "sha256": "085f4f35a7eef176dcad4100eabc2302b62809a405d97af12992ffda21058d09"
+    },
+    {
+      "name": "fevc.mata",
+      "installed_name": "fevc.mata",
+      "sha256": "a243898da7668dca609bfff95a4f16381d2aecf0a4e02a0902e10bbf3afe2c76"
+    },
+    {
+      "name": "fevc_inference.mata",
+      "installed_name": "fevc_inference.mata",
+      "sha256": "87eaf8193f5b39d0507a45b8e228feeb37794bf1c07c46098134d06f8dfa6954"
+    },
+    {
+      "name": "fevc_graph.mata",
+      "installed_name": "fevc_graph.mata",
+      "sha256": "5c8c8c1765395ac47c275f865e548e04bae1dd8afd370a9c00e5c90a0b07cb6b"
+    },
+    {
+      "name": "fevc_cmg.mata",
+      "installed_name": "fevc_cmg.mata",
+      "sha256": "3572a105f25316fc1ddbfb2697dbb8ad63808c637ef1d2079e6416c14a790c47"
+    },
+    {
+      "name": "fevc_solver.mata",
+      "installed_name": "fevc_solver.mata",
+      "sha256": "c2683db63874d99f4ff8cbf38c2ae1a44de20e05079ef20d482ce0459dd64bdd"
+    },
+    {
+      "name": "fevc_rng.mata",
+      "installed_name": "fevc_rng.mata",
+      "sha256": "3f7a444641424de7053ceeaec79486423a8c5ad86bc78bcd8518d0ff6b3d85bf"
+    },
+    {
+      "name": "fevc_scale.mata",
+      "installed_name": "fevc_scale.mata",
+      "sha256": "fba64e4b7b88c805066b4a4d297873210ec125102c248bc81c4b4cbc33b5eb10"
+    },
+    {
+      "name": "fevc_resource.mata",
+      "installed_name": "fevc_resource.mata",
+      "sha256": "cbce6379400199ca7ac8414f2229f6e68f81439ff6a0223544042a5c38b73ca5"
+    },
+    {
+      "name": "fevc_scale_engine.mata",
+      "installed_name": "fevc_scale_engine.mata",
+      "sha256": "b082c4fed16fd372d7f7058a74aa2a227941c97e266926e7a5e3af6efa304b29"
+    },
+    {
+      "name": "fevc_scale_runtime.mata",
+      "installed_name": "fevc_scale_runtime.mata",
+      "sha256": "6e6d9b13cae47bffbd8dd6b8e2b825257ba79ea90e03edef121fe40cb8c633f3"
+    },
+    {
+      "name": "fevc__display.ado",
+      "installed_name": "fevc__display.ado",
+      "sha256": "a032ccf7b60f7c3a01f196bc1f71fc2a45f132266cf2806b2fff662f7426bde9"
+    },
+    {
+      "name": "fevc__progress.ado",
+      "installed_name": "fevc__progress.ado",
+      "sha256": "9d56da54bf4e292bfdc129e80fc6bf311cb6917416ff8242866e43819cf829d9"
+    },
+    {
+      "name": "fevc__lifecycle.ado",
+      "installed_name": "fevc__lifecycle.ado",
+      "sha256": "b00fe011e9471f353df6d6910fbd68e8d0a12dbb5fee667a9e16e808d5d3673e"
+    },
+    {
+      "name": "fevc_estat.ado",
+      "installed_name": "fevc_estat.ado",
+      "sha256": "a6e20a38b0bfe9ab8a145f0da5b9d131fc80d4bfbd3689594ddf1cdb67126944"
+    },
+    {
+      "name": "fevc_run.ado",
+      "installed_name": "fevc_run.ado",
+      "sha256": "fca93b5751254ef4e441c5760ebb1dd3e8c232a118df0b5df53df11c659830e9"
+    },
+    {
+      "name": "fevc__simulate_data.ado",
+      "installed_name": "fevc__simulate_data.ado",
+      "sha256": "bc277879909b543f945ac94e870652692f2efb9bfc4db3406f960671da66eabc"
+    },
+    {
+      "name": "fevc_rust.ado",
+      "installed_name": "fevc_rust.ado",
+      "sha256": "8f29c21644ab588dc3b5bea89b03bdf3d82a760e747c67b267c5a5be30d96de3"
+    },
+    {
+      "name": "fevc__rust_plugin_call.ado",
+      "installed_name": "fevc__rust_plugin_call.ado",
+      "sha256": "fede7c21491ee6d9a4d8dde995dfe91ae847c91667f0bb465a59f37f93d62022"
+    },
+    {
+      "name": "fevc__rust_solve_v4.ado",
+      "installed_name": "fevc__rust_solve_v4.ado",
+      "sha256": "3ec3b4c51f9f0936ae96f024a1c17ed40333c1ac80778ed565915bab4fabbd16"
+    },
+    {
+      "name": "fevc__rust_solve_v5.ado",
+      "installed_name": "fevc__rust_solve_v5.ado",
+      "sha256": "397a17b0270888a5e6f7825a39f5a07dcfec747ef3d235df565ec29ecc49f9e4"
+    },
+    {
+      "name": "fevc__rust_cmg_model.ado",
+      "installed_name": "fevc__rust_cmg_model.ado",
+      "sha256": "2aca6e707fd447e4f5395299c0589474a8159610a1756da87dedcd5f8c55d140"
+    },
+    {
+      "name": "fevc__rust_plan_receipt.ado",
+      "installed_name": "fevc__rust_plan_receipt.ado",
+      "sha256": "5e8b6524dd9f9107237e0dae0297a0c426f5fc66cedbe5d6905916fbaceee1fd"
+    },
+    {
+      "name": "fevc__rust_reconcile_comp_v7.ado",
+      "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+      "sha256": "306f8c005a34696812864464bc5af50206306d26ec5a085df8c63b7b888386cf"
+    },
+    {
+      "name": "fevc__rust_reconcile_exact_v7.ado",
+      "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+      "sha256": "d9ed45b417bcab498db86ff16e3ec8025b5ced7c16cda91d51bd0f2489c0f185"
+    },
+    {
+      "name": "fevc__rust_post_comp_v7.ado",
+      "installed_name": "fevc__rust_post_comp_v7.ado",
+      "sha256": "a99e027cb9727d08bbdb46844b6e06ceb8cafa3bb4dff1cfd551db6683d2f324"
+    },
+    {
+      "name": "fevc__rust_post_exact_v7.ado",
+      "installed_name": "fevc__rust_post_exact_v7.ado",
+      "sha256": "19a8a6d9d672917ba84b8ece3f95394f7c4a27b97f628c38e26d3fdf6a7fe2fc"
+    },
+    {
+      "name": "fevc__rust_capture_stayers.ado",
+      "installed_name": "fevc__rust_capture_stayers.ado",
+      "sha256": "071e451cf4fd556911ee1f62e9bcc28b05ae77a793e434ec5d94d04049d9812f"
+    },
+    {
+      "name": "fevc__rust_post_stayer_hybrid.ado",
+      "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+      "sha256": "dd2ed6e9ace0cf7090a0bc59b9ea0f5498799d5528b62140754e8eb9b24f87f2"
+    },
+    {
+      "name": "fevc__rust_macos.ado",
+      "installed_name": "fevc__rust_macos.ado",
+      "sha256": "a85eaf5ead0bb2aa8b8421d246119ee316d5cdbb18d9fe16700bb64f256fc0e5"
+    },
+    {
+      "name": "fevc__rust_windows.ado",
+      "installed_name": "fevc__rust_windows.ado",
+      "sha256": "686fecb89736db99840d05845543fb56e36c1da10ac45ba519806c767bcef99f"
+    },
+    {
+      "name": "fevc__rust_linux.ado",
+      "installed_name": "fevc__rust_linux.ado",
+      "sha256": "e57acd40fcb4e6127926d65c023fd4190180b4a2e2c9c530d1df9d451ca6b368"
+    },
+    {
+      "name": "fevc__rust_public_call.ado",
+      "installed_name": "fevc__rust_public_call.ado",
+      "sha256": "a128e9e46df863d5649c6bdf66b712d4a1f000b61c970b99a5b9ba6deefeecfe"
+    },
+    {
+      "name": "fevc__rust_core_ready.ado",
+      "installed_name": "fevc__rust_core_ready.ado",
+      "sha256": "e09f650d76768592b7b4a603b67db4c09f14dacb153645040b71d4a4ba45d774"
+    },
+    {
+      "name": "fevc__component_model_route.ado",
+      "installed_name": "fevc__component_model_route.ado",
+      "sha256": "81f1fbe3ff27b49ae59dc6a9b617035c5a05f4de39389952830fa14f3eb950ea"
+    },
+    {
+      "name": "fevc__observation_population.ado",
+      "installed_name": "fevc__observation_population.ado",
+      "sha256": "9cc6c77d340cb8e170a7f0bbd245bdb774813659dc652b47c89eea7396bf5e80"
+    },
+    {
+      "name": "fevc__stayer_population_post.ado",
+      "installed_name": "fevc__stayer_population_post.ado",
+      "sha256": "4e70d476472b956b423977f505a319d045ad2e6c43078b36f52da10a99924d7a"
+    },
+    {
+      "name": "fevc__exact_inference_model_post.ado",
+      "installed_name": "fevc__exact_inference_model_post.ado",
+      "sha256": "26e8ab485fc80ecf1e8d0ec0c53da3195c3ad32509cc32dde5cf31a6d972bd45"
+    },
+    {
+      "name": "fevc__rust_component_attach.ado",
+      "installed_name": "fevc__rust_component_attach.ado",
+      "sha256": "026dd6a3a40cd66b9006ec9b25ea9a925b9b35e403362542dd21079cc917ad02"
+    },
+    {
+      "name": "fevc__rust_comp_batch_receipt.ado",
+      "installed_name": "fevc__rust_comp_batch_receipt.ado",
+      "sha256": "7ced3a9d460bf299f94bbb00fae4feabc3185d69eb7e67d39756ec84fdc11808"
+    },
+    {
+      "name": "fevc__rust_component_fetch.ado",
+      "installed_name": "fevc__rust_component_fetch.ado",
+      "sha256": "be64d70b47f59571eeed3e06767907515dea5b684ded9e84d12bbde62543530c"
+    },
+    {
+      "name": "fevc__rust_component_post.ado",
+      "installed_name": "fevc__rust_component_post.ado",
+      "sha256": "a04d171e2123e4418136047bc7fb23f8074f6b25ec8c7f449a21abcb195fbe02"
+    },
+    {
+      "name": "fevc__failure_guidance.ado",
+      "installed_name": "fevc__failure_guidance.ado",
+      "sha256": "148b2d2b82bb4feb0585869d64be0c1ef38f1d510ed7ca799b6294b3c5167c1b"
+    },
+    {
+      "name": "fevc.sthlp",
+      "installed_name": "fevc.sthlp",
+      "sha256": "6bddb29ae1fd13b00045604e6ba3a9cb2f1a325decaedd75d5670a80088a6cca"
+    },
+    {
+      "name": "fevc__memory_options.ado",
+      "installed_name": "fevc__memory_options.ado",
+      "sha256": "fb81e093af50999c092d87e43cb7d4fe8200e02ff50f767963c5704ac069ba34"
+    },
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "installed_name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "53400c1c4c4c0624c95ffef377ca4a5637fcce49ecba5a4aade2a530732bb568"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "installed_name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "0c0eb96f098c6b7841062f9c57147a772a6f608eb0cfdd758c8fc8de013af219"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "installed_name": "fevc_rust_macos.plugin",
+      "sha256": "aca13bfa48dd0e81c7e772bfc20aefab45752920342239816ec344cb2510df38"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "installed_name": "fevc_rust_linux_x64.plugin",
+      "sha256": "08227a71c6e7decc988e38cc40a853941f7e59881722258621c98052ce9a9488"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "installed_name": "fevc_rust_windows_x64.plugin",
+      "sha256": "7adea236f077be30a28b01dba18d1680b00aa6b8c1cb3d3c4db6acccfcba29f6"
+    }
+  ],
+  "resolved_development_failures": [
+    "Initial Mac smoke staging omitted stata.toc; corrected before runtime tests.",
+    "Temporary portable manifest used f for notices; changed to F as in the production root catalog, then all bytes verified.",
+    "Source-bundle test initially rejected the untracked build receipt; it passed after staging.",
+    "A new note had been inserted into a generated parity document; the document was regenerated from its source and all 828 tests passed."
+  ],
+  "evidence_location": "Detailed diagnostic logs and smoke drivers remain in ignored .local/native-refresh-20260922/; published source/build receipts and binary hashes are retained here."
+}

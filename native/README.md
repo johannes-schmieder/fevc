@@ -16,6 +16,16 @@ has not been run. No AWS machine was used. GitHub artifacts last 14 days;
 the committed plugin remains available through the normal installer. The
 [earlier Windows candidate record](windows-test-20260922.json) remains historical.
 
+The current package was retested with the existing Mac binaries: arm64 and
+Rosetta x86-64 thin plugins, plus the universal binary under both architectures.
+All four isolated installs passed the exact/JLA help examples, progress
+regression, installed-file hashes, and idle-registry check. The compiled native
+sources and locked dependencies are unchanged since their qualified build;
+the new simulation helper and help are covered by the current package tests.
+The [refresh receipt](refresh-20260922.json) records compatibility, current
+binary hashes, and public installer checks. Linux remains blocked as described
+below; this is not a completed all-platform qualification.
+
 The Mac plugins were rebuilt from `0614534c` on September 22 to suppress
 repeated progress summaries. Their [qualification receipt](progress-20260922-macos.txt)
 records the exact source, binary hashes, and passing arm64, Rosetta x86-64,

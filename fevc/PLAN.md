@@ -1,5 +1,29 @@
 # Current checkpoint — 2026-09-22
 
+## Binary installer refresh
+
+The help/helper source is committed at `991597f7`. The Windows candidate was
+rebuilt from that source on GitHub's hosted Windows runner and included in the
+standard repository installer at `41ad5240`, on both `main` and `master`.
+Compilation, 14 Rust tests, 129 exports, system-only dependencies, and all
+Windows package hashes passed. Windows Stata testing is left to the owner;
+see [installation instructions](../INSTALLATION.md).
+
+The Mac plugins already match the current compiled source. Current-package
+isolated tests pass for thin arm64, thin Rosetta x86-64, and the universal
+binary on both architectures, including exact/JLA examples and the progress
+regression. All 828 Python tests and generated CMG checks pass. See the
+[new refresh record](../native/refresh-20260922.json) for source compatibility,
+binary identities, and installer evidence. Older qualification records remain
+unchanged.
+
+Linux is still blocked by SCC authentication. Its committed binary remains
+from September 21 and lacks the subsequent progress-summary cleanup. After
+`ssh scc` authentication is renewed, use the existing source-bound deployment
+and scheduled qualifier, collect its exact tested binary and scheduler receipt,
+and repeat both public installer checks on Linux before updating the package.
+No current Linux rebuild or new runtime test is claimed.
+
 ## Applied help and example data
 
 The help now starts with a runnable example, explains the leave-out sample
