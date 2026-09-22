@@ -10,6 +10,9 @@ records the exact source, binary hashes, and passing arm64, Rosetta x86-64,
 and universal-plugin checks. The [source inventory](progress-20260922-macos.sha256)
 binds the tested files. The exact help example was also checked to print one
 method summary and one allocation summary, followed by elapsed-time updates.
+[Validation and public installer checks](progress-20260922-validation.json)
+record the passing source, Rust, and Stata gates and both public installation
+commands on Mac, including replacement installs and all 50 installed-file hashes.
 
 The Linux plugin remains the September 21 build from `f2a15dea`; it does not
 yet contain this progress-display fix. Its rebuild is awaiting SCC login access.

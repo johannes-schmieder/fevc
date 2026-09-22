@@ -18,6 +18,14 @@ Source archives omit repository plugin binaries through `.gitattributes`,
 preserving the frozen SCC source-bundle builder and its no-old-binaries gate.
 Direct repository installation still downloads all four committed plugins.
 
+The integrated local checks passed: 827 Python tests, CMG gates, the quick and
+full Stata suites, help examples, installation and migration checks, and harness
+smokes. Both public installers passed fresh and replacement installs on Mac,
+including all 50 file hashes and the exact example's single-summary output.
+See [`progress validation`](../native/progress-20260922-validation.json).
+Both public refs carry the updated package. Source CI passed on `f7d13d1c`;
+the existing broader Rust CI matrix is separate from native Stata qualification.
+
 ## Public package baseline
 
 The existing repository is public with working `net install fevc` and
@@ -27,7 +35,7 @@ The owner accepted the retained historical GitHub PR reviews. Do not restore
 review files into the cleaned checkout. Windows binaries and testing remain
 deferred. No tag or GitHub release has been created.
 
-## Qualified package
+## September 21 qualification
 
 Native build source: `f2a15dea9fe5715d654a00976e97c8d706efe63f`, including the
 latest runtime reporting and total-elapsed updates. Mac arm64, Rosetta x86-64,
@@ -42,7 +50,7 @@ actual build identities, hashes, compatibility review, and compact qualification
 receipts live in [`native/`](../native/README.md). Packaging and later evidence
 commits do not redefine the binaries' original tested source.
 
-## Installer verification
+## September 21 installer verification
 
 Both advertised public commands passed fresh and replacement installation
 checks on Mac and Linux under Stata/MP 19. Checks cover all 50 installed-file
