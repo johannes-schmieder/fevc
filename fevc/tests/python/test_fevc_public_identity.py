@@ -71,3 +71,22 @@ def test_private_vckss_build_ids_cannot_be_rebranded() -> None:
         "vckss-inference-api1-block-projection",
     ):
         assert not MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)
+
+
+def test_package_receipt_schema_does_not_exempt_runtime_protocols(tmp_path, monkeypatch):
+    monkeypatch.setattr(MODULE, "REPO_ROOT", tmp_path)
+    relative = "native/refresh-20260922.json"
+    receipt = tmp_path / relative
+    receipt.parent.mkdir()
+    schema = '  "schema": "FEVC-NATIVE-REFRESH-V1",\n'
+    receipt.write_text(schema)
+    assert MODULE.audit([relative]) == []
+    receipt.write_text(schema + '  "protocol": "FEVC-NATIVE-PHASE-PERF-V1"\n')
+    assert MODULE.audit([relative]) == [
+        f"{relative}:2: private VCKSS protocol was renamed"
+    ]
+    runtime = tmp_path / "runtime.mata"
+    runtime.write_text(schema)
+    assert MODULE.audit(["runtime.mata"]) == [
+        "runtime.mata:1: private VCKSS protocol was renamed"
+    ]

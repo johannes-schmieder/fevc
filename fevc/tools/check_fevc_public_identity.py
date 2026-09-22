@@ -70,6 +70,11 @@ RENAMED_PRIVATE_PROTOCOL = re.compile(
 RENAMED_PRIVATE_BUILD_ID = re.compile(
     r"\bfevc-(?:api21-stayer-hybrid|inference-api1-block-projection)\b"
 )
+# This published package receipt is not a runtime protocol. Preserve its
+# source-bound bytes; exempt only its schema line, not the rest of the report.
+PUBLIC_RECEIPT_SCHEMA_LINES = {
+    "native/refresh-20260922.json": '"schema": "FEVC-NATIVE-REFRESH-V1",',
+}
 
 
 def candidates() -> list[str]:
@@ -127,7 +132,8 @@ def audit(paths: list[str]) -> list[str]:
                 errors.append(
                     f"{relative}:{line_number}: private VCKSS build ID was renamed"
                 )
-            if RENAMED_PRIVATE_PROTOCOL.search(line):
+            if (RENAMED_PRIVATE_PROTOCOL.search(line)
+                    and line.strip() != PUBLIC_RECEIPT_SCHEMA_LINES.get(relative)):
                 errors.append(
                     f"{relative}:{line_number}: private VCKSS protocol was renamed"
                 )
