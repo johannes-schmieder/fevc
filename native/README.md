@@ -1,8 +1,17 @@
 # Native package provenance
 
 The repository installation includes macOS arm64, macOS x86-64, macOS
-universal, and Linux x86-64 plugins. Windows binaries and testing are deferred.
+universal, and Linux x86-64 plugins. Windows is available as a separate test
+package; normal installer inclusion awaits owner testing in Windows Stata.
 Intel Mac execution is checked under Rosetta, not on native Intel hardware.
+
+The [Windows test build](https://github.com/johannes-schmieder/fevc/actions/runs/35757451381)
+provides an installable ZIP, source-bound receipt, and a smoke-test do-file.
+It passed compilation, 14 Rust unit tests, PE export/dependency checks, and
+package hash checks, but has not run in licensed Windows Stata. See the
+[candidate record](windows-test-20260922.json). No AWS machine was used.
+GitHub artifacts are retained for 14 days; the manual **Windows test package**
+workflow can produce a new candidate from the selected commit.
 
 The Mac plugins were rebuilt from `0614534c` on September 22 to suppress
 repeated progress summaries. Their [qualification receipt](progress-20260922-macos.txt)

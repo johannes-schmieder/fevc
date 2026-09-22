@@ -1,0 +1,41 @@
+{
+  "artifact_id": 10708443870,
+  "artifact_retention_days": 14,
+  "aws_used": false,
+  "binary_sha256": "28ddf0971e49261a62a0745db3e1412f91c24a1644c63f599915f7825edbbb06",
+  "build_run": "https://github.com/johannes-schmieder/fevc/actions/runs/35757451381",
+  "crt": "static",
+  "date": "2026-09-22",
+  "dependencies": [
+    "api-ms-win-core-synch-l1-2-0.dll",
+    "KERNEL32.dll",
+    "ntdll.dll"
+  ],
+  "exports_checked": 129,
+  "installable_files_checked": 47,
+  "licensed_stata_run": false,
+  "limitations": [
+    "Owner must test loading and execution in licensed Windows Stata.",
+    "Smoke test is not full scientific/platform qualification.",
+    "No public release tag or normal Windows installer promotion."
+  ],
+  "normal_repository_installer_includes_windows": false,
+  "prior_attempt": {
+    "outcome": "Compilation and Rust tests passed; packaging failed on a stale ABI-header filename. Corrected to vckss_rust.h; bounded rebuild passed.",
+    "run_id": 35757009477
+  },
+  "rust_toolchain": "1.85.1",
+  "rust_unit_tests_passed": 14,
+  "schema": "FEVC-WINDOWS-TEST-CANDIDATE-V1",
+  "source_commit": "9a7d7e3516155872719b4cb3681b6e80438905b9",
+  "status": "BUILD_ONLY_NOT_STATA_TESTED",
+  "target": "x86_64-pc-windows-msvc",
+  "validation": [
+    "Windows x86-64 PE32+ DLL verified",
+    "129 canonical Rust and Stata exports present",
+    "Only Windows system DLL imports; no MSVC redistributable required",
+    "Every packaged runtime source file matches the recorded commit",
+    "ZIP and per-file SHA-256 checks passed"
+  ],
+  "zip_sha256": "809c602f2b1ce47007afcf161e30589974eef818e539e5a64f30a3a5efe1a590"
+}
