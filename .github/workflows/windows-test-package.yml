@@ -1,0 +1,31 @@
+name: Windows test package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.85.1
+      - name: Fetch authenticated public Stata SPI
+        shell: bash
+        run: rust/stata_backend/fetch_stata_spi.sh
+      - name: Build, audit, and package Windows candidate (no licensed Stata)
+        shell: pwsh
+        run: ./rust/stata_backend/package_windows_test.ps1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: fevc-windows-test-${{ github.sha }}
+          path: windows-test-output/*
+          if-no-files-found: error
+          retention-days: 14
