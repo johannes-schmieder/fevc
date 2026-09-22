@@ -14,6 +14,9 @@
 *.tar binary
 *.gz binary
 
+# Repository installers fetch plugins directly; source archives omit old builds.
+fevc/*.plugin binary export-ignore
+
 # Historical review packets preserve byte-exact embedded CSV payloads.
 reviews/gpt-pro/requests/**/FILES/**/*.csv -text whitespace=cr-at-eol
 

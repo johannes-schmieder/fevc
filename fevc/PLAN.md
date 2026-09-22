@@ -1,4 +1,24 @@
-# Current checkpoint — 2026-09-21
+# Current checkpoint — 2026-09-22
+
+## Progress-display cleanup
+
+Repeated identical native method/settings and allocation summaries are now
+suppressed within each reporting scope; elapsed-time updates continue and
+changed settings remain visible. The help examples now put JLA first and exact
+second, with all five runnable example bodies unchanged.
+
+Mac arm64, Rosetta x86-64, and universal plugins were rebuilt and qualified from
+`0614534c`. The strengthened Stata progress regression passed on all four
+artifact/architecture combinations. Running the exact help example independently
+confirmed one method summary and one allocation summary. See the new
+[`native/` records](../native/README.md). Linux still carries the September 21
+binary; rebuilding its progress fix requires renewed SCC login access.
+
+Source archives omit repository plugin binaries through `.gitattributes`,
+preserving the frozen SCC source-bundle builder and its no-old-binaries gate.
+Direct repository installation still downloads all four committed plugins.
+
+## Public package baseline
 
 The existing repository is public with working `net install fevc` and
 `github install johannes-schmieder/fevc` routes. `main` is the development

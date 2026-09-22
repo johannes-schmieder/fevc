@@ -4,10 +4,19 @@ The repository installation includes macOS arm64, macOS x86-64, macOS
 universal, and Linux x86-64 plugins. Windows binaries and testing are deferred.
 Intel Mac execution is checked under Rosetta, not on native Intel hardware.
 
-The [input manifest](manifest.json) and qualification receipts record each
-binary's actual build source and SHA-256.
+The Mac plugins were rebuilt from `0614534c` on September 22 to suppress
+repeated progress summaries. Their [qualification receipt](progress-20260922-macos.txt)
+records the exact source, binary hashes, and passing arm64, Rosetta x86-64,
+and universal-plugin checks. The [source inventory](progress-20260922-macos.sha256)
+binds the tested files. The exact help example was also checked to print one
+method summary and one allocation summary, followed by elapsed-time updates.
+
+The Linux plugin remains the September 21 build from `f2a15dea`; it does not
+yet contain this progress-display fix. Its rebuild is awaiting SCC login access.
+The original [input manifest](manifest.json) and qualification receipts preserve
+the September 21 binaries' actual build sources and SHA-256 hashes.
 [Installation verification](installation.json) records fresh and replacement
-installs with both public commands on Mac and Linux under Stata/MP 19. Later packaging and evidence commits
+installs of that initial package with both public commands on Mac and Linux under Stata/MP 19. Later packaging and evidence commits
 do not change that build identity. Root `fevc.pkg` selects the native package;
 `fevc/fevc.pkg` remains the portable source manifest.
 
