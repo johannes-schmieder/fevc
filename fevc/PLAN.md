@@ -1,6 +1,6 @@
 # Current checkpoint — 2026-09-22
 
-## Applied help and example data (local development)
+## Applied help and example data
 
 The help now starts with a runnable example, explains the leave-out sample
 and main user choices, and groups advanced options separately. It is about
@@ -41,7 +41,8 @@ binary; rebuilding its progress fix requires renewed SCC login access.
 
 Source archives omit repository plugin binaries through `.gitattributes`,
 preserving the frozen SCC source-bundle builder and its no-old-binaries gate.
-Direct repository installation still downloads all four committed plugins.
+Direct repository installation downloads the committed plugins; the current
+Windows candidate and its pending Stata check are documented in `native/README.md`.
 
 The integrated local checks passed: 827 Python tests, CMG gates, the quick and
 full Stata suites, help examples, installation and migration checks, and harness
@@ -57,8 +58,8 @@ The existing repository is public with working `net install fevc` and
 `github install johannes-schmieder/fevc` routes. `main` is the development
 branch; `master` is the matching compatibility ref for the community installer.
 The owner accepted the retained historical GitHub PR reviews. Do not restore
-review files into the cleaned checkout. Windows binaries and testing remain
-deferred. No tag or GitHub release has been created.
+review files into the cleaned checkout. The Windows binary is now included as a build-tested candidate; the owner
+will test it in Windows Stata. No tag or GitHub release has been created.
 
 ## September 21 qualification
 

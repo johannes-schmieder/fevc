@@ -14,9 +14,9 @@ requests. Point estimation is the default; inference is available for
 ## Requirements
 
 - Stata 18 or 19.
-- Precompiled native backends for macOS (Apple Silicon and Intel) and
-  Linux x86-64; no compiler or Rust installation is needed.
-- Windows binaries and testing are deferred.
+- Precompiled native backends for macOS (Apple Silicon and Intel), Linux
+  x86-64, and Windows x86-64; no compiler or Rust installation is needed.
+- Windows is a build-tested candidate; testing in Windows Stata is pending.
 
 ## Installation
 
@@ -31,7 +31,7 @@ If you already use the Stata `github` command:
 github install johannes-schmieder/fevc
 ```
 
-Both routes install the command, help, and Mac/Linux native backends.
+Both routes install the command, help, and native backends for all three platforms.
 Restart Stata after updating. See [installation notes](INSTALLATION.md) if
 you have an older development installation.
 

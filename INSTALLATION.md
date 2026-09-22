@@ -1,9 +1,10 @@
 # Installing fevc
 
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
-for macOS Apple Silicon and Intel, and Linux x86-64. No compiler, Rust
-installation, or separate plugin download is needed. Windows binaries and
-Windows testing are deferred; this distribution makes no Windows native claim.
+for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
+compiler, Rust installation, or separate plugin download is needed. The Windows
+binary passes build and dependency checks; testing in licensed Windows Stata
+is pending the owner's check.
 
 ## Installation
 
@@ -20,8 +21,8 @@ With the community-contributed `github` installer already installed:
 github install johannes-schmieder/fevc
 ```
 
-Both routes install the same runtime, help, licenses, and four plugin files
-(macOS arm64, Intel, universal, and Linux x86-64). The loader selects the
+Both routes install the same runtime, help, licenses, and five plugin files
+(macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
 appropriate native backend. The `master` compatibility branch serves the
 community installer; `main` remains the development branch.
 
@@ -35,6 +36,24 @@ fevc_run exact_controls using fevc.sthlp
 The example uses simulated data and restores your data afterward. Restart
 Stata after updating a loaded native plugin. This is a prerelease package;
 see [inference support and limitations](fevc/docs/INFERENCE.md).
+
+## Windows candidate check
+
+Install with either command above, then restart Stata and run:
+
+```stata
+fevc_rust probe
+assert r(progress_api) == 2
+fevc_run exact_controls using fevc.sthlp
+assert "`e(backend_selected)'" == "rust"
+fevc_run jla_controls using fevc.sthlp
+assert "`e(backend_selected)'" == "rust"
+```
+
+The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/35759636558)
+also provides a standalone ZIP with a local installer, test do-file, and build
+receipt. It uses the same Windows binary as the repository installer. The ZIP
+is available as a GitHub Actions artifact for 14 days.
 
 ## Local source installation
 

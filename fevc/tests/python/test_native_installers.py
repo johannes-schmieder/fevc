@@ -27,3 +27,16 @@ def test_missing_and_duplicate_installed_files_are_rejected(tmp_path):
         (folder / "license").write_bytes(b"notice")
     with pytest.raises(ValueError, match="found 2"):
         MODULE.installed_file(tmp_path, "LICENSE")
+
+
+def test_repository_catalog_installs_all_platform_plugins():
+    root = SCRIPT.parents[2]
+    entries = [line[2:] for line in (root / "fevc.pkg").read_text().splitlines()
+               if line.startswith(("f ", "F "))]
+    plugins = [Path(entry).name for entry in entries if entry.endswith(".plugin")]
+    assert len(plugins) == len(set(plugins))
+    assert set(plugins) == MODULE.REPOSITORY_PLUGINS
+    # Git source archives deliberately omit the binaries; direct repository
+    # installs download them. The portable manifest must remain binary-free.
+    portable = (root / "fevc/fevc.pkg").read_text()
+    assert ".plugin" not in portable

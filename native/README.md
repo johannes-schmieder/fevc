@@ -1,17 +1,20 @@
 # Native package provenance
 
 The repository installation includes macOS arm64, macOS x86-64, macOS
-universal, and Linux x86-64 plugins. Windows is available as a separate test
-package; normal installer inclusion awaits owner testing in Windows Stata.
-Intel Mac execution is checked under Rosetta, not on native Intel hardware.
+universal, Linux x86-64, and a Windows x86-64 candidate. Windows Stata testing
+is pending the owner's check. Intel Mac execution uses Rosetta, not native
+Intel hardware.
 
-The [Windows test build](https://github.com/johannes-schmieder/fevc/actions/runs/35757451381)
-provides an installable ZIP, source-bound receipt, and a smoke-test do-file.
-It passed compilation, 14 Rust unit tests, PE export/dependency checks, and
-package hash checks, but has not run in licensed Windows Stata. See the
-[candidate record](windows-test-20260922.json). No AWS machine was used.
-GitHub artifacts are retained for 14 days; the manual **Windows test package**
-workflow can produce a new candidate from the selected commit.
+The [current Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/35759636558)
+uses source `991597f7`, including the shortened help and simulation helper.
+It passed compilation, 14 Rust unit tests, 129-export PE inspection, system-only
+dependency checks, and all package hashes. Its
+[build receipt](refresh-20260922-windows-build.json) records the source and
+payload. The same binary is installed from the repository and included in the
+workflow's standalone ZIP with a smoke-test do-file. Licensed Windows Stata
+has not been run. No AWS machine was used. GitHub artifacts last 14 days;
+the committed plugin remains available through the normal installer. The
+[earlier Windows candidate record](windows-test-20260922.json) remains historical.
 
 The Mac plugins were rebuilt from `0614534c` on September 22 to suppress
 repeated progress summaries. Their [qualification receipt](progress-20260922-macos.txt)

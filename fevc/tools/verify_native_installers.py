@@ -14,6 +14,13 @@ import tempfile
 import threading
 
 
+REPOSITORY_PLUGINS = {
+    'fevc_rust_macos_arm64.plugin', 'fevc_rust_macos_x86_64.plugin',
+    'fevc_rust_macos.plugin', 'fevc_rust_linux_x64.plugin',
+    'fevc_rust_windows_x64.plugin',
+}
+
+
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -44,8 +51,7 @@ def verify(catalog, test_root, output, stata, url, methods):
         assert entry.startswith('fevc/') and '..' not in Path(entry).parts
         expected[Path(entry).name] = (catalog / entry).read_bytes()
     assert len(expected) == len(entries)
-    assert len([n for n in expected if n.endswith('.plugin')]) == 4
-    assert 'fevc_rust_windows_x64.plugin' not in expected
+    assert {n for n in expected if n.endswith('.plugin')} == REPOSITORY_PLUGINS
     output.mkdir(parents=True, exist_ok=False)
     results = []
     with tempfile.TemporaryDirectory(prefix='fevc-installer-') as tmp:
@@ -132,7 +138,9 @@ exit 0
                'catalog_url': url, 'methods': methods, 'results': results,
                'catalog_sha256': sha((catalog / 'fevc.pkg').read_bytes()),
                'verifier_sha256': sha(Path(__file__).read_bytes()),
-               'scope': 'Mac/Linux distribution; Windows binary and tests deferred'}
+               'scope': ('Installed payload hashes cover all five plugins; runtime checks '
+                         'apply only to the recorded execution platform. Windows Stata '
+                         'testing is performed separately by the owner.')}
     (output / 'verification.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 
