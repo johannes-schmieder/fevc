@@ -31,7 +31,7 @@ if ($pe -lt 64 -or $pe + 26 -gt $bytes.Length -or
     [BitConverter]::ToUInt16($bytes, $pe + 24) -ne 0x20b) { throw 'Not x86-64 PE32+' }
 $exports = (& dumpbin /exports $library | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Export inspection failed' }
-$header = Get-Content -Raw 'rust/stata_backend/include/fevc_rust.h'
+$header = Get-Content -Raw 'rust/stata_backend/include/vckss_rust.h'
 $symbols = @([regex]::Matches($header, '\b(vckss_rust_[A-Za-z0-9_]+)\s*\(') |
     ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique) + @('pginit', 'stata_call')
 if ($symbols.Count -le 2) { throw 'No Rust exports parsed' }
