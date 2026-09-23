@@ -23,8 +23,7 @@ github install johannes-schmieder/fevc
 
 Both routes install the same runtime, help, licenses, and five plugin files
 (macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
-appropriate native backend. The `master` compatibility branch serves the
-community installer; `main` remains the development branch.
+appropriate native backend. `main` is the development and installation branch.
 
 After installation:
 

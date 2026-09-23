@@ -68,7 +68,7 @@ help, decomposition, and the installed match q0/q1 regression. Stata execution
 must use local or explicitly private licensed infrastructure. Detailed logs
 remain outside the tracked checkout; only compact receipts are retained here.
 
-When publishing a package update, keep `main` and the `master` compatibility
-ref on the same package. The community `github` installer currently uses
-`master` URLs. No release tag or release archive is implied by this prerelease
-repository installation.
+Publish package updates to `main` and verify both advertised installation
+commands with `--public`. A separate `master` branch is not maintained.
+No release tag or release archive is implied by this prerelease repository
+installation.

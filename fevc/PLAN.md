@@ -1,4 +1,20 @@
-# Current checkpoint — 2026-09-22
+# Current checkpoint — 2026-09-23
+
+## Main-only installation
+
+The redundant `master` compatibility branch was removed on September 23;
+`main` is the sole development and installation branch. Earlier references
+below to publishing both refs describe the historical installation checks.
+
+Fresh and replacement installs through both advertised commands passed on
+Stata/MP 19, macOS Apple Silicon, after branch deletion. The installer commands
+and package payload required no changes. The public installer verifier ran with:
+`./.venv/bin/python fevc/tools/verify_native_installers.py --catalog . --test-root . --output .local/main-only-install-20260923 --public`.
+It uses isolated Stata libraries and checks all 52 installed-file hashes,
+native reporting, the README example, caller-data restoration, and match q0/q1
+inference. The Python source suite passed all 829 tests, and
+`./.venv/bin/python fevc/cmg/tools/assemble.py --all --check` passed.
+Pytest reported temporary-directory cleanup permission warnings after passing.
 
 ## Binary installer refresh
 
@@ -80,7 +96,8 @@ the existing broader Rust CI matrix is separate from native Stata qualification.
 
 The existing repository is public with working `net install fevc` and
 `github install johannes-schmieder/fevc` routes. `main` is the development
-branch; `master` is the matching compatibility ref for the community installer.
+and installation branch; the former `master` compatibility ref was removed
+on September 23.
 The owner accepted the retained historical GitHub PR reviews. Do not restore
 review files into the cleaned checkout. The Windows binary is now included as a build-tested candidate; the owner
 will test it in Windows Stata. No tag or GitHub release has been created.

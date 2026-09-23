@@ -97,11 +97,11 @@ and approved, the installation metadata and tested binaries can be committed
 together with their matching source. Release attachments alone do not supply
 the raw GitHub installation endpoint.
 
-The upstream `github` installer inspected during preparation uses `master`
-URLs. Verify the exact advertised command against the publication layout and
-provide an equivalent compatibility ref if needed. No such ref is created by
-the builder. Verify clean installs and upgrades using both commands on the
-supported platforms, including actual native execution and binary hashes.
+Verify the exact advertised `github install` command against the publication
+layout on `main`; a hardcoded URL in the upstream installer alone does not
+establish that a separate branch is required. Verify clean installs and upgrades
+using both commands on the supported platforms, including actual native
+execution and binary hashes.
 
 The final receipt binds the package source, native inputs, archive digest and
 every installed file. A later documentation/evidence commit must not be
@@ -110,7 +110,6 @@ reported as the tested binary source. Preserve all accepted earlier records.
 For the public prerelease, commit root `fevc.pkg` and `stata.toc`, the four
 selected `fevc/*.plugin` files, and a compact binary manifest linking exact
 build sources and sanitized qualification receipts. Keep the nested portable
-manifest unchanged. Push the same package commit to `main` and the `master`
-compatibility ref whenever publishing an installation update. Verify actual
+manifest unchanged. Push package updates to `main`. Verify actual
 HTTP installs after publication; building a staging directory alone is not an
 installer verification.
