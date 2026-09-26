@@ -299,3 +299,25 @@
   corresponding-source, notice, provenance, and data-exclusion review was
   completed on 2026-08-29. Public tagging and release remain separate owner
   decisions, with a fresh exact-artifact check required before conveyance.
+
+## 2026-09-25: original deletion units define match movers
+
+Owner-authorized pooled-employer repair: match-mode movers have more than one
+original deletion unit, not necessarily more than one model firm. Default
+worker--firm IDs give the former classification. Freeze eligible one-block
+stayers before graph pruning and synthetic observation IDs; do not reclassify
+dropped movers. Preserve worker-articulation, bridge and full/nuisance-rank
+gates, and the independence assumption across declared blocks. No new option
+is needed. Gate all parallel partitions from old native selectors before
+preparation; automatic routing uses Mata and strict Rust/Counter withholds.
+See [contract](ESTIMATOR_CONTRACT.md) and
+[validation notes](POOLED_DELETION_2026-09-25.md).
+
+## 2026-09-26: native deletion-unit support
+
+The Rust selector, final graph certificate and match-component inference guard
+now use original deletion-unit support, matching Mata. Additive readiness bit
+15 admits parallel blocks; the earlier fallback remains for older binaries.
+No ABI layout, observation definition, articulation restriction or numerical
+acceptance threshold changes. See the [integration record](DELETION_UNIT_MOVERS_2026-09-26.md)
+for source-bound validation and platform qualification status.

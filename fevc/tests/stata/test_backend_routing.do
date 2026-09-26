@@ -30,6 +30,15 @@ program define fevc_rust, rclass
         return scalar exact_api = 1
         return scalar exact_resolved_api = 2
         return scalar exact_legacy_api = 1
+        if "$VCKSS_ROUTING_PROXY_MODE"=="stale_deletion_units" {
+            return scalar abi_compiled = 1
+            return scalar abi_runtime = 1
+            return scalar core_ready_flags = 32767
+            return scalar support_flags = 38
+            return scalar deterministic_parallelism = 1
+            return scalar execution_api = 3
+            exit 0
+        }
         if inlist("$VCKSS_ROUTING_PROXY_MODE","stale_exact","stale_auto_exact") {
             return scalar abi_compiled = 1
             return scalar abi_runtime = 1
@@ -598,6 +607,35 @@ assert `"`e(rng_selected)'"' == ""
 assert e(rng_option_supplied) == 0
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
 
+// A current-looking old plugin must not reinterpret parallel match units.
+// The proxy traps every native preparation; JLA fallback must restore state.
+preserve
+generate long parallel_match=obsid
+global VCKSS_ROUTING_PROXY_MODE stale_deletion_units
+global VCKSS_ROUTING_PREPARE_CALLED 0
+foreach route in automatic strict counter {
+    local request backend(auto) rng(auto)
+    if "`route'"=="strict" local request backend(rust) rng(auto)
+    if "`route'"=="counter" local request backend(auto) rng(counter_v1)
+    capture quietly fevc y, worker(worker) firm(firm) deletionid(parallel_match) ///
+        algorithm(jla) engine(generic) preconditioner(diagonal) batch(2) ///
+        probes(8) stayers(movers) `request' nodisplay
+    if "`route'"=="automatic" {
+        assert _rc==0
+        assert "`e(backend_selected)'"=="mata"
+        assert e(backend_fallback)==1
+        assert "`e(backend_fallback_reason)'"=="RUST_PARALLEL_DELETION_UNSUPPORTED"
+        assert "`e(backend_fallback_phase)'"=="preflight"
+    }
+    else {
+        assert _rc==498
+        assert "`e(withholding_status)'"=="RUST_PARALLEL_DELETION_UNSUPPORTED"
+    }
+    assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+    assert `"`c(rngstate)'"'==`"`caller_rngstate'"'
+}
+restore
+
 // The successful and typed-failure routes cumulatively preserve caller state.
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_rngstream'
@@ -626,6 +664,23 @@ assert(VCKSS_BACKEND_ROUTING_AFTER.mt64s_selected_stream_state ==
 end
 
 capture program drop fevc_rust
+// A missing core mask must never inherit bit 15 from a prior native call.
+capture program drop fevc__rust_plugin_call
+program define fevc__rust_plugin_call, rclass
+    scalar __vckss_rust_abi_compiled=1
+    scalar __vckss_rust_abi_runtime=1
+    scalar __vckss_rust_support_flags=38
+    scalar __vckss_rust_deterministic=1
+end
+scalar __vckss_rust_core_flags=65535
+capture quietly fevc_rust probe
+assert _rc!=0
+capture confirm scalar __vckss_rust_core_flags
+assert _rc!=0
+capture program drop fevc__rust_plugin_call
+foreach field in abi_compiled abi_runtime support_flags deterministic {
+    capture scalar drop __vckss_rust_`field'
+}
 macro drop VCKSS_ROUTING_NATIVE_CALLED
 macro drop VCKSS_ROUTING_PREPARE_CALLED
 macro drop VCKSS_ROUTING_PROXY_MODE

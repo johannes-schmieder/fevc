@@ -8,8 +8,13 @@ by this preparation document.
 
 ## Current distribution scope
 
-On September 21 the owner selected a public Mac/Linux prerelease and deferred
-Windows testing and binaries. Use `--profile macos-linux` and put
+On September 26 the owner authorized deletion-unit mover integration, all five
+plugins, and source then package publication to `main`. Use the `complete`
+profile for this update. Qualification is tracked in
+[the integration record](DELETION_UNIT_MOVERS_2026-09-26.md); a tag or release
+is still a separate decision.
+
+The September 21 Mac/Linux-only checkpoint used `--profile macos-linux` and
 `"profile": "macos-linux"` in its input manifest. This profile requires all
 four Mac/Linux plugin files and rejects missing, duplicate, unexpected,
 unqualified, or mismatched inputs. The default `complete` profile retains the
@@ -30,18 +35,22 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    the broader public and isolated-install gates. Linux acceptance requires
    scheduler `failed=0`, `exit_status=0`, all explicit application markers,
    and source/binary hashes. No scaling or Monte Carlo campaign is requested.
-3. For the complete profile only (deferred in the current Mac/Linux scope),
+3. For the complete profile,
    run the private Windows skill's accepted `stata-do` profile against
    repository-root `windows-ci.do`. The first bounded gate builds with pinned
    Rust 1.85.1, authenticated SPI and static MSVC CRT, checks x86-64 PE format,
    then loads the plugin for the first time from an isolated PLUS installation.
    It exercises lifecycle and the public fixed-offset match q0/q1 regression.
-   A later full Windows claim needs broader route tests and binary import/export
-   audit. The Mac/Linux specialized full-CMG auto route remains out of scope
+   The September 26 driver also checks observation/individual inference, the
+   deletion-unit oracle, canonical-header exports and system-only imports.
+   The Mac/Linux specialized full-CMG auto route remains out of scope
    on Windows; generic diagonal/CMG match inference is the intended RC route.
-4. Collect tested bytes and sanitized evidence. The currently approved Windows
-   runner returns only a receipt, so tested-binary/evidence collection requires
-   a separately authorized bounded runner extension. Never bypass that runner,
+4. Collect tested bytes and sanitized evidence. The approved Windows runner
+   returns only a receipt. Build the Windows candidate in hosted CI, download
+   it, and transfer those exact bytes with a hash-bound input manifest through
+   the private runner. Its project receipt checks the installed candidate hash;
+   no binary retrieval or runner extension is needed. Record the transfer as
+   a snapshot, distinct from the clean source identity. Never bypass the runner,
    upload license material or collect raw Stata startup logs.
 5. Create an input manifest with schema `FEVC-BINARY-INPUTS-V1`, the exact
    `source_commit`, and the selected profile’s `binaries` rows. Each row names `name`, `sha256`,

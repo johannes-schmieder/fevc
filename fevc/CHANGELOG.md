@@ -1,5 +1,19 @@
 # Pending changes
 
+## Original deletion-unit mover eligibility — 2026-09-26
+
+- Count original declared match blocks for match-mode mover eligibility and
+  fixed-point support, including parallel blocks at pooled model employers.
+  Keep effect IDs separate from deletion IDs and freeze one-block stayer
+  eligibility before physical-observation augmentation. Default match and
+  observation-mode populations retain their meanings.
+- Apply deletion-unit support in Mata and Rust, including final graph
+  certification and supported match-component/projection inference. Native
+  readiness bit 15 protects users with older plugins: automatic requests may
+  use Mata, while strict requests require the updated plugin.
+- Add literal-refit, weighted/control, JLA, sample/partition, restoration,
+  failure and focused correlated-block Monte Carlo regressions.
+
 ## Applied help and example data — 2026-09-22
 
 - Shorten the help, place a runnable example first, explain the leave-out sample

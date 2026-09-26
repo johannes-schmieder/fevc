@@ -1,4 +1,21 @@
-# Current checkpoint — 2026-09-23
+# Current checkpoint — 2026-09-26
+
+## Deletion-unit mover integration (in progress)
+
+The owner authorized integrating the September 25 repair into main, completing
+Mata/Rust support, all-platform plugin builds and qualification, two-stage
+source/package publication, and removal of the original development worktree
+only after successful publication and installation verification.
+
+Source is integrated from the preserved worktree above `7167d23a`. Match-mode
+population and graph support count original deletion units. Rust final graph
+and component-inference eligibility are updated; readiness bit 15 protects old
+plugins. Independent graph/refit and public native regressions are in progress.
+The committed plugin binaries still have their earlier source identities.
+
+Current implementation and evidence: [integration record](docs/DELETION_UNIT_MOVERS_2026-09-26.md).
+The prior [Mata repair notes](docs/POOLED_DELETION_2026-09-25.md) retain their
+development results and failures; they do not qualify this integration.
 
 ## Main-only installation
 

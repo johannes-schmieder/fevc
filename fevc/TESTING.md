@@ -103,6 +103,16 @@ substantial package or numerical change. Both include routing, sample,
 restoration, result-equivalence, and typed-failure coverage appropriate to
 their profile.
 
+`tests/stata/test_pooled_deletion.do` checks original deletion-unit mover
+classification against literal block-deletion QR fits, including one-firm
+multi-block workers, physical copies, target weights, controls, both populations
+and nuisance modes, and positive/indefinite projection covariances. Current
+plugins run the native exact and JLA routes; older plugins must fall back or
+withhold before preparation. The full profile also checks 256 fixed-seed outcome
+draws with every attempt counted. The native match-component test separately
+requires q0/q1 success for the new mover case. Rust's `deletion_unit_graph`
+test independently enumerates 728 small multigraphs and checks the fixed point.
+
 ## Manual referee checks
 
 The self-contained Stata entry points under [`tests/manual/`](tests/manual/)

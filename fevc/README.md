@@ -115,3 +115,14 @@ The companion paper, *fevc: Leave-out bias-corrected variance decompositions in
 Stata* (Schmieder, September 2026), explains the method and sample construction.
 
 The package code is GPL-3.0-only; see [licensing](../CODE_LICENSE.md).
+
+For `deletion(match)`, movers have more than one distinct original deletion
+unit: supplied `deletionid()` values, or worker--firm pairs by default. Actual
+employers pooled into one model firm can therefore remain separate deletion
+blocks. Errors must be independent across those blocks, and every retained
+deletion must preserve identification. True one-block stayers retain the
+separate observation correction under `stayers(both)`. Observation-mode
+populations are unchanged. Mata and current Rust plugins support this partition,
+including the existing projection and fixed-offset match-inference routes.
+Older plugins require an update for strict native requests; automatic requests
+can fall back to Mata before preparation.

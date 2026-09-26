@@ -201,7 +201,10 @@ def test_prep_sem1_is_confined_to_the_eligible_compressed_boundary() -> None:
     assert "`prep_mata_semantic'" in command_prepare
     assert "6 + (\"`probeorder'\" != \"\")" in ADO_SOURCE
     assert "`scale_prepare_diagnostics'[1,16]" in ADO_SOURCE
-    assert ADO_SOURCE.count("local prep_semantic_group_calls =") == 4
+    # Zero initialization shares the bounded-program-size preparation loop.
+    assert "semantic_group_calls sort_calls" in ADO_SOURCE
+    assert "local prep_`field' = 0" in ADO_SOURCE
+    assert ADO_SOURCE.count("local prep_semantic_group_calls =") == 3
 
 
 def test_cells_deletion_units_and_target_strata_are_independent() -> None:

@@ -100,16 +100,28 @@ according to the dependence in your data.
 {cmd:deletionid()} is needed only when your match units differ from the
 default worker-firm pairs, for example when distinct employment spells at
 the same firm are treated as independent matches. Each ID must belong to
-one worker-firm pair. It applies to match deletion.
+one worker-firm pair. It applies to match deletion. A match-mode mover has
+more than one distinct original deletion ID, even if those IDs share a model
+firm (for example, pooled employers). Without this option, movers still have
+more than one firm. Different IDs assume independent error blocks; repeated
+spells with the same ID remain one block.
 
 {phang}
-{cmd:stayers(both)}, the default, includes movers and eligible workers who
-never change firms. With match deletion, stayer contributions use a separate
+{cmd:stayers(both)}, the default, includes movers and eligible stayers.
+Match-mode stayers have one original deletion unit; observation-mode stayers
+have one model firm. With match deletion, stayer contributions use a separate
 observation-level correction and are {it:not} robust to within-match error
 correlation. Use {cmd:stayers(movers)} for a decomposition restricted to
 movers. This changes the estimation sample and the population described by
 the estimates. With observation deletion, all retained observations use the
-same observation-level correction.
+same observation-level correction. All retained deletions must preserve model
+and control identification; counting two blocks alone does not guarantee this.
+
+{phang}
+Mata and current Rust plugins support parallel declared blocks within a
+worker-firm cell. Older plugins use Mata under {cmd:backend(auto)}; strict
+{cmd:backend(rust)} or {cmd:rng(counter_v1)} requests require a plugin update.
+The usual inference restrictions continue to apply.
 
 {phang}
 {cmd:probes()} controls the precision of the default randomized calculation

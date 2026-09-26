@@ -164,7 +164,7 @@ def test_mata_api_guard_agrees() -> None:
     graph = (ROOT / "fevc_graph.mata").read_text(encoding="utf-8")
     assert "vckss_graph__api_level()" in graph
     assert "return(21)" in graph
-    assert "vckss-graph-api21-prep-map1-retained" in graph
+    assert "vckss-graph-api21-original-deletion-support" in graph
     solver = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
     assert "return(27)" in solver

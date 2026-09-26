@@ -39,6 +39,18 @@ Q32 allocation, rank, cancellation and deliberate-refinement tests.
 
 ## Routine source gates
 
+Match movers count distinct original deletion IDs, including parallel blocks
+at one model firm. `deletion_unit_graph.rs` independently enumerates all 728
+nonempty three-worker/two-firm multigraphs and checks retained rows against
+literal vertex/edge removal. `test_pooled_deletion.do` checks physical-copy
+and deleted-QR oracles, both populations and nuisance modes, weighted controls,
+positive projection covariance, exact and randomized native routes, and old
+plugin fallback before preparation/RNG. Its `full` profile adds 256 outcome
+draws. Run it in native qualification and isolated installations. The match
+component suite separately requires q0/q1 success for a one-firm worker with
+twenty original blocks. Readiness bit 15 is additive; observation semantics,
+worker-articulation pruning, rank/residual gates and ABI layouts stay fixed.
+
 The additive native V6 execution boundary has dedicated `generic_execution`
 FFI suites. Freeze the 304/328-byte request and 160-byte work receipt, validate
 short buffers/headers/reserved fields, stale generations and request/solver

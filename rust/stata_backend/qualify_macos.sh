@@ -380,6 +380,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
+  "${package_dir}/tests/stata/test_pooled_deletion.do"
   "${package_dir}/tests/stata/test_rust_component_inference.do"
   "${package_dir}/tests/stata/test_rust_match_component_inference.do"
   "${package_dir}/tests/stata/test_rust_individual_inference.do"
@@ -800,6 +801,9 @@ run_stata_case arm64 public-generic \
 run_stata_case arm64 public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${test_package_dir}"
+run_stata_case arm64 public-pooled-deletion \
+  "${package_dir}/tests/stata/test_pooled_deletion.do" \
+  'PASS test_pooled_deletion.do' "${test_package_dir}"
 run_stata_case arm64 public-component-inference \
   "${package_dir}/tests/stata/test_rust_component_inference.do" \
   'PASS test_rust_component_inference.do' "${test_package_dir}"
@@ -866,6 +870,9 @@ run_stata_case arm64 universal-public-generic \
 run_stata_case arm64 universal-public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-pooled-deletion \
+  "${package_dir}/tests/stata/test_pooled_deletion.do" \
+  'PASS test_pooled_deletion.do' "${universal_test_package_dir}"
 arm64_install_root=${temporary_root}/install-arm64
 mkdir -p "${arm64_install_root}"
 run_stata_case arm64 clean-install \
@@ -944,6 +951,9 @@ run_stata_case x86_64 public-runtime-reporting \
   run_stata_case x86_64 public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${test_package_dir}"
+  run_stata_case x86_64 public-pooled-deletion \
+    "${package_dir}/tests/stata/test_pooled_deletion.do" \
+    'PASS test_pooled_deletion.do' "${test_package_dir}"
   run_stata_case x86_64 public-component-inference \
     "${package_dir}/tests/stata/test_rust_component_inference.do" \
     'PASS test_rust_component_inference.do' "${test_package_dir}"
@@ -1010,6 +1020,9 @@ run_stata_case x86_64 universal-public-runtime-reporting \
   run_stata_case x86_64 universal-public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-pooled-deletion \
+    "${package_dir}/tests/stata/test_pooled_deletion.do" \
+    'PASS test_pooled_deletion.do' "${universal_test_package_dir}"
   x86_64_install_root=${temporary_root}/install-x86_64
   mkdir -p "${x86_64_install_root}"
   run_stata_case x86_64 clean-install \
@@ -1092,6 +1105,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'VCKSS_MACOS_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=%s\n' "${classification}"
   printf 'scope=%s\n' "${qualification_scope_text}"
+  printf 'parallel_deletion_policy=deletion-unit mover support; older-runtime preflight fallback/withholding; independent pooled oracle on each tested artifact/architecture\n'
   printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-and-generic-jla-stayer-hybrid-backend-rust-stayers-both-combined-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-counter-v1-lifecycle;public-generic-jla-observation-component-inference-structured-common-leverage-q0-q1-spectrum-counter-v1;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
   printf 'excluded_claims=public-release,Windows,Linux,native-Intel,representative-scale,human-license-provenance-review\n'
   printf 'tested_match_component_route=public-generic-jla-fixedoffset-movers-match-q0-q1-structured-common-leverage-diagonal-cmg-counter-v1-frequency-targetweight-declared-match-id-unit-receipt-v1\n'

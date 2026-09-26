@@ -1,10 +1,23 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-12",
+  "updated": "2026-09-26",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Qualified rows record capability evidence only for the cited sources and regimes. The current symmetric-stayer-option checkpoint passes local arm64/Rosetta thin/universal and isolated-install tests at native manifest cdf9efc0e77a9afeb350045580b259aa7ba83ebfc160dc735b0033a475e84632 (188 inputs); see STAYER_OPTIONS_2026-09-12.md for population compatibility and scope. The preceding macOS deletion-symmetry checkpoint is an uncommitted worktree above fbf8dcd, native manifest d66523c875156118999bcd420879c4dca0bc552f345aafb742b2b56985186ba1. It passes arm64/Rosetta thin/universal qualification; see DELETION_SYMMETRY_2026-09-12.md for final documentation compatibility and bounded both-mode SCC checks. Linux smoke and point comparisons do not extend inference/platform claims; prior full Linux batching/queue qualification is bound to 0ec6f3f. Windows qualification and the complete five-binary archive remain pending. The retained alpha_required field describes prior alpha gates, not authorization to release the current RC.",
-  "statuses": ["qualified", "implemented", "pending", "deferred"],
+  "qualification_scope": "Deletion-unit mover semantics are implemented in Mata and Rust, including parallel declared blocks. All-platform qualification is in progress; older native runtimes retain preflight fallback/withholding. See DELETION_UNIT_MOVERS_2026-09-26.md. Qualified rows record capability evidence only for the cited sources and regimes. The current symmetric-stayer-option checkpoint passes local arm64/Rosetta thin/universal and isolated-install tests at native manifest cdf9efc0e77a9afeb350045580b259aa7ba83ebfc160dc735b0033a475e84632 (188 inputs); see STAYER_OPTIONS_2026-09-12.md for population compatibility and scope. The preceding macOS deletion-symmetry checkpoint is an uncommitted worktree above fbf8dcd, native manifest d66523c875156118999bcd420879c4dca0bc552f345aafb742b2b56985186ba1. It passes arm64/Rosetta thin/universal qualification; see DELETION_SYMMETRY_2026-09-12.md for final documentation compatibility and bounded both-mode SCC checks. Linux smoke and point comparisons do not extend inference/platform claims; prior full Linux batching/queue qualification is bound to 0ec6f3f. Windows qualification and the complete five-binary archive remain pending. The retained alpha_required field describes prior alpha gates, not authorization to release the current RC.",
+  "statuses": [
+    "qualified",
+    "implemented",
+    "pending",
+    "deferred"
+  ],
   "rows": [
+    {
+      "id": "parallel-deletion-blocks",
+      "surface": "Parallel declared match blocks at one coefficient cell",
+      "mata": "implemented",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "Original deletion-unit mover classification, fixed-point/final support and existing inference routes; native readiness bit 15. All-platform qualification pending. DELETION_UNIT_MOVERS_2026-09-26.md."
+    },
     {
       "id": "exact-movers",
       "surface": "Exact, movers",

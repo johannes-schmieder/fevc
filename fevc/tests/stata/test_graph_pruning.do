@@ -140,7 +140,7 @@ assert e(firm_levels) == 2
 matrix map_counts = e(prep_boundary_counts)
 assert map_counts[1,3] == 0
 assert map_counts[1,4] == 0
-assert map_counts[1,5] == 1
+assert map_counts[1,5] == 3
 assert map_counts[1,8] == 2
 assert map_counts[1,10] == 6
 assert map_counts[1,11] == e(N_retained)

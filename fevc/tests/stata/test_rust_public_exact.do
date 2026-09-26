@@ -14,7 +14,8 @@ set obs 8
 generate long obsid = _n
 generate long worker = cond(_n <= 4, 1, 2)
 generate long firm = cond(inlist(_n, 1, 2, 5, 6), 1, 2)
-generate long deletion_id = _n
+// Native exact is qualified for one declared block per coefficient cell.
+egen long deletion_id = group(worker firm)
 generate byte category = mod(_n,2)
 generate byte eligible = 1
 generate double y = .
@@ -321,7 +322,7 @@ assert `"`e(withholding_status)'"' == "NONESTIMABLE_DELETION"
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
-generate long large_block = firm
+generate long large_block = deletion_id
 capture quietly fevc y, worker(worker) firm(firm)             ///
     deletion(match) deletionid(large_block) algorithm(exact)         ///
     backend(rust) blocksize_limit(1) stayers(movers) nodisplay

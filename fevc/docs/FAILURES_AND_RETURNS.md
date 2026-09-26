@@ -403,3 +403,11 @@ may reject earlier through its existing resource-admission status. Warning,
 off and omitted-budget behavior is unchanged. A user interrupt during control
 preparation returns Stata code 1, clears estimates, and restores ordinary
 caller state; it is not `MATA_RUNTIME_FAILED` or control-basis ambiguity.
+
+`RUST_PARALLEL_DELETION_UNSUPPORTED` means the complete-case supplied match
+partition has distinct blocks at one coefficient cell and the loaded plugin
+lacks deletion-unit mover readiness (bit 15). Update the plugin to use Rust. Automatic point routing records
+`e(backend_fallback)=1`, the same reason, and phase `preflight`, and uses Mata.
+Strict Rust or Counter requests withhold before native preparation/RNG.
+Match-mode `e(N_stayers)`/`e(N_stayer_rows)` count original one-block histories;
+observation-mode counts still use original one-firm histories.

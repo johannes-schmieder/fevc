@@ -22,32 +22,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Standalone Rust tests failed' }
 & cargo +1.85.1 build --manifest-path rust/stata_backend/Cargo.toml --locked --release
 if ($LASTEXITCODE -ne 0) { throw 'Windows compilation failed' }
 $library = Join-Path $root 'rust/stata_backend/target/release/vckss_stata.dll'
-$bytes = [IO.File]::ReadAllBytes($library)
-if ($bytes.Length -lt 256 -or $bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw 'Not a PE binary' }
-$pe = [BitConverter]::ToInt32($bytes, 60)
-if ($pe -lt 64 -or $pe + 26 -gt $bytes.Length -or
-    [BitConverter]::ToUInt32($bytes, $pe) -ne 0x00004550 -or
-    [BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664 -or
-    [BitConverter]::ToUInt16($bytes, $pe + 24) -ne 0x20b) { throw 'Not x86-64 PE32+' }
-$exports = (& dumpbin /exports $library | Out-String)
-if ($LASTEXITCODE -ne 0) { throw 'Export inspection failed' }
-$header = Get-Content -Raw 'rust/stata_backend/include/vckss_rust.h'
-$symbols = @([regex]::Matches($header, '\b(vckss_rust_[A-Za-z0-9_]+)\s*\(') |
-    ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique) + @('pginit', 'stata_call')
-if ($symbols.Count -le 2) { throw 'No Rust exports parsed' }
-foreach ($symbol in $symbols) {
-    if ($exports -notmatch ('(?m)\b' + [regex]::Escape($symbol) + '\b')) { throw "Missing export: $symbol" }
-}
-$imports = (& dumpbin /dependents $library | Out-String)
-if ($LASTEXITCODE -ne 0) { throw 'Dependency inspection failed' }
-$dependencies = @([regex]::Matches($imports, '(?im)^\s*([A-Za-z0-9_.-]+\.dll)\s*$') |
-    ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
-if ($dependencies.Count -eq 0) { throw 'No dependencies parsed' }
-foreach ($dependency in $dependencies) {
-    if ($dependency -notmatch '^(?i:KERNEL32|ADVAPI32|WS2_32|USERENV|BCRYPT|NTDLL|api-ms-win-core-[A-Za-z0-9_-]+)\.dll$') {
-        throw "Unexpected dependency (static CRT required): $dependency"
-    }
-}
+$audit = & ./rust/stata_backend/audit_windows_plugin.ps1 -Binary $library
+$symbols = $audit.exports
+$dependencies = $audit.dependencies
 $output = Join-Path $root 'windows-test-output'
 if (Test-Path $output) { throw 'Output directory already exists' }
 $package = Join-Path $output 'fevc-windows-test'

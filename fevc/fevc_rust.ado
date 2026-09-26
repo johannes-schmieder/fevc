@@ -59,6 +59,7 @@ program define fevc_rust, rclass
         }
         // Old FFI-only builds advertise native V6 but omit this shim field.
         // Drop any stale scalar first so absence cannot inherit readiness.
+        capture scalar drop __vckss_rust_core_flags
         capture scalar drop __vckss_rust_progress_api
         capture scalar drop __vckss_rust_execution_api
         capture scalar drop __vckss_rust_exact_api

@@ -14,7 +14,7 @@ real scalar vckss_graph__api_level()
 
 string scalar vckss_graph__build_id()
 {
-    return("vckss-graph-api21-prep-map1-retained")
+    return("vckss-graph-api21-original-deletion-support")
 }
 
 struct vckss_graph__dense_map
@@ -253,7 +253,7 @@ void vckss_graph__stata_prune(
     struct vckss_graph__bridge_result scalar bridges, final_bridges
     real colvector worker, firm, frequency, deletion_id, sample, sample_index
     real colvector deletion_order, deletion_sorted, index, active
-    real colvector worker_firms, remove_unit, diagnostics, legacy
+    real colvector worker_units, remove_unit, diagnostics, legacy
     real matrix deletion_panel, numeric_input
     real scalar n, workers, group, begin, finish, row, removed
     real scalar initial_components, initial_component_rows, mover_input_rows
@@ -368,8 +368,9 @@ void vckss_graph__stata_prune(
     initial_components = component.components
     initial_component_rows = sum(active)
 
-    worker_firms = vckss__worker_firm_counts(worker,firm,active)
-    active = active :* (worker_firms[worker] :> 1)
+    // Count original deletion units, including parallel coefficient-cell edges.
+    worker_units = vckss__worker_firm_counts(worker,deletion_id,active)
+    active = active :* (worker_units[worker] :> 1)
     mover_input_rows = sum(active)
     if (mover_input_rows == 0) {
         st_local(status_local,"NO_MOVER_SAMPLE")
@@ -409,10 +410,10 @@ void vckss_graph__stata_prune(
         active = active:*component.keep
         if (sum(active) == 0) break
 
-        worker_firms = vckss__worker_firm_counts(worker,firm,active)
-        removed = sum(worker_firms :== 1)
+        worker_units = vckss__worker_firm_counts(worker,deletion_id,active)
+        removed = sum(worker_units :== 1)
         if (removed > 0) {
-            active = active :* (worker_firms[worker] :> 1)
+            active = active :* (worker_units[worker] :> 1)
             insufficient_removed = insufficient_removed+removed
             pruning_iterations = pruning_iterations+1
             fixedpoint_iterations = fixedpoint_iterations+1
@@ -475,6 +476,15 @@ void vckss_graph__stata_prune(
         st_local(status_local,"GRAPH_BRIDGE_CERTIFICATE_FAILED")
         st_local(message_local,
             "final retained deletion-unit multigraph still contains a bridge")
+        return
+    }
+
+    worker_units = vckss__worker_firm_counts(worker,deletion_id,active)
+    articulation = vckss__worker_articulations(worker,firm,active)
+    if (sum(worker_units :== 1) != 0 | articulation.count != 0) {
+        st_local(status_local,"GRAPH_CERTIFICATE_FAILED")
+        st_local(message_local,
+            "final retained graph contains a one-block worker or worker articulation")
         return
     }
 

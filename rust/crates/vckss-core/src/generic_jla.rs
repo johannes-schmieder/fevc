@@ -2637,15 +2637,20 @@ fn validate_component_inference_request(
             "component inference requires an explicit diagonal or CMG solver route",
         ));
     }
-    let mut first_firm = vec![None; problem.workers()];
+    // Match movers need independent deletion blocks, even when their model
+    // firm is constant. Observation inference retains its firm-based scope.
+    let history = match options.deletion {
+        DeletionMode::Match => &problem.row_deletion,
+        DeletionMode::Observation => &problem.row_firm,
+    };
+    let mut first_unit = vec![None; problem.workers()];
     let mut mover = vec![false; problem.workers()];
-    for row in 0..problem.outcome.len() {
+    for (row, &unit) in history.iter().enumerate() {
         let worker = problem.row_worker[row] as usize;
-        let firm = problem.row_firm[row];
-        if let Some(first) = first_firm[worker] {
-            mover[worker] |= first != firm;
+        if let Some(first) = first_unit[worker] {
+            mover[worker] |= first != unit;
         } else {
-            first_firm[worker] = Some(firm);
+            first_unit[worker] = Some(unit);
         }
     }
     if mover.iter().any(|value| !value) {

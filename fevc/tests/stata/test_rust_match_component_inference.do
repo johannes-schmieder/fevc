@@ -131,6 +131,28 @@ assert e(inference_independent_units)==401
 assert e(deletion_units)==401
 replace match = 1 if order==2
 
+// Twenty original matches at one model firm still form a mover history.
+// Both inference references must retain that worker and all original units.
+preserve
+replace firm=0 if worker==0
+replace outcome=worker-.8*firm+shock
+quietly fevc outcome [fw=copies], `point'
+matrix pooled_point=e(results)
+foreach reference in highrank q1 {
+    quietly fevc outcome [fw=copies], `point' `infer' inference(`reference')
+    assert e(sample)==1
+    assert e(inference_independent_units)==400
+    assert e(deletion_units)==400
+    assert mreldif(pooled_point,e(results))==0
+    assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
+    if "`reference'"=="q1" assert e(q1_computed_targets)>0
+    else {
+        matrix pooled_V=e(V)
+        assert rowsof(pooled_V)==4 & colsof(pooled_V)==4
+    }
+}
+restore
+
 // Unsupported combinations stop in capability preflight, before native work.
 foreach change in joint both autoengine omittedengine omitteddeletion omittednuisance omittedstayers {
     if "`change'"=="joint" local invalid : subinstr local point "nuisance(fixedoffset)" "nuisance(joint)"

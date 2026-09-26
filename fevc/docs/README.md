@@ -27,6 +27,7 @@ and the installed `help fevc`.
 
 - [Contributing](../../CONTRIBUTING.md) and [testing](../TESTING.md).
 - [Current checkpoint](../PLAN.md).
+- [Deletion-unit mover integration](DELETION_UNIT_MOVERS_2026-09-26.md).
 - [Development acceptance policy](development_acceptance_v1.json).
 - [Rust backend](../../rust/README.md) and [CMG component](../cmg/README.md).
 - [Benchmark harnesses](../benchmarks/README.md).

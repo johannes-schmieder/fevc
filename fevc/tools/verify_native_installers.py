@@ -104,6 +104,7 @@ assert `"`r(datasignature)'"' == `"`before'"'
 estat decomposition, full
 help fevc
 do "{test_root}/fevc/tests/stata/test_rust_match_component_inference.do" "{plus}/f"
+do "{test_root}/fevc/tests/stata/test_pooled_deletion.do" "{plus}/f"
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 display "FEVC_INSTALL_RUNTIME Stata=`c(stata_version)' machine=`c(machine_type)'"
@@ -116,7 +117,8 @@ exit 0
                 transcript = sanitize(completed.stdout)
                 (output / (label + '.sanitized.log')).write_text(transcript)
                 if (completed.returncode or 'FEVC PUBLIC INSTALL PASS' not in completed.stdout
-                        or 'PASS test_rust_match_component_inference.do' not in completed.stdout):
+                        or 'PASS test_rust_match_component_inference.do' not in completed.stdout
+                        or 'PASS test_pooled_deletion.do' not in completed.stdout):
                     raise RuntimeError('Stata installation checks failed: ' + label)
                 assert not list(plus.rglob('_fevc*.ado')), 'obsolete package helpers installed'
                 inventory = []
@@ -129,7 +131,8 @@ exit 0
                     'installed_files': inventory, 'stata_process_rc': completed.returncode,
                     'transcript_sha256': sha(transcript.encode()),
                     'checks': ['native progress API 2', 'README example', 'caller data restoration',
-                               'decomposition', 'help', 'installed match q0/q1', 'idle native registry',
+                               'decomposition', 'help', 'installed match q0/q1',
+                               'installed deletion-unit mover regression', 'idle native registry',
                                'all installed file hashes']})
                 (output / 'verification.json').write_text(json.dumps({
                     'status': 'IN_PROGRESS', 'results': results}, indent=2) + '\n')

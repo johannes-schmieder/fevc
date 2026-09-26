@@ -39,6 +39,10 @@ program define fevc__failure_guidance, rclass
         local reason "The loaded Rust runtime did not satisfy the versioned transport or request-capability contract."
         local suggestion "Restart Stata and reinstall one complete qualified build; use backend(mata) only as a new explicit request, never as post-preparation fallback."
     }
+    else if "`failure_status'" == "RUST_PARALLEL_DELETION_UNSUPPORTED" {
+        local reason "The loaded native plugin lacks deletion-unit mover support for parallel declared blocks."
+        local suggestion "Update the Rust plugin, or use backend(mata) with rng(stata). Eligible automatic requests use Mata before native preparation."
+    }
     else if "`failure_status'" == "RUST_OPTION_UNSUPPORTED" {
         local reason "The effective request is outside the capability surface admitted by the loaded Rust runtime."
         local suggestion "Use backend(mata), or choose a documented Rust tuple; do not weaken the model, validation gates, or RNG contract merely to enter a native route."

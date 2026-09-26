@@ -159,9 +159,18 @@ gates.
 
 ## Sample and dependence contract
 
-Match mode first constructs the certified mover graph. The command selects a
+Match mode freezes mover eligibility on the complete-case input: a worker
+must have more than one distinct original deletion unit. These are supplied
+`deletionid()` values, or worker--firm pairs when the option is omitted.
+Distinct blocks at the same coefficient cell count separately; repeated
+observations or spells carrying the same ID count once. IDs manufactured later
+for eligible-stayer observation deletion never determine this classification.
+`e(N_stayers)` and `e(N_stayer_rows)` describe original one-unit histories in
+match mode and original one-firm histories in observation mode.
+
+Match mode then constructs the certified mover graph. The command selects a
 largest connected worker--firm
-component, then iteratively removes insufficient histories and worker
+component, then iteratively removes histories with fewer than two retained deletion units and worker
 articulation vertices and retains the largest resulting component. Each
 distinct deletion ID is then represented as one edge in a deletion-unit
 multigraph. Distinct IDs at the same worker--firm coordinate are parallel
@@ -179,16 +188,23 @@ It is stronger than the graph condition needed for some individual
 deletion units. The exact and JLA backends still test every requested block
 for estimability, including failures introduced by controls.
 
+More than one block is necessary, not sufficient: the existing conservative
+worker-articulation rule and every post-deletion full/nuisance-rank gate still
+apply. Pooling actual employers into one model firm changes coefficient cells;
+it does not merge their declared deletion blocks or establish independence.
+
 Match deletion permits unrestricted dependence within a declared match and
 treats distinct declared matches as independent. It does not permit arbitrary
 dependence across all matches belonging to one worker.
 
 Both deletion modes default to `stayers(both)`. With match deletion the target
-population matches the KSS Matlab package. Let M denote the final
-mover rows. Eligible stayers are workers who were one-firm stayers in the
+population follows the KSS Matlab package when deletion units are ordinary
+worker--firm matches. Let M denote the final mover rows. Eligible stayers are
+workers with exactly one original deletion unit in the
 frozen complete-case sample, are attached to a retained mover firm, and have
 at least two literal physical observations. The command fits M and those
 stayers jointly and normalizes every target over their pooled target mass.
+Graph-dropped movers are never reclassified as original stayers.
 Mover matches are deleted as declared blocks; each eligible stayer is
 corrected by deleting one literal physical observation. The latter component
 is explicitly not match-robust. `stayers(movers)` opts out and restores a
@@ -233,3 +249,20 @@ The plug-in row, correction row, and their final difference must each be
 finite. A finite plug-in and finite correction do not by themselves authorize
 posting: overflow in `plugin-correction` is withheld as
 `NONFINITE_CORRECTED_TARGET`.
+
+## Parallel-block backend boundary
+
+Mata and Rust count original deletion units for match mover eligibility,
+active support during fixed-point pruning, and final certification. The existing
+worker-articulation restriction remains stronger than minimal individual-block
+identification; full-model and deleted-model rank checks remain mandatory.
+
+Native readiness bit 15 (`VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY`) advertises
+these semantics through the unchanged capability receipt. The public wrapper
+requires it for every complete-case partition containing parallel supplied
+blocks, including multi-firm workers whose support may change during pruning.
+Old plugins fall back to Mata only for eligible automatic requests, before
+preparation and estimator RNG. Strict Rust/Counter requests instead return
+`RUST_PARALLEL_DELETION_UNSUPPORTED`. Updated private preparation APIs use the
+same native graph selector. Existing ABI layouts and ordinary/default match
+and observation capabilities are unchanged.

@@ -37,16 +37,26 @@ $command = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 build --release --l
 & cmd.exe /d /s /c $command *>> $buildLog
 if ($LASTEXITCODE -ne 0) { throw 'Native build failed; preserve bounded compiler diagnostics' }
 $candidate = Join-Path $backend 'target/release/vckss_stata.dll'
-$bytes = [IO.File]::ReadAllBytes($candidate)
-if ($bytes.Length -lt 256 -or $bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw 'Not a PE candidate' }
-$pe = [BitConverter]::ToInt32($bytes, 60)
-if ($pe -lt 64 -or $pe + 26 -gt $bytes.Length -or
-    [BitConverter]::ToUInt32($bytes, $pe) -ne 0x00004550 -or
-    [BitConverter]::ToUInt16($bytes, $pe + 4) -ne 0x8664 -or
-    [BitConverter]::ToUInt16($bytes, $pe + 24) -ne 0x20b) { throw 'Not an x86-64 PE32+ candidate' }
+# When a CI candidate is supplied, qualify those exact distributed bytes.
+# The local build/tests still check the same pinned source independently.
+$identityPath = Join-Path $projectRoot 'windows-input-identity.json'
+$identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+if ($identity.PSObject.Properties.Name -contains 'candidate_sha256') {
+    if ($identity.candidate_sha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid candidate hash' }
+    $candidate = Join-Path $projectRoot 'windows-candidate/fevc_rust_windows_x64.plugin'
+    if ((Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant() -ne $identity.candidate_sha256) {
+        throw 'Transferred Windows candidate hash mismatch'
+    }
+}
 'pe_import_export' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
-& python.exe -E -s 'C:\WindowsCI\pe_audit.py' --binary $candidate --exports 'C:\WindowsCI\required_exports.json' *>> $buildLog
-if ($LASTEXITCODE -ne 0) { throw 'PE import/export audit failed' }
+$environment = & cmd.exe /d /s /c "`"$devcmd`" -arch=x64 -host_arch=x64 >nul && set"
+if ($LASTEXITCODE -ne 0) { throw 'MSVC audit environment unavailable' }
+foreach ($line in $environment) {
+    if ($line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+        [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
+    }
+}
+$audit = & ./rust/stata_backend/audit_windows_plugin.ps1 -Binary $candidate
 foreach ($test in @(@('rust_workspace','rust/Cargo.toml'), @('rust_backend','rust/stata_backend/Cargo.toml'))) {
     $test[0] | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
     $testCommand = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 test --workspace --all-targets --locked --manifest-path {1}"' -f $devcmd, $test[1]
@@ -73,6 +83,7 @@ $manifest + "f $plugin" | Set-Content -Encoding ASCII (Join-Path $stage 'fevc.pk
 $digest = (Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
 @{schema='FEVC-WINDOWS-BUILD-V1'; target='x86_64-pc-windows-msvc';
   binary=$plugin; sha256=$digest; crt='static'; pe_audit='PASS';
-  toolchain='1.85.1'; status='BUILD_ONLY_NOT_QUALIFICATION'} |
+  toolchain='1.85.1'; exports=$audit.exports; dependencies=$audit.dependencies;
+  status='BUILD_ONLY_NOT_QUALIFICATION'} |
   ConvertTo-Json | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-build.json')
 'FEVC_WINDOWS_BUILD=PASS' | Set-Content -Encoding ASCII $statusPath

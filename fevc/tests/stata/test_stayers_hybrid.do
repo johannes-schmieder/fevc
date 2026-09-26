@@ -32,13 +32,13 @@ forvalues row=1/24 {
 // Two eligible stayers on retained mover firms.
 quietly replace worker = 100 in 25/26
 quietly replace firm = 0 in 25/26
-quietly replace match_id = 1000+_n in 25/26
+quietly replace match_id = 1100 in 25/26
 quietly replace c1 = -.4+.8*(_n-25) in 25/26
 quietly replace c2 = _n==26 in 25/26
 quietly replace frequency = 2 in 25
 quietly replace worker = 101 in 27/28
 quietly replace firm = 2 in 27/28
-quietly replace match_id = 1000+_n in 27/28
+quietly replace match_id = 1101 in 27/28
 quietly replace c1 = -.3+.6*(_n-27) in 27/28
 quietly replace c2 = _n==28 in 27/28
 // One physical-copy singleton on a retained firm: deliberately ineligible.
@@ -50,7 +50,7 @@ quietly replace c2 = 0 in 29
 // One stayer and one mover in a smaller, unretained firm component.
 quietly replace worker = 103 in 30/31
 quietly replace firm = 9 in 30/31
-quietly replace match_id = 1000+_n in 30/31
+quietly replace match_id = 1103 in 30/31
 quietly replace c1 = -.1+.2*(_n-30) in 30/31
 quietly replace c2 = _n==31 in 30/31
 quietly replace worker = 200 in 32/33

@@ -290,12 +290,12 @@ fn select_match_deletion_graph_standard_with_interrupt(
     receipt.initial_component_rows = as_u64(initial.retained_rows, "component row count")?;
     intersect_active(&mut active, &initial.keep, interrupt)?;
 
-    let worker_firms = distinct_firm_counts(input, &active, interrupt)?;
+    let worker_units = distinct_deletion_counts(input, &active, interrupt)?;
     for (row, keep) in active.iter_mut().enumerate() {
         checkpoint_chunk(interrupt, row, "graph_mover_filter")?;
         if *keep {
             let worker = usize::try_from(input.worker[row]).expect("dense worker");
-            *keep = worker_firms[worker] > 1;
+            *keep = worker_units[worker] > 1;
         }
     }
     let mover_rows = count_true(&active, interrupt, "graph_mover_count")?;
@@ -352,9 +352,9 @@ fn select_match_deletion_graph_standard_with_interrupt(
             ));
         }
 
-        let worker_firms = distinct_firm_counts(input, &active, interrupt)?;
-        let mut insufficient = Vec::with_capacity(worker_firms.len());
-        for (worker, &count) in worker_firms.iter().enumerate() {
+        let worker_units = distinct_deletion_counts(input, &active, interrupt)?;
+        let mut insufficient = Vec::with_capacity(worker_units.len());
+        for (worker, &count) in worker_units.iter().enumerate() {
             checkpoint_chunk(interrupt, worker, "graph_degree_scan")?;
             insufficient.push(count == 1);
         }
@@ -462,17 +462,17 @@ fn select_match_deletion_graph_standard_with_interrupt(
             "final retained graph still contains a worker articulation",
         ));
     }
-    let final_worker_firms = distinct_firm_counts(input, &active, interrupt)?;
-    let mut one_firm = false;
-    for (worker, &count) in final_worker_firms.iter().enumerate() {
+    let final_worker_units = distinct_deletion_counts(input, &active, interrupt)?;
+    let mut one_block = false;
+    for (worker, &count) in final_worker_units.iter().enumerate() {
         checkpoint_chunk(interrupt, worker, "graph_final_degree_scan")?;
-        one_firm |= count == 1;
+        one_block |= count == 1;
     }
-    if one_firm {
+    if one_block {
         return Err(BackendError::new(
             ErrorCode::GraphCertificateFailed,
             "graph",
-            "final retained graph still contains a one-firm worker",
+            "final retained graph still contains a one-deletion-unit worker",
         ));
     }
 
@@ -788,21 +788,21 @@ fn coordinate_graph(
     })
 }
 
-fn distinct_firm_counts(
+fn distinct_deletion_counts(
     input: &CanonicalInput,
     active: &[bool],
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<usize>> {
     let mut coordinates = BTreeSet::new();
     for (row, &keep) in active.iter().enumerate() {
-        checkpoint_chunk(interrupt, row, "graph_distinct_firms")?;
+        checkpoint_chunk(interrupt, row, "graph_distinct_deletions")?;
         if keep {
-            coordinates.insert((input.worker[row], input.firm[row]));
+            coordinates.insert((input.worker[row], input.deletion[row]));
         }
     }
     let mut counts = vec![0_usize; input.workers()];
     for (coordinate, (worker, _)) in coordinates.into_iter().enumerate() {
-        checkpoint_chunk(interrupt, coordinate, "graph_distinct_firm_consume")?;
+        checkpoint_chunk(interrupt, coordinate, "graph_distinct_deletion_consume")?;
         counts[usize::try_from(worker).expect("dense worker")] += 1;
     }
     Ok(counts)
@@ -1306,6 +1306,38 @@ mod tests {
     }
 
     #[test]
+    fn match_movers_count_blocks_even_at_one_firm() {
+        let input = canonical_with_frequency(&[
+            (1, 1, 1, 1),
+            (1, 2, 2, 1),
+            (2, 1, 3, 1),
+            (2, 2, 4, 1),
+            (3, 1, 5, 2),
+            (3, 1, 6, 1),
+            (3, 1, 5, 3),
+            (4, 1, 7, 5),
+            (4, 1, 7, 2),
+        ]);
+        let selected = select_match_deletion_graph(&input).expect("parallel-block mover");
+        assert_eq!(
+            selected.active,
+            vec![true, true, true, true, true, true, true, false, false]
+        );
+        assert_eq!(selected.receipt.mover_input_rows, 7);
+        assert_eq!(selected.receipt.retained_deletion_edges, 6);
+        assert_eq!(selected.receipt.retained_physical_mass, 10);
+    }
+
+    #[test]
+    fn one_firm_parallel_blocks_pass_the_final_graph_certificate() {
+        // Graph support is distinct from the estimator's two-firm target gate.
+        let input = canonical(&[(1, 1, 1), (1, 1, 2), (2, 1, 3), (2, 1, 4)]);
+        let selected = select_match_deletion_graph(&input).expect("parallel edges survive");
+        assert_eq!(selected.active, vec![true; 4]);
+        assert_eq!(selected.receipt.retained_deletion_edges, 4);
+    }
+
+    #[test]
     fn firm_count_precedes_physical_mass_in_component_rank() {
         let input = canonical_with_frequency(&[
             (1, 1, 1, 100),
@@ -1383,8 +1415,8 @@ mod tests {
         let input = canonical(&rows);
         let active = vec![true; ITEMS];
 
-        let mut interrupt = BreakOnPhase::new("graph_distinct_firm_consume", 2);
-        let error = distinct_firm_counts(&input, &active, &mut interrupt)
+        let mut interrupt = BreakOnPhase::new("graph_distinct_deletion_consume", 2);
+        let error = distinct_deletion_counts(&input, &active, &mut interrupt)
             .expect_err("coordinate consumption must break within bounded work");
         assert_eq!(error.code, ErrorCode::UserBreak);
         assert_eq!(interrupt.hits, 2);

@@ -75,7 +75,7 @@ if `"`install_mode'"' == "qualified" {
         test_rust_execution_paths.do                          ///
         test_stayer_option_symmetry.do                        ///
         test_rust_public_exact.do test_rust_public_generic.do   ///
-        test_stayers_hybrid.do test_rust_component_inference.do   ///
+        test_stayers_hybrid.do test_pooled_deletion.do test_rust_component_inference.do   ///
         test_rust_match_component_inference.do test_rust_individual_inference.do {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'
@@ -88,7 +88,7 @@ if `"`install_mode'"' == "qualified" {
     generate long obsid = _n
     generate long worker = cond(_n<=4,1,2)
     generate long firm = cond(inlist(_n,1,2,5,6),1,2)
-    generate long deletion_id = _n
+    egen long deletion_id = group(worker firm)
     generate double y = worker-firm+.05*obsid
     generate byte frequency = 1
     generate double target = 1

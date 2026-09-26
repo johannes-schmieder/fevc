@@ -184,13 +184,13 @@ program define fevc__rust_post_stayer_hybrid, eclass sortpreserve
     ereturn scalar memory_forecast_bytes = `command_memory'
     ereturn local stayer_hybrid_status "CONVERGED"
     ereturn local stayer_hybrid_target_population                   ///
-        "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+        "retained movers plus eligible original one-block stayers attached to retained mover firms"
     ereturn local stayer_hybrid_deletion                            ///
         "mover matches plus stayer physical observations"
     ereturn local stayer_hybrid_assumption                          ///
         "mover correction is match-robust; stayer correction is not match-robust"
     ereturn local stayer_hybrid_sample_rule                         ///
-        "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+        "original one-block stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
     ereturn local stayer_hybrid_esample                             ///
         "e(sample) marks retained movers plus eligible attached stayers"
     ereturn local stayer_hybrid_targetweight                        ///

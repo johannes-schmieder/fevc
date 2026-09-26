@@ -2803,13 +2803,13 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                     "MOVERS_FIXED_POINT_PLUS_ELIGIBLE_ATTACHED_STAYERS"
                 ereturn local stayer_hybrid_status "CONVERGED"
                 ereturn local stayer_hybrid_target_population        ///
-                    "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+                    "retained movers plus eligible original one-block stayers attached to retained mover firms"
                 ereturn local stayer_hybrid_deletion                 ///
                     "mover matches plus stayer physical observations"
                 ereturn local stayer_hybrid_assumption               ///
                     "mover correction is match-robust; stayer correction is not match-robust"
                 ereturn local stayer_hybrid_sample_rule              ///
-                    "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+                    "original one-block stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
                 ereturn local stayer_hybrid_esample                  ///
                     "e(sample) marks retained movers plus eligible attached stayers"
                 ereturn local stayer_hybrid_targetweight             ///
@@ -4089,13 +4089,13 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `stayers_code'==2 {
         ereturn local stayer_hybrid_status "CONVERGED"
         ereturn local stayer_hybrid_target_population             ///
-            "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+            "retained movers plus eligible original one-block stayers attached to retained mover firms"
         ereturn local stayer_hybrid_deletion                       ///
             "mover matches plus stayer physical observations"
         ereturn local stayer_hybrid_assumption                     ///
             "mover correction is match-robust; stayer correction is not match-robust"
         ereturn local stayer_hybrid_sample_rule                    ///
-            "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+            "original one-block stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
         ereturn local stayer_hybrid_esample                        ///
             "e(sample) marks retained movers plus eligible attached stayers"
         ereturn local stayer_hybrid_targetweight                   ///
@@ -4487,9 +4487,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "inference does not support algorithm(jla)"
         exit 498
     }
-    if `inference_requested' & "`algorithm'" == "auto" {
-        local algorithm exact
-    }
+    if `inference_requested' & "`algorithm'" == "auto" local algorithm exact
     if "`nuisance'" == "" local nuisance joint
     local nuisance = lower(strtrim("`nuisance'"))
     if !inlist("`nuisance'", "joint", "fixedoffset") {
@@ -4935,15 +4933,12 @@ program define _vckss_impl, eclass sortpreserve
     // selected; every fallback must re-enter the ordinary Mata preparation.
     local implicit_match = `rust_public' & `implicit_match'
 
-    local prep_mark_validate_seconds = 0
-    local prep_initial_group_seconds = 0
-    local prep_runtime_setup_seconds = 0
-    local prep_graph_setup_io_seconds = 0
-    local prep_retained_map_seconds = 0
-    local prep_semantic_group_calls = 0
-    local prep_sort_calls = 0
-    local prep_compression_import_columns = 0
-    local prep_compression_import_rows = 0
+    // Keep this program below Stata's compiled-program size limit.
+    foreach field in mark_validate_seconds initial_group_seconds ///
+        runtime_setup_seconds graph_setup_io_seconds retained_map_seconds ///
+        semantic_group_calls sort_calls compression_import_columns compression_import_rows {
+        local prep_`field' = 0
+    }
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
     tempvar requested touse hybrid_complete
     mark `requested' `if' `in'
@@ -5206,8 +5201,7 @@ program define _vckss_impl, eclass sortpreserve
         r(t$VCKSS_STAGE_SELECTION_TIMER)
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
-    tempvar initial_worker initial_firm pair_first firm_count worker_tag
-    tempvar original_stayer
+    tempvar initial_worker initial_firm pair_first unit_count worker_tag original_stayer
     if `implicit_match' {
         capture confirm numeric variable `worker'
         if !_rc capture confirm numeric variable `firm'
@@ -5231,13 +5225,16 @@ program define _vckss_impl, eclass sortpreserve
         local initial_worker `worker'
         local initial_firm `firm'
         quietly generate byte `original_stayer' = 0 if `touse'
-        local N_stayers = 0
-        local N_stayer_rows = 0
     }
-    fevc__observation_population `deletion' `stayers_population' `touse' ///
+    capture noisily fevc__observation_population `deletion' `stayers_population' `touse' ///
         `original_stayer' `worker' `firm' `initial_worker' `initial_firm' ///
-        `N_complete' `implicit_match' `pair_first' `firm_count' `worker_tag' ///
-        `prep_sort_calls'
+        `N_complete' `implicit_match' `pair_first' `unit_count' `worker_tag' ///
+        `prep_sort_calls' `"`deletionid'"' `rust_public' `rust_strict' `rust_core_flags'
+    if _rc {
+        local population_rc = _rc
+        quietly _vckss_post_failure "`population_failure'"
+        exit `population_rc'
+    }
     if `N_complete'==0 {
         quietly _vckss_post_failure "NO_MOVER_SAMPLE" ///
             "stayers(movers) excluded every complete-case worker."
@@ -5270,9 +5267,6 @@ program define _vckss_impl, eclass sortpreserve
                 exit 198
             }
         }
-        // Do not let a prior estimation receipt be mistaken for a failure
-        // posted by this prepared lifecycle if an unexpected Stata error or
-        // UserBreak unwinds the inner program.
         ereturn clear
         if "`algorithm'" == "exact" & "`stayers'" == "movers" {
             capture noisily _vckss_rexact `depvar'                  ///
@@ -5453,7 +5447,7 @@ program define _vckss_impl, eclass sortpreserve
 
     capture mata: assert(vckss_graph__api_level() == 21 &          ///
         vckss_graph__build_id() ==                                 ///
-        "vckss-graph-api21-prep-map1-retained")
+        "vckss-graph-api21-original-deletion-support")
     if _rc {
         capture findfile fevc_graph.mata
         if _rc {
@@ -5464,7 +5458,7 @@ program define _vckss_impl, eclass sortpreserve
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss_graph__api_level() == 21 &      ///
             vckss_graph__build_id() ==                             ///
-            "vckss-graph-api21-prep-map1-retained")
+            "vckss-graph-api21-original-deletion-support")
         if _rc {
             quietly _vckss_post_failure "INVALID_GRAPH_RUNTIME"
             di as error "the loaded graph runtime does not match this command build"
@@ -5560,7 +5554,7 @@ program define _vckss_impl, eclass sortpreserve
 
     /* The combined match target is defined from the frozen complete-case
        worker histories, never from rows dropped by the mover graph.  Only
-       original one-firm stayers attached to a firm in the final mover sample
+       original one-block stayers attached to a firm in the final mover sample
        enter, and one-copy histories are ineligible for physical leave-one-out. */
     local N_hybrid_stayers = 0
     local N_hybrid_stayer_rows = 0
@@ -5613,13 +5607,8 @@ program define _vckss_impl, eclass sortpreserve
             `hybrid_mover_target_mass' + `hybrid_stayer_target_mass'
     }
 
-    /* Outcome-variance summaries are descriptive display quantities, not
-       additional KSS targets.  The target-weighted variance uses the same
-       retained target mass as the four quadratic forms.  The regression-
-       weighted variance uses literal frequency mass and therefore supports
-       the ordinary full-model explained-variance identity below.  A
-       nonfinite descriptive moment is left missing rather than withholding
-       an otherwise valid KSS calculation. */
+    // Descriptive moments use target mass or literal frequency respectively;
+    // a nonfinite moment does not withhold otherwise valid KSS targets.
     quietly _vckss_descriptive_variances `depvar' `frequency'     ///
         `target' `touse' `retained_physical'
     local target_outcome_variance = r(target)
@@ -7429,13 +7418,13 @@ program define _vckss_impl, eclass sortpreserve
             `hybrid_stayer_target_mass'
         ereturn local stayer_hybrid_status "CONVERGED"
         ereturn local stayer_hybrid_target_population             ///
-            "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+            "retained movers plus eligible original one-block stayers attached to retained mover firms"
         ereturn local stayer_hybrid_deletion                      ///
             "mover matches plus stayer physical observations"
         ereturn local stayer_hybrid_assumption                    ///
             "mover correction is match-robust; stayer correction is not match-robust"
         ereturn local stayer_hybrid_sample_rule                   ///
-            "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+            "original one-block stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
         ereturn local stayer_hybrid_esample                       ///
             "e(sample) marks retained movers plus eligible attached stayers"
         ereturn local stayer_hybrid_targetweight                  ///

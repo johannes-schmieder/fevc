@@ -1322,7 +1322,7 @@ struct vckss_result scalar vckss__exact(
 /* The separately labelled stayer hybrid uses one combined full-sample fit
    and one pooled target normalization, but two scientifically distinct
    deletion conventions.  Retained mover matches are deleted as blocks;
-   eligible one-firm stayers are deleted one literal physical copy at a time.
+   eligible original one-block stayers are deleted one physical copy at a time.
    The ado layer constructs and labels those populations.  This kernel never
    infers stayer status from the post-pruning graph. */
 struct vckss_result scalar vckss__exact_stayer_hybrid(
@@ -3546,7 +3546,7 @@ void vckss__stata_prune_graph(
     struct vckss_articulation_result scalar articulation
     real colvector worker, firm, frequency, deletion_id, sample, sample_index
     real colvector deletion_order, deletion_sorted, index, active
-    real colvector worker_firms, worker_physical, diagnostics
+    real colvector worker_units, worker_physical, diagnostics
     real matrix deletion_panel
     real scalar n, workers, group, begin, finish, row, removed
     real scalar initial_components, initial_component_rows, mover_input_rows
@@ -3619,8 +3619,8 @@ void vckss__stata_prune_graph(
     initial_component_rows = sum(active)
 
     if (deletion == "match") {
-        worker_firms = vckss__worker_firm_counts(worker,firm,active)
-        active = active :* (worker_firms[worker] :> 1)
+        worker_units = vckss__worker_firm_counts(worker,deletion_id,active)
+        active = active :* (worker_units[worker] :> 1)
         mover_input_rows = sum(active)
         if (mover_input_rows == 0) {
             st_local(status_local,"NO_MOVER_SAMPLE")
@@ -3657,10 +3657,10 @@ void vckss__stata_prune_graph(
         if (sum(active) == 0) break
 
         if (deletion == "match") {
-            worker_firms = vckss__worker_firm_counts(worker,firm,active)
-            removed = sum(worker_firms :== 1)
+            worker_units = vckss__worker_firm_counts(worker,deletion_id,active)
+            removed = sum(worker_units :== 1)
             if (removed > 0) {
-                active = active :* (worker_firms[worker] :> 1)
+                active = active :* (worker_units[worker] :> 1)
                 insufficient_removed = insufficient_removed+removed
                 iterations = iterations+1
                 continue

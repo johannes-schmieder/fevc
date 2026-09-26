@@ -579,3 +579,12 @@ The additional KSS Matlab routine `leave_out_COMPLETE.m` returns only three marg
 errors, not the joint covariance or total-target uncertainty. It also retains
 materially negative local-fit predictions that FEVC rejects, so its component
 standard errors are not treated as a parity gate.
+
+Parallel declared match blocks at one worker--firm coefficient cell use the
+original-deletion-unit population contract in `ESTIMATOR_CONTRACT.md`. Exact
+Mata projection and current Rust projection inherit that partition. Native
+match-component inference counts distinct deletion units, including for workers
+at one model firm, while retaining its fixed-offset, mover-only contract.
+Old native runtimes without deletion-unit readiness return
+`RUST_PARALLEL_DELETION_UNSUPPORTED` for strict requests before preparation/RNG.
+Engineering parity tests do not extend historical inference-coverage claims.
