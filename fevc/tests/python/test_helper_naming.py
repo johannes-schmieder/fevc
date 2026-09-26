@@ -11,7 +11,7 @@ import build_release_artifact as portable
 def test_shipped_helpers_use_the_package_prefix():
     assert not list(ROOT.glob("_fevc*.ado"))
     helpers = sorted(ROOT.glob("fevc__*.ado"))
-    assert len(helpers) == 30
+    assert len(helpers) == 31
     shipped = {str(item.relative) for item in portable.package_files(ROOT)}
     assert {p.name for p in helpers} <= shipped
 

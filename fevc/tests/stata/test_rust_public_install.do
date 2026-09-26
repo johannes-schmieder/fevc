@@ -35,6 +35,7 @@ foreach required in fevc.ado fevc_rust.ado ///
     fevc__rust_core_ready.ado                          ///
     fevc__component_model_route.ado                    ///
     fevc__observation_population.ado fevc__stayer_population_post.ado ///
+    fevc__hybrid_sample.ado                              ///
     fevc__exact_inference_model_post.ado                ///
     fevc__rust_component_attach.ado                    ///
     fevc__rust_comp_batch_receipt.ado                  ///
@@ -75,7 +76,8 @@ if `"`install_mode'"' == "qualified" {
         test_rust_execution_paths.do                          ///
         test_stayer_option_symmetry.do                        ///
         test_rust_public_exact.do test_rust_public_generic.do   ///
-        test_stayers_hybrid.do test_pooled_deletion.do test_rust_component_inference.do   ///
+        test_stayers_hybrid.do test_pooled_deletion.do           ///
+        test_subsample_equivalence.do test_rust_component_inference.do ///
         test_rust_match_component_inference.do test_rust_individual_inference.do {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'

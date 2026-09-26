@@ -346,6 +346,7 @@ source_inputs=(
   "${package_dir}/fevc__rust_core_ready.ado"
   "${package_dir}/fevc__component_model_route.ado"
   "${package_dir}/fevc__observation_population.ado"
+  "${package_dir}/fevc__hybrid_sample.ado"
   "${package_dir}/fevc__stayer_population_post.ado"
   "${package_dir}/fevc__exact_inference_model_post.ado"
   "${package_dir}/fevc__rust_component_attach.ado"
@@ -381,6 +382,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
   "${package_dir}/tests/stata/test_pooled_deletion.do"
+  "${package_dir}/tests/stata/test_subsample_equivalence.do"
   "${package_dir}/tests/stata/test_rust_component_inference.do"
   "${package_dir}/tests/stata/test_rust_match_component_inference.do"
   "${package_dir}/tests/stata/test_rust_individual_inference.do"
@@ -804,6 +806,9 @@ run_stata_case arm64 public-stayer-hybrid \
 run_stata_case arm64 public-pooled-deletion \
   "${package_dir}/tests/stata/test_pooled_deletion.do" \
   'PASS test_pooled_deletion.do' "${test_package_dir}"
+run_stata_case arm64 public-subsample \
+  "${package_dir}/tests/stata/test_subsample_equivalence.do" \
+  'PASS test_subsample_equivalence.do' "${test_package_dir}"
 run_stata_case arm64 public-component-inference \
   "${package_dir}/tests/stata/test_rust_component_inference.do" \
   'PASS test_rust_component_inference.do' "${test_package_dir}"
@@ -873,6 +878,9 @@ run_stata_case arm64 universal-public-stayer-hybrid \
 run_stata_case arm64 universal-public-pooled-deletion \
   "${package_dir}/tests/stata/test_pooled_deletion.do" \
   'PASS test_pooled_deletion.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-subsample \
+  "${package_dir}/tests/stata/test_subsample_equivalence.do" \
+  'PASS test_subsample_equivalence.do' "${universal_test_package_dir}"
 arm64_install_root=${temporary_root}/install-arm64
 mkdir -p "${arm64_install_root}"
 run_stata_case arm64 clean-install \
@@ -954,6 +962,9 @@ run_stata_case x86_64 public-runtime-reporting \
   run_stata_case x86_64 public-pooled-deletion \
     "${package_dir}/tests/stata/test_pooled_deletion.do" \
     'PASS test_pooled_deletion.do' "${test_package_dir}"
+  run_stata_case x86_64 public-subsample \
+    "${package_dir}/tests/stata/test_subsample_equivalence.do" \
+    'PASS test_subsample_equivalence.do' "${test_package_dir}"
   run_stata_case x86_64 public-component-inference \
     "${package_dir}/tests/stata/test_rust_component_inference.do" \
     'PASS test_rust_component_inference.do' "${test_package_dir}"
@@ -1023,6 +1034,9 @@ run_stata_case x86_64 universal-public-runtime-reporting \
   run_stata_case x86_64 universal-public-pooled-deletion \
     "${package_dir}/tests/stata/test_pooled_deletion.do" \
     'PASS test_pooled_deletion.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-subsample \
+    "${package_dir}/tests/stata/test_subsample_equivalence.do" \
+    'PASS test_subsample_equivalence.do' "${universal_test_package_dir}"
   x86_64_install_root=${temporary_root}/install-x86_64
   mkdir -p "${x86_64_install_root}"
   run_stata_case x86_64 clean-install \
@@ -1172,6 +1186,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_public_exact=FEVC RUST PUBLIC EXACT PASS\n'
   printf 'arm64_public_generic=FEVC RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
+  printf 'arm64_public_subsample=PASS test_subsample_equivalence.do\n'
   printf 'arm64_public_component_inference=PASS test_rust_component_inference.do\n'
   printf 'arm64_public_match_component_inference=PASS test_rust_match_component_inference.do\n'
   printf 'arm64_public_individual_inference=PASS test_rust_individual_inference.do\n'
@@ -1186,6 +1201,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_universal_public_exact=FEVC RUST PUBLIC EXACT PASS\n'
   printf 'arm64_universal_public_generic=FEVC RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_universal_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
+  printf 'arm64_universal_public_subsample=PASS test_subsample_equivalence.do\n'
   printf 'arm64_clean_install=PASS test_rust_public_install.do\n'
   printf 'arm64_canonical_install_unavailable=PASS test_rust_public_install.do\n'
   printf 'arm64_test_status=%s\n' "${arm64_test_status}"
@@ -1204,6 +1220,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_public_exact=FEVC RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_public_generic=FEVC RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
+    printf 'x86_64_public_subsample=PASS test_subsample_equivalence.do\n'
     printf 'x86_64_public_component_inference=PASS test_rust_component_inference.do\n'
     printf 'x86_64_public_match_component_inference=PASS test_rust_match_component_inference.do\n'
     printf 'x86_64_public_individual_inference=PASS test_rust_individual_inference.do\n'
@@ -1218,6 +1235,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_universal_public_exact=FEVC RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_universal_public_generic=FEVC RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_universal_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
+    printf 'x86_64_universal_public_subsample=PASS test_subsample_equivalence.do\n'
     printf 'x86_64_clean_install=PASS test_rust_public_install.do\n'
     printf 'x86_64_canonical_install_unavailable=PASS test_rust_public_install.do\n'
   fi
@@ -1256,6 +1274,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_subsample=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_match_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_individual_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>\n'
@@ -1278,6 +1297,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_subsample=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-universal-package>\n'
   printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
   printf 'command.test_arm64_canonical_install_unavailable=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do fevc <isolated-plus> unavailable\n'
   if [[ "${rosetta_status}" == AVAILABLE ]]; then
@@ -1302,6 +1322,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_subsample=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_match_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_individual_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>\n'
@@ -1324,6 +1345,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_subsample=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
     printf 'command.test_x86_64_canonical_install_unavailable=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do fevc <isolated-plus> unavailable\n'
   fi

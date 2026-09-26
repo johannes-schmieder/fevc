@@ -113,6 +113,15 @@ draws with every attempt counted. The native match-component test separately
 requires q0/q1 success for the new mover case. Rust's `deletion_unit_graph`
 test independently enumerates 728 small multigraphs and checks the fixed point.
 
+`tests/stata/test_subsample_equivalence.do` compares `if`/`in` fits with
+physically compact selected datasets in both backends and exact/JLA routes.
+It checks retained row identities, sample counts and target mass, results and
+numerical MCSE, data/order/RNG restoration, and idle native state. Fixtures
+include controls, frequency and target weights, pooled deletion IDs, excluded
+movers, missing excluded inputs, eligible stayers, and graph exclusions. It
+also preserves the typed failure for missing inputs inside requested matches.
+The test runs in both source profiles and qualified installed-package checks.
+
 ## Manual referee checks
 
 The self-contained Stata entry points under [`tests/manual/`](tests/manual/)

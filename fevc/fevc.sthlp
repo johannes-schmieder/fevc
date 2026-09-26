@@ -155,7 +155,9 @@ a connected component beforehand need not be sufficient.
 Under default match deletion, the command first constructs the retained
 mover sample, then includes eligible original stayers at retained firms
 with at least two observations (counting frequency weights). Removed movers are not reclassified as
-stayers. Controls must also remain identified under the requested deletions;
+stayers. All eligibility and observation counts use the requested
+{cmd:if}/{cmd:in} sample; observations outside it never enter {cmd:e(sample)}.
+Controls must also remain identified under the requested deletions;
 if that cannot be established, the command reports a failure.
 
 {pstd}

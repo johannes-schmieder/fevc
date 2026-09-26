@@ -1741,14 +1741,10 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         tempvar retained_firm_member stayer_physical_total hybrid_stayer ///
             hybrid_touse hybrid_stayer_worker hybrid_firm hybrid_stayer_tag ///
             complete_worker_tag
-        quietly egen byte `retained_firm_member' = max(`touse')       ///
-            if `hybridcomplete', by(`firm')
-        quietly egen double `stayer_physical_total' =                 ///
-            total(`frequency') if `hybridcomplete', by(`worker')
-        quietly generate byte `hybrid_stayer' =                       ///
-            `originalstayer' & `retained_firm_member' &               ///
-            `stayer_physical_total'>=2 if `hybridcomplete'
-        quietly generate byte `hybrid_touse' = `touse' | `hybrid_stayer'
+        quietly fevc__hybrid_sample `touse' `hybridcomplete'      ///
+            `originalstayer' `worker' `firm' `frequency'            ///
+            `retained_firm_member' `stayer_physical_total'          ///
+            `hybrid_stayer' `hybrid_touse'
         quietly egen long `hybrid_firm' = group(`firm') if `hybrid_touse'
         quietly egen long `hybrid_stayer_worker' = group(`worker')    ///
             if `hybrid_stayer'
@@ -1807,6 +1803,17 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             exit 198
         }
 
+        // Native augmentation assigns row-specific ordering labels. Stabilize
+        // their input order and preserve that map for projection attachment.
+        if `N_hybrid_stayer_rows'>0 {
+            tempvar stayer_target_percopy
+            quietly generate double `stayer_target_percopy' = `target'/`frequency' ///
+                if `hybrid_stayer'
+            sort `hybrid_stayer' `hybrid_stayer_worker' `hybrid_firm' ///
+                `stayer_target_percopy' `depvar' `controls' `frequency'
+            quietly replace `native_input_order' = _n if `hybrid_stayer'
+            quietly drop `stayer_target_percopy'
+        }
         capture noisily fevc__rust_public_call augmentstayers     ///
             `hybrid_firm' `hybrid_stayer_worker' `depvar'          ///
             `frequency' `target' `controls' if `hybrid_stayer',    ///
@@ -5224,7 +5231,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         local initial_worker `worker'
         local initial_firm `firm'
-        quietly generate byte `original_stayer' = 0 if `touse'
+        quietly generate byte `original_stayer' = 0
     }
     capture noisily fevc__observation_population `deletion' `stayers_population' `touse' ///
         `original_stayer' `worker' `firm' `initial_worker' `initial_firm' ///
@@ -5570,15 +5577,10 @@ program define _vckss_impl, eclass sortpreserve
     tempvar hybrid_stayer hybrid_touse hybrid_worker hybrid_firm
     tempvar hybrid_stayer_tag
     if "`stayers'" == "both" {
-        quietly egen byte `retained_firm_member' = max(`touse')   ///
-            if `hybrid_complete', by(`initial_firm')
-        quietly egen double `stayer_physical_total' =            ///
-            total(`frequency') if `hybrid_complete', by(`initial_worker')
-        quietly generate byte `hybrid_stayer' =                  ///
-            `original_stayer' & `retained_firm_member' &         ///
-            `stayer_physical_total' >= 2 if `hybrid_complete'
-        quietly generate byte `hybrid_touse' =                   ///
-            `touse' | `hybrid_stayer'
+        quietly fevc__hybrid_sample `touse' `hybrid_complete'    ///
+            `original_stayer' `initial_worker' `initial_firm'    ///
+            `frequency' `retained_firm_member' `stayer_physical_total' ///
+            `hybrid_stayer' `hybrid_touse'
         quietly egen long `hybrid_worker' = group(`initial_worker') ///
             if `hybrid_touse'
         quietly egen long `hybrid_firm' = group(`initial_firm')  ///
@@ -5646,7 +5648,9 @@ program define _vckss_impl, eclass sortpreserve
             if `hybrid_touse'
         quietly summarize `graph_deletion' if `touse', meanonly
         local mover_deletion_max = r(max)
-        quietly replace `hybrid_deletion' = `mover_deletion_max' + _n ///
+        // The kernel deletes stayer physical copies; this is only an ordering
+        // label. Let row content, not incidental Stata sort order, break ties.
+        quietly replace `hybrid_deletion' = `mover_deletion_max' + `hybrid_worker' ///
             if `hybrid_stayer'
     }
 

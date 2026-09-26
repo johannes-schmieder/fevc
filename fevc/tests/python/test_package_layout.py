@@ -63,6 +63,7 @@ def test_package_manifest_is_complete() -> None:
         "fevc__rust_core_ready.ado",
         "fevc__component_model_route.ado",
         "fevc__observation_population.ado",
+        "fevc__hybrid_sample.ado",
         "fevc__stayer_population_post.ado",
         "fevc__exact_inference_model_post.ado",
         "fevc__rust_component_attach.ado",

@@ -1,5 +1,17 @@
 # Pending changes
 
+## Frozen subsample boundaries — 2026-09-26
+
+- Keep combined mover–stayer samples and stayer counts inside the requested
+  `if`/`in` sample in both Mata and Rust dispatch. Excluded rows, including
+  rows with missing values, cannot enter through a missing logical indicator.
+- Stabilize JLA stayer ordering in both dispatch paths against incidental Stata sorts so fitting
+  selected rows agrees with fitting the same rows as a separate dataset.
+- Add paired subsample/compact-data regressions for exact and JLA, controls,
+  weights, pooled deletion IDs, graph exclusions, and caller restoration.
+  Preserve deletion-unit mover eligibility and missing-input failures within
+  the requested match sample. Compiled plugin files are unchanged.
+
 ## Original deletion-unit mover eligibility — 2026-09-26
 
 - Count original declared match blocks for match-mode mover eligibility and

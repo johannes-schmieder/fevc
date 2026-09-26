@@ -62,6 +62,7 @@ def test_catalog_preserves_match_install_inventory():
         "f fevc__progress.ado",
         "f fevc__memory_options.ado",
         "f fevc__observation_population.ado",
+        "f fevc__hybrid_sample.ado",
         "f fevc__stayer_population_post.ado",
         "f fevc__rust_cmg_model.ado",
         "f fevc__rust_comp_batch_receipt.ado",

@@ -28,6 +28,7 @@ do `"`pkgroot'/tests/stata/test_simulate_data.do"'
 do `"`pkgroot'/tests/stata/test_load.do"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
 do `"`pkgroot'/tests/stata/test_stayers_hybrid.do"'
+do `"`pkgroot'/tests/stata/test_subsample_equivalence.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_backend_routing.do"' `"`pkgroot'"'
 capture quietly fevc_rust probe
 if !_rc {

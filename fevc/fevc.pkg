@@ -40,6 +40,7 @@ f fevc__rust_public_call.ado
 f fevc__rust_core_ready.ado
 f fevc__component_model_route.ado
 f fevc__observation_population.ado
+f fevc__hybrid_sample.ado
 f fevc__stayer_population_post.ado
 f fevc__exact_inference_model_post.ado
 f fevc__rust_component_attach.ado

@@ -32,12 +32,16 @@ record the unchanged production inputs and the precise test/harness changes.
   individual project-check JSON are not available. Cleanup and stopped-instance
   checks passed. The original build-only receipt keeps its historical status.
 
-Fresh and replacement public installs through both `net install` and
+At package commit `72da5542`, fresh and replacement public installs through both `net install` and
 `github install` pass on Mac arm64 and Linux x86-64. Each case checks all
 52 installed-file hashes and the native mover/inference regressions.
 [Publication evidence](deletion-unit-movers-20260926/publication.json) binds
 commit `72da5542`, the two platform receipts, and Linux job `7745408`.
 Windows isolated installation was qualified separately on the exact artifact.
+The later [subsample repair](../fevc/docs/SUBSAMPLE_REPAIR_2026-09-26.md)
+adds one Ado helper (53 installed files) and changes sample/order preparation;
+its checks and compatibility scope are recorded separately. All five plugin
+files retain the artifact identities above.
 
 The [integration record](../fevc/docs/DELETION_UNIT_MOVERS_2026-09-26.md)
 records tests, failures, retained limitations and final public installer status.

@@ -89,6 +89,7 @@ fevc/fevc__component_model_route.ado
 fevc/fevc__display.ado
 fevc/fevc__exact_inference_model_post.ado
 fevc/fevc__failure_guidance.ado
+fevc/fevc__hybrid_sample.ado
 fevc/fevc__lifecycle.ado
 fevc/fevc__memory_options.ado
 fevc/fevc__observation_population.ado

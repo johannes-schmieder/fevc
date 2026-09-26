@@ -42,7 +42,8 @@ program define fevc__observation_population
     quietly by `dense_worker' `history_id': generate byte `pair_first' = (_n==1) if `touse'
     quietly by `dense_worker': egen long `unit_count' = total(`pair_first') if `touse'
     quietly egen byte `worker_tag' = tag(`dense_worker') if `touse'
-    quietly generate byte `original_stayer' = (`unit_count'==1) if `touse'
+    // This mask survives graph selection and must remain false on excluded rows.
+    quietly generate byte `original_stayer' = (`touse'==1) & (`unit_count'==1)
     quietly count if `worker_tag' & `unit_count'==1 & `touse'
     c_local N_stayers = r(N)
     quietly count if `unit_count'==1 & `touse'

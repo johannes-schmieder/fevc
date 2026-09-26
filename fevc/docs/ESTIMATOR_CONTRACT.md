@@ -205,6 +205,19 @@ frozen complete-case sample, are attached to a retained mover firm, and have
 at least two literal physical observations. The command fits M and those
 stayers jointly and normalizes every target over their pooled target mass.
 Graph-dropped movers are never reclassified as original stayers.
+The requested `if`/`in` boundary is frozen before graph selection. Original
+stayer, eligible stayer, retained-firm and combined-sample indicators are zero
+or one on every row, with excluded rows zero. Both backends enforce that the
+combined sample is contained in this boundary. Missing values outside it do
+not affect eligibility; missing required inputs inside a requested match
+remain a `MATCH_INPUT_MISSING` failure. A filtered fit and a fit to the identical
+selected dataset must retain the same row identities, population and target
+mass, and give equivalent estimates under the same supported RNG options.
+Mata JLA uses a worker-level ordering label for stayer rows, followed by the
+ordinary row-content key; the mixed kernel still deletes their individual
+physical observations. Rust receives stayer rows in the same content-based order and preserves
+that attachment map for projections. Incidental Stata sorting cannot assign
+stayer draws.
 Mover matches are deleted as declared blocks; each eligible stayer is
 corrected by deleting one literal physical observation. The latter component
 is explicitly not match-robust. `stayers(movers)` opts out and restores a
