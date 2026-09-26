@@ -1,0 +1,412 @@
+{
+  "schema": "FEVC_SUBSAMPLE_REPAIR_V1",
+  "baseline_source": "b7216f72e9dfdef003de9e21e0822c8d2f79f5ba",
+  "implementation_source": "9681684a3f89e5883406fc27ca5e0eceb452d050",
+  "integrated_source": "16d5564abfbf7c9db0f36644a7ad4bf96af3fd81",
+  "installed_payload": {
+    "source": "9681684a3f89e5883406fc27ca5e0eceb452d050",
+    "files": [
+      {
+        "path": "fevc.pkg",
+        "sha256": "39c5e953aa5200ffd289fd1bc2633c4b1d62450755ec81e3d3bb1baa346d61a3"
+      },
+      {
+        "path": "stata.toc",
+        "sha256": "b3b280c471446369d7869c56d4f6131bf0f19bd333fd3403cccd30011ee8f312"
+      },
+      {
+        "path": "fevc/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+      },
+      {
+        "path": "fevc/THIRD_PARTY_NOTICES.txt",
+        "sha256": "3ff608a89355dd85f5a1f61140a0ec5b107842d373559df2d3d507f2f9918bb9"
+      },
+      {
+        "path": "fevc/fevc.ado",
+        "sha256": "9fc188dd1207dca4fef5e2bc4aaf45049061ea1acc7692fe4ffb6f71e277aaa2"
+      },
+      {
+        "path": "fevc/fevc.mata",
+        "sha256": "c10963732a9e0a3e5f7a21ff5ae114c3edf0eb64c0a4a438814fd61e65ac7893"
+      },
+      {
+        "path": "fevc/fevc_inference.mata",
+        "sha256": "87eaf8193f5b39d0507a45b8e228feeb37794bf1c07c46098134d06f8dfa6954"
+      },
+      {
+        "path": "fevc/fevc_graph.mata",
+        "sha256": "ea8eb048c33a0033b532c018226d40b6c5d5d302043875520d912f17b3c2db21"
+      },
+      {
+        "path": "fevc/fevc_cmg.mata",
+        "sha256": "3572a105f25316fc1ddbfb2697dbb8ad63808c637ef1d2079e6416c14a790c47"
+      },
+      {
+        "path": "fevc/fevc_solver.mata",
+        "sha256": "c2683db63874d99f4ff8cbf38c2ae1a44de20e05079ef20d482ce0459dd64bdd"
+      },
+      {
+        "path": "fevc/fevc_rng.mata",
+        "sha256": "3f7a444641424de7053ceeaec79486423a8c5ad86bc78bcd8518d0ff6b3d85bf"
+      },
+      {
+        "path": "fevc/fevc_scale.mata",
+        "sha256": "fba64e4b7b88c805066b4a4d297873210ec125102c248bc81c4b4cbc33b5eb10"
+      },
+      {
+        "path": "fevc/fevc_resource.mata",
+        "sha256": "cbce6379400199ca7ac8414f2229f6e68f81439ff6a0223544042a5c38b73ca5"
+      },
+      {
+        "path": "fevc/fevc_scale_engine.mata",
+        "sha256": "b082c4fed16fd372d7f7058a74aa2a227941c97e266926e7a5e3af6efa304b29"
+      },
+      {
+        "path": "fevc/fevc_scale_runtime.mata",
+        "sha256": "6e6d9b13cae47bffbd8dd6b8e2b825257ba79ea90e03edef121fe40cb8c633f3"
+      },
+      {
+        "path": "fevc/fevc__display.ado",
+        "sha256": "a032ccf7b60f7c3a01f196bc1f71fc2a45f132266cf2806b2fff662f7426bde9"
+      },
+      {
+        "path": "fevc/fevc__progress.ado",
+        "sha256": "9d56da54bf4e292bfdc129e80fc6bf311cb6917416ff8242866e43819cf829d9"
+      },
+      {
+        "path": "fevc/fevc__lifecycle.ado",
+        "sha256": "b00fe011e9471f353df6d6910fbd68e8d0a12dbb5fee667a9e16e808d5d3673e"
+      },
+      {
+        "path": "fevc/fevc_estat.ado",
+        "sha256": "a6e20a38b0bfe9ab8a145f0da5b9d131fc80d4bfbd3689594ddf1cdb67126944"
+      },
+      {
+        "path": "fevc/fevc_run.ado",
+        "sha256": "fca93b5751254ef4e441c5760ebb1dd3e8c232a118df0b5df53df11c659830e9"
+      },
+      {
+        "path": "fevc/fevc__simulate_data.ado",
+        "sha256": "bc277879909b543f945ac94e870652692f2efb9bfc4db3406f960671da66eabc"
+      },
+      {
+        "path": "fevc/fevc_rust.ado",
+        "sha256": "1b04410dd9f5d6f50c818f4defdc2ed19e73b0ba7d65a00ba0b931287e818da9"
+      },
+      {
+        "path": "fevc/fevc__rust_plugin_call.ado",
+        "sha256": "fede7c21491ee6d9a4d8dde995dfe91ae847c91667f0bb465a59f37f93d62022"
+      },
+      {
+        "path": "fevc/fevc__rust_solve_v4.ado",
+        "sha256": "3ec3b4c51f9f0936ae96f024a1c17ed40333c1ac80778ed565915bab4fabbd16"
+      },
+      {
+        "path": "fevc/fevc__rust_solve_v5.ado",
+        "sha256": "397a17b0270888a5e6f7825a39f5a07dcfec747ef3d235df565ec29ecc49f9e4"
+      },
+      {
+        "path": "fevc/fevc__rust_cmg_model.ado",
+        "sha256": "2aca6e707fd447e4f5395299c0589474a8159610a1756da87dedcd5f8c55d140"
+      },
+      {
+        "path": "fevc/fevc__rust_plan_receipt.ado",
+        "sha256": "5e8b6524dd9f9107237e0dae0297a0c426f5fc66cedbe5d6905916fbaceee1fd"
+      },
+      {
+        "path": "fevc/fevc__rust_reconcile_comp_v7.ado",
+        "sha256": "306f8c005a34696812864464bc5af50206306d26ec5a085df8c63b7b888386cf"
+      },
+      {
+        "path": "fevc/fevc__rust_reconcile_exact_v7.ado",
+        "sha256": "d9ed45b417bcab498db86ff16e3ec8025b5ced7c16cda91d51bd0f2489c0f185"
+      },
+      {
+        "path": "fevc/fevc__rust_post_comp_v7.ado",
+        "sha256": "a99e027cb9727d08bbdb46844b6e06ceb8cafa3bb4dff1cfd551db6683d2f324"
+      },
+      {
+        "path": "fevc/fevc__rust_post_exact_v7.ado",
+        "sha256": "19a8a6d9d672917ba84b8ece3f95394f7c4a27b97f628c38e26d3fdf6a7fe2fc"
+      },
+      {
+        "path": "fevc/fevc__rust_capture_stayers.ado",
+        "sha256": "071e451cf4fd556911ee1f62e9bcc28b05ae77a793e434ec5d94d04049d9812f"
+      },
+      {
+        "path": "fevc/fevc__rust_post_stayer_hybrid.ado",
+        "sha256": "c6fc1a530478eebfc80dd6b3ba1a5db9fb9381d73fac854f5d3c24f9b6ccca9f"
+      },
+      {
+        "path": "fevc/fevc__rust_macos.ado",
+        "sha256": "a85eaf5ead0bb2aa8b8421d246119ee316d5cdbb18d9fe16700bb64f256fc0e5"
+      },
+      {
+        "path": "fevc/fevc__rust_windows.ado",
+        "sha256": "686fecb89736db99840d05845543fb56e36c1da10ac45ba519806c767bcef99f"
+      },
+      {
+        "path": "fevc/fevc__rust_linux.ado",
+        "sha256": "e57acd40fcb4e6127926d65c023fd4190180b4a2e2c9c530d1df9d451ca6b368"
+      },
+      {
+        "path": "fevc/fevc__rust_public_call.ado",
+        "sha256": "a128e9e46df863d5649c6bdf66b712d4a1f000b61c970b99a5b9ba6deefeecfe"
+      },
+      {
+        "path": "fevc/fevc__rust_core_ready.ado",
+        "sha256": "e09f650d76768592b7b4a603b67db4c09f14dacb153645040b71d4a4ba45d774"
+      },
+      {
+        "path": "fevc/fevc__component_model_route.ado",
+        "sha256": "81f1fbe3ff27b49ae59dc6a9b617035c5a05f4de39389952830fa14f3eb950ea"
+      },
+      {
+        "path": "fevc/fevc__observation_population.ado",
+        "sha256": "a873571e005542709739600419447ba37a7c6829cabdc0c9328c76d9f7616359"
+      },
+      {
+        "path": "fevc/fevc__hybrid_sample.ado",
+        "sha256": "2dc25e22d67449de56c596bd656682d73f7c0e64286770f8f335170b2147d3e9"
+      },
+      {
+        "path": "fevc/fevc__stayer_population_post.ado",
+        "sha256": "4e70d476472b956b423977f505a319d045ad2e6c43078b36f52da10a99924d7a"
+      },
+      {
+        "path": "fevc/fevc__exact_inference_model_post.ado",
+        "sha256": "26e8ab485fc80ecf1e8d0ec0c53da3195c3ad32509cc32dde5cf31a6d972bd45"
+      },
+      {
+        "path": "fevc/fevc__rust_component_attach.ado",
+        "sha256": "026dd6a3a40cd66b9006ec9b25ea9a925b9b35e403362542dd21079cc917ad02"
+      },
+      {
+        "path": "fevc/fevc__rust_comp_batch_receipt.ado",
+        "sha256": "7ced3a9d460bf299f94bbb00fae4feabc3185d69eb7e67d39756ec84fdc11808"
+      },
+      {
+        "path": "fevc/fevc__rust_component_fetch.ado",
+        "sha256": "be64d70b47f59571eeed3e06767907515dea5b684ded9e84d12bbde62543530c"
+      },
+      {
+        "path": "fevc/fevc__rust_component_post.ado",
+        "sha256": "a04d171e2123e4418136047bc7fb23f8074f6b25ec8c7f449a21abcb195fbe02"
+      },
+      {
+        "path": "fevc/fevc__failure_guidance.ado",
+        "sha256": "e0b34dfe1c6b8cc9d1b7db5b12ba443aa1e0758a94357c7662e421d10699fc10"
+      },
+      {
+        "path": "fevc/fevc.sthlp",
+        "sha256": "22d7abb5631bbd797054f4023b461a996e5e0bc86088a12d51cd677ecb0a12a8"
+      },
+      {
+        "path": "fevc/fevc__memory_options.ado",
+        "sha256": "fb81e093af50999c092d87e43cb7d4fe8200e02ff50f767963c5704ac069ba34"
+      },
+      {
+        "path": "fevc/fevc_rust_macos_arm64.plugin",
+        "sha256": "b9930706cf9520048578a85cb8586abe9c461ca361effc7a6a2fa0a3b4dca0bb"
+      },
+      {
+        "path": "fevc/fevc_rust_macos_x86_64.plugin",
+        "sha256": "427ee9446b085c4d4a5e49da4a79e87a01eb9cc834487df08854042488699f38"
+      },
+      {
+        "path": "fevc/fevc_rust_macos.plugin",
+        "sha256": "404c24b007e9fd745f351f1ae019566381b76843eba98d704f587b27a36ba8d7"
+      },
+      {
+        "path": "fevc/fevc_rust_linux_x64.plugin",
+        "sha256": "b743e9d8f58d6ac6b39d44a9f62ec4e894d72207f22cb6c45563c19eeeeeeb64"
+      },
+      {
+        "path": "fevc/fevc_rust_windows_x64.plugin",
+        "sha256": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57"
+      }
+    ]
+  },
+  "compiled_inputs_unchanged_paths": [
+    "rust/crates",
+    "rust/vendor",
+    "rust/Cargo.toml",
+    "rust/Cargo.lock",
+    "rust/rust-toolchain.toml",
+    "rust/stata_backend/Cargo.toml",
+    "rust/stata_backend/Cargo.lock",
+    "rust/stata_backend/build.rs",
+    "rust/stata_backend/src",
+    "rust/stata_backend/cshim",
+    "rust/stata_backend/include"
+  ],
+  "changed_paths": [
+    "fevc.pkg",
+    "fevc/CHANGELOG.md",
+    "fevc/PLAN.md",
+    "fevc/TESTING.md",
+    "fevc/benchmarks/scale_bundle_allowlist.txt",
+    "fevc/docs/ESTIMATOR_CONTRACT.md",
+    "fevc/docs/README.md",
+    "fevc/docs/SUBSAMPLE_REPAIR_2026-09-26.md",
+    "fevc/fevc.ado",
+    "fevc/fevc.pkg",
+    "fevc/fevc.sthlp",
+    "fevc/fevc__hybrid_sample.ado",
+    "fevc/fevc__observation_population.ado",
+    "fevc/tests/python/test_helper_naming.py",
+    "fevc/tests/python/test_match_documentation.py",
+    "fevc/tests/python/test_package_layout.py",
+    "fevc/tests/stata/run_all.do",
+    "fevc/tests/stata/test_rust_public_install.do",
+    "fevc/tests/stata/test_subsample_equivalence.do",
+    "fevc/tools/verify_native_installers.py",
+    "native/README.md",
+    "rust/stata_backend/qualify_macos.sh"
+  ],
+  "native_profile": {
+    "completed_at": "2026-09-26T16:45:03.308880Z",
+    "duration_seconds": 1333.216,
+    "failure_detail": null,
+    "failure_kind": null,
+    "platform": "Unix; Mac (Apple Silicon)",
+    "process_rc": 0,
+    "profile": "plugin-build",
+    "qualification": {
+      "abi_header_compat_test": "PASS",
+      "arm64_test_status": "PASS_NATIVE",
+      "artifact_arm64_sha256": "ca1c4579baa51197706e06b8926250994f66b01a555f884dc5d9143743245fb3",
+      "artifact_universal_sha256": "bbce2e36ffee6e1ef4e3f436100f98ba004b72762a18b0a1b174e64628e473c3",
+      "artifact_x86_64_sha256": "244f3f7bc113e37bc1f892c43b3bf3f554856c956b9b238a432223df513721fa",
+      "cargo_clippy": "PASS",
+      "cargo_fmt": "PASS",
+      "cargo_test": "PASS",
+      "classification": "CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION",
+      "cshim_error_transport_test": "PASS",
+      "cshim_interrupt_test": "PASS",
+      "rosetta_status": "AVAILABLE",
+      "scope": "source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control observation/match JLA point CMG_FULL_V2 cells through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts",
+      "source_manifest_sha256": "d352356102f990b646456483ba05ff0a0bf074de3cce21aebaae4a8578d6dc16",
+      "x86_64_test_status": "PASS_ROSETTA"
+    },
+    "ref": "local",
+    "repository": "local/fevc",
+    "run_attempt": "1",
+    "run_id": "local",
+    "runner_name": "local-mac",
+    "schema_version": 1,
+    "started_at": "2026-09-26T16:22:50.089435Z",
+    "stata_bundle_version": "19.0.115",
+    "stata_edition": "MP",
+    "stata_executable": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp",
+    "stata_rc": 0,
+    "stata_version": "19",
+    "status": "success",
+    "suite": "rust/stata_backend/qualify_macos.sh",
+    "tested_sha": "9681684a3f89e5883406fc27ca5e0eceb452d050",
+    "tests_failed": 0,
+    "tests_passed": 1
+  },
+  "installer_receipt_sha256": "c6e2181e644a9c504a554567867e069b5dd3ac68819eee4c33ab7b46b3c89298",
+  "qualification_receipt_sha256": "2b839108e5fc41bc0e696e1a47ff20a80e22d747d197bd25524d6ce6bfe389b0",
+  "scope": "Ado sample masks and deterministic stayer preparation; graph, mover and identification contracts unchanged. No Linux/Windows runtime requalification, large Monte Carlo, representative-scale or new performance claim.",
+  "claims_carried_forward": "Unchanged compiled artifact identities and corresponding old compiled-code qualifications; new Ado behavior is supported only by the newly recorded checks. Existing native receipts remain immutable.",
+  "invalidation_triggers": [
+    "Any installed payload or compiled input change",
+    "Changes to sample, graph, target, rank or residual acceptance semantics",
+    "New platform-specific behavior or failing regression"
+  ],
+  "status": "PASS",
+  "checks": [
+    {
+      "status": "PASS",
+      "source": "16d5564abfbf7c9db0f36644a7ad4bf96af3fd81",
+      "command": "./.venv/bin/python fevc/tools/run_checks.py",
+      "log_path": ".local/subsample-fix-20260926/integrated-final.log",
+      "log_sha256": "1c7729e45d140af8e09c9f5e22f514dabc03cf3db3d447e0ff5135c8d40df8d0",
+      "required_marker": "FEVC LOCAL QUALIFICATION PASS"
+    },
+    {
+      "status": "PASS",
+      "source": "9681684a3f89e5883406fc27ca5e0eceb452d050",
+      "command": "/Applications/Stata18/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_subsample_equivalence.do fevc",
+      "log_path": ".local/subsample-fix-20260926/stata18.log",
+      "log_sha256": "1df4d52a790eee3c1e0c7eca781737a9507fd88051e87043be26ce452fa73b7c",
+      "required_marker": "PASS test_subsample_equivalence.do"
+    },
+    {
+      "status": "PASS",
+      "source": "9681684a3f89e5883406fc27ca5e0eceb452d050",
+      "command": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_subsample_equivalence.do fevc",
+      "log_path": ".local/subsample-fix-20260926/focused-9.log",
+      "log_sha256": "2cf4eecfe7480b8664ab95537ada8bcf55f4dec3054191aa4f514abe8c918d99",
+      "required_marker": "PASS test_subsample_equivalence.do"
+    },
+    {
+      "status": "PASS",
+      "source": "16d5564abfbf7c9db0f36644a7ad4bf96af3fd81",
+      "command": "arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_subsample_equivalence.do fevc",
+      "log_path": ".local/subsample-fix-20260926/shipped-thin-x86.log",
+      "log_sha256": "9b9276a7886ade3461cb5c7505d85480ca11299d90d251757712a6ee532380aa",
+      "required_marker": "PASS test_subsample_equivalence.do"
+    },
+    {
+      "status": "PASS",
+      "source": "16d5564abfbf7c9db0f36644a7ad4bf96af3fd81",
+      "command": "arch -arm64 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_subsample_equivalence.do <isolated-shipped-universal-package>",
+      "log_path": ".local/subsample-fix-20260926/shipped-universal-arm64.log",
+      "log_sha256": "1b0b21bbd2c3796a14965f8b681c0d020dd3be5b23391cb3fa88975c5ba10269",
+      "required_marker": "PASS test_subsample_equivalence.do"
+    },
+    {
+      "status": "PASS",
+      "source": "16d5564abfbf7c9db0f36644a7ad4bf96af3fd81",
+      "command": "arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_subsample_equivalence.do <isolated-shipped-universal-package>",
+      "log_path": ".local/subsample-fix-20260926/shipped-universal-x86.log",
+      "log_sha256": "1b0b21bbd2c3796a14965f8b681c0d020dd3be5b23391cb3fa88975c5ba10269",
+      "required_marker": "PASS test_subsample_equivalence.do"
+    }
+  ],
+  "paired_scenarios_with_native": 116,
+  "paired_scenarios_portable": 58,
+  "seed": 9262026,
+  "jla_probes": 33,
+  "jla_batch": 8,
+  "matrix_relative_tolerance": 1e-08,
+  "count_mass_scale_relative_tolerance": 1e-10,
+  "integrated_pass_markers": [
+    "829 passed",
+    "CMG LOCAL CORE GATES PASS",
+    "FEVC TEST SUITE PASS: quick",
+    "FEVC TEST SUITE PASS: full",
+    "FEVC INSTALL TEST PASS",
+    "FEVC HELPER MIGRATION PASS",
+    "FEVC LOCAL QUALIFICATION PASS"
+  ],
+  "native_qualification_scope": "Newly compiled Mac candidates on both architectures and thin/universal forms; candidate bytes were retained only in ignored local evidence. Their source-bound qualification is distinct from the unchanged shipped artifacts, which passed the focused/installed and integrated checks above.",
+  "source_compatibility": {
+    "from": "9681684a3f89e5883406fc27ca5e0eceb452d050",
+    "to": "16d5564abfbf7c9db0f36644a7ad4bf96af3fd81",
+    "changed_paths": [
+      "fevc/PLAN.md",
+      "fevc/tests/stata/test_subsample_equivalence.do"
+    ],
+    "rationale": "Restore the acceptance-policy link and skip an already unsupported Windows native projection test tuple. No Mac test, installed payload, estimator, build input, binary, acceptance threshold or fixture changes."
+  },
+  "build_harness_change": "The only changed rust/ path is qualify_macos.sh: new helper/test inventory, four test invocations, and receipt entries; compilation inputs and flags are unchanged.",
+  "versions": {
+    "python": "Python 3.13.0",
+    "stata18_bundle": "18.0.130",
+    "stata19_bundle": "19.0.115"
+  },
+  "completion_bookkeeping": {
+    "paths": [
+      "fevc/PLAN.md",
+      "fevc/docs/SUBSAMPLE_REPAIR_2026-09-26.md",
+      "native/README.md",
+      "native/subsample-repair-20260926/"
+    ],
+    "scope": "Documentation and new immutable qualification/compatibility evidence only; the installed payload, production/build inputs, binaries, fixtures and numerical acceptance are unchanged from the validated sources."
+  }
+}

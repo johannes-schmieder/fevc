@@ -1,26 +1,26 @@
 # Current checkpoint — 2026-09-26
 
-The subsample repair is implemented; source, native and installation checks
-are in progress before the owner-authorized commit/push is completed.
-Both dispatch paths build binary stayer/sample masks inside the frozen
-requested sample. JLA stayer ordering is stable under removal of excluded
-rows, including Rust projection attachment. Deletion-unit mover eligibility,
-graph selection, identification and numerical acceptance gates are preserved.
-See the [repair record](docs/SUBSAMPLE_REPAIR_2026-09-26.md).
+The subsample repair is complete on `main`. Both backends keep eligible-stayer
+and combined-sample masks inside the frozen requested `if`/`in` sample.
+JLA stayer ordering is stable when excluded rows are removed, including Rust
+projection attachment. Deletion-unit mover eligibility, graph selection,
+identification and numerical acceptance gates remain unchanged.
 
-The preceding deletion-unit mover integration is complete on `main` for Mata
-and Rust. All five shipped plugins retain their existing bytes: Mac/Windows
-build source `d6f5571d`, Linux source `31cf2ea7`, package assembly `c3ab9e52`.
-The [native manifest](../native/deletion-unit-movers-20260926/manifest.json)
-and [integration record](docs/DELETION_UNIT_MOVERS_2026-09-26.md) preserve those
-source-bound qualifications. The subsample repair changes Ado dispatch and adds
-one installed helper; it does not replace compiled artifacts or create a tag.
-Historical receipts remain immutable.
+Implementation `9681684a` passed the native Mac profile on arm64 and Rosetta,
+including thin/universal candidates and isolated installs. Source `16d5564a`
+passed the full integrated check: 829 Python tests, CMG, Stata quick/full,
+portable installation, helper migration and harness smokes. The 116 paired
+subsample scenarios pass on Stata/MP 18/19 and each shipped Mac plugin form.
+Fresh and replacement native installs validate all 53 installed-file hashes.
+See the [repair record](docs/SUBSAMPLE_REPAIR_2026-09-26.md) and
+[compatibility evidence](../native/subsample-repair-20260926/compatibility.json).
 
-The prior Codex worktree `/Users/johannes/.codex/worktrees/86db/fevc` has been
-removed. Its changes and useful logs remain backed up in ignored
-`.local/deletion-unit-movers/original-worktree/`, with all 31 source hashes
-verified. Work continues on the existing `main` checkout.
+All five shipped plugin files retain their previous bytes; the local native
+profile's rebuilt candidates are retained only as ignored test evidence.
+The prior [deletion-unit mover integration](docs/DELETION_UNIT_MOVERS_2026-09-26.md)
+and its exact-source receipts remain intact. The old Codex development
+worktree is removed; its backup remains under ignored
+`.local/deletion-unit-movers/original-worktree/`.
 
 Candidate promotion and evidence reuse follow the registered
 [acceptance policy](docs/development_acceptance_v1.json).

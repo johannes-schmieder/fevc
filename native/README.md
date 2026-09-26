@@ -40,8 +40,9 @@ commit `72da5542`, the two platform receipts, and Linux job `7745408`.
 Windows isolated installation was qualified separately on the exact artifact.
 The later [subsample repair](../fevc/docs/SUBSAMPLE_REPAIR_2026-09-26.md)
 adds one Ado helper (53 installed files) and changes sample/order preparation;
-its checks and compatibility scope are recorded separately. All five plugin
-files retain the artifact identities above.
+its [new qualification and compatibility record](subsample-repair-20260926/compatibility.json)
+separates local rebuilt-candidate tests from tests of the unchanged shipped
+artifacts. All five plugin files retain the artifact identities above.
 
 The [integration record](../fevc/docs/DELETION_UNIT_MOVERS_2026-09-26.md)
 records tests, failures, retained limitations and final public installer status.
