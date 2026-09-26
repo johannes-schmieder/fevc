@@ -96,3 +96,13 @@ The first private Windows run returned STATA_DRIVER_FAILED with no stage
 detail. Its source archive and exact hosted candidate hashes match the planned
 input. The instance stopped, transient objects were deleted and the lock was
 released. It does not qualify the Windows candidate; investigation is ongoing.
+
+The Windows retest uses the already compiled CI candidate directly. The first
+driver repeated a complete private build and Rust workspace suite inside the
+licensed Stata process; that is unnecessary for exact-artifact testing and its
+opaque failure did not identify a scientific assertion. For supplied candidates,
+the bounded driver now performs the canonical PE audit, isolated installation,
+all existing Stata runtime gates and installed-hash verification. Rust source
+and standalone binary-unit checks retain their successful hosted-CI provenance
+instead of being labelled as private checks. The fallback private-build path
+remains available. No shared runner, machine or timeout policy is changed.
