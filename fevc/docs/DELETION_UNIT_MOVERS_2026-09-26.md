@@ -74,8 +74,8 @@ The later capability-cache safeguard passed its focused routing regression.
 All five plugins pass source-bound build and runtime qualification. The
 [manifest](../../native/deletion-unit-movers-20260926/manifest.json) preserves
 actual build identities; the [package receipt](../../native/deletion-unit-movers-20260926/package.receipt.json)
-binds the assembled payload. Public installation verification follows publication.
-The original development worktree remains preserved until those checks succeed.
+binds the assembled payload. Public installation verification passed on the published package. Its source
+and binary identities are bound by the final publication record below.
 
 ## Platform qualification follow-up
 
@@ -163,3 +163,35 @@ whitespace checks passed. Fresh and replacement installs of the staged root
 catalog passed all 52 installed-file hashes and native runtime gates under
 Stata/MP 19 on macOS arm64. See [validation](../../native/deletion-unit-movers-20260926/validation.json)
 and [staged installation](../../native/deletion-unit-movers-20260926/staged-install.json).
+
+
+## Public installation and final checkpoint
+
+Package commit `72da5542fb8a72593357d578ccb161e65dd48ac1` is published on
+`main`. Fresh and replacement installations passed through both `net install`
+and `github install` on Mac arm64 and Linux x86-64, under Stata/MP 19. Each
+of the eight cases verified all 52 installed-file hashes, native reporting,
+the README example and caller-data restoration, help/decomposition, match q0/q1,
+the deletion-unit and positive projection regression, and an idle registry.
+[Publication evidence](../../native/deletion-unit-movers-20260926/publication.json)
+binds the package, both platform receipts and Linux scheduler accounting.
+Windows exact-artifact isolated installation is recorded separately; both
+public commands were not claimed as Windows runtime checks.
+
+Linux public-install job 7745395 failed before launching Stata because the
+system Python 3.6.8 lacks `subprocess.run(text=True)`. Its failure remains
+recorded. The single environment-only retry used installed Python 3.12.4 after
+verifier-import, subprocess and complete input-hash preflight checks. Job
+7745408 passed all four cases with scheduler failed=0 and exit_status=0.
+The package, verifier, fixtures, thresholds and qualified binary were unchanged.
+A transient scheduler outage delayed execution; no duplicate job was submitted.
+
+The published source checks and all six hosted Rust stable/MSRV jobs passed
+(runs 36240285184 and 36240285275). This final documentation/evidence update
+preserves every catalog and installed-payload byte from the tested package;
+actual binary build identities remain `d6f5571d` and `31cf2ea7`.
+
+All 31 original changed source files and useful development logs were preserved
+in ignored `.local/deletion-unit-movers/original-worktree/`; original and backup
+hashes were rechecked. The owner-authorized worktree removal follows final
+evidence publication and verification of the matching remote `main`.

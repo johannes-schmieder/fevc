@@ -1,0 +1,17 @@
+{
+  "status": "FAIL",
+  "stage": "Python verifier before Stata launch",
+  "reason": "Default Python 3.6.8 does not support subprocess.run(text=True).",
+  "accounting": {
+    "hostname": "scc-tb4.scc.bu.edu",
+    "jobnumber": "7745395",
+    "start_time": "Sat Sep 26 07:58:42 2026",
+    "end_time": "Sat Sep 26 07:58:46 2026",
+    "slots": "4",
+    "failed": "0",
+    "exit_status": "1",
+    "ru_wallclock": "4",
+    "maxvmem": "184.129M"
+  },
+  "retry_scope": "Same package and verifier; pin installed Python 3.12.4 with a compatible virtual environment."
+}
