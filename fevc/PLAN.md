@@ -21,3 +21,6 @@ The prior Codex worktree `/Users/johannes/.codex/worktrees/86db/fevc` has been
 removed. Its changes and useful logs remain backed up in ignored
 `.local/deletion-unit-movers/original-worktree/`, with all 31 source hashes
 verified. Work continues on the existing `main` checkout.
+
+Candidate promotion and evidence reuse follow the registered
+[acceptance policy](docs/development_acceptance_v1.json).

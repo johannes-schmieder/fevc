@@ -165,6 +165,11 @@ foreach design in basic controls weighted pooled pooled_bare {
 foreach route of local routes {
     foreach population in match_movers observation_both observation_movers projection {
         if "`population'"=="projection" & !inlist("`route'","mata_exact","rust_jla") continue
+        if "`population'"=="projection" & "`route'"=="rust_jla" & ///
+            !(strpos(lower("`c(machine_type)'"),"mac") | "`c(os)'"=="Unix") {
+            display "SUBSAMPLE_PROJECTION_SKIPPED: unsupported native platform"
+            continue
+        }
         quietly use `fixture', clear
         quietly replace wanted=0 in 1
         local deletion match
