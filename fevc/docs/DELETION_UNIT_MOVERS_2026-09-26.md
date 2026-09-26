@@ -76,3 +76,23 @@ retain their prior identities until new source-bound gates complete. Final
 receipts will identify exact source, binaries, platform checks and limitations.
 The original development worktree remains preserved until final publication
 and installation verification succeed.
+
+## Platform qualification follow-up
+
+Source `d6f5571dca34775025cd6e7500cef77896a2afc2` passed clean macOS
+qualification (arm64, Rosetta x86-64, thin and universal artifacts, isolated
+installs), GitHub source checks and all six stable/MSRV Rust CI jobs.
+
+Linux job 7745310 compiled successfully but failed the progress-display test:
+it assumed one allocation summary for exact match/both, although the existing
+native execution runs a mover pass and a combined stayer pass with potentially
+different forecasts. Callback timing determines whether both are observed.
+The harness correction permits at most one forecast per actual pass and keeps
+the single-method assertion; unchanged summaries remain covered by the Rust
+tracker regression. No estimator, fixture, solver or scientific threshold
+changes. The failed run remains failed, and Linux qualification must rerun.
+
+The first private Windows run returned STATA_DRIVER_FAILED with no stage
+detail. Its source archive and exact hosted candidate hashes match the planned
+input. The instance stopped, transient objects were deleted and the lock was
+released. It does not qualify the Windows candidate; investigation is ongoing.

@@ -141,7 +141,13 @@ foreach deletion in observation match {
                 if "`algorithm'"=="jla" assert r(pairs)>0
                 else {
                     assert r(pairs)==0
-                    assert r(methods)==1 & r(allocations)==1
+                    assert r(methods)==1
+                    // Exact match/both executes a mover pass and a combined
+                    // stayer pass. Revised forecasts are intentionally reported;
+                    // fast hosts may coalesce them before the next callback.
+                    local forecasts=1
+                    if "`deletion'"=="match" & e(stayer_hybrid_N_stayers)>0 local forecasts=2
+                    assert inrange(r(allocations),1,`forecasts')
                 }
                 if "`output'"=="verbose" assert r(selection)>0
                 else assert r(selection)==0
