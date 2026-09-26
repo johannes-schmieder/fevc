@@ -1,0 +1,36 @@
+{
+  "schema": "FEVC-WINDOWS-EXACT-ARTIFACT-QUALIFICATION-V1",
+  "status": "PASS",
+  "build_source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+  "runtime_harness_source_commit": "c3ab9e52fbe8027ee52de84c551c81172c110623",
+  "binary_sha256": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57",
+  "hosted_build_run_id": "36237445599",
+  "hosted_rust_run_id": "36237419045",
+  "private_run_id": "win-20260926T112550Z-3d85addd",
+  "private_source_revision": "dirty-79e3ff8d7a9baa172b27aac4018409bbe206f00593c042624c7502dda86c0038",
+  "private_archive_sha256": "4a55d8b881ed979c94563df8b5082253a0f439f3855d86f7996e8e46bd09e9b9",
+  "private_receipt_sha256": "11b705bbbe028e3c65acbe38cc63082c315f98841d5e89ef4d8de11df7500593",
+  "harness_sha256": "82fe375538c191ab1bd2fa793f70eefda436f1abd310809980ce1719f1c9c9e6",
+  "input_manifest_sha256": "2299fc9c99703e09532d1def230bd10d57c52b1f92d45532060487d2bb1485df",
+  "runtime_gates": [
+    "Canonical-header PE exports and system-only dependencies",
+    "Isolated net installation",
+    "Native lifecycle and readiness bit 15",
+    "Observation and individual component inference",
+    "Fixed-offset match q0/q1 including one-firm multi-block workers",
+    "Mata/native literal deletion-unit oracle and positive projection regression",
+    "Installed plugin hash matches the exact hosted artifact",
+    "Idle native registry"
+  ],
+  "cleanup": {
+    "instance_stopped": true,
+    "transient_objects_deleted": true,
+    "lock_released": true
+  },
+  "limitations": [
+    "The fixed controller returns an aggregate source-bound project PASS, not raw Stata logs or individual project-check JSON. The frozen driver writes PASS only after all listed gates and installed-hash verification.",
+    "Rust workspace checks ran in hosted CI; the static-CRT candidate additionally passed hosted standalone unit and PE checks.",
+    "Runtime qualification uses a manifest-bound snapshot to carry the exact CI artifact; compiled estimator and installed runtime sources are unchanged from the build commit.",
+    "No statistical coverage or unsupported-route claims are added."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "FEVC-BINARY-COMPATIBILITY-V1",
+  "status": "PASS",
+  "build_source_commit": "31cf2ea7a74a3650b11984aa9c40081d21d30f6a",
+  "package_source_commit": "c3ab9e52fbe8027ee52de84c551c81172c110623",
+  "binaries": {
+    "fevc_rust_linux_x64.plugin": "b743e9d8f58d6ac6b39d44a9f62ec4e894d72207f22cb6c45563c19eeeeeeb64"
+  },
+  "unchanged_source_manifest_sha256": "dc50a35a5883b7b4aaf57ed02ad9b6a3a843f80b1dd224310f30f00866009d20",
+  "changed_paths": [
+    "fevc/docs/DELETION_UNIT_MOVERS_2026-09-26.md",
+    "rust/stata_backend/build_windows_ci.ps1",
+    "rust/stata_backend/write_windows_checks.ps1"
+  ],
+  "affected_surface": "Integration notes and private Windows qualification harness only. Linux build/runtime inputs, scientific fixtures, seeds, and acceptance thresholds unchanged.",
+  "checks": [
+    "All 1187 unchanged qualified source members verified byte-for-byte; three listed Windows-harness/documentation changes excluded explicitly.",
+    "Generated SOURCE_COMMIT.txt verified against actual build commit separately.",
+    "Linux full suite, clean installation, wrapper PASS and scheduler failed=0 exit_status=0 verified.",
+    "Current source and six hosted Rust OS/toolchain checks passed."
+  ],
+  "limitations": [
+    "Carries only the Linux qualified supported-route claims; no statistical coverage, representative-scale, or other-platform claim.",
+    "The unchanged manifest excludes the three changed documentation/Windows-harness files and the generated build-commit identity file."
+  ]
+}

@@ -47,6 +47,8 @@ fevc/qualification/inference_matlab/evidence/*qacct.txt whitespace=-blank-at-eol
 # Windows controller receipts bind original CRLF bytes, not Git-normalized JSON.
 rust/qualification/evidence/RC1-PLATFORMS/*/windows-receipt.json -text whitespace=cr-at-eol
 rust/qualification/evidence/INFERENCE-WINDOWS/*/windows-receipt.json -text whitespace=cr-at-eol
+native/deletion-unit-movers-20260926/evidence/windows-private-receipt.json -text whitespace=cr-at-eol
+native/deletion-unit-movers-20260926/evidence/windows-hosted-build.json -text whitespace=cr-at-eol
 
 # Preserve the fixed-width scheduler accounting bound by the Linux receipt.
 rust/qualification/evidence/INFERENCE-LINUX-SCC/*/qacct.txt whitespace=-blank-at-eol

@@ -37,9 +37,10 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    and source/binary hashes. No scaling or Monte Carlo campaign is requested.
 3. For the complete profile,
    run the private Windows skill's accepted `stata-do` profile against
-   repository-root `windows-ci.do`. The first bounded gate builds with pinned
-   Rust 1.85.1, authenticated SPI and static MSVC CRT, checks x86-64 PE format,
-   then loads the plugin for the first time from an isolated PLUS installation.
+   repository-root `windows-ci.do`. A supplied exact hosted candidate retains
+   its CI build/Rust-test provenance; the private driver audits x86-64 PE format
+   and loads it from an isolated PLUS installation. The fallback build uses
+   pinned Rust 1.85.1, authenticated SPI and static MSVC CRT.
    It exercises lifecycle and the public fixed-offset match q0/q1 regression.
    The September 26 driver also checks observation/individual inference, the
    deletion-unit oracle, canonical-header exports and system-only imports.
@@ -65,8 +66,8 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    and actual notices alongside the binary artifact. Install the **final
    archive bytes** into empty PLUS directories on each platform and exercise
    q0/q1 and help; separately retain the portable-only missing-native test.
-   Distribution requires owner authorization; the September 21 request
-   authorizes the current Mac/Linux repository installation package. A tag
+   Distribution requires owner authorization; the September 26 request
+   authorizes all five plugins in the repository installation package. A tag
    or GitHub release remains a separate decision.
 
 The tracked `fevc/fevc.pkg` remains a portable development/source manifest.
@@ -94,7 +95,7 @@ instead of `--output-dir`:
 
 ```bash
 ./.venv/bin/python fevc/tools/build_native_release.py \
-    --binary-dir DIR --manifest MANIFEST --profile macos-linux \
+    --binary-dir DIR --manifest MANIFEST --profile complete \
     --repository-dir /private/tmp/fevc-install-repository
 ```
 
@@ -116,8 +117,8 @@ The final receipt binds the package source, native inputs, archive digest and
 every installed file. A later documentation/evidence commit must not be
 reported as the tested binary source. Preserve all accepted earlier records.
 
-For the public prerelease, commit root `fevc.pkg` and `stata.toc`, the four
-selected `fevc/*.plugin` files, and a compact binary manifest linking exact
+For the current public prerelease, commit root `fevc.pkg` and `stata.toc`, all five
+qualified `fevc/*.plugin` files, and a compact binary manifest linking exact
 build sources and sanitized qualification receipts. Keep the nested portable
 manifest unchanged. Push package updates to `main`. Verify actual
 HTTP installs after publication; building a staging directory alone is not an

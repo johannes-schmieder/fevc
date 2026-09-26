@@ -2,7 +2,7 @@
   "schema_version": 1,
   "updated": "2026-09-26",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Deletion-unit mover semantics are implemented in Mata and Rust, including parallel declared blocks. All-platform qualification is in progress; older native runtimes retain preflight fallback/withholding. See DELETION_UNIT_MOVERS_2026-09-26.md. Qualified rows record capability evidence only for the cited sources and regimes. The current symmetric-stayer-option checkpoint passes local arm64/Rosetta thin/universal and isolated-install tests at native manifest cdf9efc0e77a9afeb350045580b259aa7ba83ebfc160dc735b0033a475e84632 (188 inputs); see STAYER_OPTIONS_2026-09-12.md for population compatibility and scope. The preceding macOS deletion-symmetry checkpoint is an uncommitted worktree above fbf8dcd, native manifest d66523c875156118999bcd420879c4dca0bc552f345aafb742b2b56985186ba1. It passes arm64/Rosetta thin/universal qualification; see DELETION_SYMMETRY_2026-09-12.md for final documentation compatibility and bounded both-mode SCC checks. Linux smoke and point comparisons do not extend inference/platform claims; prior full Linux batching/queue qualification is bound to 0ec6f3f. Windows qualification and the complete five-binary archive remain pending. The retained alpha_required field describes prior alpha gates, not authorization to release the current RC.",
+  "qualification_scope": "Deletion-unit mover semantics pass Mata/Rust regression and exact-artifact qualification for all five shipped plugins: Mac arm64, Rosetta x86-64 and universal, Linux x86-64, and Windows x86-64. Build sources d6f5571d (Mac/Windows) and 31cf2ea7 (Linux), package source c3ab9e52, and explicit compatibility reviews are recorded in native/deletion-unit-movers-20260926. See DELETION_UNIT_MOVERS_2026-09-26.md for final public installer status. Qualification covers supported runtime routes and engineering checks; it does not extend statistical coverage, representative scale, native Intel hardware, or unsupported Windows routes. Earlier scientific confirmation failures and deferred features remain unchanged. The retained alpha_required field describes prior alpha gates, not authorization for a release tag.",
   "statuses": [
     "qualified",
     "implemented",
@@ -13,10 +13,10 @@
     {
       "id": "parallel-deletion-blocks",
       "surface": "Parallel declared match blocks at one coefficient cell",
-      "mata": "implemented",
-      "rust": "implemented",
+      "mata": "qualified",
+      "rust": "qualified",
       "alpha_required": false,
-      "evidence": "Original deletion-unit mover classification, fixed-point/final support and existing inference routes; native readiness bit 15. All-platform qualification pending. DELETION_UNIT_MOVERS_2026-09-26.md."
+      "evidence": "Original deletion-unit mover classification, fixed-point/final support, literal deletion/refit and projection oracles, match q0/q1, and native readiness bit 15 pass on supported routes across all shipped artifacts. DELETION_UNIT_MOVERS_2026-09-26.md; native/deletion-unit-movers-20260926/manifest.json."
     },
     {
       "id": "exact-movers",
@@ -128,7 +128,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "API-24 local checkpoint bound to 929a1d7: thin and universal qualified binaries, arm64/Rosetta, Stata/install and real interruption checks; CONTROL_LANES_256_2026-09-10.md and control_lanes_256_v1_result.json. No all-platform release claim"
+      "evidence": "Clean source d6f5571d; thin arm64, thin Rosetta x86-64, universal on both architectures and isolated installs pass. Source manifest 888698f158bf7031647353bb4b83f12ee2177e032965fe884104fd89bcb8b09b; native/deletion-unit-movers-20260926/evidence/macos-qualification.txt."
     },
     {
       "id": "linux-scc",
@@ -136,15 +136,15 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "prior alpha exact source 86e0711 under M4-LINUX-SCC; later inference source f3098bc PASS on job 7493136 in inference_linux_qualification_20260908_result.json. Neither receipt qualifies subsequent memory/control runtime changes"
+      "evidence": "Clean source 31cf2ea7; SCC job 7745342 full Stata suite and isolated install pass, scheduler failed=0 exit_status=0. native/deletion-unit-movers-20260926/evidence/linux-qualification.txt."
     },
     {
       "id": "windows",
       "surface": "Windows qualification",
-      "mata": "implemented",
-      "rust": "pending",
+      "mata": "qualified",
+      "rust": "qualified",
       "alpha_required": false,
-      "evidence": "requested for the complete RC payload; exact-source smoke failed with STATA_DRIVER_FAILED, cleanup/stopped state passed. Authorized collector extension awaits maintenance-profile authentication; Windows qualification and final-archive installation remain pending (INFERENCE_PLATFORM_FOLLOWUP_2026-09-08.md)"
+      "evidence": "Hosted build at d6f5571d passes Rust/unit/PE checks; exact artifact passes private Stata/MP 19 isolated installation, lifecycle, component/match q0/q1, deletion-unit and positive projection checks. Aggregate source-bound receipt, no raw project logs. Existing unsupported Windows routes remain. native/deletion-unit-movers-20260926/evidence/windows-qualification.json."
     }
   ]
 }

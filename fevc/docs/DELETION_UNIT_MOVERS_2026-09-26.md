@@ -71,11 +71,11 @@ The later capability-cache safeguard passed its focused routing regression.
 
 ## Qualification status
 
-All-platform qualification and publication are in progress. Repository binaries
-retain their prior identities until new source-bound gates complete. Final
-receipts will identify exact source, binaries, platform checks and limitations.
-The original development worktree remains preserved until final publication
-and installation verification succeed.
+All five plugins pass source-bound build and runtime qualification. The
+[manifest](../../native/deletion-unit-movers-20260926/manifest.json) preserves
+actual build identities; the [package receipt](../../native/deletion-unit-movers-20260926/package.receipt.json)
+binds the assembled payload. Public installation verification follows publication.
+The original development worktree remains preserved until those checks succeed.
 
 ## Platform qualification follow-up
 
@@ -90,12 +90,18 @@ different forecasts. Callback timing determines whether both are observed.
 The harness correction permits at most one forecast per actual pass and keeps
 the single-method assertion; unchanged summaries remain covered by the Rust
 tracker regression. No estimator, fixture, solver or scientific threshold
-changes. The failed run remains failed, and Linux qualification must rerun.
+changes. The failed run remains failed. Retest job 7745342 at `31cf2ea7` passed the
+full suite (including 256/256 pooled outcome draws), isolated installation,
+and wrapper checks. Scheduler accounting reports failed=0, exit_status=0,
+1,108 seconds elapsed, four slots and peak virtual memory 9.175G.
+The exact qualified binary has SHA-256
+`b743e9d8f58d6ac6b39d44a9f62ec4e894d72207f22cb6c45563c19eeeeeeb64`.
 
 The first private Windows run returned STATA_DRIVER_FAILED with no stage
 detail. Its source archive and exact hosted candidate hashes match the planned
 input. The instance stopped, transient objects were deleted and the lock was
-released. It does not qualify the Windows candidate; investigation is ongoing.
+released. It does not qualify the Windows candidate; the limited receipt does not
+establish the failing stage or root cause.
 
 The Windows retest uses the already compiled CI candidate directly. The first
 driver repeated a complete private build and Rust workspace suite inside the
@@ -106,3 +112,54 @@ all existing Stata runtime gates and installed-hash verification. Rust source
 and standalone binary-unit checks retain their successful hosted-CI provenance
 instead of being labelled as private checks. The fallback private-build path
 remains available. No shared runner, machine or timeout policy is changed.
+
+
+Private Windows retest `win-20260926T112550Z-3d85addd` passed with harness
+source `c3ab9e52`, using hosted build 36237445599 from `d6f5571d` unchanged.
+The controller confirms licensed Stata and project-test success, archive/source
+integrity, stopped instance, deleted transient objects and released lock. The
+[exact-artifact record](../../native/deletion-unit-movers-20260926/evidence/windows-qualification.json)
+binds the candidate, snapshot and receipt. The frozen driver reaches PASS only
+after PE/dependency audit, isolated installation, lifecycle, observation and
+individual inference, match q0/q1 including one-firm multi-block workers, pooled
+and positive projection regression, installed hash and idle-registry checks.
+The fixed controller supplies aggregate source-bound PASS, not raw Stata logs
+or individual project-check JSON. Rust tests retain hosted-CI provenance.
+
+Mac qualification used Rust 1.85.1, Apple clang 21.0.0, macOS 26.6.2 and
+Stata/MP 19; the source manifest binds 222 inputs. Linux used Rust 1.85.1,
+glibc 2.28 and Stata/MP 19. Windows used Rust 1.85.1 static-CRT x86-64 MSVC
+and private Stata/MP 19. Exact commands, versions, artifact hashes and route
+scope are in each platform receipt. Source checks and all six hosted Rust
+stable/MSRV jobs also passed at `c3ab9e52` (runs 36238744612 and 36238744595).
+
+The new [compatibility reviews](../../native/README.md) compare qualified source
+manifests with package source `c3ab9e52`: installed Ado/Mata, compiled Rust/C,
+locked dependencies, scientific inputs and thresholds are unchanged from the
+qualified builds. The changed progress assertion and private Windows harness
+are named explicitly. Intel Mac runtime uses Rosetta. Existing unsupported
+Windows routes and inference-coverage limitations remain unchanged; no new
+statistical-coverage, representative-scale or release-tag claim is made.
+
+
+## Final package assembly
+
+`build_native_release.py --profile complete --repository-dir` assembled the
+five qualified artifacts from clean source `c3ab9e52`. The deterministic package
+digest is `03f6a9cf491576835fd4bc13fc8079cee13f6feb748efcba8d57db79357521de`;
+54 catalog/payload files include 52 installed files. The root catalog removes
+the obsolete Windows-testing-pending label. No release archive is published.
+Windows receipts preserve original CRLF bytes in Git so recorded hashes remain
+verifiable after cloning. Earlier qualification files are unchanged.
+
+The first final Python suite passed 828 tests and rejected newly untracked
+provenance files through the source-bundle guard. Staging those reviewed files
+resolved the guard; its focused retest passed. No source allowlist or test
+threshold was weakened. Detailed logs remain in the ignored evidence directory.
+
+
+The final source rerun passed all 829 Python tests; generated CMG/parity and
+whitespace checks passed. Fresh and replacement installs of the staged root
+catalog passed all 52 installed-file hashes and native runtime gates under
+Stata/MP 19 on macOS arm64. See [validation](../../native/deletion-unit-movers-20260926/validation.json)
+and [staged installation](../../native/deletion-unit-movers-20260926/staged-install.json).

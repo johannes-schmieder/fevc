@@ -49,7 +49,6 @@ f fevc/fevc__rust_component_post.ado
 f fevc/fevc__failure_guidance.ado
 f fevc/fevc.sthlp
 f fevc/fevc__memory_options.ado
-d Native binaries: macOS, Linux x86-64, and Windows x86-64 (owner Stata testing pending).
 f fevc/fevc_rust_macos_arm64.plugin
 f fevc/fevc_rust_macos_x86_64.plugin
 f fevc/fevc_rust_macos.plugin

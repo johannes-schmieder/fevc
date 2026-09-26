@@ -195,8 +195,9 @@ caller RNG/data/sort restoration. Do not commit raw Stata logs.
 
 The macOS qualifier makes no Linux, Windows, native-Intel,
 representative-scale, production, inference, or public-release claim. Linux is
-qualified separately on SCC for the alpha; Windows and public distribution
-remain deferred pending their own gates and human review.
+qualified separately on SCC. Current all-platform build/runtime qualification
+and repository distribution are recorded in [`native/README.md`](../../native/README.md);
+release tags and archives remain separate owner decisions.
 
 ## Runtime reporting
 

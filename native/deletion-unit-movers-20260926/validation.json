@@ -1,0 +1,50 @@
+{
+  "schema": "FEVC-DELETION-MOVER-VALIDATION-V1",
+  "status": "PASS",
+  "production_source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+  "package_source_commit": "c3ab9e52fbe8027ee52de84c551c81172c110623",
+  "checks": {
+    "python": {
+      "command": "./.venv/bin/python -m pytest -q",
+      "passed": 829,
+      "seconds": 105.11
+    },
+    "cmg_generated": {
+      "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "status": "PASS"
+    },
+    "parity_generated": {
+      "command": "./.venv/bin/python fevc/tools/render_rust_mata_parity.py --check",
+      "status": "PASS"
+    },
+    "integrated_stata": {
+      "command": "./.venv/bin/python fevc/tools/run_checks.py",
+      "status": "FEVC LOCAL QUALIFICATION PASS"
+    },
+    "independent_rust_graph_oracle": {
+      "graphs": 728,
+      "status": "PASS"
+    },
+    "stata18_pooled_full": {
+      "outcome_draws": 256,
+      "successful": 256,
+      "seed": 9252026,
+      "status": "PASS"
+    },
+    "hosted_source_ci": "36238744612",
+    "hosted_rust_ci": "36238744595",
+    "five_platform_artifacts": "manifest.json",
+    "staged_installer": "staged-install.json"
+  },
+  "tolerances": {
+    "deterministic_scale_relative": 1e-08,
+    "randomized_numerical_mcse_multiplier": 6,
+    "projection_covariance_relative_engineering_gate": 0.005
+  },
+  "limitations": [
+    "Native Intel Mac hardware not exercised; x86-64 runtime uses Rosetta.",
+    "Existing inference-coverage and unsupported-route limits remain.",
+    "The first final source run rejected newly untracked provenance through the source-bundle guard; staging the reviewed files and rerunning passed without weakening the guard.",
+    "Local detailed development logs remain ignored; native exact-source receipts retain original identities."
+  ]
+}

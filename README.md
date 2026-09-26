@@ -16,7 +16,8 @@ requests. Point estimation is the default; inference is available for
 - Stata 18 or 19.
 - Precompiled native backends for macOS (Apple Silicon and Intel), Linux
   x86-64, and Windows x86-64; no compiler or Rust installation is needed.
-- Windows is a build-tested candidate; testing in Windows Stata is pending.
+- Native plugins pass source-bound build and Stata runtime checks; see
+  [platform evidence and limitations](native/README.md).
 
 ## Installation
 

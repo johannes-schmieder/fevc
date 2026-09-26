@@ -1,59 +1,50 @@
 # Native package provenance
 
-The repository installation includes macOS arm64, macOS x86-64, macOS
-universal, Linux x86-64, and a Windows x86-64 candidate. Windows Stata testing
-is pending the owner's check. Intel Mac execution uses Rosetta, not native
-Intel hardware.
+The repository installs qualified macOS arm64, macOS x86-64, macOS universal,
+Linux x86-64, and Windows x86-64 plugins with deletion-unit mover support.
+Qualification covers the existing supported routes; it does not add statistical
+coverage, unsupported Windows routes, native Intel hardware evidence, or a
+public release tag. Intel Mac execution uses Rosetta.
 
-The [current Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/35759636558)
-uses source `991597f7`, including the shortened help and simulation helper.
-It passed compilation, 14 Rust unit tests, 129-export PE inspection, system-only
-dependency checks, and all package hashes. Its
-[build receipt](refresh-20260922-windows-build.json) records the source and
-payload. The same binary is installed from the repository and included in the
-workflow's standalone ZIP with a smoke-test do-file. Licensed Windows Stata
-has not been run. No AWS machine was used. GitHub artifacts last 14 days;
-the committed plugin remains available through the normal installer. The
-[earlier Windows candidate record](windows-test-20260922.json) remains historical.
+The [current input manifest](deletion-unit-movers-20260926/manifest.json) and
+[package receipt](deletion-unit-movers-20260926/package.receipt.json) bind all
+five artifacts. Mac and Windows were built from `d6f5571d`; Linux was built
+from `31cf2ea7`, which corrects a progress-display test without changing the
+estimator. Packaging source `c3ab9e52` adds the bounded private Windows harness.
+The [Mac/Windows compatibility review](deletion-unit-movers-20260926/evidence/compatibility-build-to-package.json)
+and [Linux compatibility review](deletion-unit-movers-20260926/evidence/compatibility-linux-to-package.json)
+record the unchanged production inputs and the precise test/harness changes.
 
-The current package was retested with the existing Mac binaries: arm64 and
-Rosetta x86-64 thin plugins, plus the universal binary under both architectures.
-All four isolated installs passed the exact/JLA help examples, progress
-regression, installed-file hashes, and idle-registry check. The compiled native
-sources and locked dependencies are unchanged since their qualified build;
-the new simulation helper and help are covered by the current package tests.
-The [refresh receipt](refresh-20260922.json) records compatibility, current
-binary hashes, and public installer checks. Linux remains blocked as described
-below; this is not a completed all-platform qualification.
+- [Mac qualification](deletion-unit-movers-20260926/evidence/macos-qualification.txt):
+  thin arm64, thin Rosetta x86-64, universal under both architectures, and
+  isolated installs. The [222-file manifest](deletion-unit-movers-20260926/evidence/macos-source.sha256)
+  identifies the qualified inputs.
+- [Linux qualification](deletion-unit-movers-20260926/evidence/linux-qualification.txt):
+  full Stata/MP 19 suite and isolated install, SCC job `7745342`.
+  [Scheduler accounting](deletion-unit-movers-20260926/evidence/linux-scheduler.json)
+  requires `failed=0` and `exit_status=0`.
+- [Windows qualification](deletion-unit-movers-20260926/evidence/windows-qualification.json):
+  exact [hosted artifact](https://github.com/johannes-schmieder/fevc/actions/runs/36237445599),
+  129-export PE/system-dependency audit, isolated install, lifecycle, component
+  and match q0/q1 inference, deletion-unit oracle, positive projection, installed
+  binary hash, and idle registry on private licensed Stata/MP 19. The fixed
+  controller returns an aggregate source-bound PASS; raw Stata logs and
+  individual project-check JSON are not available. Cleanup and stopped-instance
+  checks passed. The original build-only receipt keeps its historical status.
 
-The Mac plugins were rebuilt from `0614534c` on September 22 to suppress
-repeated progress summaries. Their [qualification receipt](progress-20260922-macos.txt)
-records the exact source, binary hashes, and passing arm64, Rosetta x86-64,
-and universal-plugin checks. The [source inventory](progress-20260922-macos.sha256)
-binds the tested files. The exact help example was also checked to print one
-method summary and one allocation summary, followed by elapsed-time updates.
-[Validation and public installer checks](progress-20260922-validation.json)
-record the passing source, Rust, and Stata gates and both public installation
-commands on Mac, including replacement installs and all 50 installed-file hashes.
+The [integration record](../fevc/docs/DELETION_UNIT_MOVERS_2026-09-26.md)
+records tests, failures, retained limitations and final public installer status.
+Detailed diagnostic logs remain outside the tracked checkout. Earlier receipts
+in this directory remain immutable and retain their original sources and limits.
 
-The Linux plugin remains the September 21 build from `f2a15dea`; it does not
-yet contain this progress-display fix. Its rebuild is awaiting SCC login access.
-The original [input manifest](manifest.json) and qualification receipts preserve
-the September 21 binaries' actual build sources and SHA-256 hashes.
-[Installation verification](installation.json) records fresh and replacement
-installs of that initial package with both public commands on Mac and Linux under Stata/MP 19. Later packaging and evidence commits
-do not change that build identity. Root `fevc.pkg` selects the native package;
-`fevc/fevc.pkg` remains the portable source manifest.
+Corresponding source, C shim, build scripts, and locked dependencies are in
+`rust/` at each recorded build commit. See the
+[build guide](../rust/stata_backend/README.md). [Pinned dependencies](dependencies.json)
+record source downloads, licenses, and checksums; runtime license texts ship in
+[`THIRD_PARTY_NOTICES.txt`](../fevc/THIRD_PARTY_NOTICES.txt).
 
-Corresponding FEVC and CMG source, C shim, build scripts, and locked dependencies
-are in `rust/` at the recorded build commit. See
-[`rust/stata_backend/README.md`](../rust/stata_backend/README.md) for building.
-[`dependencies.json`](dependencies.json) identifies every pinned registry crate,
-its source download, license, and checksum. Runtime dependency license texts
-are included in the installed [`THIRD_PARTY_NOTICES.txt`](../fevc/THIRD_PARTY_NOTICES.txt).
-
-To check a staged root catalog through a loopback HTTP server in fresh,
-isolated Stata directories:
+Root `fevc.pkg` selects the native package; `fevc/fevc.pkg` is the portable
+source manifest. Test a staged catalog in isolated Stata directories with:
 
 ```bash
 ./.venv/bin/python fevc/tools/verify_native_installers.py \
@@ -61,14 +52,9 @@ isolated Stata directories:
     --output /path/to/new/evidence-directory
 ```
 
-Add `--public` to test both advertised public commands, including replacement
-of an altered installed help file. The verifier checks every installed byte,
-the current native reporting API, the README example and caller-data restoration,
-help, decomposition, and the installed match q0/q1 regression. Stata execution
-must use local or explicitly private licensed infrastructure. Detailed logs
-remain outside the tracked checkout; only compact receipts are retained here.
-
-Publish package updates to `main` and verify both advertised installation
-commands with `--public`. A separate `master` branch is not maintained.
-No release tag or release archive is implied by this prerelease repository
-installation.
+Add `--public` to test fresh and replacement installs through both advertised
+commands. The verifier checks every installed byte, reporting, the README
+example, caller restoration, help, decomposition, match q0/q1, the deletion-unit
+mover regression, and the idle registry. Licensed execution stays local or on
+private infrastructure. Publish to `main`; no `master` branch is maintained.
+This repository installation does not create a release tag or release archive.

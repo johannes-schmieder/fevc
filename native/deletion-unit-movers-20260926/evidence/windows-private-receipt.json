@@ -1,0 +1,22 @@
+{
+    "schema_version":  1,
+    "run_id":  "win-20260926T112550Z-3d85addd",
+    "project":  "fevc",
+    "profile":  "stata-do",
+    "source_revision":  "dirty-79e3ff8d7a9baa172b27aac4018409bbe206f00593c042624c7502dda86c0038",
+    "source_sha256":  "4a55d8b881ed979c94563df8b5082253a0f439f3855d86f7996e8e46bd09e9b9",
+    "windows_target":  "x86_64",
+    "execution_identity":  "SYSTEM",
+    "status":  "PASS",
+    "error_code":  null,
+    "checks":  {
+                   "execution_identity":  true,
+                   "source_hash":  true,
+                   "archive_paths":  true,
+                   "source_manifest":  true,
+                   "shutdown_backstop":  true,
+                   "stata":  true,
+                   "project_test":  true
+               },
+    "completed_at_utc":  "2026-09-26T11:29:19.9215741Z"
+}

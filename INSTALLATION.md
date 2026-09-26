@@ -2,9 +2,9 @@
 
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
 for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
-compiler, Rust installation, or separate plugin download is needed. The Windows
-binary passes build and dependency checks; testing in licensed Windows Stata
-is pending the owner's check.
+compiler, Rust installation, or separate plugin download is needed. All five
+plugins pass source-bound build and Stata runtime checks. Intel Mac execution
+was tested through Rosetta; see [native provenance](native/README.md).
 
 ## Installation
 
@@ -36,7 +36,7 @@ The example uses simulated data and restores your data afterward. Restart
 Stata after updating a loaded native plugin. This is a prerelease package;
 see [inference support and limitations](fevc/docs/INFERENCE.md).
 
-## Windows candidate check
+## Windows installation check
 
 Install with either command above, then restart Stata and run:
 
@@ -49,10 +49,13 @@ fevc_run jla_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 ```
 
-The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/35759636558)
+The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/36237445599)
 also provides a standalone ZIP with a local installer, test do-file, and build
 receipt. It uses the same Windows binary as the repository installer. The ZIP
-is available as a GitHub Actions artifact for 14 days.
+is available as a GitHub Actions artifact for 14 days. This exact binary also
+passed isolated installation and licensed Stata/MP 19 tests on the private
+Windows test machine; [the qualification record](native/deletion-unit-movers-20260926/evidence/windows-qualification.json)
+binds the hosted build, runtime harness, and artifact hash.
 
 ## Local source installation
 

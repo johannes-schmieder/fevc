@@ -1,0 +1,30 @@
+{
+  "schema": "FEVC-BINARY-COMPATIBILITY-V1",
+  "status": "PASS",
+  "build_source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+  "package_source_commit": "c3ab9e52fbe8027ee52de84c551c81172c110623",
+  "binaries": {
+    "fevc_rust_macos.plugin": "404c24b007e9fd745f351f1ae019566381b76843eba98d704f587b27a36ba8d7",
+    "fevc_rust_macos_arm64.plugin": "b9930706cf9520048578a85cb8586abe9c461ca361effc7a6a2fa0a3b4dca0bb",
+    "fevc_rust_macos_x86_64.plugin": "427ee9446b085c4d4a5e49da4a79e87a01eb9cc834487df08854042488699f38",
+    "fevc_rust_windows_x64.plugin": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57"
+  },
+  "unchanged_source_manifest_sha256": "da1b41cb80ce5d7e3f29217f2d71330d155373cdec572bdffb36ad103025dbe6",
+  "changed_paths": [
+    "fevc/docs/DELETION_UNIT_MOVERS_2026-09-26.md",
+    "fevc/tests/stata/test_rust_progress.do",
+    "rust/stata_backend/build_windows_ci.ps1",
+    "rust/stata_backend/write_windows_checks.ps1"
+  ],
+  "affected_surface": "Progress-display assertion and private Windows qualification harness only; installed runtime, compiled Rust/C, hosted Windows build, dependencies, scientific inputs and acceptance thresholds are unchanged.",
+  "checks": [
+    "All qualified Mac manifest paths compared byte-for-byte; sole changed member is test_rust_progress.do.",
+    "The corrected progress test passed locally; it permits a forecast for each existing exact hybrid pass, retaining one method report.",
+    "Hosted source checks, all six Rust stable/MSRV jobs, and exact Windows artifact compile/unit/PE audits passed at the build source."
+  ],
+  "limitations": [
+    "This compatibility record is not itself platform qualification. Each binary additionally requires its platform receipt.",
+    "The unchanged manifest excludes the corrected display-test file, explicitly listed in changed_paths.",
+    "Intel Mac runtime evidence uses Rosetta; statistical coverage and unsupported route limitations remain."
+  ]
+}

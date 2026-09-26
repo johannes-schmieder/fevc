@@ -1,0 +1,57 @@
+{
+  "schema": "FEVC-BINARY-INPUTS-V1",
+  "profile": "complete",
+  "source_commit": "c3ab9e52fbe8027ee52de84c551c81172c110623",
+  "binaries": [
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "b743e9d8f58d6ac6b39d44a9f62ec4e894d72207f22cb6c45563c19eeeeeeb64",
+      "source_commit": "31cf2ea7a74a3650b11984aa9c40081d21d30f6a",
+      "status": "PASS",
+      "evidence": "evidence/linux-qualification.txt",
+      "evidence_sha256": "6ef5122f1372dd865a988fd6fbe3166dee5f28bde901bde1776acd1ab4d8af2c",
+      "compatibility_evidence": "evidence/compatibility-linux-to-package.json",
+      "compatibility_sha256": "75c4001deae6dcd79bc97fc9649671d41bada73859847c90b4c5a689681572ea"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "404c24b007e9fd745f351f1ae019566381b76843eba98d704f587b27a36ba8d7",
+      "source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+      "status": "PASS",
+      "evidence": "evidence/macos-qualification.txt",
+      "evidence_sha256": "76ea93b24a37e5dce5474125c0efa093a57aa10f651f90c33ab62d17e9cc6767",
+      "compatibility_evidence": "evidence/compatibility-build-to-package.json",
+      "compatibility_sha256": "d3d32ca606bec6e0af3d5e8e5418be84853d3fe2a4567bc72a336e114778f727"
+    },
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "b9930706cf9520048578a85cb8586abe9c461ca361effc7a6a2fa0a3b4dca0bb",
+      "source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+      "status": "PASS",
+      "evidence": "evidence/macos-qualification.txt",
+      "evidence_sha256": "76ea93b24a37e5dce5474125c0efa093a57aa10f651f90c33ab62d17e9cc6767",
+      "compatibility_evidence": "evidence/compatibility-build-to-package.json",
+      "compatibility_sha256": "d3d32ca606bec6e0af3d5e8e5418be84853d3fe2a4567bc72a336e114778f727"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "427ee9446b085c4d4a5e49da4a79e87a01eb9cc834487df08854042488699f38",
+      "source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+      "status": "PASS",
+      "evidence": "evidence/macos-qualification.txt",
+      "evidence_sha256": "76ea93b24a37e5dce5474125c0efa093a57aa10f651f90c33ab62d17e9cc6767",
+      "compatibility_evidence": "evidence/compatibility-build-to-package.json",
+      "compatibility_sha256": "d3d32ca606bec6e0af3d5e8e5418be84853d3fe2a4567bc72a336e114778f727"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "sha256": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57",
+      "source_commit": "d6f5571dca34775025cd6e7500cef77896a2afc2",
+      "status": "PASS",
+      "evidence": "evidence/windows-qualification.json",
+      "evidence_sha256": "294b36d0944404aee17d486a8538272639b461b62930a3f26a0d7ab803256f95",
+      "compatibility_evidence": "evidence/compatibility-build-to-package.json",
+      "compatibility_sha256": "d3d32ca606bec6e0af3d5e8e5418be84853d3fe2a4567bc72a336e114778f727"
+    }
+  ]
+}
