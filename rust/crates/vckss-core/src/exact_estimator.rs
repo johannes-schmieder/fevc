@@ -2279,7 +2279,7 @@ fn preserve_user_break_or(
     ) {
         error
     } else {
-        BackendError::new(code, "exact_estimator", message)
+        BackendError::new(code, "exact_estimator", format!("{message}: {error}"))
     }
 }
 

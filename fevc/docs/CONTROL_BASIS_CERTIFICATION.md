@@ -253,3 +253,22 @@ performed. The owner's manual file and prior investigation remain unchanged.
 The accompanying local checkpoint record distinguishes new validation from
 historical accepted evidence. It does not qualify a public binary distribution,
 a release, or a remote platform.
+
+## Repeated-eigenvalue rotation direction
+
+The public age/year-control regression also exposed slow convergence in the
+small symmetric Jacobi kernel used to certify a match-maker inverse. Its
+21-dimensional synthetic matrix has two exchangeable groups (sizes 9 and 12),
+19 analytically known repeated eigenvalues and two group-mean eigenvalues.
+Its smallest eigenvalue is about 0.749; identification is well supported.
+
+When rounded diagonal entries are equal, a negative off-diagonal entry yields
+`tau=-0.0`. The former comparison `tau>=0` selected the positive rotation.
+Preserving the sign with `copysign` gives a consistent direction for these
+ties. The reproduced matrix then passes the existing residual criterion;
+the former path reaches a residual of about `2.409e-12` after 128 sweeps,
+above its `1.370e-12` gate. The repair changes neither that gate nor the sweep
+limit, eigenvalue enclosure or inverse-residual checks. A direct analytic
+spectrum test and twenty deterministic simultaneous row/column permutations
+exercise the kernel, and the native public panel compares exact corrected
+targets to Mata as well as testing JLA and coordinate invariance.

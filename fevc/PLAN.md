@@ -3,8 +3,11 @@
 The owner authorized investigation and repair of a real-data control-basis
 certification refusal. A direct final-basis certificate is implemented in Mata
 and Rust. It preserves all prior numerical gates and statistical decisions.
-Focused oracle and public panel checks are passing; integrated source and
-rebuilt native qualification are in progress. No candidate binary has been
+The integrated source checks passed (830 Python tests, CMG, Stata quick/full,
+installation and harness checks). Native qualification exposed a separate
+repeated-eigenvalue rotation tie, now repaired with an analytic-spectrum
+regression. The focused native exact/JLA panel passes; rebuilt native
+requalification is in progress. No candidate binary has been
 adopted downstream or publicly released. See the active
 [certificate contract](docs/CONTROL_BASIS_CERTIFICATION.md).
 

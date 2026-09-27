@@ -41,6 +41,12 @@ foreach pop in movers both {
     quietly fevc y `controls', `options' algorithm(exact)
     matrix exact=e(results)
     matrix plugin=e(plugin)
+    if "`backend'"=="rust" {
+        local mata_options : subinstr local options "backend(rust) rng(counter_v1)" "backend(mata) rng(stata)",all
+        quietly fevc y `controls', `mata_options' algorithm(exact)
+        matrix independent_exact=e(results)
+        mata: a=st_matrix("exact"); b=st_matrix("independent_exact"); assert(all(abs(a[3,.]-b[3,.]):<=1e-8:*rowmax((J(4,1,1),abs(a[3,.]'),abs(b[3,.]')))' ))
+    }
     assert e(N)==cond("`pop'"=="movers",9600,9640)
     assert e(sample)==(worker<=100 | "`pop'"=="both")
     * An independent dummy-variable OLS regression checks the plug-in targets.

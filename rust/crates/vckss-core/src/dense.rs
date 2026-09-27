@@ -237,11 +237,10 @@ fn symmetric_spectrum(
                 let diagonal_left = work[left * dimension + left];
                 let diagonal_right = work[right * dimension + right];
                 let tau = (diagonal_right - diagonal_left) / (2.0 * cross);
-                let tangent = if tau >= 0.0 {
-                    1.0 / (tau + (1.0 + tau * tau).sqrt())
-                } else {
-                    -1.0 / (-tau + (1.0 + tau * tau).sqrt())
-                };
+                // Equal diagonal entries can produce -0.0 for a negative
+                // cross term. Preserve that sign so repeated eigenspaces do
+                // not repeatedly exchange the same rounded coordinates.
+                let tangent = 1.0_f64.copysign(tau) / (tau.abs() + (1.0 + tau * tau).sqrt());
                 let cosine = (1.0 + tangent * tangent).sqrt().recip();
                 let sine = tangent * cosine;
                 for index in 0..dimension {
@@ -711,6 +710,81 @@ fn inverse_residual(
 mod tests {
     use super::*;
     use crate::interrupt::{InterruptCheck, NeverInterrupt};
+
+    #[test]
+    fn repeated_eigenvalues_converge_with_signed_zero_rotations() {
+        // Two exchangeable groups give 19 known repeated eigenvalues plus
+        // the two eigenvalues of a 2x2 group-mean matrix. These binary64
+        // constants reproduce a synthetic age/year-control match maker.
+        let n = 21;
+        let d1 = 0.9999999999999998;
+        let d2 = 1.0;
+        let c1 = -0.012854507549808856;
+        let c2 = -0.01312353592716113;
+        let cross = -0.012076840552289417;
+        let first = [0, 2, 4, 6, 8, 13, 15, 17, 19];
+        let mut matrix = vec![0.0; n * n];
+        for i in 0..n {
+            for j in 0..n {
+                matrix[i * n + j] = if i == j {
+                    if first.contains(&i) {
+                        d1
+                    } else {
+                        d2
+                    }
+                } else if first.contains(&i) && first.contains(&j) {
+                    c1
+                } else if !first.contains(&i) && !first.contains(&j) {
+                    c2
+                } else {
+                    cross
+                };
+            }
+        }
+        let spectrum =
+            symmetric_spectrum(&matrix, n, &mut NeverInterrupt, "repeated_eigenvalues").unwrap();
+        let a = d1 + 8.0 * c1;
+        let d = d2 + 11.0 * c2;
+        let root = ((a - d) * (a - d) + 4.0 * 9.0 * 12.0 * cross * cross).sqrt();
+        let mut expected = vec![(a + d - root) / 2.0, (a + d + root) / 2.0];
+        expected.extend(std::iter::repeat(d1 - c1).take(8));
+        expected.extend(std::iter::repeat(d2 - c2).take(11));
+        expected.sort_by(f64::total_cmp);
+        for (actual, expected) in spectrum.eigenvalues.iter().zip(expected) {
+            assert!((actual - expected).abs() <= spectrum.error_bound + 1e-14);
+        }
+        let inverse =
+            invert_scaled_spd(&matrix, n, 1e-10, &mut NeverInterrupt, "repeated_inverse").unwrap();
+        assert!(inverse.rcond > 0.7);
+        assert!(inverse.relres < 1e-10);
+        assert!(inverse.original_relres < 1e-10);
+        // Equivalent coordinates must retain the analytic spectrum.
+        let mut state = 9272026_u64;
+        let mut order: Vec<_> = (0..n).collect();
+        for _ in 0..20 {
+            for i in (1..n).rev() {
+                state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                order.swap(i, (state as usize) % (i + 1));
+            }
+            let mut permuted = vec![0.0; n * n];
+            for i in 0..n {
+                for j in 0..n {
+                    permuted[i * n + j] = matrix[order[i] * n + order[j]];
+                }
+            }
+            let permuted_spectrum =
+                symmetric_spectrum(&permuted, n, &mut NeverInterrupt, "permuted_repeated").unwrap();
+            for (left, right) in spectrum
+                .eigenvalues
+                .iter()
+                .zip(permuted_spectrum.eigenvalues)
+            {
+                assert!(
+                    (left - right).abs() <= spectrum.error_bound + permuted_spectrum.error_bound
+                );
+            }
+        }
+    }
 
     struct BreakFirst;
 

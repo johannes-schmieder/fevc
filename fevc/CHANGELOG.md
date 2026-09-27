@@ -11,6 +11,15 @@
 - Native layouts are unchanged; Mata runtime identity advances to API 25.
   Qualification of rebuilt binaries is recorded separately.
 
+## Repeated-eigenvalue rotation ties — 2026-09-27
+
+- Preserve signed zero when selecting Jacobi rotation direction. This resolves
+  stagnation in repeated eigenspaces while retaining the 128-sweep limit,
+  residual thresholds, spectral error bounds, and identification checks.
+- Add a failing-then-passing 21-dimensional analytic-spectrum regression and
+  twenty coordinate permutations. Preserve nested exact-estimator failure
+  details so future numerical refusals identify their underlying cause.
+
 ## Frozen subsample boundaries — 2026-09-26
 
 - Keep combined mover–stayer samples and stayer counts inside the requested
