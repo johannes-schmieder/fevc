@@ -29,8 +29,10 @@ end
 // auto-to-exact choose different physical anchors under this determinant-four
 // map; native API 12 accepted both and returned gaps near 1.4e-9.  Every
 // controlled backend now receives the same ID-free semantic row order.  The
-// original d=.002 design is too ill-conditioned downstream to certify its
-// final result and must be withheld consistently in every representation.
+// d=.002 design can now be certified by a direct final-basis bound on some
+// routes. Every accepted result must agree with the independent 120-digit
+// deleted-regression oracle at the registered deterministic tolerance. Other
+// routes may still withhold when their own certificate is unavailable.
 set obs 8
 generate byte worker = 1 + mod(floor((_n-1)/4),2)
 generate byte firm = 1 + mod(floor((_n-1)/2),2)
@@ -52,40 +54,75 @@ generate double order_u1 = order_z1+order_z2
 generate double order_u2 = -3*order_z1+order_z2
 generate double y = sin(1.7*(_n-1))+.1*(_n-1)
 
-foreach deletion_mode in observation match {
-    local deletion_options "deletion(`deletion_mode')"
-    local relabeled_options "deletion(`deletion_mode')"
-    if "`deletion_mode'" == "match" {
-        local deletion_options "`deletion_options' deletionid(match)"
-        local relabeled_options ///
-            "`relabeled_options' deletionid(match_relabel)"
+// Freeze the exact binary64 inputs behind the high-precision oracle.
+quietly findfile fevc.mata
+local pkgroot = substr(`"`r(fn)'"',1,strlen(`"`r(fn)'"')-10)
+do `"`pkgroot'/tests/fixtures/control_anchor_oracle.do"'
+local backends mata
+if `rust_available' local backends mata rust
+foreach backend of local backends {
+    foreach deletion_mode in observation match {
+        local mode = cond("`deletion_mode'"=="observation","obs","match")
+        foreach nuisance_mode in joint fixedoffset {
+            local nuisance_label = cond("`nuisance_mode'"=="joint","joint","offset")
+            foreach selected_algorithm in exact auto {
+                foreach representation in z u relabel {
+                    local basis = cond("`representation'"=="z","z","u")
+                    local worker worker
+                    local firm firm
+                    local match match
+                    if "`representation'"=="relabel" {
+                        local worker worker_relabel
+                        local firm firm_relabel
+                        local match match_relabel
+                    }
+                    local options "deletion(`deletion_mode')"
+                    if "`deletion_mode'"=="match" local options "`options' deletionid(`match')"
+                    capture noisily fevc y order_`basis'1 order_`basis'2, ///
+                        worker(`worker') firm(`firm') `options' ///
+                        algorithm(`selected_algorithm') nuisance(`nuisance_mode') ///
+                        backend(`backend') nodisplay
+                    local code = _rc
+                    if `code' {
+                        assert `code' == 498
+                        assert "`e(withholding_status)'" == "AMBIGUOUS_CONTROL_BASIS"
+                    }
+                    else {
+                        assert e(N)==8
+                        assert "`e(algorithm)'"=="exact"
+                        matrix actual=e(results)
+                        matrix expected=anchor_`nuisance_label'_`mode'_`basis'
+                        mata: a=st_matrix("actual")[3,.]; b=st_matrix("expected"); assert(all(abs(a-b):<=1e-8:*colmax((J(1,4,1)\abs(a)\abs(b)))))
+                        matrix expected=anchor_plugin_`basis'
+                        mata: a=st_matrix("actual")[1,.]; b=st_matrix("expected"); assert(all(abs(a-b):<=1e-8:*colmax((J(1,4,1)\abs(a)\abs(b)))))
+                    }
+                }
+            }
+        }
     }
-    foreach nuisance_mode in joint fixedoffset {
-        foreach selected_algorithm in exact auto {
-            capture noisily fevc y order_z1 order_z2, ///
-                worker(worker) firm(firm) ///
-                `deletion_options' algorithm(`selected_algorithm') ///
-                nuisance(`nuisance_mode') nodisplay
-            assert _rc == 498
-            assert "`e(withholding_status)'" == ///
-                "AMBIGUOUS_CONTROL_BASIS"
+}
 
-            capture noisily fevc y order_u1 order_u2, ///
-                worker(worker) firm(firm) ///
-                `deletion_options' algorithm(`selected_algorithm') ///
-                nuisance(`nuisance_mode') nodisplay
-            assert _rc == 498
-            assert "`e(withholding_status)'" == ///
-                "AMBIGUOUS_CONTROL_BASIS"
-
-            capture noisily fevc y order_u1 order_u2, ///
-                worker(worker_relabel) ///
-                firm(firm_relabel) `relabeled_options' ///
-                algorithm(`selected_algorithm') ///
-                nuisance(`nuisance_mode') nodisplay
-            assert _rc == 498
-            assert "`e(withholding_status)'" == ///
-                "AMBIGUOUS_CONTROL_BASIS"
+// A tenfold weaker separation from the FE space must still fail closed.
+// The original inverse residual may refuse before the control certificate.
+scalar anchor_d = .0002
+scalar anchor_a = sqrt(1-anchor_d^2)
+quietly replace order_z1 = anchor_s*(anchor_a*worker_sign + anchor_d*copy_sign*firm_sign)
+quietly replace order_z2 = anchor_s*(anchor_a*firm_sign - anchor_d*copy_sign*worker_sign)
+quietly replace order_u1 = order_z1+order_z2
+quietly replace order_u2 = -3*order_z1+order_z2
+foreach backend of local backends {
+    foreach deletion_mode in observation match {
+        local options "deletion(`deletion_mode')"
+        if "`deletion_mode'"=="match" local options "`options' deletionid(match)"
+        foreach nuisance_mode in joint fixedoffset {
+            foreach basis in z u {
+                capture noisily fevc y order_`basis'1 order_`basis'2, ///
+                    worker(worker) firm(firm) `options' algorithm(exact) ///
+                    nuisance(`nuisance_mode') backend(`backend') nodisplay
+                assert _rc == 498
+                assert inlist("`e(withholding_status)'", ///
+                    "AMBIGUOUS_CONTROL_BASIS","INVERSE_RESIDUAL_FAILED")
+            }
         }
     }
 }

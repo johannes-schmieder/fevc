@@ -1,15 +1,26 @@
 # Current checkpoint — 2026-09-27
 
 The owner authorized investigation and repair of a real-data control-basis
-certification refusal. A direct final-basis certificate is implemented in Mata
-and Rust. It preserves all prior numerical gates and statistical decisions.
-The integrated source checks passed (830 Python tests, CMG, Stata quick/full,
-installation and harness checks). Native qualification exposed a separate
-repeated-eigenvalue rotation tie, now repaired with an analytic-spectrum
-regression. The focused native exact/JLA panel passes; rebuilt native
-requalification is in progress. No candidate binary has been
-adopted downstream or publicly released. See the active
-[certificate contract](docs/CONTROL_BASIS_CERTIFICATION.md).
+certification refusal. Source commits `cc3b3efc` and `6fc08fee` add a direct
+final-basis certificate in Mata/Rust and repair a signed-zero Jacobi rotation
+tie. The estimator, sample and numerical tolerances are unchanged. The original
+integrated source checks passed (830 Python tests, CMG, Stata quick/full,
+installation and harness checks). The rebuilt Mac arm64/Rosetta native checks
+and isolated installs pass, with a documented dirty-end test-only compatibility
+review; qualified candidate binaries remain separate from tracked payloads.
+
+SCC job 7760983 passed the new exact/JLA public panel but stopped in the full
+suite at an obsolete blanket-refusal assertion for the eight-row anchor
+witness. An independent high-precision deleted-regression oracle confirms the
+accepted native results satisfy the existing deterministic tolerance. That
+regression now tests the oracle and retains harder-case withholding; it passes
+on both qualified Mac architectures. The full local native suite, 831 Python tests, CMG and 19 downstream
+oracle/integration/application tests pass. Linux full qualification and
+downstream adoption remain pending;
+no additional SCC qualification has been submitted after this second failure.
+No candidate binary has been adopted downstream or publicly released. See the
+[certificate contract](docs/CONTROL_BASIS_CERTIFICATION.md) and
+[qualification record](docs/CONTROL_BASIS_REPAIR_2026-09-27.md).
 
 ## Previous accepted checkpoint
 

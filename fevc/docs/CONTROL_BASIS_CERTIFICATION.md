@@ -229,6 +229,29 @@ age-polynomial/year-control panel exercises exact and JLA public estimation,
 movers and eligible stayers, a nonsingular coordinate change, target weights,
 caller restoration, and an independent dummy-variable OLS plug-in oracle.
 
+## Certified acceptance of the eight-row witness
+
+The historical `d=.002` eight-row control-anchor test required every route
+to refuse because the former cumulative certificate exhausted its conditioning
+margin. The direct certificate can admit this case without changing the
+registered deterministic acceptance limit. A refusal is still appropriate
+when a route cannot certify its own computation.
+
+`tests/oracles/control_anchor.py` independently refits the original dummy
+regression after every literal observation or match deletion, using frozen
+binary64 inputs and 120-digit Decimal arithmetic. The resulting four corrected
+targets are unchanged when precision doubles to 240 digits; a separate
+100-digit mpmath implementation gives the same rounded oracle. The test checks
+both original and transformed controls, joint and fixed-offset nuisance,
+exact and automatic routing, and simultaneous worker/firm/deletion-ID relabeling.
+Every accepted result must meet the existing `1e-8*max(1,abs(candidate),abs(reference))`
+limit. The largest measured scaled native error is approximately `1.2e-9`.
+The test also retains typed withholding on a tenfold more difficult member
+(`d=.0002`), including an inverse-residual refusal that can precede the
+control certificate. The fuzzy-anchor and rank-boundary tests remain in place.
+This updates an implementation-dependent refusal expectation; it changes no
+production gate or tolerance.
+
 ## Rounding the bounds
 
 `up(x)=fl(fl(x*(1+64*eps))+eta)` for nonnegative short bound expressions.
