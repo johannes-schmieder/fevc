@@ -18,7 +18,7 @@ real scalar vckss__api_level()
 
 string scalar vckss__build_id()
 {
-    return("vckss-api24-control-lanes256")
+    return("vckss-api25-control-posterior")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -630,6 +630,69 @@ struct vckss_control_basis_result
     real scalar forward_error
 }
 
+// Scale before squaring to preserve tiny residual norms and avoid overflow.
+real scalar vckss__control_posterior_norm(real matrix value)
+{
+    real scalar scale
+    scale=max(abs(value))
+    if (scale==0 | missing(scale)) return(scale)
+    return(scale*sqrt(quadcross(vec(value:/scale),vec(value:/scale))))
+}
+
+// Certify the final basis directly after the discrete anchor choices are fixed.
+// With A=X[selected,.], R=I-A*T and F=C-X*T,
+// C-X*A^-1=(F-C*R)*(I-R)^-1. See CONTROL_BASIS_CERTIFICATION.md.
+real scalar vckss__control_posterior(
+    real matrix x, real matrix transform, real matrix canonical,
+    real colvector selected, real colvector frequency)
+{
+    real scalar n, q, gamma, cushion, underflow, eps, rho2, rhoi
+    real scalar f2, c2, fw2, cw2, finf, cinf, begin, finish, relative, weighted, absolute
+    real matrix anchor, product, magnitude, residual, block, error, values, rootweight
+
+    n=rows(x); q=cols(x); eps=2.2204460492503131e-16
+    if (n==0 | q==0 | rows(transform)!=q | cols(transform)!=q |
+        rows(canonical)!=n | cols(canonical)!=q | rows(selected)!=q |
+        rows(frequency)!=n | cols(frequency)!=1 | hasmissing(frequency) | min(frequency)<=0 |
+        hasmissing(x) | hasmissing(transform) | hasmissing(canonical)) return(.)
+    gamma=vckss__rounding_gamma(2*q+2)
+    cushion=1/(1-vckss__rounding_gamma(8*n*q+128))
+    underflow=(2*q+2)*4.9406564584124654e-324/(1-gamma)
+    if (missing(cushion) | cushion<=0) return(.)
+    anchor=x[selected,.]
+    product=anchor*transform
+    magnitude=(abs(anchor)*abs(transform)):/(1-gamma)
+    residual=abs(I(q)-product):/(1-eps):+gamma:*magnitude:+underflow
+    if (hasmissing(residual)) return(.)
+    rhoi=vckss__control_bound_up(max(rowsum(residual))*cushion)
+    rho2=vckss__control_bound_up(max((max(rowsum(residual)),max(colsum(residual))))*cushion)
+    if (rho2>=1 | rhoi>=1) return(.)
+    f2=c2=fw2=cw2=finf=cinf=0
+    // Fixed blocks fit the existing control-preparation memory envelope.
+    for (begin=1;begin<=n;begin=begin+256) {
+        finish=min((n,begin+255))
+        block=x[|begin,1\finish,q|]
+        values=canonical[|begin,1\finish,q|]
+        product=block*transform
+        magnitude=(abs(block)*abs(transform)):/(1-gamma)
+        error=abs(values-product):/(1-eps):+gamma:*magnitude:+underflow
+        if (hasmissing(error)) return(.)
+        f2=vckss__control_posterior_norm((f2\vckss__control_posterior_norm(error)))
+        c2=vckss__control_posterior_norm((c2\vckss__control_posterior_norm(values)))
+        rootweight=sqrt(frequency[|begin\finish|])
+        fw2=vckss__control_posterior_norm((fw2\vckss__control_posterior_norm(rootweight:*error)))
+        cw2=vckss__control_posterior_norm((cw2\vckss__control_posterior_norm(rootweight:*values)))
+        finf=max((finf,max(rowsum(error))))
+        cinf=max((cinf,max(rowsum(abs(values)))))
+    }
+    // The absolute infinity bound also encloses each individual coefficient.
+    relative=vckss__control_bound_up(((f2*cushion+n*q*4.9406564584124654e-324)/max((1,c2/cushion))+rho2)/(1-rho2))
+    weighted=vckss__control_bound_up(((fw2*cushion+n*q*4.9406564584124654e-324)/max((1,cw2/cushion))+rho2)/(1-rho2))
+    absolute=vckss__control_bound_up((finf*cushion+cinf*cushion*rhoi)/(1-rhoi))
+    if (missing(relative) | missing(weighted) | missing(absolute)) return(.)
+    return(max((relative,weighted,absolute)))
+}
+
 struct vckss_control_basis_result scalar vckss__canonical_controls(
     real matrix controls,
     real colvector frequency,
@@ -643,7 +706,7 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
     real scalar numerical_error, summation_error, inverse_forward_error
     real scalar cholesky_error, basis_product_error, score_error
     real scalar anchor_forward_error, product_error, canonical_error
-    real scalar projection_error, selected_zero_error, span_error
+    real scalar projection_error, selected_zero_error, span_error, posterior_error
     real colvector selected, score
     real matrix gram, whitener, orthonormal, checked
     real matrix anchor, anchor_gram, residualized, projector
@@ -844,6 +907,9 @@ struct vckss_control_basis_result scalar vckss__canonical_controls(
     out.message = "control span mapped to an ID-free canonical basis"
     out.relres = max((gram_inverse.relres,whitening_error,
         anchor_inverse.relres,anchor_error))
+    posterior_error=vckss__control_posterior(controls,
+        whitener*anchor'*anchor_inverse.inverse,out.controls,selected,frequency)
+    if (!missing(posterior_error)) numerical_error=min((numerical_error,posterior_error))
     out.forward_error = numerical_error
     return(out)
 }

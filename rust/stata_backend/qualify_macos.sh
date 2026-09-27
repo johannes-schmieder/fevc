@@ -383,6 +383,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
   "${package_dir}/tests/stata/test_pooled_deletion.do"
   "${package_dir}/tests/stata/test_subsample_equivalence.do"
+  "${package_dir}/tests/stata/test_control_panel.do"
   "${package_dir}/tests/stata/test_rust_component_inference.do"
   "${package_dir}/tests/stata/test_rust_match_component_inference.do"
   "${package_dir}/tests/stata/test_rust_individual_inference.do"
@@ -809,6 +810,9 @@ run_stata_case arm64 public-pooled-deletion \
 run_stata_case arm64 public-subsample \
   "${package_dir}/tests/stata/test_subsample_equivalence.do" \
   'PASS test_subsample_equivalence.do' "${test_package_dir}"
+run_stata_case arm64 public-control-panel \
+  "${package_dir}/tests/stata/test_control_panel.do" \
+  'PASS test_control_panel.do' "${test_package_dir}" rust
 run_stata_case arm64 public-component-inference \
   "${package_dir}/tests/stata/test_rust_component_inference.do" \
   'PASS test_rust_component_inference.do' "${test_package_dir}"
@@ -965,6 +969,9 @@ run_stata_case x86_64 public-runtime-reporting \
   run_stata_case x86_64 public-subsample \
     "${package_dir}/tests/stata/test_subsample_equivalence.do" \
     'PASS test_subsample_equivalence.do' "${test_package_dir}"
+  run_stata_case x86_64 public-control-panel \
+    "${package_dir}/tests/stata/test_control_panel.do" \
+    'PASS test_control_panel.do' "${test_package_dir}" rust
   run_stata_case x86_64 public-component-inference \
     "${package_dir}/tests/stata/test_rust_component_inference.do" \
     'PASS test_rust_component_inference.do' "${test_package_dir}"

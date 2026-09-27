@@ -1,5 +1,16 @@
 # Pending changes
 
+## Direct control-basis certification — 2026-09-27
+
+- Certify the final canonical controls from an independent inverse/reconstruction
+  residual in Mata and Rust. Preserve anchor decisions, coefficients, samples,
+  rank/residual gates, and the downstream accuracy ceiling.
+- Add shared high-precision error-bound fixtures and a public age/year-control
+  regression covering exact and JLA, both supported match populations,
+  coordinate changes, target weights, and an independent OLS oracle.
+- Native layouts are unchanged; Mata runtime identity advances to API 25.
+  Qualification of rebuilt binaries is recorded separately.
+
 ## Frozen subsample boundaries — 2026-09-26
 
 - Keep combined mover–stayer samples and stayer counts inside the requested

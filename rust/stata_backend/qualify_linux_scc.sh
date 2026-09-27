@@ -346,6 +346,9 @@ run_stata_case shared-atoms \
 run_stata_case public-route \
   "${test_package_dir}/tests/stata/test_rust_public.do" \
   'PASS test_rust_public.do' "${test_package_dir}"
+run_stata_case public-control-panel \
+  "${test_package_dir}/tests/stata/test_control_panel.do" \
+  'PASS test_control_panel.do' "${test_package_dir}" rust
 VCKSS_STATA_CASE_CWD=${test_root} \
 VCKSS_STATA_MARKER_FILE=${test_root}/run_all.log \
 run_stata_case full-suite \

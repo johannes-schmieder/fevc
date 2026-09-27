@@ -579,7 +579,7 @@ fn canonicalize_controls_ordered_input_with_interrupt(
         interrupt,
     )?;
     drop(original);
-    drop(whitener);
+
     let checked = certified_weighted_product(
         &orthonormal,
         &orthonormal,
@@ -796,6 +796,19 @@ fn canonicalize_controls_ordered_input_with_interrupt(
             "canonical control basis failed its anchor residual gate",
         ));
     }
+    let transform = multiply(
+        &whitener,
+        control_count,
+        control_count,
+        &anchor_transpose_inverse,
+        control_count,
+        interrupt,
+    )?;
+    if let Some(posterior) = posterior_forward_error(
+        controls, &transform, &canonical, &selected, frequency, interrupt,
+    )? {
+        numerical_error = numerical_error.min(posterior);
+    }
     Ok(CanonicalControlBasis {
         columns: row_major_to_columns(&canonical, rows, control_count, interrupt)?,
         receipt: ControlBasisReceipt {
@@ -811,6 +824,107 @@ fn canonicalize_controls_ordered_input_with_interrupt(
             span_residual: span_error,
         },
     })
+}
+
+/// A posteriori certificate for the computed basis after anchor selection.
+/// For A=X[selected], R=I-A*T and F=C-X*T, the exact error is
+/// (F-C*R)*(I-R)^-1. No anchor-selection or downstream gate is changed.
+fn posterior_forward_error(
+    controls: &[Vec<f64>],
+    transform: &[f64],
+    canonical: &[f64],
+    selected: &[usize],
+    frequency: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Option<f64>> {
+    let q = controls.len();
+    let n = controls[0].len();
+    let gamma = rounding_gamma(2.0 * q as f64 + 2.0)?;
+    let cushion = 1.0 / (1.0 - rounding_gamma(8.0 * n as f64 * q as f64 + 128.0)?);
+    let underflow = (2 * q + 2) as f64 * f64::from_bits(1) / (1.0 - gamma);
+    let mut column_sums = vec![0.0_f64; q];
+    let mut row_max = 0.0_f64;
+    for (a, &row) in selected.iter().enumerate() {
+        let mut row_sum = 0.0;
+        for b in 0..q {
+            let (product, magnitude) = posterior_dot(controls, row, transform, b);
+            let identity = f64::from(a == b);
+            let residual = (identity - product).abs() / (1.0 - f64::EPSILON)
+                + gamma * magnitude / (1.0 - gamma)
+                + underflow;
+            if !residual.is_finite() {
+                return Ok(None);
+            }
+            row_sum += residual;
+            column_sums[b] += residual;
+        }
+        row_max = row_max.max(row_sum);
+    }
+    let rhoi = bound_up(row_max * cushion);
+    // ||R||_2 <= sqrt(||R||_1 ||R||_inf) <= max(||R||_1,||R||_inf).
+    let rho2 = bound_up(row_max.max(column_sums.into_iter().fold(0.0_f64, f64::max)) * cushion);
+    if !rho2.is_finite() || rho2 >= 1.0 || rhoi >= 1.0 {
+        return Ok(None);
+    }
+    let mut f2 = 0.0_f64;
+    let mut c2 = 0.0_f64;
+    let mut fw2 = 0.0_f64;
+    let mut cw2 = 0.0_f64;
+    let mut finf = 0.0_f64;
+    let mut cinf = 0.0_f64;
+    for row in 0..n {
+        checkpoint_chunk(interrupt, row, "control_basis_posterior")?;
+        let rootweight = (frequency[row] as f64).sqrt();
+        let mut error_sum = 0.0;
+        let mut value_sum = 0.0;
+        for b in 0..q {
+            let value = canonical[row * q + b];
+            let (product, magnitude) = posterior_dot(controls, row, transform, b);
+            let error = (value - product).abs() / (1.0 - f64::EPSILON)
+                + gamma * magnitude / (1.0 - gamma)
+                + underflow;
+            if !error.is_finite() || !value.is_finite() {
+                return Ok(None);
+            }
+            f2 = f2.hypot(error);
+            c2 = c2.hypot(value);
+            fw2 = fw2.hypot(rootweight * error);
+            cw2 = cw2.hypot(rootweight * value);
+            error_sum += error;
+            value_sum += value.abs();
+        }
+        finf = finf.max(error_sum);
+        cinf = cinf.max(value_sum);
+    }
+    let norm_underflow = n as f64 * q as f64 * f64::from_bits(1);
+    let relative =
+        bound_up(((f2 * cushion + norm_underflow) / (c2 / cushion).max(1.0) + rho2) / (1.0 - rho2));
+    let weighted = bound_up(
+        ((fw2 * cushion + norm_underflow) / (cw2 / cushion).max(1.0) + rho2) / (1.0 - rho2),
+    );
+    let absolute = bound_up((finf * cushion + cinf * cushion * rhoi) / (1.0 - rhoi));
+    if relative.is_finite() && weighted.is_finite() && absolute.is_finite() {
+        Ok(Some(relative.max(weighted).max(absolute)))
+    } else {
+        Ok(None)
+    }
+}
+
+fn posterior_dot(
+    controls: &[Vec<f64>],
+    row: usize,
+    transform: &[f64],
+    column: usize,
+) -> (f64, f64) {
+    let q = controls.len();
+    let mut product = 0.0;
+    let mut magnitude = 0.0;
+    for k in 0..q {
+        let term = controls[k][row] * transform[k * q + column];
+        product += term;
+        magnitude += term.abs();
+    }
+    (product, magnitude)
 }
 
 pub(crate) fn propagated_error(forward_error: f64, reciprocal_margin: f64) -> Option<f64> {
@@ -1503,6 +1617,75 @@ fn preserve_break_or(error: BackendError, code: ErrorCode, message: &'static str
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn posterior_certificate_encloses_independent_decimal_errors() {
+        let fixture = include_str!("../../../../fevc/tests/fixtures/control_posterior.txt");
+        let lines: Vec<_> = fixture
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .collect();
+        assert_eq!(lines.len() % 5, 0);
+        for record in lines.chunks_exact(5) {
+            let line = record.join(";");
+            let fields: Vec<_> = line.split(';').collect();
+            let q: usize = fields[1].parse().unwrap();
+            let n: usize = fields[2].parse().unwrap();
+            let parse = |s: &str| {
+                s.split(',')
+                    .map(|v| v.parse::<f64>().unwrap())
+                    .collect::<Vec<_>>()
+            };
+            let x = parse(fields[3]);
+            let controls: Vec<Vec<f64>> = (0..q)
+                .map(|j| (0..n).map(|i| x[i * q + j]).collect())
+                .collect();
+            let transform = parse(fields[4]);
+            let canonical = parse(fields[5]);
+            let selected: Vec<_> = (0..q).collect();
+            let bound = posterior_forward_error(
+                &controls,
+                &transform,
+                &canonical,
+                &selected,
+                &vec![1; n],
+                &mut NeverInterrupt,
+            )
+            .unwrap()
+            .unwrap();
+            assert!(bound >= fields[6].parse::<f64>().unwrap(), "{}", fields[0]);
+            assert!(bound >= fields[7].parse::<f64>().unwrap(), "{}", fields[0]);
+            let frequency: Vec<_> = (0..n).map(|i| 1 + (i * 977 % 10000) as u64).collect();
+            let weighted = posterior_forward_error(
+                &controls,
+                &transform,
+                &canonical,
+                &selected,
+                &frequency,
+                &mut NeverInterrupt,
+            )
+            .unwrap()
+            .unwrap();
+            assert!(
+                weighted >= fields[8].parse::<f64>().unwrap(),
+                "{}",
+                fields[0]
+            );
+            assert!(posterior_forward_error(
+                &controls,
+                &vec![0.0; q * q],
+                &canonical,
+                &selected,
+                &vec![1; n],
+                &mut NeverInterrupt
+            )
+            .unwrap()
+            .is_none());
+            if fields[0].contains("p0.0_weakFalse") {
+                assert!(bound < 1e-9, "{}: {bound}", fields[0]);
+            }
+        }
+    }
 
     #[test]
     fn selection_certifies_only_the_decisive_prefix_but_uses_the_global_maximum() {

@@ -5410,7 +5410,7 @@ program define _vckss_impl, eclass sortpreserve
         `prep_mark_validate_seconds'
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
-    local expected_mata_build "vckss-api24-control-lanes256"
+    local expected_mata_build "vckss-api25-control-posterior"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 24 &                 ///

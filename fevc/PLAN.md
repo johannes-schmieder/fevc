@@ -1,4 +1,15 @@
-# Current checkpoint — 2026-09-26
+# Current checkpoint — 2026-09-27
+
+The owner authorized investigation and repair of a real-data control-basis
+certification refusal. A direct final-basis certificate is implemented in Mata
+and Rust. It preserves all prior numerical gates and statistical decisions.
+Focused oracle and public panel checks are passing; integrated source and
+rebuilt native qualification are in progress. No candidate binary has been
+adopted downstream or publicly released. See the active
+[certificate contract](docs/CONTROL_BASIS_CERTIFICATION.md).
+
+## Previous accepted checkpoint
+
 
 The subsample repair is complete on `main`. Both backends keep eligible-stayer
 and combined-sample masks inside the frozen requested `if`/`in` sample.

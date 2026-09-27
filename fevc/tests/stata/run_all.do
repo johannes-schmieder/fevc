@@ -67,6 +67,7 @@ do `"`pkgroot'/tests/stata/test_probe_order.do"'
 do `"`pkgroot'/tests/stata/test_control_anchor.do"'
 do `"`pkgroot'/tests/stata/test_control_arithmetic.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_control_lanes.do"' `"`pkgroot'"'
+do `"`pkgroot'/tests/stata/test_control_posterior.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_routing_api.do"'
 do `"`pkgroot'/tests/stata/test_batch_invariance.do"'
 do `"`pkgroot'/tests/stata/test_batch_memory_limit.do"'
@@ -86,6 +87,7 @@ do `"`pkgroot'/tests/stata/test_scale_engine_reductions.do"'
 do `"`pkgroot'/tests/stata/test_scale_command.do"'
 
 if "`suite'" == "full" {
+    do `"`pkgroot'/tests/stata/test_control_panel.do"' `"`pkgroot'"' mata
     do `"`pkgroot'/tests/stata/test_control_akm.do"'
     do `"`pkgroot'/tests/stata/test_lockstep_pcg.do"'
     do `"`pkgroot'/tests/stata/test_forced_cmg.do"'
