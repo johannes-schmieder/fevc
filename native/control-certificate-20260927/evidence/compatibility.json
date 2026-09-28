@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "PASS_WITH_STATED_SCOPE",
+  "mac_build_source": "6fc08fee39f9e4c9e751a9f9e44af50f7601e650",
+  "linux_build_source": "4064febe0a4a8dd551d76f7fb1494821f1da4f00",
+  "adoption_base_source": "4064febe0a4a8dd551d76f7fb1494821f1da4f00",
+  "mac_to_linux_changed_paths": [
+    "fevc/PLAN.md",
+    "fevc/docs/CONTROL_BASIS_CERTIFICATION.md",
+    "fevc/docs/CONTROL_BASIS_REPAIR_2026-09-27.md",
+    "fevc/docs/README.md",
+    "fevc/tests/fixtures/control_anchor_oracle.do",
+    "fevc/tests/oracles/control_anchor.py",
+    "fevc/tests/python/test_control_anchor_oracle.py",
+    "fevc/tests/stata/test_control_anchor.do"
+  ],
+  "mac_qualification_classification": "LOCAL_CHECKPOINT_DIRTY_TREE",
+  "mac_source_manifest_base_mismatches": [],
+  "compatibility": "Only the independently checked anchor test/oracle and qualification documentation changed after the Mac build. The production Rust/Mata/ado/build inputs and native profile tests are identical. The revised anchor test separately passes on both exact qualified thin Mac artifacts. Linux ran the final full suite and isolated install.",
+  "adoption_changes": "Four binary payloads and documentation/evidence only; no estimator or numerical-gate change after source 4064febe.",
+  "reused_checks": [
+    "831 Python tests",
+    "CMG assembly",
+    "Rust workspace/backend targets, fmt and strict clippy",
+    "Mac thin/universal arm64 and Rosetta profiles and isolated installs",
+    "final local native Stata full suite with separately identified development binary",
+    "exact qualified Mac anchor regressions",
+    "Linux final full suite and isolated install"
+  ],
+  "limitations": [
+    "Windows repair unqualified; previous Windows binary retained",
+    "Intel Mac executed through Rosetta",
+    "No representative-scale performance or statistical-inference claim",
+    "No public push, release archive or tag"
+  ]
+}

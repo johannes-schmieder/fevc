@@ -1,26 +1,23 @@
 # Current checkpoint — 2026-09-27
 
-The owner authorized investigation and repair of a real-data control-basis
-certification refusal. Source commits `cc3b3efc` and `6fc08fee` add a direct
-final-basis certificate in Mata/Rust and repair a signed-zero Jacobi rotation
-tie. The estimator, sample and numerical tolerances are unchanged. The original
-integrated source checks passed (830 Python tests, CMG, Stata quick/full,
-installation and harness checks). The rebuilt Mac arm64/Rosetta native checks
-and isolated installs pass, with a documented dirty-end test-only compatibility
-review; qualified candidate binaries remain separate from tracked payloads.
+The owner-approved control-basis repair has passed final Mac and Linux
+qualification and its four exact qualified native artifacts are adopted locally.
+Source `4064febe` contains the direct final-basis certificate, signed-zero Jacobi
+tie repair, and independent high-precision anchor oracle. The estimator, sample,
+rank/residual gates and existing deterministic tolerance remain unchanged.
 
-SCC job 7760983 passed the new exact/JLA public panel but stopped in the full
-suite at an obsolete blanket-refusal assertion for the eight-row anchor
-witness. An independent high-precision deleted-regression oracle confirms the
-accepted native results satisfy the existing deterministic tolerance. That
-regression now tests the oracle and retains harder-case withholding; it passes
-on both qualified Mac architectures. The full local native suite, 831 Python tests, CMG and 19 downstream
-oracle/integration/application tests pass. Linux full qualification and
-downstream adoption remain pending;
-no additional SCC qualification has been submitted after this second failure.
-No candidate binary has been adopted downstream or publicly released. See the
-[certificate contract](docs/CONTROL_BASIS_CERTIFICATION.md) and
-[qualification record](docs/CONTROL_BASIS_REPAIR_2026-09-27.md).
+SCC job `7761676` passed the full Stata/MP 19 suite and isolated install with
+`failed=0` and `exit_status=0`. Mac thin/universal arm64 and Rosetta qualification
+is carried through an explicit test-only compatibility review that preserves
+the original receipt classification. Source gates pass 831 Python tests, CMG,
+Rust workspace/backend tests, formatting and strict Clippy. The local native
+full suite and downstream oracle/integration/application checks also pass.
+
+The Windows binary is retained unchanged and this repair is unqualified there.
+Nothing has been pushed, tagged or publicly released. Exact artifact identities
+and retained limitations are in the
+[adoption manifest](../native/control-certificate-20260927/manifest.json) and
+[repair record](docs/CONTROL_BASIS_REPAIR_2026-09-27.md).
 
 ## Previous accepted checkpoint
 

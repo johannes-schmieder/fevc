@@ -1,0 +1,9 @@
+{
+  "source_commit": "6fc08fee39f9e4c9e751a9f9e44af50f7601e650",
+  "receipt_classification": "LOCAL_CHECKPOINT_DIRTY_TREE",
+  "dirty_start": "clean",
+  "dirty_end": "dirty",
+  "source_manifest_current_differences": [],
+  "source_manifest_base6fc_mismatches": [],
+  "explanation": "Only the control-anchor test was edited while qualification was running. Its old blanket refusal was replaced by a literal-deletion high-precision oracle after independent diagnosis. Production Rust/Mata/ado/build and all tests executed by the native qualifier remained at 6fc08fee. New oracle test separately run on both exact qualified thin candidates. Full local native suite separately recorded. Linux full qualification remains failed and unaccepted."
+}

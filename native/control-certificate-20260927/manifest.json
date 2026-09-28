@@ -1,0 +1,57 @@
+{
+  "schema": "FEVC-CONTROL-REPAIR-ADOPTION-V1",
+  "source_commit": "4064febe0a4a8dd551d76f7fb1494821f1da4f00",
+  "platform_scope": [
+    "macOS arm64",
+    "macOS x86_64 under Rosetta",
+    "Linux x86_64 SCC"
+  ],
+  "linux_job_id": 7761676,
+  "binaries": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "49643507573324d67edcda34df8b3dfacb0cd10562c5b6355aa9c965fe4ec607",
+      "previous_sha256": "b9930706cf9520048578a85cb8586abe9c461ca361effc7a6a2fa0a3b4dca0bb",
+      "build_source": "6fc08fee39f9e4c9e751a9f9e44af50f7601e650",
+      "status": "qualified"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "d2bddffce6e86a1446931750c4b6cc195ae89b6fbebfd3f2f3274ec02deeb143",
+      "previous_sha256": "427ee9446b085c4d4a5e49da4a79e87a01eb9cc834487df08854042488699f38",
+      "build_source": "6fc08fee39f9e4c9e751a9f9e44af50f7601e650",
+      "status": "qualified"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "21b4d3dff3cd22d44db2476963ac6e5d3be84e53ba80c5ed8085a4b7072e4802",
+      "previous_sha256": "404c24b007e9fd745f351f1ae019566381b76843eba98d704f587b27a36ba8d7",
+      "build_source": "6fc08fee39f9e4c9e751a9f9e44af50f7601e650",
+      "status": "qualified"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "d11b4601d3a2552a1df3bcc64e5fa626cd316526d387c54b35e7d09265305701",
+      "previous_sha256": "b743e9d8f58d6ac6b39d44a9f62ec4e894d72207f22cb6c45563c19eeeeeeb64",
+      "build_source": "4064febe0a4a8dd551d76f7fb1494821f1da4f00",
+      "status": "qualified"
+    }
+  ],
+  "retained_unqualified_for_this_repair": {
+    "name": "fevc_rust_windows_x64.plugin",
+    "sha256": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57"
+  },
+  "evidence": {
+    "evidence/anchor-oracle.json": "a934c6a16b61809f9403f07aa3578e6e98e4824faca749e36f0d980f4c810259",
+    "evidence/compatibility.json": "ee27aac33264d4ac675410f702135c39f7934e71d56b18aceb2028db6643605b",
+    "evidence/linux-qacct.txt": "4964aa8e1e58d0bad46dc0cdabf7ca26089bca0b7c7939c08ec0fd888b860e0c",
+    "evidence/linux-qualification.txt": "a7cc39492a0edb843db7f3fb6de44b2843a2694f856b0451d49f39ce8453b619",
+    "evidence/linux-scheduler.json": "686cd89aae858ed226de59a898fcee6577c446d88a82df47fb6715a9c3106f8a",
+    "evidence/linux-source.sha256": "9f8b1825ffe2009e5da8143d999b628277ddceb53bc9247c89e89cd06b79036b",
+    "evidence/linux-wrapper.txt": "e370bc438eda8bc045a05daaffdbc579e3957ecf91f535c2b951ea446956d640",
+    "evidence/macos-original-compatibility.json": "c411e76e395f317876ac1077aac28918822b8e8b721e859442f56bea353ef81a",
+    "evidence/macos-qualification.txt": "47ba5e03c9f557e487539aebc78ae17e3e01543e0604e857070ecbbd796ff654",
+    "evidence/macos-source.sha256": "81bab3a18c73df461d94999def8cf8e7c3b6ff7f70dac7f244863b2ea8d3a3bf",
+    "evidence/local-installer.json": "042b6a76beb6c541908c7c5fd60433eeabba76ba345ce2d14a653137635458e3"
+  }
+}

@@ -1,12 +1,30 @@
 # Native package provenance
 
-The repository installs qualified macOS arm64, macOS x86-64, macOS universal,
+The current control-basis repair is qualified for macOS arm64, macOS x86-64
+under Rosetta, universal Mac payloads, and SCC Linux x86-64. The
+[adoption manifest](control-certificate-20260927/manifest.json) binds the exact
+four installed artifacts. Linux source `4064febe` passed its full Stata/MP 19
+suite and isolated install in SCC job `7761676`, with successful scheduler
+accounting. Mac artifacts were built at `6fc08fee`; the
+[compatibility review](control-certificate-20260927/evidence/compatibility.json)
+records the test-only changes and preserves the original dirty-end receipt.
+
+The Windows binary retains its previous bytes and is not qualified for this
+repair. Native Intel hardware, public release, and representative-scale
+performance remain outside these claims. The statistical model, retained
+populations and numerical acceptance gates are unchanged. See the
+[repair record](../fevc/docs/CONTROL_BASIS_REPAIR_2026-09-27.md).
+
+## Previous payload qualification
+
+
+The previous checkpoint installed qualified macOS arm64, macOS x86-64, macOS universal,
 Linux x86-64, and Windows x86-64 plugins with deletion-unit mover support.
 Qualification covers the existing supported routes; it does not add statistical
 coverage, unsupported Windows routes, native Intel hardware evidence, or a
 public release tag. Intel Mac execution uses Rosetta.
 
-The [current input manifest](deletion-unit-movers-20260926/manifest.json) and
+The [previous input manifest](deletion-unit-movers-20260926/manifest.json) and
 [package receipt](deletion-unit-movers-20260926/package.receipt.json) bind all
 five artifacts. Mac and Windows were built from `d6f5571d`; Linux was built
 from `31cf2ea7`, which corrects a progress-display test without changing the

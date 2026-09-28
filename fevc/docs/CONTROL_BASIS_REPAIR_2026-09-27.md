@@ -1,9 +1,9 @@
 # Control-basis repair qualification — September 27, 2026
 
 The owner authorized investigating and repairing a control-basis certification
-refusal in an application with thirteen age/year controls. The accepted
-installed dependency remains unchanged pending Linux qualification. Nothing
-has been pushed, released or adopted downstream.
+refusal in an application with thirteen age/year controls. Final Linux
+qualification passed after explicit owner approval. The exact qualified
+Mac/Linux payloads are adopted locally; downstream adoption is handled separately. Nothing has been pushed, tagged or publicly released.
 
 ## Implementation
 
@@ -48,7 +48,7 @@ historical-integration and five comparison/report tests. Each receipt confirms
 unchanged sources during the run and identifies the exact candidate dependency.
 Application data and results remain outside this public-source repository.
 
-## Linux failure and remaining gate
+## Linux failures and final qualification
 
 SCC job `7760783` first exposed the signed-zero eigensolver defect. The repaired
 source was tested in job `7760983`, which passed the new public exact/JLA
@@ -60,9 +60,9 @@ this was an application assertion, not a scheduler success.
 Independent diagnosis shows the newly accepted values satisfy the existing
 registered deterministic gate: the largest measured scaled error is about
 `1.2e-9`, below `1e-8`. The updated test now checks accuracy directly and passes
-locally. The original failed receipts remain failures. No further SCC job has
-been submitted after this second qualification failure. A successful Linux
-full suite and isolated install are still required before adoption for SCC.
+locally. After explicit owner approval, final SCC job `7761676` at source
+`4064febe` passed the full Stata/MP 19 suite and isolated install. Its scheduler record has
+`failed=0` and `exit_status=0`. The earlier failed receipts remain unchanged.
 
 ## Evidence and payload handling
 
@@ -71,7 +71,22 @@ accounting and the compatibility review are retained locally under
 `.local/control-certificate-20260927/`. Its `summary.json` enumerates completed
 and pending claims. The Mac qualifier automatically staged its candidates in
 the package directory; their bytes were verified against the exported artifacts
-and the three previous tracked plugin payloads were restored. All rebuilt
-candidates remain separately available for qualification and authorized adoption.
-Historical qualification receipts and the installed downstream payload remain
-unchanged. This record is development evidence, not a public release decision.
+and the three previous tracked plugin payloads were restored while final
+qualification was pending. The subsequent authorized adoption is recorded below.
+Historical qualification receipts remain unchanged. This record is development evidence, not a public release decision.
+
+## Authorized native adoption
+
+The four exact qualified Mac/Linux candidates replace the previous local
+payloads. The Windows payload retains its previous bytes and this repair remains
+unqualified there. The [new adoption manifest](../../native/control-certificate-20260927/manifest.json)
+records both old and new hashes, exact build sources, complete Linux scheduler
+evidence, and the explicit Mac compatibility review. Historical manifests are
+unchanged. Adoption changes packaging and documentation only after the tested
+source; it creates no public release or tag.
+
+Fresh and replacement local catalog installations pass on the adopted Mac
+package, including native pooled deletion, match inference and subsample
+regressions. Both installations verify all 53 runtime/license file hashes.
+The source-bound [installation receipt](../../native/control-certificate-20260927/evidence/local-installer.json)
+records this package check; it is not a public installation or release.
