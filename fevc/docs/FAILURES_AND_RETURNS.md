@@ -411,3 +411,30 @@ lacks deletion-unit mover readiness (bit 15). Update the plugin to use Rust. Aut
 Strict Rust or Counter requests withhold before native preparation/RNG.
 Match-mode `e(N_stayers)`/`e(N_stayer_rows)` count original one-block histories;
 observation-mode counts still use original one-firm histories.
+
+## Candidate control-span failure diagnostics
+
+The generic Rust control-span certificate emits `FEVC_CONTROL_CERT_V1` in
+`e(withholding_detail)` and sets `e(status)=WITHHELD`. The exact native phase
+is `e(native_failure_phase)`; `e(native_error_phase)` retains its existing
+outer-operation meaning. `e(control_certificate_failure)` is a failure-only
+row with columns `N controls units bound transform_norm conditioning propagated
+ceiling original_residual canonical_bound accumulated_bound inconclusive`.
+The selected span bound is an absolute weighted Frobenius residual; the
+conditioning value is the certified least eigenvalue in the reported phase's
+whitened coordinates. The propagated field is the relative information-inverse
+bound, not a measured target error or Monte Carlo error. Missing propagated
+values mean nonfinite/unavailable certification. The final column is one.
+The schema, selected bound and prepared-population label are also returned as
+`e(control_certificate_schema)`, `e(control_certificate_selected)` and
+`e(control_certificate_population)`. Request population remains in `e(stayers)`.
+The full-phase original residual is the maximum original-system control
+projection residual; the deletion-phase value is the original-system full-fit
+residual. Before a quantity is computed it is unavailable, never assumed zero.
+
+Errors that occur before this certificate retain their typed code, exact phase
+and existing residual/rank detail. An inconclusive span certificate is
+`AMBIGUOUS_CONTROL_BASIS`, not evidence of structural nonidentification.
+Failure receipts contain no coefficient vectors, success matrices or `e(sample)`.
+Error-string retrieval bypasses the progress wrapper to preserve its Stata
+macro scope under normal, verbose and quiet execution.

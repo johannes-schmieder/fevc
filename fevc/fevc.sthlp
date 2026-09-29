@@ -297,9 +297,24 @@ separately; Stata's {cmd:lincom} does not operate directly on these rows.
     {cmd:rng(auto|stata|counter_v1)}{col 40}random-number method; default auto
     {cmd:engine(auto|compressed|generic)}{col 40}internal representation; default auto
     {cmd:preconditioner(auto|diagonal|cmg)}{col 40}solver method; default auto
+    {cmd:nativethreads(}{it:#}{cmd:)}{col 40}native concurrency cap; default c(processors)
     {cmd:batch(auto|}{it:#}{cmd:)}{col 40}simultaneous calculations; default auto
     {cmd:probeorder(}{it:varname}{cmd:)}{col 40}stable ordering key for random draws
   {hline 76}
+
+{pstd}
+{cmd:nativethreads()} is independent of the Stata/MP license and does not
+change Stata's processor setting. Specify an integer from 1 to 64, no greater
+than the host processor count or {cmd:NSLOTS} on SGE. Stata's active processors
+must also fit inside {cmd:NSLOTS}. An explicit request beyond the allocation
+fails before native preparation. The option caps native work; serial routes,
+small batches and memory planning may use fewer workers. Mata does not use
+this native budget. On SCC, keep {cmd:set processors 4} and use
+{cmd:nativethreads(28)} only in an allocation of at least 28 slots.
+{cmd:e(native_threads_requested)}, {cmd:e(native_threads_selected)} and
+{cmd:e(native_threads_capacity)} distinguish the request, admitted cap and
+selected runtime capacity. {cmd:e(native_threads_active)} records concurrency
+when instrumented; missing means unavailable, not zero activity.
 
 {pstd}
 The default {cmd:algorithm(jla)} uses a randomized approximation.

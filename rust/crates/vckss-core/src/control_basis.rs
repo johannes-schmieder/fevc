@@ -48,6 +48,26 @@ pub struct ControlBasisReceipt {
     pub whitening_residual: f64,
     pub anchor_residual: f64,
     pub span_residual: f64,
+    pub accumulated_forward_error: f64,
+    pub posterior: Option<PosteriorCertificate>,
+}
+
+/// Bounds on stored binary64 inputs; no row values or anchor identities.
+#[derive(Clone, Debug)]
+pub struct PosteriorCertificate {
+    pub forward_error: f64,
+    pub relative: f64,
+    pub weighted_relative: f64,
+    pub absolute: f64,
+    pub transform_residual_two: f64,
+    pub transform_residual_inf: f64,
+    /// ||W^(1/2)(C-X*T)||_F. Since ||I-A*T|| < 1, X*T and X
+    /// span the same model. This excludes harmless right-coordinate error.
+    pub weighted_span_residual: f64,
+    pub residual_frobenius: f64,
+    pub residual_infinity: f64,
+    pub canonical_weighted_norm: f64,
+    pub canonical_infinity: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -523,6 +543,8 @@ fn canonicalize_controls_ordered_input_with_interrupt(
                 whitening_residual: 0.0,
                 anchor_residual: 0.0,
                 span_residual: 0.0,
+                accumulated_forward_error: 0.0,
+                posterior: None,
             },
         });
     }
@@ -804,10 +826,12 @@ fn canonicalize_controls_ordered_input_with_interrupt(
         control_count,
         interrupt,
     )?;
-    if let Some(posterior) = posterior_forward_error(
+    let accumulated_forward_error = numerical_error;
+    let posterior = posterior_certificate(
         controls, &transform, &canonical, &selected, frequency, interrupt,
-    )? {
-        numerical_error = numerical_error.min(posterior);
+    )?;
+    if let Some(certificate) = &posterior {
+        numerical_error = numerical_error.min(certificate.forward_error);
     }
     Ok(CanonicalControlBasis {
         columns: row_major_to_columns(&canonical, rows, control_count, interrupt)?,
@@ -822,6 +846,8 @@ fn canonicalize_controls_ordered_input_with_interrupt(
             whitening_residual: whitening_error,
             anchor_residual: anchor_error,
             span_residual: span_error,
+            accumulated_forward_error,
+            posterior,
         },
     })
 }
@@ -829,29 +855,23 @@ fn canonicalize_controls_ordered_input_with_interrupt(
 /// A posteriori certificate for the computed basis after anchor selection.
 /// For A=X[selected], R=I-A*T and F=C-X*T, the exact error is
 /// (F-C*R)*(I-R)^-1. No anchor-selection or downstream gate is changed.
-fn posterior_forward_error(
+fn posterior_certificate(
     controls: &[Vec<f64>],
     transform: &[f64],
     canonical: &[f64],
     selected: &[usize],
     frequency: &[u64],
     interrupt: &mut dyn InterruptCheck,
-) -> Result<Option<f64>> {
+) -> Result<Option<PosteriorCertificate>> {
     let q = controls.len();
     let n = controls[0].len();
-    let gamma = rounding_gamma(2.0 * q as f64 + 2.0)?;
     let cushion = 1.0 / (1.0 - rounding_gamma(8.0 * n as f64 * q as f64 + 128.0)?);
-    let underflow = (2 * q + 2) as f64 * f64::from_bits(1) / (1.0 - gamma);
     let mut column_sums = vec![0.0_f64; q];
     let mut row_max = 0.0_f64;
     for (a, &row) in selected.iter().enumerate() {
         let mut row_sum = 0.0;
         for b in 0..q {
-            let (product, magnitude) = posterior_dot(controls, row, transform, b);
-            let identity = f64::from(a == b);
-            let residual = (identity - product).abs() / (1.0 - f64::EPSILON)
-                + gamma * magnitude / (1.0 - gamma)
-                + underflow;
+            let residual = posterior_residual(controls, row, transform, b, f64::from(a == b))?;
             if !residual.is_finite() {
                 return Ok(None);
             }
@@ -879,10 +899,7 @@ fn posterior_forward_error(
         let mut value_sum = 0.0;
         for b in 0..q {
             let value = canonical[row * q + b];
-            let (product, magnitude) = posterior_dot(controls, row, transform, b);
-            let error = (value - product).abs() / (1.0 - f64::EPSILON)
-                + gamma * magnitude / (1.0 - gamma)
-                + underflow;
+            let error = posterior_residual(controls, row, transform, b, value)?;
             if !error.is_finite() || !value.is_finite() {
                 return Ok(None);
             }
@@ -904,27 +921,73 @@ fn posterior_forward_error(
     );
     let absolute = bound_up((finf * cushion + cinf * cushion * rhoi) / (1.0 - rhoi));
     if relative.is_finite() && weighted.is_finite() && absolute.is_finite() {
-        Ok(Some(relative.max(weighted).max(absolute)))
+        Ok(Some(PosteriorCertificate {
+            forward_error: relative.max(weighted).max(absolute),
+            relative,
+            weighted_relative: weighted,
+            absolute,
+            transform_residual_two: rho2,
+            transform_residual_inf: rhoi,
+            weighted_span_residual: bound_up(fw2 * cushion + norm_underflow),
+            residual_frobenius: bound_up(f2 * cushion + norm_underflow),
+            residual_infinity: bound_up(finf * cushion),
+            canonical_weighted_norm: bound_up(cw2 * cushion),
+            canonical_infinity: bound_up(cinf * cushion),
+        }))
     } else {
         Ok(None)
     }
 }
 
-fn posterior_dot(
+/// Enclose value - X[row,.]*T[.,column] using error-free additions and
+/// FMA product residuals. Only the low parts are summed in ordinary precision;
+/// their error is bounded explicitly, including gradual-underflow allowances.
+fn posterior_residual(
     controls: &[Vec<f64>],
     row: usize,
     transform: &[f64],
     column: usize,
-) -> (f64, f64) {
+    value: f64,
+) -> Result<f64> {
     let q = controls.len();
-    let mut product = 0.0;
+    let mut high = value;
+    let mut low = 0.0;
     let mut magnitude = 0.0;
     for k in 0..q {
-        let term = controls[k][row] * transform[k * q + column];
-        product += term;
-        magnitude += term.abs();
+        let x = -controls[k][row];
+        let y = transform[k * q + column];
+        let product = x * y;
+        let product_error = x.mul_add(y, -product);
+        let sum = high + product;
+        let z = sum - high;
+        let addition_error = (high - (sum - z)) + (product - z);
+        high = sum;
+        low += product_error;
+        low += addition_error;
+        magnitude += product_error.abs();
+        magnitude += addition_error.abs();
     }
-    (product, magnitude)
+    let gamma = rounding_gamma(2.0 * q as f64)?;
+    Ok(bound_up(
+        (high + low).abs() / (1.0 - f64::EPSILON)
+            + gamma * magnitude / (1.0 - gamma)
+            + (4 * q + 2) as f64 * f64::from_bits(1) / (1.0 - gamma),
+    ))
+}
+
+#[cfg(test)]
+fn posterior_forward_error(
+    controls: &[Vec<f64>],
+    transform: &[f64],
+    canonical: &[f64],
+    selected: &[usize],
+    frequency: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Option<f64>> {
+    Ok(posterior_certificate(
+        controls, transform, canonical, selected, frequency, interrupt,
+    )?
+    .map(|certificate| certificate.forward_error))
 }
 
 pub(crate) fn propagated_error(forward_error: f64, reciprocal_margin: f64) -> Option<f64> {
@@ -937,6 +1000,47 @@ pub(crate) fn propagated_error(forward_error: f64, reciprocal_margin: f64) -> Op
     } else {
         Some(forward_error / (reciprocal_margin - forward_error))
     }
+}
+
+/// A basis perturbation must be mapped into the information coordinates
+/// before applying an inverse bound. If B is the stored right transform and
+/// lambda <= lambda_min(B' C' W M C B), contraction of the weighted orthogonal
+/// residual maker gives ||W^(1/2) M (C-XT) B|| / sqrt(lambda) <= eta.
+/// Thus the relative Gram perturbation is at most 2*eta+eta^2, and its inverse
+/// perturbation is at most delta/(1-delta). T is certified nonsingular by the
+/// posterior certificate, so XT is exactly the requested control span.
+pub(crate) fn span_gram_bound(
+    weighted_residual: f64,
+    transform_norm: f64,
+    information_lower: f64,
+) -> Option<f64> {
+    if !weighted_residual.is_finite()
+        || weighted_residual < 0.0
+        || !transform_norm.is_finite()
+        || transform_norm <= 0.0
+        || !information_lower.is_finite()
+        || information_lower <= 0.0
+    {
+        return None;
+    }
+    // Enclose the product before division: a subnormal product may round to
+    // zero even though division by a small information root is representable.
+    let mapped_residual = bound_up(weighted_residual * transform_norm);
+    let eta = bound_up(mapped_residual / information_lower.sqrt());
+    let delta = bound_up(2.0 * eta + eta * eta);
+    if !delta.is_finite() || delta >= 1.0 {
+        None
+    } else {
+        Some(bound_up(delta / (1.0 - delta)))
+    }
+}
+
+pub(crate) fn small_norm_upper(matrix: &[f64]) -> f64 {
+    let norm = matrix
+        .iter()
+        .fold(0.0_f64, |norm, &value| norm.hypot(value));
+    let gamma = rounding_gamma(8.0 * matrix.len() as f64 + 128.0).unwrap_or(1.0);
+    bound_up(norm / (1.0 - gamma))
 }
 
 pub(crate) fn enforce_downstream_bound(
@@ -1683,6 +1787,114 @@ mod tests {
             .is_none());
             if fields[0].contains("p0.0_weakFalse") {
                 assert!(bound < 1e-9, "{}: {bound}", fields[0]);
+            }
+        }
+    }
+
+    #[test]
+    fn span_residual_encloses_independent_decimal_products() {
+        let source: Vec<_> = include_str!("../../../../fevc/tests/fixtures/control_posterior.txt")
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .collect();
+        let norms: Vec<_> =
+            include_str!("../../../../fevc/tests/fixtures/control_span_residual.txt")
+                .lines()
+                .filter(|line| !line.starts_with('#'))
+                .collect();
+        for (record, truth) in source.chunks_exact(5).zip(norms) {
+            let header: Vec<_> = record[0].split(';').collect();
+            let q: usize = header[1].parse().unwrap();
+            let n: usize = header[2].parse().unwrap();
+            let parse = |line: &str| {
+                line.split(',')
+                    .map(|v| v.parse::<f64>().unwrap())
+                    .collect::<Vec<_>>()
+            };
+            let x = parse(record[1]);
+            let t = parse(record[2]);
+            let c = parse(record[3]);
+            let controls: Vec<Vec<_>> = (0..q)
+                .map(|j| (0..n).map(|i| x[i * q + j]).collect())
+                .collect();
+            let frequency: Vec<_> = (0..n).map(|i| 1 + (i * 977 % 10000) as u64).collect();
+            let certificate = posterior_certificate(
+                &controls,
+                &t,
+                &c,
+                &(0..q).collect::<Vec<_>>(),
+                &frequency,
+                &mut NeverInterrupt,
+            )
+            .unwrap()
+            .unwrap();
+            let expected: Vec<_> = truth
+                .split(';')
+                .skip(1)
+                .map(|v| v.parse::<f64>().unwrap())
+                .collect();
+            assert!(
+                certificate.residual_frobenius >= expected[0],
+                "{}",
+                header[0]
+            );
+            assert!(
+                certificate.weighted_span_residual >= expected[1],
+                "{}",
+                header[0]
+            );
+            assert!(
+                certificate.residual_infinity >= expected[2],
+                "{}",
+                header[0]
+            );
+        }
+        // Cancellation is resolved before taking absolute values. Exact
+        // subnormal products retain an allowance even when their FMA rounds.
+        let x = vec![vec![1e16], vec![1.], vec![-1e16]];
+        let bound = posterior_residual(&x, 0, &[1.; 9], 0, 0.).unwrap();
+        assert!((1.0..1.000000000001).contains(&bound));
+        let tiny = posterior_residual(&[vec![f64::from_bits(1)]], 0, &[0.5], 0, 0.).unwrap();
+        assert!(tiny > 0.);
+        assert!(!posterior_residual(&[vec![f64::MAX]], 0, &[2.], 0, 0.)
+            .unwrap()
+            .is_finite());
+    }
+
+    #[test]
+    fn span_bound_encloses_underflow_before_information_scaling() {
+        // Exact eta is about 1e-250, but f*b underflows in binary64. An
+        // inflation only after the division would report about 1e-323.
+        let bound = span_gram_bound(1e-200, 1e-200, 1e-300).unwrap();
+        assert!(bound >= 2e-250);
+        assert!(bound < 1e-8);
+    }
+
+    #[test]
+    fn span_bound_uses_the_design_error_and_actual_information_coordinates() {
+        // C and XT can differ substantially in their invertible right map
+        // while representing the same space. Only their residual enters.
+        assert!(span_gram_bound(1e-13, 4.0, 0.02).unwrap() < 1e-8);
+        // The same relative rcond with much less absolute information is
+        // insufficient: the information scale must enter before propagation.
+        assert!(span_gram_bound(1e-13, 4.0, 1e-16).unwrap() > 1e-8);
+        for (error, norm, lower) in [
+            (-1., 1., 1.),
+            (1., 0., 1.),
+            (1., 1., 0.),
+            (f64::NAN, 1., 1.),
+            (1., 1., 1.),
+        ] {
+            assert!(span_gram_bound(error, norm, lower).is_none());
+        }
+        // Literal scalar inverse perturbations for both signs are enclosed.
+        for scale in [1e-100_f64, 1e-3, 1., 1e80] {
+            for relative in [1e-12_f64, 1e-7, 0.01] {
+                let bound = span_gram_bound(scale * relative, scale.recip(), 1.).unwrap();
+                for sign in [-1., 1.] {
+                    let measured = ((1. + sign * relative).powi(-2) - 1.).abs();
+                    assert!(measured <= bound + 4. * f64::EPSILON);
+                }
             }
         }
     }

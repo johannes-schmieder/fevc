@@ -50,3 +50,5 @@ f fevc__rust_component_post.ado
 f fevc__failure_guidance.ado
 f fevc.sthlp
 f fevc__memory_options.ado
+f fevc__native_threads.ado
+f fevc__control_failure_post.ado

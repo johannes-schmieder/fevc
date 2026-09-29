@@ -27,6 +27,10 @@ pub(crate) enum Phase {
     ExactInverse,
     ExactCorrection,
     ProjectionStatistics,
+    ControlCanonicalization,
+    ControlPreparation,
+    FullFit,
+    ControlValidation,
 }
 
 #[cfg(not(feature = "pipeline-profile"))]
@@ -55,7 +59,7 @@ mod enabled {
     use std::cell::RefCell;
     use std::time::Instant;
 
-    const NAMES: [&str; 22] = [
+    const NAMES: [&str; 26] = [
         "command",
         "leverage",
         "leverage_rhs",
@@ -78,6 +82,10 @@ mod enabled {
         "exact_inverse",
         "exact_correction",
         "projection_statistics",
+        "control_canonicalization",
+        "control_preparation",
+        "full_fit",
+        "control_validation",
     ];
 
     #[derive(Clone, Copy, Default)]
@@ -89,7 +97,7 @@ mod enabled {
 
     #[derive(Default)]
     struct State {
-        stats: [Stats; 22],
+        stats: [Stats; 26],
         children: Vec<u128>,
     }
 

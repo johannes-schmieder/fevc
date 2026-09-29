@@ -6,6 +6,12 @@ or downstream `1e-8` forward-error ceiling. The implementation retains the
 existing semantic ordering and at most 32 controls. API identity is
 `vckss-api25-control-posterior`; native layouts are unchanged.
 
+The September 28 development candidate supersedes the **generic Rust JLA**
+downstream propagation rules below with a [weighted span certificate](CONTROL_SPAN_REPAIR_2026-09-28.md).
+Its compensated posterior residual changes only the error enclosure. Exact
+and Mata downstream gates retain the API 25 rules; historical receipts retain
+their original source and acceptance status.
+
 ## Accumulation
 
 Assume binary64, round to nearest, gradual underflow and no reassociation of

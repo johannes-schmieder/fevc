@@ -3,7 +3,9 @@ program define fevc__rust_plugin_call, rclass
     gettoken plugin 0 : 0, parse(" ,")
     local parsed = strtrim(subinstr(`"`0'"', ",", "", 1))
     gettoken subcommand rest : parsed
-    if inlist("$VCKSS_REPORT_LEVEL","1","2") {
+    // Error strings belong to the plugin caller's macro scope. The progress
+    // wrapper adds a scope and has no reporting work for this read-only call.
+    if inlist("$VCKSS_REPORT_LEVEL","1","2") & lower(strtrim("`subcommand'"))!="lasterror" {
         fevc__progress $VCKSS_REPORT_LEVEL `plugin' `0'
     }
     else plugin call `plugin' `0'

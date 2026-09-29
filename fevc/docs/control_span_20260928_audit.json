@@ -1,0 +1,609 @@
+{
+  "schema": "FEVC_CONTROL_AUDIT_20260928_V1",
+  "baseline_commit": "dc9b9d48beb04e83804527321934b269f4bf0a23",
+  "job": 7766947,
+  "scope": "logging-only source; no gate or computed canonical-value change",
+  "raw_rows_and_anchor_values": "remain on SCC, not included",
+  "independent_precision": {
+    "small_matrices_digits": [
+      100,
+      200
+    ],
+    "streamed_rows_significand_bits": 64,
+    "row_results": "long-double measurements, not exact interval bounds"
+  },
+  "cases": [
+    {
+      "case": "quarter_m",
+      "expected_original_status": "PASS",
+      "basis": {
+        "n": 38057.0,
+        "q": 13.0,
+        "accumulated": 3.1638893338359416e-10,
+        "gram_rcond": 0.14469023126527203,
+        "gram_residual": 8.736675211575944e-16,
+        "anchor_rcond": 0.0032165309335383105,
+        "anchor_inverse_residual": 2.048451740479304e-14,
+        "anchor_residual": 2.4154974830767305e-14,
+        "span_residual": 9.651553315012542e-15,
+        "whitening": 1.0465965859271746e-14,
+        "summation": 3.218365802142854e-14,
+        "cholesky": 5.386518194569632e-13,
+        "basis_product": 4.5673294502640784e-14,
+        "inverse": 2.1771013963382597e-14,
+        "final_product": 9.335479442000373e-11
+      },
+      "posterior": {
+        "relative": 1.558446674060637e-13,
+        "weighted": 1.558446674060637e-13,
+        "absolute": 7.43894165217422e-13,
+        "rho2": 1.4846977954663158e-13,
+        "rhoi": 8.746288480686238e-14,
+        "f2": 2.190294958750863e-12,
+        "c2": 296.9936634096823,
+        "fw2": 2.190294958750863e-12,
+        "cw2": 296.9936634096823,
+        "finf": 7.181825130956308e-14,
+        "cinf": 7.684126984126977,
+        "cushion": 1.000000000878865
+      },
+      "selected": {
+        "posterior": 7.43894165217422e-13,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.0004878842505295535,
+        "relres": 3.277052751813495e-13,
+        "fit": 1.1662902496809487e-14,
+        "original_fit": 1.1662902496809487e-14,
+        "projection": 1.0363084265392307e-14
+      },
+      "generalized": {
+        "rcond": 0.028795109154528282,
+        "smallest_generalized_eigenvalue_lower": 0.027398658159905696,
+        "largest_generalized_eigenvalue_upper": 0.9515038825819842,
+        "projection_error_bound": 7.087705517109954e-19,
+        "normalization_error_bound": 1.8302665008849026e-14,
+        "fe_information_eigenvalue_lower_bound": 3.7813902659451775e-06,
+        "maximum_projection_residual": 1.0363084265392307e-14
+      },
+      "independent": {
+        "n": 38057,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 36.33684735576924,
+        "rho_inf_measured": 2.5156496720377227e-14,
+        "rho_2_upper_measured": 3.253398104458192e-14,
+        "relative_measured": 4.11873186577822e-15,
+        "weighted_measured": 4.11873186577822e-15,
+        "absolute_measured": 4.2970723985069363e-14,
+        "f2_measured": 2.4162640140902043e-14,
+        "finf_measured": 9.261992011560566e-16,
+        "max_canonical_entry": 1.0397877984084878,
+        "schur_rcond_highprecision": 0.0004878842524518944,
+        "schur_inverse_frobenius_residual": 3.7033115569370363e-13,
+        "anchor_inverse_100_200_relative": 4.891853007769892e-105
+      },
+      "old_diagonal_propagated": 1.5247349459307914e-09
+    },
+    {
+      "case": "quarter_ms",
+      "expected_original_status": "PASS",
+      "basis": {
+        "n": 41731.0,
+        "q": 13.0,
+        "accumulated": 3.4100064513915746e-10,
+        "gram_rcond": 0.15228472331294443,
+        "gram_residual": 5.612554316705396e-16,
+        "anchor_rcond": 0.004280593061543871,
+        "anchor_inverse_residual": 1.2713780662907069e-14,
+        "anchor_residual": 2.5278053674266834e-14,
+        "span_residual": 9.233364056437169e-15,
+        "whitening": 9.891531139002223e-15,
+        "summation": 3.043560614303239e-14,
+        "cholesky": 5.117890661200863e-13,
+        "basis_product": 4.368346092213139e-14,
+        "inverse": 1.3288497976006898e-14,
+        "final_product": 7.015456777389726e-11
+      },
+      "posterior": {
+        "relative": 1.480196059876496e-13,
+        "weighted": 1.480196059876496e-13,
+        "absolute": 7.022972408281332e-13,
+        "rho2": 1.407568356809101e-13,
+        "rhoi": 7.08479894129623e-14,
+        "f2": 2.3428866709764534e-12,
+        "c2": 322.5885683491149,
+        "fw2": 2.3428866709764534e-12,
+        "cw2": 322.5885683491149,
+        "finf": 6.558030468563293e-14,
+        "cinf": 8.98708545918366,
+        "cushion": 1.0000000009637073
+      },
+      "selected": {
+        "posterior": 7.022972408281332e-13,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.00038640633160426054,
+        "relres": 2.858440750689822e-13,
+        "fit": 7.505353443975284e-15,
+        "original_fit": 7.505353443975284e-15,
+        "projection": 1.2731886722662716e-14
+      },
+      "generalized": {
+        "rcond": 0.032234488348470265,
+        "smallest_generalized_eigenvalue_lower": 0.030129785165091544,
+        "largest_generalized_eigenvalue_upper": 0.9347064808156447,
+        "projection_error_bound": 3.0871199822831403e-18,
+        "normalization_error_bound": 2.2115704571581553e-14,
+        "fe_information_eigenvalue_lower_bound": 4.871460427300151e-07,
+        "maximum_projection_residual": 1.2731886722662716e-14
+      },
+      "independent": {
+        "n": 41731,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 38.3788737244898,
+        "rho_inf_measured": 3.195962656554891e-14,
+        "rho_2_upper_measured": 2.935499543970292e-14,
+        "relative_measured": 3.5202929337521153e-15,
+        "weighted_measured": 3.5202929337521153e-15,
+        "absolute_measured": 3.6506084503805284e-14,
+        "f2_measured": 2.5051130081864914e-14,
+        "finf_measured": 7.264696656739122e-16,
+        "max_canonical_entry": 1.000000000000012,
+        "schur_rcond_highprecision": 0.00038640633376681925,
+        "schur_inverse_frobenius_residual": 3.1901707835615434e-13,
+        "anchor_inverse_100_200_relative": 9.093977907092557e-106
+      },
+      "old_diagonal_propagated": 1.8175096644736802e-09
+    },
+    {
+      "case": "cz22_m",
+      "expected_original_status": "PASS",
+      "basis": {
+        "n": 332340.0,
+        "q": 13.0,
+        "accumulated": 3.12210752927462e-10,
+        "gram_rcond": 0.13712146092146227,
+        "gram_residual": 9.360582383290086e-16,
+        "anchor_rcond": 0.0030363520925826564,
+        "anchor_inverse_residual": 1.3239264098381925e-14,
+        "anchor_residual": 2.7930871167183827e-14,
+        "span_residual": 8.631315429429166e-15,
+        "whitening": 9.85646086080746e-15,
+        "summation": 3.415872755646326e-14,
+        "cholesky": 5.683840866698989e-13,
+        "basis_product": 4.787568466656194e-14,
+        "inverse": 2.461325858429181e-14,
+        "final_product": 9.889315009766566e-11
+      },
+      "posterior": {
+        "relative": 1.9396161685008815e-13,
+        "weighted": 1.9396161685008815e-13,
+        "absolute": 7.471904897686414e-13,
+        "rho2": 1.8502471239402882e-13,
+        "rhoi": 9.354815632969431e-14,
+        "f2": 8.690930609052518e-12,
+        "c2": 972.4766316145414,
+        "fw2": 8.690930609052518e-12,
+        "cw2": 972.4766316145414,
+        "finf": 9.031208477069587e-14,
+        "cinf": 7.0218208999052365,
+        "cushion": 1.0000000076746363
+      },
+      "selected": {
+        "posterior": 7.471904897686414e-13,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.0002697585877714099,
+        "relres": 3.792228809144894e-13,
+        "fit": 6.27522483619098e-14,
+        "original_fit": 6.27522483619098e-14,
+        "projection": 3.4963565369667168e-12
+      },
+      "generalized": {
+        "rcond": 0.0326881467250265,
+        "smallest_generalized_eigenvalue_lower": 0.03145361921311853,
+        "largest_generalized_eigenvalue_upper": 0.9622331751538916,
+        "projection_error_bound": 3.315657609078677e-12,
+        "normalization_error_bound": 1.581020298766943e-14,
+        "fe_information_eigenvalue_lower_bound": 7.023746690542255e-08,
+        "maximum_projection_residual": 3.4963565369667168e-12
+      },
+      "independent": {
+        "n": 332340,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 53.75906080967446,
+        "rho_inf_measured": 4.000652611205971e-14,
+        "rho_2_upper_measured": 3.782029562986074e-14,
+        "relative_measured": 5.288902392176185e-15,
+        "weighted_measured": 5.288902392176185e-15,
+        "absolute_measured": 7.901471532801359e-14,
+        "f2_measured": 8.40351134149334e-14,
+        "finf_measured": 1.0686477744381588e-15,
+        "max_canonical_entry": 1.0046049733712457,
+        "schur_rcond_highprecision": 0.00026975858951468754,
+        "schur_inverse_frobenius_residual": 4.466779737332828e-13,
+        "anchor_inverse_100_200_relative": 1.6851541441833892e-105
+      },
+      "old_diagonal_propagated": 2.769848767414983e-09
+    },
+    {
+      "case": "cz22_ms",
+      "expected_original_status": "WITHHELD",
+      "basis": {
+        "n": 359402.0,
+        "q": 13.0,
+        "accumulated": 1.4751522283731535e-09,
+        "gram_rcond": 0.14715953658273567,
+        "gram_residual": 5.303124871635348e-16,
+        "anchor_rcond": 0.0009281505521274659,
+        "anchor_inverse_residual": 8.949719830792536e-14,
+        "anchor_residual": 1.6735637519825646e-13,
+        "span_residual": 8.216983455130914e-15,
+        "whitening": 9.776683715059236e-15,
+        "summation": 3.170813734095509e-14,
+        "cholesky": 5.296133579822036e-13,
+        "basis_product": 4.500377883784377e-14,
+        "inverse": 1.2993169922168038e-14,
+        "final_product": 3.234666386999886e-10
+      },
+      "posterior": {
+        "relative": 4.372885034111278e-13,
+        "weighted": 4.372885034111278e-13,
+        "absolute": 4.803376666687192e-12,
+        "rho2": 4.299867825347753e-13,
+        "rhoi": 4.299867825347753e-13,
+        "f2": 7.791687923203783e-12,
+        "c2": 1067.1029726678098,
+        "fw2": 7.791687923203783e-12,
+        "cw2": 1067.1029726678098,
+        "finf": 9.480197705163697e-14,
+        "cinf": 10.950510204082043,
+        "cushion": 1.0000000082995693
+      },
+      "selected": {
+        "posterior": 4.803376666687192e-12,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.000162709323206608,
+        "relres": 2.6899666612285394e-13,
+        "fit": 5.123752964814289e-14,
+        "original_fit": 5.123752964814289e-14,
+        "projection": 3.3000498737245737e-12
+      },
+      "generalized": {
+        "rcond": 0.03558849314901907,
+        "smallest_generalized_eigenvalue_lower": 0.03375953041154765,
+        "largest_generalized_eigenvalue_upper": 0.948608030977512,
+        "projection_error_bound": 4.813120597602043e-11,
+        "normalization_error_bound": 4.229912669706471e-14,
+        "fe_information_eigenvalue_lower_bound": 9.00371616229582e-09,
+        "maximum_projection_residual": 3.3000498737245737e-12
+      },
+      "independent": {
+        "n": 359402,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 53.97089387755103,
+        "rho_inf_measured": 3.894029292445032e-13,
+        "rho_2_upper_measured": 2.4323005982310763e-13,
+        "relative_measured": 5.193210919971788e-14,
+        "weighted_measured": 5.193210919971788e-14,
+        "absolute_measured": 4.575610202254495e-13,
+        "f2_measured": 9.009925401400922e-14,
+        "finf_measured": 9.551022963510449e-16,
+        "max_canonical_entry": 1.0000000000000882,
+        "schur_rcond_highprecision": 0.00016270932503311395,
+        "schur_inverse_frobenius_residual": 2.9599815695031193e-13,
+        "anchor_inverse_100_200_relative": 7.985033898012741e-106
+      },
+      "old_diagonal_propagated": 2.9521214358376903e-08
+    },
+    {
+      "case": "cz25_m",
+      "expected_original_status": "WITHHELD",
+      "basis": {
+        "n": 262401.0,
+        "q": 13.0,
+        "accumulated": 1.213891643420074e-09,
+        "gram_rcond": 0.1279073334978213,
+        "gram_residual": 6.911896588688919e-16,
+        "anchor_rcond": 0.001028370171227378,
+        "anchor_inverse_residual": 5.3391455202394316e-14,
+        "anchor_residual": 1.1638349346175268e-13,
+        "span_residual": 7.695504013677034e-15,
+        "whitening": 1.0019299596227024e-14,
+        "summation": 3.6488558818863764e-14,
+        "cholesky": 6.093290681414691e-13,
+        "basis_product": 5.090864625704863e-14,
+        "inverse": 1.9483791022543292e-14,
+        "final_product": 2.919455095448347e-10
+      },
+      "posterior": {
+        "relative": 2.782080870476993e-13,
+        "weighted": 2.782080870476993e-13,
+        "absolute": 3.0128484079165812e-12,
+        "rho2": 2.6972140622703306e-13,
+        "rhoi": 2.634045003740467e-13,
+        "f2": 8.172846261152381e-12,
+        "c2": 963.020353065961,
+        "fw2": 8.172846261152381e-12,
+        "cw2": 963.020353065961,
+        "finf": 1.1539888554466858e-13,
+        "cinf": 11.000000000000103,
+        "cushion": 1.00000000605956
+      },
+      "selected": {
+        "posterior": 3.0128484079165812e-12,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.0001686407723411428,
+        "relres": 3.0677238154367e-13,
+        "fit": 3.716112652196756e-14,
+        "original_fit": 3.716112652196756e-14,
+        "projection": 1.1324129139843783e-12
+      },
+      "generalized": {
+        "rcond": 0.032627394914768924,
+        "smallest_generalized_eigenvalue_lower": 0.03147211904894875,
+        "largest_generalized_eigenvalue_upper": 0.9645918447109231,
+        "projection_error_bound": 7.105997241532218e-13,
+        "normalization_error_bound": 5.35181407023023e-14,
+        "fe_information_eigenvalue_lower_bound": 1.1594874393015573e-07,
+        "maximum_projection_residual": 1.1324129139843783e-12
+      },
+      "independent": {
+        "n": 262401,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 69.04255903903905,
+        "rho_inf_measured": 1.5286196933184176e-13,
+        "rho_2_upper_measured": 1.530497271414779e-13,
+        "relative_measured": 1.1112607473341623e-14,
+        "weighted_measured": 1.1112607473341623e-14,
+        "absolute_measured": 1.5366547506227485e-13,
+        "f2_measured": 8.642429466101988e-14,
+        "finf_measured": 1.4980624705139568e-15,
+        "max_canonical_entry": 1.0045245245245338,
+        "schur_rcond_highprecision": 0.0001686407739135593,
+        "schur_inverse_frobenius_residual": 3.59444522705938e-13,
+        "anchor_inverse_100_200_relative": 4.270127303845543e-105
+      },
+      "old_diagonal_propagated": 1.7865480689615714e-08
+    },
+    {
+      "case": "cz25_ms",
+      "expected_original_status": "PASS",
+      "basis": {
+        "n": 281639.0,
+        "q": 13.0,
+        "accumulated": 2.1790996570265035e-10,
+        "gram_rcond": 0.13767002697311614,
+        "gram_residual": 4.644956960844728e-16,
+        "anchor_rcond": 0.004348215601438103,
+        "anchor_inverse_residual": 1.4110864762527916e-14,
+        "anchor_residual": 2.1597895134401357e-14,
+        "span_residual": 9.766043359284916e-15,
+        "whitening": 9.688194050773545e-15,
+        "summation": 3.379036595813583e-14,
+        "cholesky": 5.661192784098679e-13,
+        "basis_product": 4.770792109174484e-14,
+        "inverse": 1.2165052090764594e-14,
+        "final_product": 6.906389773591929e-11
+      },
+      "posterior": {
+        "relative": 1.961269007055422e-13,
+        "weighted": 1.961269007055422e-13,
+        "absolute": 3.911744606723317e-13,
+        "rho2": 1.8774604060128068e-13,
+        "rhoi": 6.643334411475948e-14,
+        "f2": 6.39774508262888e-12,
+        "c2": 763.3757259145151,
+        "fw2": 6.39774508262888e-12,
+        "cw2": 763.3757259145151,
+        "finf": 5.900773755437566e-14,
+        "cinf": 5.000000000000006,
+        "cushion": 1.0000000065038162
+      },
+      "selected": {
+        "posterior": 3.911744606723317e-13,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.0009620734570767085,
+        "relres": 5.793465586652782e-14,
+        "fit": 2.704234913977584e-14,
+        "original_fit": 2.704234913977584e-14,
+        "projection": 1.4373936580915083e-12
+      },
+      "generalized": {
+        "rcond": 0.03469213375889934,
+        "smallest_generalized_eigenvalue_lower": 0.032989566184203005,
+        "largest_generalized_eigenvalue_upper": 0.9509235267415748,
+        "projection_error_bound": 1.4041165051226519e-12,
+        "normalization_error_bound": 1.0210576312936169e-14,
+        "fe_information_eigenvalue_lower_bound": 1.666544758917552e-08,
+        "maximum_projection_residual": 1.4373936580915083e-12
+      },
+      "independent": {
+        "n": 281639,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 23.037279519519522,
+        "rho_inf_measured": 3.8871196012465355e-14,
+        "rho_2_upper_measured": 3.011076486675358e-14,
+        "relative_measured": 6.325691394481411e-15,
+        "weighted_measured": 6.325691394481411e-15,
+        "absolute_measured": 4.3852845092156905e-14,
+        "f2_measured": 5.41573226238774e-14,
+        "finf_measured": 9.978985925419683e-16,
+        "max_canonical_entry": 1.0045245245245245,
+        "schur_rcond_highprecision": 0.0009620734595842717,
+        "schur_inverse_frobenius_residual": 8.029192929478153e-14,
+        "anchor_inverse_100_200_relative": 4.2468982519470155e-105
+      },
+      "old_diagonal_propagated": 4.0659521157560845e-10
+    },
+    {
+      "case": "cz27_m",
+      "expected_original_status": "WITHHELD",
+      "basis": {
+        "n": 373166.0,
+        "q": 13.0,
+        "accumulated": 7.360274152199025e-10,
+        "gram_rcond": 0.11731150147541985,
+        "gram_residual": 5.414394058351482e-16,
+        "anchor_rcond": 0.0014122352992147434,
+        "anchor_inverse_residual": 3.499721650315598e-14,
+        "anchor_residual": 1.0388783597571314e-13,
+        "span_residual": 8.062377013799812e-15,
+        "whitening": 1.0314371067470719e-14,
+        "summation": 3.948227615515915e-14,
+        "cholesky": 6.643650055490745e-13,
+        "basis_product": 5.498538236131569e-14,
+        "inverse": 1.664105834247169e-14,
+        "final_product": 2.125969505686627e-10
+      },
+      "posterior": {
+        "relative": 2.940676228927507e-13,
+        "weighted": 2.940676228927507e-13,
+        "absolute": 1.6835168717139078e-12,
+        "rho2": 2.851257609362046e-13,
+        "rhoi": 2.2571272254358432e-13,
+        "f2": 9.783631988014215e-12,
+        "c2": 1094.1381341240108,
+        "fw2": 9.783631988014215e-12,
+        "cw2": 1094.1381341240108,
+        "finf": 1.0068134682857449e-13,
+        "cinf": 7.012610953162925,
+        "cushion": 1.0000000086174163
+      },
+      "selected": {
+        "posterior": 1.6835168717139078e-12,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.0001526374353625654,
+        "relres": 5.445260253023611e-13,
+        "fit": 2.991157919540287e-14,
+        "original_fit": 2.991157919540287e-14,
+        "projection": 1.5769218083479642e-12
+      },
+      "generalized": {
+        "rcond": 0.03151418802602607,
+        "smallest_generalized_eigenvalue_lower": 0.03034411676102907,
+        "largest_generalized_eigenvalue_upper": 0.9628716036081688,
+        "projection_error_bound": 5.377654008793211e-12,
+        "normalization_error_bound": 5.732161393504795e-14,
+        "fe_information_eigenvalue_lower_bound": 5.7281074739601666e-08,
+        "maximum_projection_residual": 1.5769218083479642e-12
+      },
+      "independent": {
+        "n": 373166,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 53.68854945741402,
+        "rho_inf_measured": 1.856542786485365e-13,
+        "rho_2_upper_measured": 1.5008716504241118e-13,
+        "relative_measured": 2.367849159220371e-14,
+        "weighted_measured": 2.367849159220371e-14,
+        "absolute_measured": 2.09706145535595e-13,
+        "f2_measured": 8.596745388453641e-14,
+        "finf_measured": 8.465673950765994e-16,
+        "max_canonical_entry": 1.0046049733712812,
+        "schur_rcond_highprecision": 0.00015263743712850566,
+        "schur_inverse_frobenius_residual": 6.089033642190847e-13,
+        "anchor_inverse_100_200_relative": 2.1460605441005322e-105
+      },
+      "old_diagonal_propagated": 1.1029515048411041e-08
+    },
+    {
+      "case": "cz27_ms",
+      "expected_original_status": "PASS",
+      "basis": {
+        "n": 404536.0,
+        "q": 13.0,
+        "accumulated": 7.189211378481101e-10,
+        "gram_rcond": 0.12967854362022346,
+        "gram_residual": 4.741768181372634e-16,
+        "anchor_rcond": 0.0012128109685084357,
+        "anchor_inverse_residual": 1.8622398636965493e-14,
+        "anchor_residual": 8.097960391858517e-14,
+        "span_residual": 8.159389331668036e-15,
+        "whitening": 9.668307036843668e-15,
+        "summation": 3.5575482207148365e-14,
+        "cholesky": 6.010065671074759e-13,
+        "basis_product": 5.029216469897505e-14,
+        "inverse": 1.3183899076143424e-14,
+        "final_product": 2.475507895790685e-10
+      },
+      "posterior": {
+        "relative": 2.4178727714458415e-13,
+        "weighted": 2.4178727714458415e-13,
+        "absolute": 1.3107218086758167e-12,
+        "rho2": 2.3223807536045625e-13,
+        "rhoi": 1.50258872294485e-13,
+        "f2": 1.041725463259301e-11,
+        "c2": 1090.9032045595086,
+        "fw2": 1.041725463259301e-11,
+        "cw2": 1090.9032045595086,
+        "finf": 1.0675591047439586e-13,
+        "cinf": 8.012610953162675,
+        "cushion": 1.0000000093418324
+      },
+      "selected": {
+        "posterior": 1.3107218086758167e-12,
+        "selected": "posterior"
+      },
+      "residualized": {
+        "rcond": 0.00023093304801101395,
+        "relres": 1.8503851694029206e-13,
+        "fit": 4.5755350091955316e-14,
+        "original_fit": 4.5755350091955316e-14,
+        "projection": 1.2182523162070892e-12
+      },
+      "generalized": {
+        "rcond": 0.03401922338931389,
+        "smallest_generalized_eigenvalue_lower": 0.03223942722752453,
+        "largest_generalized_eigenvalue_upper": 0.9476826339795744,
+        "projection_error_bound": 2.1588448159368522e-11,
+        "normalization_error_bound": 3.3433838257074307e-14,
+        "fe_information_eigenvalue_lower_bound": 6.92049039245447e-09,
+        "maximum_projection_residual": 1.2182523162070892e-12
+      },
+      "independent": {
+        "n": 404536,
+        "q": 13,
+        "precision": 100,
+        "longdouble_bits": 64,
+        "anchor_condition_inf": 53.68854945741402,
+        "rho_inf_measured": 1.0086333999385389e-13,
+        "rho_2_upper_measured": 1.0134172658207496e-13,
+        "relative_measured": 1.486408467641777e-14,
+        "weighted_measured": 1.486408467641777e-14,
+        "absolute_measured": 1.7942649088401986e-13,
+        "f2_measured": 1.1152364403901524e-13,
+        "finf_measured": 1.494082580332163e-15,
+        "max_canonical_entry": 1.0046049733712619,
+        "schur_rcond_highprecision": 0.00023093304975405952,
+        "schur_inverse_frobenius_residual": 3.047350315423397e-13,
+        "anchor_inverse_100_200_relative": 1.266846760809024e-105
+      },
+      "old_diagonal_propagated": 5.675765454118346e-09
+    }
+  ]
+}

@@ -61,6 +61,8 @@ def test_catalog_preserves_match_install_inventory():
         "f fevc__simulate_data.ado",
         "f fevc__progress.ado",
         "f fevc__memory_options.ado",
+        "f fevc__native_threads.ado",
+        "f fevc__control_failure_post.ado",
         "f fevc__observation_population.ado",
         "f fevc__hybrid_sample.ado",
         "f fevc__stayer_population_post.ado",

@@ -18,6 +18,9 @@ program define fevc, eclass
     foreach key in LEVEL API NOTICE ALLOWED TIMER {
         capture macro drop VCKSS_REPORT_`key'
     }
+    foreach key in REQUESTED SELECTED ALLOCATION SUPPLIED SOURCE {
+        capture macro drop VCKSS_NATIVE_`key'
+    }
     global VCKSS_REPORT_ALLOWED = c(noisily)
     local report_timer
     foreach id of numlist 51/79 1/30 {
@@ -44,6 +47,12 @@ program define fevc, eclass
     }
     foreach key in LEVEL API NOTICE ALLOWED TIMER {
         capture macro drop VCKSS_REPORT_`key'
+    }
+    if "`e(cmd)'"=="fevc" & "$VCKSS_NATIVE_SELECTED"!="" {
+        fevc__native_threads post
+    }
+    foreach key in REQUESTED SELECTED ALLOCATION SUPPLIED SOURCE {
+        capture macro drop VCKSS_NATIVE_`key'
     }
     exit `command_rc'
 end
@@ -1307,9 +1316,9 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if "`rngrequested'"=="" local rngrequested counter_v1
     if "`fullcmg'"=="" local fullcmg = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
-    // One execution context; the isolated benchmark adapter may replace only
-    // this initialization, never Stata's own processor/accounting metadata.
+    // Native concurrency is independent of Stata's licensed processor count.
     local native_threads = c(processors)
+    if "$VCKSS_NATIVE_SELECTED"!="" local native_threads = real("$VCKSS_NATIVE_SELECTED")
     local projection_requested = (strtrim(`"`project'"') != "")
     local component_requested = ("`inference'" != "none" &       ///
         inlist(lower(strtrim("`inferencemodel'")),                 ///
@@ -4228,6 +4237,7 @@ program define _vckss_impl, eclass sortpreserve
         PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(string)                        ///
         ENGINE(string) BACKEND(string) RNG(string) WALLSeconds(string) ///
+        NATIVEThreads(string)                                    ///
         PREConditioner(string) MEMory_gib(string) MEMorycheck(string)                ///
         SEED(integer 8675309) TOLerance(string)                  ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
@@ -4250,6 +4260,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
+    _fevc_native_threads `"`nativethreads'"'
     global VCKSS_REPORT_LEVEL 0
     if "$VCKSS_REPORT_ALLOWED" == "1" & "`nodisplay'`nolog'" == "" {
         global VCKSS_REPORT_LEVEL = cond("`verbose'" != "", 2, 1)
@@ -7913,6 +7924,7 @@ program define _fevc_rust_abort, eclass
     }
     capture quietly fevc_rust clear
     quietly _vckss_post_failure "`native_status'" `"`native_detail'"'
+    quietly fevc__control_failure_post `"`native_detail'"'
     ereturn scalar native_error_code = `native_code'
     ereturn local native_error_phase "`phase'"
     ereturn local backend_requested "rust"
@@ -8032,6 +8044,7 @@ program define _vckss_rexact, eclass sortpreserve
 
     // This private execution context does not alter Stata processor metadata.
     local native_threads = c(processors)
+    if "$VCKSS_NATIVE_SELECTED"!="" local native_threads = real("$VCKSS_NATIVE_SELECTED")
     local exact_legacy = (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix")
 
     foreach input in `depvar' `worker' `firm' `deletionvar'           ///
@@ -9552,6 +9565,17 @@ program define _fevc_rust_public, eclass sortpreserve
     if "`nodisplay'" == "" fevc__display
 end
 
+program define _fevc_native_threads, eclass
+    version 18.0
+    args requested
+    capture noisily fevc__native_threads `"`requested'"' context
+    if _rc {
+        quietly _vckss_post_failure "INVALID_NATIVE_THREADS" ///
+            "Native threads and Stata processors must fit within the host and scheduler allocation."
+        exit 198
+    }
+end
+
 program define _vckss_post_failure, eclass
     version 18.0
     args failure_status failure_detail
@@ -9635,14 +9659,14 @@ end
 
 program define _vckss_display_failure
     version 18.0
-    di as error _newline "fevc could not compute the requested decomposition."
-    di as error "Reason: " as text `"`e(withholding_reason)'"'
+    noisily di as error _newline "fevc could not compute the requested decomposition."
+    noisily di as error "Reason: " as error `"`e(withholding_reason)'"'
     if `"`e(withholding_detail)'"' != `"`e(withholding_reason)'"' {
-        di as error "Detail: " as text `"`e(withholding_detail)'"'
+        noisily di as error "Detail: " as error `"`e(withholding_detail)'"'
     }
-    di as error "What to try: " as text `"`e(withholding_suggestion)'"'
-    di as error "Technical status: " as result `"`e(withholding_status)'"'
-    di as text "See "                                           ///
+    noisily di as error "What to try: " as error `"`e(withholding_suggestion)'"'
+    noisily di as error "Technical status: " as error `"`e(withholding_status)'"'
+    noisily di as error "See "                                           ///
         `"{help fevc##troubleshooting:help fevc, troubleshooting}."'
 end
 

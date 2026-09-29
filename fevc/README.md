@@ -126,3 +126,11 @@ populations are unchanged. Mata and current Rust plugins support this partition,
 including the existing projection and fixed-offset match-inference routes.
 Older plugins require an update for strict native requests; automatic requests
 can fall back to Mata before preparation.
+
+Native concurrency can be set independently of the Stata license with
+`nativethreads(#)`. Its default remains `c(processors)`; explicit values must
+fit within the machine and, on SGE, `NSLOTS`. For a 28-slot SCC job with a
+four-core Stata license, use `set processors 4` and add `nativethreads(28)` to
+`fevc`. This is a native concurrency cap, not a promise that each phase uses
+all workers. The requested cap, selected cap, runtime capacity and available
+concurrency measurements are returned separately in `e(native_threads_*)`.

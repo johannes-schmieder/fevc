@@ -1,4 +1,20 @@
-# Current checkpoint — 2026-09-27
+# Current checkpoint — 2026-09-28
+
+A control-span reliability candidate is qualified in the current worktree
+against baseline `dc9b9d48beb04e83804527321934b269f4bf0a23`. No installed or
+frozen application package is changed. It replaces generic JLA coordinate-error
+propagation with a weighted span perturbation certificate, exposes failure
+diagnostics, and adds allocation-bounded `nativethreads()`. See the
+[prospective contract and qualification](docs/CONTROL_SPAN_REPAIR_2026-09-28.md).
+The canceled Separations campaigns remain canceled.
+Final candidate B passed thirteen retained-design checks in SCC job 7767513,
+including all three former refusals and both target-weight systems. The
+50-cell A8 study and explicit B compatibility review, independent small
+four-target oracles, Mac/Linux interfaces, thread routing and probe precision
+are recorded in the report. Owner adoption is pending; Intel/Rosetta, universal
+Mac and Windows artifacts are not qualified for this candidate.
+
+## Accepted checkpoint — 2026-09-27
 
 The owner-approved control-basis repair has passed final Mac and Linux
 qualification and its four exact qualified native artifacts are adopted locally.

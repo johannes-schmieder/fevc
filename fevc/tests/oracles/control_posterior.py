@@ -53,3 +53,23 @@ def fixture_text():
     return '\n'.join(lines)+'\n'
 
 if __name__=='__main__':FIXTURE.write_text(fixture_text())
+
+
+def span_fixture_text():
+    """Independent exact stored-input C-XT norms; no canonical inverse used."""
+    lines = ['# name;frobenius_upper;weighted_frobenius_upper;infinity_upper']
+    source = [line for line in fixture_text().splitlines() if not line.startswith('#')]
+    with localcontext() as context:
+        context.prec = 180
+        for start in range(0, len(source), 5):
+            name, q, n = source[start].split(';'); q, n = int(q), int(n)
+            parse = lambda line: [Decimal.from_float(float(v)) for v in line.split(',')]
+            x, t, c = map(parse, source[start+1:start+4])
+            residual = [[c[i*q+j]-sum((x[i*q+k]*t[k*q+j] for k in range(q)), Decimal(0))
+                         for j in range(q)] for i in range(n)]
+            norm = sum((v*v for row in residual for v in row), Decimal(0)).sqrt()
+            weighted = sum((Decimal(1+i*977%10000)*sum((v*v for v in residual[i]),Decimal(0))
+                            for i in range(n)),Decimal(0)).sqrt()
+            infinity = max(sum((abs(v) for v in row),Decimal(0)) for row in residual)
+            lines.append(';'.join([name,*[repr(upper(v)) for v in (norm,weighted,infinity)]]))
+    return '\n'.join(lines)+'\n'

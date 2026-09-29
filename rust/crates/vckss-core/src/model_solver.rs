@@ -175,6 +175,8 @@ pub struct ModelBatchSolve {
 #[derive(Clone, Debug)]
 pub struct ControlRankReceipt {
     pub controls: usize,
+    /// Upper bound on the norm of the stored original-information whitener.
+    pub original_whitener_norm: f64,
     /// One lossless FE-projection receipt per logical canonical control.
     pub projection_rhs: Vec<ControlProjectionReceipt>,
     /// Certified lower bound for the generalized reciprocal condition number
@@ -1304,6 +1306,7 @@ fn certify_control_rank(
         return Ok(PreparedControlSchur {
             receipt: ControlRankReceipt {
                 controls: 0,
+                original_whitener_norm: 0.0,
                 projection_rhs: Vec::new(),
                 rcond: 1.0,
                 smallest_generalized_eigenvalue_lower: 1.0,
@@ -1659,6 +1662,7 @@ fn certify_control_rank(
     Ok(PreparedControlSchur {
         receipt: ControlRankReceipt {
             controls,
+            original_whitener_norm: crate::control_basis::small_norm_upper(&whitener),
             projection_rhs,
             rcond,
             smallest_generalized_eigenvalue_lower,

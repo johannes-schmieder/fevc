@@ -52,8 +52,8 @@ use crate::component_inference::{
     REPORTED_TARGETS,
 };
 use crate::control_basis::{
-    canonicalize_controls_in_order_with_interrupt, enforce_downstream_bound,
-    refine_control_semantic_order_with_interrupt, MAX_CANONICAL_CONTROLS,
+    canonicalize_controls_in_order_with_interrupt, refine_control_semantic_order_with_interrupt,
+    small_norm_upper, span_gram_bound, ControlBasisReceipt, MAX_CANONICAL_CONTROLS,
 };
 use crate::counter_accounting::{
     combine_counter_phases, plan_counter_phase, plan_counter_phase_with_logical_atoms,
@@ -1141,6 +1141,7 @@ fn run_generic_jla_with_execution_interrupt(
         "generic JLA RHS receipts",
     )?;
 
+    let canonical_profile = ProfileScope::new(ProfilePhase::ControlCanonicalization);
     let design_only_order = component_inference.is_some_and(|prepared| prepared.design_only_order);
     let control_order = if design_only_order {
         residual_moment_attachment::canonical_design_order(problem, interrupt)?
@@ -1167,6 +1168,7 @@ fn run_generic_jla_with_execution_interrupt(
     } else {
         canonical_row_order(problem, &canonical.columns, interrupt)?
     };
+    drop(canonical_profile);
     let full_data = CanonicalModelData {
         workers,
         firms,
@@ -1178,6 +1180,7 @@ fn run_generic_jla_with_execution_interrupt(
     let mut controlled_batch = None;
     let mut diagonal_plan = None;
     let mut component_batch = None;
+    let preparation_profile = ProfileScope::new(ProfilePhase::ControlPreparation);
     let prepared_solvers = if let Some(threads) = diagonal_threads {
         let (batch, plan, inference) = diagonal::plan(
             problem,
@@ -1348,6 +1351,7 @@ fn run_generic_jla_with_execution_interrupt(
             interrupt,
         )?
     };
+    drop(preparation_profile);
     if let (Some(prepared), Some(receipt)) = (&mut component_view, component_batch) {
         // The selected component and Gram widths may have different probe caps.
         prepared.options.batch_width = receipt.component_width;
@@ -1374,10 +1378,14 @@ fn run_generic_jla_with_execution_interrupt(
         });
     }
     if controls > 0 {
-        enforce_downstream_bound(
-            canonical.receipt.forward_error,
-            full_solver.control_rank_receipt().rcond,
-            "joint-control conditioning cannot certify canonical-basis invariance",
+        enforce_control_span(
+            &canonical.receipt,
+            control_rank.original_whitener_norm,
+            control_rank.smallest_generalized_eigenvalue_lower,
+            problem,
+            hybrid,
+            "control_span_full",
+            control_rank.maximum_projection_residual,
         )?;
     }
     let mut route_memory = route_memory_forecast(problem, &full_solver, controls)?;
@@ -1594,6 +1602,7 @@ fn run_generic_jla_with_execution_interrupt(
         );
     }
     crate::progress::stage(crate::progress::FIT);
+    let fit_profile = ProfileScope::new(ProfilePhase::FullFit);
     let full_rhs = transpose_outcome_rhs(
         problem,
         &canonical.columns,
@@ -1630,6 +1639,8 @@ fn run_generic_jla_with_execution_interrupt(
             .expect("full fit is present before nuisance specialization"),
     );
 
+    drop(fit_profile);
+    let validation_profile = ProfileScope::new(ProfilePhase::ControlValidation);
     let residualized_controls = full_solver.take_generic_jla_residualized_controls()?;
     let geometry = control_geometry(
         problem,
@@ -1643,15 +1654,11 @@ fn run_generic_jla_with_execution_interrupt(
     let control_schur_rcond = geometry.rcond;
     let control_schur_relres = geometry.relres;
     let maximum_projection_relres = control_rank.maximum_projection_residual;
-    if controls > 0 {
-        enforce_downstream_bound(
-            canonical.receipt.forward_error,
-            geometry.rcond,
-            "residualized-control conditioning cannot certify canonical-basis invariance",
-        )?;
-    }
-    let deletion_rank_gap = if controls == 0 {
-        1.0
+    // Representation error is certified in the full and every-deletion
+    // residualized span. Geometry's inverse/factor checks certify the actual
+    // computation; its coordinate-dependent rcond is a rank diagnostic.
+    let (deletion_rank_gap, deletion_whitener_norm) = if controls == 0 {
+        (1.0, 0.0)
     } else {
         deletion_rank_certificate(
             problem,
@@ -1664,13 +1671,18 @@ fn run_generic_jla_with_execution_interrupt(
         )?
     };
     if controls > 0 {
-        enforce_downstream_bound(
-            canonical.receipt.forward_error,
+        enforce_control_span(
+            &canonical.receipt,
+            deletion_whitener_norm,
             deletion_rank_gap,
-            "deletion-rank conditioning cannot certify canonical-basis invariance",
+            problem,
+            hybrid,
+            "control_span_deletion",
+            full_fit_complete_residual,
         )?;
     }
 
+    drop(validation_profile);
     let mut working_y = copy_f64(&problem.outcome, "working outcome", interrupt)?;
     let (working_solver, working_fit, working_fit_is_distinct): (&PreparedModelSolver<'_>, _, _) =
         if options.nuisance == NuisanceMode::FixedOffset && controls > 0 {
@@ -3623,6 +3635,46 @@ fn control_geometry(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
+fn enforce_control_span(
+    certificate: &ControlBasisReceipt,
+    transform_norm: f64,
+    information_lower: f64,
+    problem: &CompressedProblem,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    phase: &'static str,
+    original_residual: f64,
+) -> Result<()> {
+    let residual = certificate
+        .posterior
+        .as_ref()
+        .map_or(f64::NAN, |value| value.weighted_span_residual);
+    let propagated =
+        span_gram_bound(residual, transform_norm, information_lower).unwrap_or(f64::INFINITY);
+    #[cfg(feature = "pipeline-profile")]
+    eprintln!(
+        "FEVC_CONTROL_SPAN_V1 phase={phase} n={} q={} units={} bound={residual:.17e} transform_norm={transform_norm:.17e} conditioning={information_lower:.17e} propagated={propagated:.17e} ceiling=1e-8 original_residual={original_residual:.17e}",
+        problem.outcome.len(), certificate.controls, problem.deletion_units(),
+    );
+    if propagated <= 1.0e-8 {
+        return Ok(());
+    }
+    let population = if hybrid.is_some() {
+        "combined"
+    } else {
+        "retained"
+    };
+    Err(BackendError::new(
+        ErrorCode::AmbiguousControlBasis,
+        phase,
+        format!(
+            "control span accuracy is numerically inconclusive; FEVC_CONTROL_CERT_V1 population={population} n={} q={} units={} selected=span_residual bound={residual:.17e} transform_norm={transform_norm:.17e} conditioning={information_lower:.17e} propagated={propagated:.17e} ceiling=1.00000000000000000e-8 original_residual={original_residual:.17e} canonical_bound={:.17e} accumulated_bound={:.17e}",
+            problem.outcome.len(), certificate.controls, problem.deletion_units(),
+            certificate.forward_error, certificate.accumulated_forward_error,
+        ),
+    ))
+}
+
 fn deletion_rank_certificate(
     problem: &CompressedProblem,
     controls: &[Vec<f64>],
@@ -3631,10 +3683,10 @@ fn deletion_rank_certificate(
     options: GenericJlaOptions,
     hybrid: Option<&ExactStayerHybridPlan>,
     interrupt: &mut dyn InterruptCheck,
-) -> Result<f64> {
+) -> Result<(f64, f64)> {
     let q = controls.len();
     if q == 0 {
-        return Ok(1.0);
+        return Ok((1.0, 0.0));
     }
     let rows = problem.outcome.len();
     let cells = problem.cells();
@@ -4120,7 +4172,7 @@ fn deletion_rank_certificate(
             "within-cell control variation does not certify rank after every deletion",
         ));
     }
-    Ok(gap)
+    Ok((gap, small_norm_upper(&whitener)))
 }
 
 #[allow(clippy::too_many_arguments)]
