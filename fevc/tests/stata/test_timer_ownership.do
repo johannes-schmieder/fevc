@@ -82,6 +82,24 @@ quietly fevc__timer end
 mata: assert(__fevc_timer_depth==0 & all(__fevc_timer_state:==0))
 mata: for (i=1;i<=100;i++) assert(timer_value(i)==(0,0))
 
+// The independently callable lifecycle helper also preserves its r() results
+// and caller data when every physical timer is busy.
+generate byte timer_sample = 1
+program define _fevc_timer_test_callback
+    assert _N==0
+end
+forvalues id=1/100 {
+    timer on `id'
+}
+fevc__lifecycle, method(preserve) sample(timer_sample) callback(_fevc_timer_test_callback)
+assert "`r(method)'"=="preserve" & r(sample_restored)==1
+assert missing(r(transition_seconds),r(work_seconds),r(restore_seconds))
+assert _N==288
+mata: for (i=1;i<=100;i++) assert(timer_value(i)[2]==1)
+timer clear
+drop timer_sample
+program drop _fevc_timer_test_callback
+
 timer on 96
 capture noisily fevc y, worker(worker) firm(firm) backend(mata) algorithm(invalid)
 assert _rc!=0

@@ -14,6 +14,7 @@ program define fevc__lifecycle, rclass
     _return hold `results'
     quietly fevc__timer end
     _return restore `results'
+    return add
     exit `rc'
 end
 
