@@ -1,11 +1,13 @@
 # Current checkpoint — 2026-09-29
 
-The active experiment moves interrupt branches out of the scalar and batched
-generic model operators, RHS reduction and worker reconstruction. It retains
-the same arithmetic and callback positions, including flattened batch offsets.
-Boundary/reuse tests and the initial kernel comparison pass. Complete-command
-timing and exact-source Mac qualification remain pending. See the
-[experiment record](docs/INTERRUPT_CHUNKS_2026-09-29.md).
+The bounded interrupt optimization moves branches out of the scalar and batched
+generic model operators, RHS reduction and worker reconstruction. Arithmetic
+and callback positions, including flattened batch offsets, are preserved.
+Five local complete-command cells improve by 4.2–26.6%, with bitwise-identical
+targets and full residuals. Boundary/reuse tests, source gates, integrated Stata
+quick/full checks and exact-source Mac thin/universal arm64/Rosetta qualification
+pass at `d9692f6d`. Distributed binaries remain unchanged. See the
+[experiment and validation record](docs/INTERRUPT_CHUNKS_2026-09-29.md).
 
 ## Review repair checkpoint — 2026-09-29
 
