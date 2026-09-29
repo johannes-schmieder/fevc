@@ -3,7 +3,8 @@
 use vckss_core::cmg::CmgOptions;
 use vckss_core::error::{BackendError, ErrorCode, Result};
 use vckss_core::generic_batch::{
-    apply_model_batch, ModelBatchWorkspace, ModelBatchWorkspaceLayout, ModelPcgStatus,
+    apply_model_batch, apply_model_batch_with_interrupt, ModelBatchWorkspace,
+    ModelBatchWorkspaceLayout, ModelPcgStatus,
 };
 use vckss_core::interrupt::InterruptCheck;
 use vckss_core::krylov::PcgOptions;
@@ -1392,6 +1393,133 @@ fn large_setup_and_apply_are_interruptible_inside_bounded_work() {
         .apply_with_workspace_and_interrupt(&input, &mut output, &mut workspace, &mut apply_break)
         .expect_err("apply must poll after 4096 rows");
     assert_eq!(error.code, ErrorCode::UserBreak);
+}
+
+#[test]
+fn model_actions_preserve_chunk_boundaries_controls_and_reuse() {
+    struct Count(std::collections::BTreeMap<&'static str, usize>);
+    impl InterruptCheck for Count {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            *self.0.entry(phase).or_default() += 1;
+            Ok(())
+        }
+    }
+    for controls in [0, 1, 32] {
+        // Neither an entity dimension nor a column's pair count aligns with
+        // 4096. Later columns must continue the original flattened schedule.
+        let workers = 4101;
+        let firms = 4103;
+        let rows = 3 * workers;
+        let fixture = Fixture {
+            workers,
+            firms,
+            worker: (0..rows).map(|row| (row / 3) as u32).collect(),
+            firm: (0..rows)
+                .map(|row| ((row / 3 + [0, 1, 7][row % 3]) % firms) as u32)
+                .collect(),
+            weight: (0..rows).map(|row| 1.0 + (row % 3) as f64).collect(),
+            controls: (0..controls)
+                .map(|q| {
+                    (0..rows)
+                        .map(|row| ((row * (2 * q + 3) + q) % 101) as f64 / 97.0 - 0.5)
+                        .collect()
+                })
+                .collect(),
+        };
+        let operator = ModelOperator::new(fixture.data()).unwrap();
+        let dimension = operator.parameter_count();
+        let columns = 3;
+        let input: Vec<_> = (0..dimension * columns)
+            .map(|i| (i % 17) as f64 / 13.0 - 0.4)
+            .collect();
+        let mut expected = vec![0.0; input.len()];
+        let mut scalar = ModelWorkspace::new(&operator).unwrap();
+        for column in 0..columns {
+            let range = column * dimension..(column + 1) * dimension;
+            operator
+                .apply_with_workspace(&input[range.clone()], &mut expected[range], &mut scalar)
+                .unwrap();
+        }
+        let mut batch = ModelBatchWorkspace::new(&operator, columns).unwrap();
+        let mut output = vec![f64::NAN; input.len()];
+        let mut count = Count(Default::default());
+        apply_model_batch_with_interrupt(
+            &operator,
+            &input,
+            &mut output,
+            columns,
+            &mut batch,
+            &mut count,
+        )
+        .unwrap();
+        assert_eq!(output, expected);
+        assert_eq!(
+            count.0["model_batch_worker_pairs"],
+            (rows * columns).div_ceil(4096)
+        );
+        assert_eq!(
+            count.0["model_batch_worker_scale"],
+            (workers * columns).div_ceil(4096)
+        );
+        if controls > 0 {
+            assert_eq!(
+                count.0["model_batch_worker_controls"],
+                columns * controls * 3
+            );
+            assert_eq!(count.0["model_batch_firm_controls"], columns * controls * 3);
+        }
+        for phase in [
+            "model_batch_worker_pairs",
+            "model_batch_worker_scale",
+            "model_batch_direct_firm",
+            "model_batch_absorb_firm",
+            "model_batch_worker_controls",
+            "model_batch_firm_controls",
+            "model_batch_control_output",
+        ] {
+            if controls == 0 && phase.contains("control") {
+                continue;
+            }
+            let mut breaker = BreakOnPhase {
+                phase,
+                calls: 0,
+                stop: 3,
+            };
+            let error = apply_model_batch_with_interrupt(
+                &operator,
+                &input,
+                &mut output,
+                columns,
+                &mut batch,
+                &mut breaker,
+            )
+            .unwrap_err();
+            assert_eq!(error.code, ErrorCode::UserBreak);
+            assert_eq!(breaker.calls, 3);
+            apply_model_batch(&operator, &input, &mut output, columns, &mut batch).unwrap();
+            assert_eq!(output, expected);
+        }
+        // Observe the completed prefix at a real operator cancellation point,
+        // rather than only counting calls. No firm beyond the first chunk may
+        // be written before the second direct-firm checkpoint.
+        let mut breaker = BreakOnPhase {
+            phase: "model_batch_direct_firm",
+            calls: 0,
+            stop: 2,
+        };
+        let error = apply_model_batch_with_interrupt(
+            &operator,
+            &input,
+            &mut output,
+            columns,
+            &mut batch,
+            &mut breaker,
+        )
+        .unwrap_err();
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert!(output[..4096].iter().any(|&value| value != 0.0));
+        assert!(output[4096..].iter().all(|&value| value == 0.0));
+    }
 }
 
 #[test]

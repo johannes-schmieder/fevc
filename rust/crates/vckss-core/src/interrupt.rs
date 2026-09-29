@@ -8,6 +8,7 @@
 //! unchanged.
 
 use core::cmp::Ordering;
+use core::ops::Range;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::Arc;
 
@@ -137,6 +138,26 @@ pub fn checkpoint_chunk(
         interrupt.checkpoint(phase)?;
     }
     Ok(())
+}
+
+/// Split scalar work at the existing checkpoint positions, including when a
+/// column starts partway through a chunk in a flattened traversal. Call
+/// `checkpoint_chunk` once at each returned range's start, then perform the
+/// range without polling. The initial unaligned segment must not add a check:
+/// the preceding column already checked that chunk. Arithmetic order and the
+/// maximum uninterrupted work are identical to checking every scalar index.
+#[inline]
+pub(crate) fn interrupt_chunks(mut work: Range<usize>) -> impl Iterator<Item = Range<usize>> {
+    std::iter::from_fn(move || {
+        if work.start >= work.end {
+            return None;
+        }
+        let start = work.start;
+        work.start = work
+            .end
+            .min(start.saturating_add(INTERRUPT_CHECK_CHUNK - start % INTERRUPT_CHECK_CHUNK));
+        Some(start..work.start)
+    })
 }
 
 /// Deterministic stable chunked sort whose run boundaries and merge copies are
@@ -301,6 +322,35 @@ where
 mod tests {
     use super::*;
     use crate::error::{BackendError, ErrorCode};
+
+    #[test]
+    fn chunk_ranges_preserve_scalar_checks_across_unaligned_columns() {
+        for length in [0, 1, 31, 4095, 4096, 4097, 8199] {
+            let mut visited = Vec::new();
+            let mut checkpoints = Vec::new();
+            for column in 0..5 {
+                for chunk in interrupt_chunks(column * length..(column + 1) * length) {
+                    assert!(chunk.len() <= INTERRUPT_CHECK_CHUNK);
+                    if chunk.start % INTERRUPT_CHECK_CHUNK == 0 {
+                        checkpoints.push(chunk.start);
+                    }
+                    visited.extend(chunk);
+                }
+            }
+            assert_eq!(visited, (0..5 * length).collect::<Vec<_>>());
+            assert_eq!(
+                checkpoints,
+                (0..5 * length)
+                    .filter(|index| index % INTERRUPT_CHECK_CHUNK == 0)
+                    .collect::<Vec<_>>()
+            );
+        }
+        // The final partial range must terminate even at the usize boundary.
+        assert_eq!(
+            interrupt_chunks(usize::MAX - 7..usize::MAX).collect::<Vec<_>>(),
+            vec![usize::MAX - 7..usize::MAX]
+        );
+    }
 
     struct BreakAfter {
         calls: usize,

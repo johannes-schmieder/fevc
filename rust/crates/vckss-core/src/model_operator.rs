@@ -12,8 +12,8 @@
 use crate::control_basis::MAX_CANONICAL_CONTROLS;
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{
-    checkpoint_chunk, stable_sort_by_with_interrupt, InterruptCheck, NeverInterrupt,
-    INTERRUPT_CHECK_CHUNK,
+    checkpoint_chunk, interrupt_chunks, stable_sort_by_with_interrupt, InterruptCheck,
+    NeverInterrupt, INTERRUPT_CHECK_CHUNK,
 };
 use crate::operator::SymmetricOperator;
 
@@ -424,67 +424,85 @@ impl<'a> ModelOperator<'a> {
         )?;
         fill_f64_with_interrupt(output, 0.0, interrupt, "model_operator_zero_output")?;
 
-        for pair in 0..self.sufficient.pair_weight.len() {
-            checkpoint_chunk(interrupt, pair, "model_operator_worker_accumulate")?;
-            let worker = dense_index(self.sufficient.pair_worker[pair]);
-            let firm = dense_index(self.sufficient.pair_firm[pair]);
-            workspace.worker_mean[worker] +=
-                self.sufficient.pair_weight[pair] * (input[firm] - firm_mean);
+        for chunk in interrupt_chunks(0..self.sufficient.pair_weight.len()) {
+            interrupt.checkpoint("model_operator_worker_accumulate")?;
+            for pair in chunk {
+                let worker = dense_index(self.sufficient.pair_worker[pair]);
+                let firm = dense_index(self.sufficient.pair_firm[pair]);
+                workspace.worker_mean[worker] +=
+                    self.sufficient.pair_weight[pair] * (input[firm] - firm_mean);
+            }
         }
         for control in 0..self.controls() {
             interrupt.checkpoint("model_operator_worker_controls")?;
             let coefficient = input[self.firms() + control];
             let begin = control * self.workers();
-            for worker in 0..self.workers() {
-                checkpoint_chunk(interrupt, worker, "model_operator_worker_controls")?;
-                workspace.worker_mean[worker] +=
-                    self.sufficient.worker_control[begin + worker] * coefficient;
+            for chunk in interrupt_chunks(0..self.workers()) {
+                interrupt.checkpoint("model_operator_worker_controls")?;
+                for worker in chunk {
+                    workspace.worker_mean[worker] +=
+                        self.sufficient.worker_control[begin + worker] * coefficient;
+                }
             }
         }
-        for (worker, value) in workspace.worker_mean.iter_mut().enumerate() {
-            checkpoint_chunk(interrupt, worker, "model_operator_worker_scale")?;
-            *value /= self.worker_diagonal[worker];
+        for chunk in interrupt_chunks(0..workspace.worker_mean.len()) {
+            interrupt.checkpoint("model_operator_worker_scale")?;
+            for worker in chunk {
+                workspace.worker_mean[worker] /= self.worker_diagonal[worker];
+            }
         }
 
-        for firm in 0..self.firms() {
-            checkpoint_chunk(interrupt, firm, "model_operator_direct_firm")?;
-            output[firm] = self.firm_diagonal[firm] * (input[firm] - firm_mean);
+        for chunk in interrupt_chunks(0..self.firms()) {
+            interrupt.checkpoint("model_operator_direct_firm")?;
+            for firm in chunk {
+                output[firm] = self.firm_diagonal[firm] * (input[firm] - firm_mean);
+            }
         }
         for control in 0..self.controls() {
             interrupt.checkpoint("model_operator_firm_controls")?;
             let coefficient = input[self.firms() + control];
             let begin = control * self.firms();
-            for firm in 0..self.firms() {
-                checkpoint_chunk(interrupt, firm, "model_operator_firm_controls")?;
-                output[firm] += self.sufficient.firm_control[begin + firm] * coefficient;
+            for chunk in interrupt_chunks(0..self.firms()) {
+                interrupt.checkpoint("model_operator_firm_controls")?;
+                for firm in chunk {
+                    output[firm] += self.sufficient.firm_control[begin + firm] * coefficient;
+                }
             }
         }
-        for pair in 0..self.sufficient.pair_weight.len() {
-            checkpoint_chunk(interrupt, pair, "model_operator_absorb_firm")?;
-            let worker = dense_index(self.sufficient.pair_worker[pair]);
-            let firm = dense_index(self.sufficient.pair_firm[pair]);
-            output[firm] -= self.sufficient.pair_weight[pair] * workspace.worker_mean[worker];
+        for chunk in interrupt_chunks(0..self.sufficient.pair_weight.len()) {
+            interrupt.checkpoint("model_operator_absorb_firm")?;
+            for pair in chunk {
+                let worker = dense_index(self.sufficient.pair_worker[pair]);
+                let firm = dense_index(self.sufficient.pair_firm[pair]);
+                output[firm] -= self.sufficient.pair_weight[pair] * workspace.worker_mean[worker];
+            }
         }
         for control in 0..self.controls() {
             interrupt.checkpoint("model_operator_control_output")?;
             let mut value = 0.0;
             let firm_begin = control * self.firms();
-            for firm in 0..self.firms() {
-                checkpoint_chunk(interrupt, firm, "model_operator_control_output")?;
-                value +=
-                    self.sufficient.firm_control[firm_begin + firm] * (input[firm] - firm_mean);
+            for chunk in interrupt_chunks(0..self.firms()) {
+                interrupt.checkpoint("model_operator_control_output")?;
+                for firm in chunk {
+                    value +=
+                        self.sufficient.firm_control[firm_begin + firm] * (input[firm] - firm_mean);
+                }
             }
             let cross_begin = control * self.controls();
-            for right in 0..self.controls() {
-                checkpoint_chunk(interrupt, right, "model_operator_control_output")?;
-                value += self.sufficient.control_cross[cross_begin + right]
-                    * input[self.firms() + right];
+            for chunk in interrupt_chunks(0..self.controls()) {
+                interrupt.checkpoint("model_operator_control_output")?;
+                for right in chunk {
+                    value += self.sufficient.control_cross[cross_begin + right]
+                        * input[self.firms() + right];
+                }
             }
             let worker_begin = control * self.workers();
-            for worker in 0..self.workers() {
-                checkpoint_chunk(interrupt, worker, "model_operator_control_output")?;
-                value -= self.sufficient.worker_control[worker_begin + worker]
-                    * workspace.worker_mean[worker];
+            for chunk in interrupt_chunks(0..self.workers()) {
+                interrupt.checkpoint("model_operator_control_output")?;
+                for worker in chunk {
+                    value -= self.sufficient.worker_control[worker_begin + worker]
+                        * workspace.worker_mean[worker];
+                }
             }
             output[self.firms() + control] = value;
         }
@@ -519,9 +537,11 @@ impl<'a> ModelOperator<'a> {
             interrupt,
             "model_rhs_copy_worker",
         )?;
-        for (worker, value) in worker_scaled.iter_mut().enumerate() {
-            checkpoint_chunk(interrupt, worker, "model_rhs_worker_scale")?;
-            *value /= self.worker_diagonal[worker];
+        for chunk in interrupt_chunks(0..worker_scaled.len()) {
+            interrupt.checkpoint("model_rhs_worker_scale")?;
+            for worker in chunk {
+                worker_scaled[worker] /= self.worker_diagonal[worker];
+            }
         }
         let mut reduced = zeroed_f64_with_interrupt(
             self.parameter_count(),
@@ -544,18 +564,22 @@ impl<'a> ModelOperator<'a> {
         // B' D_worker^-1 rhs needs only the already admitted weighted pair
         // and worker-control sums, not another observation scan per RHS.
         // The final certification remains independent and row-based.
-        for pair in 0..self.sufficient.pair_weight.len() {
-            checkpoint_chunk(interrupt, pair, "model_rhs_reduce")?;
-            let worker = dense_index(self.sufficient.pair_worker[pair]);
-            let firm = dense_index(self.sufficient.pair_firm[pair]);
-            reduced[firm] -= self.sufficient.pair_weight[pair] * worker_scaled[worker];
+        for chunk in interrupt_chunks(0..self.sufficient.pair_weight.len()) {
+            interrupt.checkpoint("model_rhs_reduce")?;
+            for pair in chunk {
+                let worker = dense_index(self.sufficient.pair_worker[pair]);
+                let firm = dense_index(self.sufficient.pair_firm[pair]);
+                reduced[firm] -= self.sufficient.pair_weight[pair] * worker_scaled[worker];
+            }
         }
         for control in 0..self.controls() {
             let begin = control * self.workers();
-            for (worker, &scaled) in worker_scaled.iter().enumerate() {
-                checkpoint_chunk(interrupt, worker, "model_rhs_reduce")?;
-                reduced[self.firms() + control] -=
-                    self.sufficient.worker_control[begin + worker] * scaled;
+            for chunk in interrupt_chunks(0..worker_scaled.len()) {
+                interrupt.checkpoint("model_rhs_reduce")?;
+                for worker in chunk {
+                    reduced[self.firms() + control] -=
+                        self.sufficient.worker_control[begin + worker] * worker_scaled[worker];
+                }
             }
         }
         center_firms_with_interrupt(&mut reduced[..self.firms()], interrupt, "model_rhs_center")?;
@@ -600,23 +624,30 @@ impl<'a> ModelOperator<'a> {
         // Recover D_worker^-1 (rhs - B reduced) from the same prepared sums.
         // No workspace or retained state is added, and the full W+F+Q check
         // below the solver boundary still traverses original observations.
-        for pair in 0..self.sufficient.pair_weight.len() {
-            checkpoint_chunk(interrupt, pair, "model_reconstruct")?;
-            let worker_index = dense_index(self.sufficient.pair_worker[pair]);
-            let firm = dense_index(self.sufficient.pair_firm[pair]);
-            worker[worker_index] -= self.sufficient.pair_weight[pair] * (reduced[firm] - firm_mean);
+        for chunk in interrupt_chunks(0..self.sufficient.pair_weight.len()) {
+            interrupt.checkpoint("model_reconstruct")?;
+            for pair in chunk {
+                let worker_index = dense_index(self.sufficient.pair_worker[pair]);
+                let firm = dense_index(self.sufficient.pair_firm[pair]);
+                worker[worker_index] -=
+                    self.sufficient.pair_weight[pair] * (reduced[firm] - firm_mean);
+            }
         }
         for control in 0..self.controls() {
             let begin = control * self.workers();
             let coefficient = reduced[self.firms() + control];
-            for (index, value) in worker.iter_mut().enumerate() {
-                checkpoint_chunk(interrupt, index, "model_reconstruct")?;
-                *value -= self.sufficient.worker_control[begin + index] * coefficient;
+            for chunk in interrupt_chunks(0..worker.len()) {
+                interrupt.checkpoint("model_reconstruct")?;
+                for index in chunk {
+                    worker[index] -= self.sufficient.worker_control[begin + index] * coefficient;
+                }
             }
         }
-        for (index, value) in worker.iter_mut().enumerate() {
-            checkpoint_chunk(interrupt, index, "model_reconstruct_scale")?;
-            *value /= self.worker_diagonal[index];
+        for chunk in interrupt_chunks(0..worker.len()) {
+            interrupt.checkpoint("model_reconstruct_scale")?;
+            for index in chunk {
+                worker[index] /= self.worker_diagonal[index];
+            }
         }
         validate_internal_finite_with_interrupt(
             &worker,

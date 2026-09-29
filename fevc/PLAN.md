@@ -1,5 +1,14 @@
 # Current checkpoint — 2026-09-29
 
+The active experiment moves interrupt branches out of the scalar and batched
+generic model operators, RHS reduction and worker reconstruction. It retains
+the same arithmetic and callback positions, including flattened batch offsets.
+Boundary/reuse tests and the initial kernel comparison pass. Complete-command
+timing and exact-source Mac qualification remain pending. See the
+[experiment record](docs/INTERRUPT_CHUNKS_2026-09-29.md).
+
+## Review repair checkpoint — 2026-09-29
+
 The confirmed review fixes repair root-catalog drift, explicit Rust toolchain
 selection, caller-safe optional timing, C ingestion bounds, and environment-
 sensitive tests. Python source tests (835), CMG, Rust 1.85.1/stable gates,
