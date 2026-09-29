@@ -146,11 +146,11 @@ Run from a clean checkout:
 ```bash
 ./.venv/bin/python -m pytest -q
 ./.venv/bin/python fevc/cmg/tools/assemble.py --all --check
-cargo fmt --manifest-path rust/Cargo.toml --all -- --check
-cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets \
+rustup run 1.85.1 cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+rustup run 1.85.1 cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets \
   --locked -- -D warnings
-cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked
-cargo test --manifest-path rust/stata_backend/Cargo.toml \
+rustup run 1.85.1 cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked
+rustup run 1.85.1 cargo test --manifest-path rust/stata_backend/Cargo.toml \
   --all-targets --locked
 ```
 

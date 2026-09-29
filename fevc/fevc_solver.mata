@@ -2,6 +2,7 @@
 *! version 0.4.0-alpha.1 31aug2026
 
 version 18.0
+quietly fevc__timer load
 
 mata:
 mata set matastrict on
@@ -14,7 +15,7 @@ real scalar vckss_solver__api_level()
 
 string scalar vckss_solver__build_id()
 {
-    return("vckss-solver-api27-memory-policy")
+    return("vckss-solver-api27-memory-policy-timers1")
 }
 
 real scalar vckss_solver__route_api()
@@ -1064,19 +1065,19 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
         return(out)
     }
 
-    timer_clear(88)
-    timer_clear(89)
-    timer_clear(90)
-    timer_on(88)
+    vckss_timer__clear(88)
+    vckss_timer__clear(89)
+    vckss_timer__clear(90)
+    vckss_timer__on(88)
     base = vckss__fe_prepare(worker,firm,frequency,rank_tolerance)
-    timer_off(88)
+    vckss_timer__off(88)
     if (base.status != "CONVERGED") {
         out.estimator = vckss__failure(base.status,base.message)
         out.status = base.status
         out.message = base.message
         return(out)
     }
-    setup_seconds = vckss__timer_seconds(88)
+    setup_seconds = vckss_timer__seconds(88)
     base_bytes = 8*(8*base.n+
         5*(base.worker_levels+base.firm_levels))
     hierarchy_memory_bytes = max((0,solver_memory_bytes-base_bytes))
@@ -1127,11 +1128,11 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
             out.message = out.estimator.message
             return(out)
         }
-        timer_on(90)
+        vckss_timer__on(90)
         cells = vckss_cmg__cells_prepare(
             base.worker,base.firm,base.frequency,worker_key,firm_key)
         if (cells.status != "CONVERGED") {
-            timer_off(90)
+            vckss_timer__off(90)
             out.estimator = vckss__failure(cells.status,cells.message)
             out.status = cells.status
             out.message = cells.message
@@ -1142,7 +1143,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
         preflight = vckss_cmg__preflight(
             cells,planned_rhs,1,hierarchy_memory_bytes,options)
         if (preflight.status != "CONVERGED") {
-            timer_off(90)
+            vckss_timer__off(90)
             // Without bounded B1 pilots there is no evidence that fallback is
             // realistic.  AUTO therefore fails closed before RNG rather than
             // treating a CMG preflight error as permission to launch B1.
@@ -1155,7 +1156,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
         if (st_global("VCKSS_MEMORY_ADVISORY")!="1" &
             preflight.predicted_structural_bytes+
                 preflight.predicted_scratch_bytes > hierarchy_memory_bytes) {
-            timer_off(90)
+            vckss_timer__off(90)
             out.estimator = vckss__failure(
                 "SOLVER_MEMORY_LIMIT",
                 "CMG preflight plus persistent FE design exceeds the solver memory reservation")
@@ -1163,8 +1164,8 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
             out.message = out.estimator.message
             return(out)
         }
-        timer_off(90)
-        hierarchy_seconds = vckss__timer_seconds(90)
+        vckss_timer__off(90)
+        hierarchy_seconds = vckss_timer__seconds(90)
     }
     pilot_cap = preflight.pilot_cap
     hybrid_vertices = preflight.predicted_vertices
@@ -1197,11 +1198,11 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
             out.message = out.estimator.message
             return(out)
         }
-        timer_on(89)
+        vckss_timer__on(89)
         diagonal_pilots = vckss__fe_solve_matrix_backend(
             base,pilot_rhs,tolerance,maxiter,diagonal_backend)
-        timer_off(89)
-        diagonal_seconds = vckss__timer_seconds(89)
+        vckss_timer__off(89)
+        diagonal_seconds = vckss_timer__seconds(89)
         diagonal_evidence = vckss_solver__pilot_evidence(
             diagonal_pilots,1,planned_rhs,pilot_cap,tolerance,base.n,
             base.worker_levels,base.firm_levels,.,.,.,.,.,0)
@@ -1226,11 +1227,11 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
                 "four deterministic pilots converged in at most four B1 steps"
         }
         else {
-            timer_on(90)
+            vckss_timer__on(90)
             hierarchy = vckss_solver__hierarchy_cells(
                 cells,hierarchy_memory_bytes,planned_rhs)
-            timer_off(90)
-            hierarchy_seconds = vckss__timer_seconds(90)
+            vckss_timer__off(90)
+            hierarchy_seconds = vckss_timer__seconds(90)
             if (hierarchy.n_level >= 1) {
                 fine = *hierarchy.level[1]
                 hybrid_vertices = fine.graph.n_vertex
@@ -1281,22 +1282,22 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
             }
             else {
                 workspace_capacity = max((4,batch,cols(controls)))
-                timer_on(90)
+                vckss_timer__on(90)
                 // Scale profiling rejects the reusable-workspace path: it was
                 // 34--74% slower at 32,768 vertices (and about 63% slower at
                 // 100,000 vertices).  Retain the certified API for equality
                 // tests, but use the faster ordinary batched CMG application.
                 cmg_context = vckss_solver__cmg_context(
                     &hierarchy,workspace_capacity,hierarchy_memory_bytes,0)
-                timer_off(90)
-                hierarchy_seconds = vckss__timer_seconds(90)
+                vckss_timer__off(90)
+                hierarchy_seconds = vckss_timer__seconds(90)
                 cmg_backend = vckss_solver__cmg_backend(&cmg_context)
-                timer_clear(89)
-                timer_on(89)
+                vckss_timer__clear(89)
+                vckss_timer__on(89)
                 cmg_pilots = vckss__fe_solve_matrix_backend(
                     base,pilot_rhs,tolerance,maxiter,cmg_backend)
-                timer_off(89)
-                cmg_seconds = vckss__timer_seconds(89)
+                vckss_timer__off(89)
+                cmg_seconds = vckss_timer__seconds(89)
                 cmg_evidence = vckss_solver__pilot_evidence(
                     cmg_pilots,2,planned_rhs,min((pilot_cap,250)),
                     tolerance,base.n,base.worker_levels,base.firm_levels,
@@ -1591,19 +1592,19 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
         return(out)
     }
 
-    timer_clear(88)
-    timer_clear(90)
-    timer_on(88)
+    vckss_timer__clear(88)
+    vckss_timer__clear(90)
+    vckss_timer__on(88)
     if (use_prepared) base = *prepared_base
     else base = vckss__fe_prepare(worker,firm,frequency,rank_tolerance)
-    timer_off(88)
+    vckss_timer__off(88)
     if (base.status != "CONVERGED") {
         out.estimator = vckss__failure(base.status,base.message)
         out.status = base.status
         out.message = base.message
         return(out)
     }
-    setup_seconds = vckss__timer_seconds(88)
+    setup_seconds = vckss_timer__seconds(88)
     base_bytes = base.persistent_bytes
     if (missing(base_bytes) | base_bytes < 0) {
         out.estimator = vckss__failure(
@@ -1657,7 +1658,7 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
         }
     }
     if (attempt_cmg & cmg_failure_status == "") {
-        timer_on(90)
+        vckss_timer__on(90)
         cells = vckss_cmg__cells_prepare(
             worker,firm,frequency,worker_key,firm_key)
         if (cells.status != "CONVERGED") {
@@ -1715,8 +1716,8 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
                 route_code = 2
             }
         }
-        timer_off(90)
-        hierarchy_seconds = vckss__timer_seconds(90)
+        vckss_timer__off(90)
+        hierarchy_seconds = vckss_timer__seconds(90)
     }
 
     if (cmg_failure_status != "") {

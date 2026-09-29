@@ -42,6 +42,8 @@ def test_package_manifest_is_complete() -> None:
         "fevc__lifecycle.ado",
         "fevc__memory_options.ado",
         "fevc__native_threads.ado",
+        "fevc_timer.mata",
+        "fevc__timer.ado",
         "fevc__control_failure_post.ado",
         "fevc_estat.ado",
         "fevc_run.ado",
@@ -160,18 +162,18 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "vckss-api25-control-posterior"
+    build_id = "vckss-api25-control-posterior-timers1"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
     graph = (ROOT / "fevc_graph.mata").read_text(encoding="utf-8")
     assert "vckss_graph__api_level()" in graph
     assert "return(21)" in graph
-    assert "vckss-graph-api21-original-deletion-support" in graph
+    assert "vckss-graph-api21-original-deletion-support-timers1" in graph
     solver = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
     assert "return(27)" in solver
-    assert "vckss-solver-api27-memory-policy" in solver
+    assert "vckss-solver-api27-memory-policy-timers1" in solver
     assert "vckss_solver__route_api()" in solver
     assert "vckss_solver__pilot_api()" not in solver
     resource = (ROOT / "fevc_resource.mata").read_text(encoding="utf-8")
@@ -243,6 +245,8 @@ def test_runtime_has_no_external_language_dependency() -> None:
             "fevc__lifecycle.ado",
         "fevc__memory_options.ado",
         "fevc__native_threads.ado",
+        "fevc_timer.mata",
+        "fevc__timer.ado",
         "fevc__control_failure_post.ado",
             "fevc_estat.ado",
             "fevc_run.ado",
@@ -387,11 +391,11 @@ def test_public_command_is_a_hard_cut_without_predecessor_alias() -> None:
     assert not (ROOT / "kss_bc.ado").exists()
 
 
-def test_mata_uses_valid_noncolliding_profile_timers() -> None:
+def test_mata_profiles_use_private_logical_timer_slots() -> None:
     runtime = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     timer_ids = {
         int(value)
-        for value in re.findall(r"timer_(?:clear|on|off|value)\((\d+)\)", runtime)
+        for value in re.findall(r"vckss_timer__(?:clear|on|off|seconds)\((\d+)\)", runtime)
     }
     assert timer_ids == {91, 92, 93, 94, 95, 96, 97, 98}
     assert all(1 <= value <= 100 for value in timer_ids)
@@ -408,7 +412,7 @@ def test_scc_outer_command_clock_does_not_use_mata_profile_timers() -> None:
     }
     runtime_ids = {
         int(value)
-        for value in re.findall(r"timer_(?:clear|on|off|value)\((\d+)\)", runtime)
+        for value in re.findall(r"vckss_timer__(?:clear|on|off|seconds)\((\d+)\)", runtime)
     }
     assert driver_ids == set()
     assert driver_ids.isdisjoint(runtime_ids)

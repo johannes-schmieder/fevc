@@ -19,9 +19,9 @@ program define fevc__progress, rclass
                 else di as txt "  Memory budget: not supplied; automatic batches are not memory-limited"
             }
             if "$VCKSS_REPORT_API"=="2" & "$VCKSS_REPORT_TIMER"!="" {
-                quietly timer off $VCKSS_REPORT_TIMER
-                mata: st_local("elapsed_ms", strofreal(floor(1000*timer_value(strtoreal(st_global("VCKSS_REPORT_TIMER")))[1]), "%21.0f"))
-                quietly timer on $VCKSS_REPORT_TIMER
+                quietly mata: vckss_timer__off($VCKSS_REPORT_TIMER)
+                mata: st_local("elapsed_ms", strofreal(floor(1000*vckss_timer__seconds(strtoreal(st_global("VCKSS_REPORT_TIMER")))), "%21.0f"))
+                quietly mata: vckss_timer__on($VCKSS_REPORT_TIMER)
                 plugin call `plugin' `data', reportv2 `level' `elapsed_ms' `options'
             }
             else if "$VCKSS_REPORT_API"=="1" {

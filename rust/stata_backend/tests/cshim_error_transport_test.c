@@ -923,6 +923,54 @@ static void assert_result_receipt_failure(uint64_t generation, const char *detai
     );
 }
 
+static ST_int ingest_stop;
+static ST_int ingest_marked;
+static ST_int ingest_reads;
+static ST_int ingest_first(void) { return 1; }
+static ST_int ingest_last(void) { return 3; }
+static ST_boolean ingest_selected(ST_int observation) { (void)observation; return 1; }
+static ST_int ingest_poll(void) { return 0; }
+static ST_int ingest_data(ST_int variable, ST_int observation, ST_double *value)
+{
+    if (variable == 1) {
+        *value = observation <= ingest_marked;
+    } else {
+        ++ingest_reads;
+        *value = 10 * variable + observation;
+    }
+    return 0;
+}
+
+static void test_marked_column_bounds(ST_plugin *plugin)
+{
+    double *storage = NULL;
+    plugin->stopflag = &ingest_stop;
+    plugin->pollstd = ingest_poll;
+    plugin->nobs1 = ingest_first;
+    plugin->nobs2 = ingest_last;
+    plugin->selobs = ingest_selected;
+    plugin->vdata = ingest_data;
+    plugin->safevdata = ingest_data;
+    reset_transport();
+    ingest_marked = 3;
+    ingest_reads = 0;
+    assert(vckss_copy_marked_columns(2, 2, &storage) != 0);
+    assert(storage == NULL && ingest_reads == 4);
+    ingest_marked = 1;
+    assert(vckss_copy_marked_columns(2, 2, &storage) != 0);
+    assert(storage == NULL);
+    ingest_marked = 2;
+    assert(vckss_copy_marked_columns(2, 2, &storage) == 0);
+    assert(storage[0] == 21 && storage[1] == 22);
+    assert(storage[2] == 31 && storage[3] == 32);
+    free(storage);
+    storage = NULL;
+    ingest_stop = 1;
+    assert(vckss_copy_marked_columns(2, 2, &storage) == 1);
+    assert(storage == NULL);
+    ingest_stop = 0;
+}
+
 int main(void)
 {
     ST_plugin plugin = {0};
@@ -935,6 +983,7 @@ int main(void)
     plugin.rowsof = mock_matrix_rows;
     plugin.colsof = mock_matrix_columns;
     _stata_ = &plugin;
+    test_marked_column_bounds(&plugin);
 
     {
         VckssProgressCall call = {0};

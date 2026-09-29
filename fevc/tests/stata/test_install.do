@@ -190,7 +190,7 @@ mata: assert(vckss_solver__api_level() == 27)
 mata: assert(vckss_rng__api_level() == 4)
 mata: assert(vckss_scale__api_level() == 6)
 mata: assert(vckss_scale__build_id() ==                         ///
-    "vckss-scale-api6-prep-sem1-mata")
+    "vckss-scale-api6-prep-sem1-mata-timers1")
 mata: assert(vckss_resource__api_level() == 12)
 mata: assert(vckss_scale_engine__api_level() == 4)
 mata: assert(vckss_scale_runtime__api_level() == 3)

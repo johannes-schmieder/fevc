@@ -6,6 +6,7 @@ import importlib.util
 import io
 import os
 import re
+import shutil
 import subprocess
 import tarfile
 from pathlib import Path, PurePosixPath
@@ -156,6 +157,23 @@ def test_builder_check_only_creates_no_output_directory(tmp_path: Path) -> None:
 
 
 def test_deployer_check_only_never_calls_remote_tools(tmp_path: Path) -> None:
+    # Exercise the real deployer against a clean main fixture, independent of
+    # the developer checkout's branch, dirt, or clone history.
+    fixture_root = tmp_path / "source"
+    for relative in {*builder.read_allowlist(ALLOWLIST_PATH),
+                     PurePosixPath(ALLOWLIST_PATH.relative_to(REPO_ROOT))}:
+        target = fixture_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / relative, target)
+    subprocess.run(["git", "init", "-b", "main", str(fixture_root)], check=True,
+                   capture_output=True)
+    subprocess.run(["git", "-C", str(fixture_root), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(fixture_root), "-c", "user.name=Fixture",
+                    "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false",
+                    "commit", "-m", "Fixture"], check=True, capture_output=True)
+    (fixture_root / ".venv/bin").mkdir(parents=True)
+    (fixture_root / ".venv/bin/python").symlink_to(REPO_ROOT / ".venv/bin/python")
+    (fixture_root / ".git/info/exclude").write_text(".venv/\n")
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     marker = tmp_path / "remote-tool-called"
@@ -170,7 +188,8 @@ def test_deployer_check_only_never_calls_remote_tools(tmp_path: Path) -> None:
     environment["PATH"] = f"{fake_bin}{os.pathsep}{environment['PATH']}"
     environment["KSS_TEST_MARKER"] = str(marker)
     completed = subprocess.run(
-        ["bash", str(DEPLOYER_PATH), "--check-only", str(REPO_ROOT)],
+        ["bash", str(fixture_root / DEPLOYER_PATH.relative_to(REPO_ROOT)),
+         "--check-only", str(fixture_root)],
         check=True,
         text=True,
         capture_output=True,

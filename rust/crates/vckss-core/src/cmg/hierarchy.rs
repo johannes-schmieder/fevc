@@ -578,9 +578,7 @@ impl DenseGroundedSolver {
                 for column in 0..columns {
                     if work == next_checkpoint {
                         interrupt.checkpoint("cmg_terminal_forward_batch")?;
-                        next_checkpoint = next_checkpoint
-                            .checked_add(INTERRUPT_CHECK_CHUNK)
-                            .unwrap_or(usize::MAX);
+                        next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
                     }
                     intermediate[row_begin + column] -= coefficient * intermediate[source + column];
                     work += 1;
@@ -604,9 +602,7 @@ impl DenseGroundedSolver {
                 for column in 0..columns {
                     if work == next_checkpoint {
                         interrupt.checkpoint("cmg_terminal_backward_batch")?;
-                        next_checkpoint = next_checkpoint
-                            .checked_add(INTERRUPT_CHECK_CHUNK)
-                            .unwrap_or(usize::MAX);
+                        next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
                     }
                     solution[row_begin + column] -= coefficient * solution[source + column];
                     work += 1;
@@ -1172,9 +1168,7 @@ impl CmgHierarchy {
             for column in 0..columns {
                 if work == next_checkpoint {
                     interrupt.checkpoint("cmg_restrict_batch")?;
-                    next_checkpoint = next_checkpoint
-                        .checked_add(INTERRUPT_CHECK_CHUNK)
-                        .unwrap_or(usize::MAX);
+                    next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
                 }
                 coarse_rhs[aggregate * columns + column] += residual[vertex * columns + column];
                 work += 1;
@@ -1197,9 +1191,7 @@ impl CmgHierarchy {
             for column in 0..columns {
                 if work == next_checkpoint {
                     interrupt.checkpoint("cmg_prolong_batch")?;
-                    next_checkpoint = next_checkpoint
-                        .checked_add(INTERRUPT_CHECK_CHUNK)
-                        .unwrap_or(usize::MAX);
+                    next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
                 }
                 level_solution[vertex * columns + column] +=
                     coarse_solution[aggregate * columns + column];
@@ -1749,9 +1741,7 @@ fn smooth_batch_with_interrupt(
             for column in 0..columns {
                 if work == next_checkpoint {
                     interrupt.checkpoint("cmg_smooth_batch")?;
-                    next_checkpoint = next_checkpoint
-                        .checked_add(INTERRUPT_CHECK_CHUNK)
-                        .unwrap_or(usize::MAX);
+                    next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
                 }
                 let index = begin + column;
                 solution[index] += weight * (right_hand_side[index] - action[index]) / diagonal;
@@ -1818,9 +1808,7 @@ fn center_batch_with_interrupt(
         for column in 0..columns {
             if work == next_checkpoint {
                 interrupt.checkpoint("cmg_center_batch_sum")?;
-                next_checkpoint = next_checkpoint
-                    .checked_add(INTERRUPT_CHECK_CHUNK)
-                    .unwrap_or(usize::MAX);
+                next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
             }
             let index = begin + column;
             let value = values[index];
@@ -1846,9 +1834,7 @@ fn center_batch_with_interrupt(
         for column in 0..columns {
             if work == next_checkpoint {
                 interrupt.checkpoint("cmg_center_batch_apply")?;
-                next_checkpoint = next_checkpoint
-                    .checked_add(INTERRUPT_CHECK_CHUNK)
-                    .unwrap_or(usize::MAX);
+                next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
             }
             values[begin + column] -= column_sum[column];
             work += 1;

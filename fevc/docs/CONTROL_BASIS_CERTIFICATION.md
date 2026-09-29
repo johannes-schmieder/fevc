@@ -4,7 +4,7 @@ This is the API 25 control-basis contract. It changes representation preparation
 not the model, sample, estimator, rank tolerance, inverse-residual gates, solver
 or downstream `1e-8` forward-error ceiling. The implementation retains the
 existing semantic ordering and at most 32 controls. API identity is
-`vckss-api25-control-posterior`; native layouts are unchanged.
+`vckss-api25-control-posterior-timers1`; native layouts are unchanged.
 
 The September 28 development candidate supersedes the **generic Rust JLA**
 downstream propagation rules below with a [weighted span certificate](CONTROL_SPAN_REPAIR_2026-09-28.md).

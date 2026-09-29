@@ -118,6 +118,7 @@ fevc/fevc__rust_solve_v5.ado
 fevc/fevc__rust_windows.ado
 fevc/fevc__simulate_data.ado
 fevc/fevc__stayer_population_post.ado
+fevc/fevc__timer.ado
 fevc/fevc_cmg.mata
 fevc/fevc_estat.ado
 fevc/fevc_graph.mata
@@ -130,4 +131,5 @@ fevc/fevc_scale.mata
 fevc/fevc_scale_engine.mata
 fevc/fevc_scale_runtime.mata
 fevc/fevc_solver.mata
+fevc/fevc_timer.mata
 fevc/stata.toc

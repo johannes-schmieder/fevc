@@ -3,11 +3,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+from .history_support import historical_file
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -125,9 +125,7 @@ CONFIRMATION_SOURCE = "eedc2d662022c887994c6943ee76fc70ac756cd5"  # Review-purge
 
 
 def _confirmed_file(relative):
-    return subprocess.check_output(
-        ["git", "show", f"{CONFIRMATION_SOURCE}:{relative}"], cwd=ROOT,
-    )
+    return historical_file(ROOT, CONFIRMATION_SOURCE, relative)
 
 
 def test_registration_binds_original_confirmation_source(tmp_path):

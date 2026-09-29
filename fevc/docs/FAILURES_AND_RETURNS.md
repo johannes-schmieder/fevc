@@ -156,6 +156,11 @@ applications, PCG, leverage probes, target probes, the combined correction,
 and the solver backend. `e(preconditioner_seconds)` remains a compatibility
 alias for `e(setup_seconds)`. Under API 18, setup and fit are disjoint; exact
 mode reports zero for iterative fields.
+Profiling borrows only unused caller timers and releases them on every exit.
+If timers are unavailable, estimation continues: affected timing fields and
+totals are missing, while unexecuted phases retain their structural zeros and
+independently measured native timings remain available. Timer availability
+never changes solver selection or numerical acceptance.
 JLA additionally records RHS-equivalent action counts, physical matrix-batch
 counts, and `e(solver_rhs_diagnostics)` with stage, batch start, RHS index,
 iterations, freshly recomputed complete relative residual, and convergence.

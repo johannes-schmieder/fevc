@@ -27,6 +27,7 @@ and the installed `help fevc`.
 
 - [Contributing](../../CONTRIBUTING.md) and [testing](../TESTING.md).
 - [Current checkpoint](../PLAN.md).
+- [Review fixes and deferred proposals](REVIEW_FIXES_2026-09-29.md).
 - [Control-span reliability candidate](CONTROL_SPAN_REPAIR_2026-09-28.md).
 - [Control-basis repair qualification](CONTROL_BASIS_REPAIR_2026-09-27.md).
 - [Deletion-unit mover integration](DELETION_UNIT_MOVERS_2026-09-26.md).

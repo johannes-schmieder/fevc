@@ -479,6 +479,12 @@ weights, recompute the truth for that population. The helper returns
 {title:Key stored results}
 
 {pstd}
+Timing diagnostics use only unused timers. If caller timers are all in use,
+estimation continues and unavailable timings and their totals are missing.
+Unexecuted phases retain zero timings; native measurements remain available.
+Caller timers are preserved on success, error, and interruption.
+
+{pstd}
 {cmd:e(b)} and {cmd:e(kss)} contain corrected worker variance, firm variance,
 raw worker-firm covariance, and total variance, in that order.
 {cmd:e(plugin)}, {cmd:e(correction)}, and {cmd:e(numerical_mcse)} hold their

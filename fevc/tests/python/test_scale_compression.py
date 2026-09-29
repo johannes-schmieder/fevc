@@ -176,7 +176,7 @@ def test_command_constructs_and_cleans_one_cached_compressed_state() -> None:
 
 def test_prep_sem1_is_confined_to_the_eligible_compressed_boundary() -> None:
     assert "return(6)" in SOURCE
-    assert 'return("vckss-scale-api6-prep-sem1-mata")' in SOURCE
+    assert 'return("vckss-scale-api6-prep-sem1-mata-timers1")' in SOURCE
     assert "struct vckss_semantic_order" in SOURCE
     assert "vckss_scale__semantic_order(" in SOURCE
     assert "per_copy = target_weight:/frequency" in SOURCE

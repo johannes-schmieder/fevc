@@ -19,6 +19,8 @@ permissions:
 jobs:
   test:
     name: ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
+    env:
+      RUSTUP_TOOLCHAIN: ${{ matrix.toolchain }}
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +38,10 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
+      - name: Report selected toolchain
+        run: |
+          rustc --version --verbose
+          cargo --version
       - name: Check formatting
         run: cargo fmt --all -- --check
       - name: Clippy
@@ -48,6 +54,8 @@ jobs:
   dependency-policy:
     name: Standalone dependency policy
     runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: "1.85.1"
     defaults:
       run:
         working-directory: rust

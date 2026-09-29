@@ -2,6 +2,7 @@
 *! API 21 PREP-MAP-1 retained-map mode
 
 version 18.0
+quietly fevc__timer load
 
 mata:
 mata set matastrict on
@@ -14,7 +15,7 @@ real scalar vckss_graph__api_level()
 
 string scalar vckss_graph__build_id()
 {
-    return("vckss-graph-api21-original-deletion-support")
+    return("vckss-graph-api21-original-deletion-support-timers1")
 }
 
 struct vckss_graph__dense_map
@@ -278,13 +279,13 @@ void vckss_graph__stata_prune(
                 numeric_input = st_data(sample_index,
                     (worker_name,firm_name))
                 active = st_data(sample_index,keep_name)
-                timer_clear(86)
-                timer_on(86)
+                vckss_timer__clear(86)
+                vckss_timer__on(86)
                 retained_levels = vckss_graph__export_maps(
                     numeric_input[.,1],numeric_input[.,2],sample_index,
                     active,worker_dense_name,firm_dense_name)
-                timer_off(86)
-                map_seconds = vckss__timer_seconds(86)
+                vckss_timer__off(86)
+                map_seconds = vckss_timer__seconds(86)
                 if (missing(retained_levels)) {
                     st_local(status_local,"INVALID_GRAPH_INPUT")
                     st_local(message_local,
@@ -331,8 +332,8 @@ void vckss_graph__stata_prune(
             "literal frequency total exceeds the exact binary64 integer range")
         return
     }
-    timer_clear(89)
-    timer_on(89)
+    vckss_timer__clear(89)
+    vckss_timer__on(89)
 
     deletion_order = order(deletion_id,1)
     deletion_sorted = deletion_id[deletion_order]
@@ -492,17 +493,17 @@ void vckss_graph__stata_prune(
     retained_rows = sum(active)
     retained_mass = sum(frequency:*active)
     retained_edges = vckss_graph__deletion_count(deletion_id,active)
-    timer_off(89)
-    graph_seconds = vckss__timer_seconds(89)
+    vckss_timer__off(89)
+    graph_seconds = vckss_timer__seconds(89)
     map_seconds = 0
     if (args() >= 14) {
-        timer_clear(86)
-        timer_on(86)
+        vckss_timer__clear(86)
+        vckss_timer__on(86)
         retained_levels = vckss_graph__export_maps(
             worker,firm,sample_index,active,
             worker_dense_name,firm_dense_name)
-        timer_off(86)
-        map_seconds = vckss__timer_seconds(86)
+        vckss_timer__off(86)
+        map_seconds = vckss_timer__seconds(86)
         if (missing(retained_levels)) {
             st_local(status_local,"INVALID_GRAPH_INPUT")
             st_local(message_local,

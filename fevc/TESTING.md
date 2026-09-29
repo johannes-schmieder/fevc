@@ -35,6 +35,11 @@ Use the repository interpreter:
 
 The Python gate covers package, CMG, packaging, retained comparator, and static
 contract tests. Generated CMG source must remain drift-free.
+Documentation-inventory tests use recorded expectations. Frozen-evidence
+audits still read their exact historical commits: shallow clones explicitly
+skip only unavailable history. Set `FEVC_REQUIRE_HISTORY=1` to require those
+audits; full-history source CI does so. Missing evidence in available commits
+always fails.
 
 The integrated release-hardening checks are also individually available:
 
@@ -60,11 +65,11 @@ Its adjacent JSON receipt records the exact source commit and SHA-256 inventory.
 For Rust source changes also run:
 
 ```bash
-cargo fmt --manifest-path rust/Cargo.toml --all -- --check
-cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets \
+rustup run 1.85.1 cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+rustup run 1.85.1 cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets \
   --locked -- -D warnings
-cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked
-cargo test --manifest-path rust/stata_backend/Cargo.toml \
+rustup run 1.85.1 cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked
+rustup run 1.85.1 cargo test --manifest-path rust/stata_backend/Cargo.toml \
   --all-targets --locked
 ```
 

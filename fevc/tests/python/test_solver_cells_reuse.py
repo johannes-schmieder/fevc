@@ -35,9 +35,9 @@ def test_slot_22_records_single_structural_setup_pass() -> None:
         "struct vckss_route_result scalar vckss_solver__jla_routed(",
         "void vckss__stata_jla_routed(",
     )
-    assert "timer_on(90)" in routed
-    assert routed.count("timer_on(90)") == 1
-    assert routed.count("timer_off(90)") == 1
+    assert "vckss_timer__on(90)" in routed
+    assert routed.count("vckss_timer__on(90)") == 1
+    assert routed.count("vckss_timer__off(90)") == 1
     assert routed.count("cells = vckss_cmg__cells_prepare(") == 1
     assert routed.count("vckss_solver__hierarchy_cells(") == 1
-    assert "hierarchy_seconds = vckss__timer_seconds(90)" in routed
+    assert "hierarchy_seconds = vckss_timer__seconds(90)" in routed

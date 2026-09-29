@@ -31,6 +31,17 @@ def build(inputs):
     return native.native_files(portable.PACKAGE_ROOT, root, manifest, "a" * 40)
 
 
+def test_tracked_repository_catalog_matches_generated_manifest(inputs):
+    expected = {str(item.relative): item.data
+                for item in native.repository_files(build(inputs))}
+    for name in ("fevc.pkg", "stata.toc"):
+        assert (portable.REPO_ROOT / name).read_bytes() == expected[name]
+    listed = [line[2:] for line in expected["fevc.pkg"].decode().splitlines()
+              if line.startswith(("f ", "F "))]
+    assert len(listed) == len(set(listed))
+    assert all((portable.REPO_ROOT / name).is_file() for name in listed)
+
+
 def test_complete_payload_adds_every_platform_and_preserves_portable_source(inputs):
     before = portable.package_files(portable.PACKAGE_ROOT)
     files = build(inputs)

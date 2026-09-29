@@ -1,4 +1,14 @@
-# Current checkpoint — 2026-09-28
+# Current checkpoint — 2026-09-29
+
+The confirmed review fixes repair root-catalog drift, explicit Rust toolchain
+selection, caller-safe optional timing, C ingestion bounds, and environment-
+sensitive tests. Python source tests (835), CMG assembly and focused timer/C
+regressions pass; integrated and exact-source native qualification are in
+progress. Timer exhaustion leaves diagnostics missing and estimation available.
+See the [repair record and deferred proposals](docs/REVIEW_FIXES_2026-09-29.md).
+No distributed binary or prior qualification/adoption record is changed.
+
+## Control-span checkpoint — 2026-09-28
 
 A control-span reliability candidate is qualified in the current worktree
 against baseline `dc9b9d48beb04e83804527321934b269f4bf0a23`. No installed or

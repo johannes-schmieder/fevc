@@ -1,13 +1,65 @@
 """Active guidance must not contradict the qualified explicit match boundary."""
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
 
 
 ROOT = Path(__file__).resolve().parents[3]
-QUALIFIED_SOURCE = "e9573ffe6346620318596c74461921b74cd5c231"  # Review-purged equivalent of 53f22a109effee87467b4ef0602b21d0b8ec1ca9
+# Minimal expectations from the qualified source; no Git history is needed.
+INVENTORY = {
+    "source_commit": "e9573ffe6346620318596c74461921b74cd5c231",
+    "help_sha256": "c6c1474567f3b5c4f36c68a98edcf52116c8384c9c60e1bfb3bf2e0a9d3807c6",
+    "manifest_sha256": "a972cd8a5b08e311946acb406b8beb5f51e7a463ce39ec904263dc76a638c48f",
+    "examples": [
+        "exact_controls",
+        "jla_controls",
+        "weights_targets",
+        "component_inference",
+        "projection_inference"
+    ],
+    "files": [
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.txt",
+        "fevc.ado",
+        "fevc.mata",
+        "fevc_inference.mata",
+        "fevc_graph.mata",
+        "fevc_cmg.mata",
+        "fevc_solver.mata",
+        "fevc_rng.mata",
+        "fevc_scale.mata",
+        "fevc_resource.mata",
+        "fevc_scale_engine.mata",
+        "fevc_scale_runtime.mata",
+        "fevc__display.ado",
+        "fevc__lifecycle.ado",
+        "fevc_estat.ado",
+        "fevc_run.ado",
+        "fevc_rust.ado",
+        "fevc__rust_plugin_call.ado",
+        "fevc__rust_solve_v4.ado",
+        "fevc__rust_solve_v5.ado",
+        "fevc__rust_plan_receipt.ado",
+        "fevc__rust_reconcile_comp_v7.ado",
+        "fevc__rust_reconcile_exact_v7.ado",
+        "fevc__rust_post_comp_v7.ado",
+        "fevc__rust_post_exact_v7.ado",
+        "fevc__rust_capture_stayers.ado",
+        "fevc__rust_post_stayer_hybrid.ado",
+        "fevc__rust_macos.ado",
+        "fevc__rust_windows.ado",
+        "fevc__rust_linux.ado",
+        "fevc__rust_public_call.ado",
+        "fevc__component_model_route.ado",
+        "fevc__exact_inference_model_post.ado",
+        "fevc__rust_component_attach.ado",
+        "fevc__rust_component_fetch.ado",
+        "fevc__rust_component_post.ado",
+        "fevc__failure_guidance.ado",
+        "fevc.sthlp"
+    ]
+}
 
 
 @pytest.mark.parametrize("path,obsolete", [
@@ -37,15 +89,11 @@ def test_help_retains_scope_warning_and_links_to_detailed_inference():
 
 
 def test_help_preserves_all_runnable_example_names():
-    old = subprocess.check_output(
-        ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.sthlp"], cwd=ROOT, text=True
-    )
     current = (ROOT / "fevc/fevc.sthlp").read_text()
     pattern = r"\{\* example_start - ([^}]+)\}\{\.\.\.\}(.*?)\{\* example_end\}\{\.\.\.\}"
-    old_examples = dict(re.findall(pattern, old, re.S))
     current_examples = dict(re.findall(pattern, current, re.S))
-    assert len(old_examples) == len(current_examples) == 5
-    assert old_examples.keys() == current_examples.keys()
+    assert len(current_examples) == 5
+    assert set(INVENTORY["examples"]) == current_examples.keys()
     # Numerical fixture and truth checks run in Stata after moving generation
     # into the installed helper; example text is no longer byte-identical.
     for name, number in (("weights_targets", 3), ("component_inference", 5)):
@@ -54,14 +102,13 @@ def test_help_preserves_all_runnable_example_names():
 
 def test_catalog_preserves_match_install_inventory():
     manifest = (ROOT / "fevc/fevc.pkg").read_text()
-    old = subprocess.check_output(
-        ["git", "show", f"{QUALIFIED_SOURCE}:fevc/fevc.pkg"], cwd=ROOT, text=True
-    )
     additive_helpers = {
         "f fevc__simulate_data.ado",
         "f fevc__progress.ado",
         "f fevc__memory_options.ado",
         "f fevc__native_threads.ado",
+        "f fevc_timer.mata",
+        "f fevc__timer.ado",
         "f fevc__control_failure_post.ado",
         "f fevc__observation_population.ado",
         "f fevc__hybrid_sample.ado",
@@ -72,8 +119,7 @@ def test_catalog_preserves_match_install_inventory():
     }
     assert additive_helpers <= set(manifest.splitlines())
     # Compare the historical inventory under the current helper filename convention.
-    previous = [x.replace("f _fevc", "f fevc_", 1)
-                for x in old.splitlines() if x.startswith("f ")]
+    previous = ["f " + name for name in INVENTORY["files"]]
     assert previous == [
         x for x in manifest.splitlines() if x.startswith("f ") and x not in additive_helpers
     ]

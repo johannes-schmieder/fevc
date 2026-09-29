@@ -159,7 +159,7 @@ def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
     source = SOLVER.read_text(encoding="utf-8")
     compact = "".join(source.split())
     assert "return(27)" in source
-    assert "vckss-solver-api27-memory-policy" in source
+    assert "vckss-solver-api27-memory-policy-timers1" in source
     assert (
         "floor(VCKSS_SOLVER_RESOURCE_GATE.hard_memory_bytes)-"
         "VCKSS_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes"

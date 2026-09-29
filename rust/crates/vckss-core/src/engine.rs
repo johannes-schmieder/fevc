@@ -3421,7 +3421,7 @@ mod tests {
         let stored_target = [1.0, 2.0, 2.0, 2.0, 3.0, 9.0, 8.0, 4.0];
         let mut physical_stored = Vec::new();
         for (stored, &frequency) in stored_frequency.iter().enumerate() {
-            physical_stored.extend(std::iter::repeat(stored).take(frequency));
+            physical_stored.extend(std::iter::repeat_n(stored, frequency));
         }
         assert_eq!(physical_stored.len(), 13);
 

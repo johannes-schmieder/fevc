@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 //! Isolated, admitted execution for independent diagonal model RHSs.
-//! No production routing selects this executor yet. In particular it does not
-//! reinterpret V5 threads or replace a requested preconditioner with CMG.
+//! V6 and the public generic/diagonal route select this executor. Legacy V5
+//! thread semantics and the requested preconditioner remain unchanged.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicUsize, Ordering};

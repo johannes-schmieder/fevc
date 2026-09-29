@@ -1,6 +1,7 @@
 *! fevc compressed-cell runtime 0.4.0-alpha.1 18aug2026
 
 version 18.0
+quietly fevc__timer load
 
 mata:
 mata set matastrict on
@@ -35,7 +36,7 @@ real scalar vckss_scale__api_level()
 
 string scalar vckss_scale__build_id()
 {
-    return("vckss-scale-api6-prep-sem1-mata")
+    return("vckss-scale-api6-prep-sem1-mata-timers1")
 }
 
 struct vckss_semantic_order
@@ -1413,13 +1414,13 @@ void vckss_srt__prepare(
     target = numeric_input[.,6]
     if (use_mata_semantic) {
         numeric_input = J(0,0,.)
-        timer_clear(85)
-        timer_on(85)
+        vckss_timer__clear(85)
+        vckss_timer__on(85)
         semantic = vckss_scale__semantic_order(
             worker,firm,deletion_id,frequency,outcome,target,probe_order)
         if (semantic.status != "CONVERGED") {
-            timer_off(85)
-            semantic_seconds = vckss__timer_seconds(85)
+            vckss_timer__off(85)
+            semantic_seconds = vckss_timer__seconds(85)
             st_matrix(diagnostics_name,(J(1,15,.),semantic_seconds))
             st_local(status_local,"RNG_SEMANTIC_KEY_INVALID")
             st_local(message_local,semantic.message)
@@ -1435,8 +1436,8 @@ void vckss_srt__prepare(
         probe_order = J(0,0,.)
         semantic.rank = J(0,1,.)
         semantic.row_order = J(0,1,.)
-        timer_off(85)
-        semantic_seconds = vckss__timer_seconds(85)
+        vckss_timer__off(85)
+        semantic_seconds = vckss_timer__seconds(85)
     }
     else {
         semantic_rank = numeric_input[.,7]

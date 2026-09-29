@@ -22,29 +22,26 @@ program define fevc, eclass
         capture macro drop VCKSS_NATIVE_`key'
     }
     global VCKSS_REPORT_ALLOWED = c(noisily)
+    quietly fevc__timer begin
     local report_timer
-    foreach id of numlist 51/79 1/30 {
-        mata: st_local("report_free", strofreal(timer_value(`id')[2]==0))
-        if `report_free' {
-            local report_timer `id'
-            continue, break
-        }
-    }
-    if "`report_timer'" != "" {
-        global VCKSS_REPORT_TIMER `report_timer'
-        quietly timer on `report_timer'
+    mata: st_local("report_free",strofreal(vckss_timer__reserve(1)>0))
+    if `report_free' {
+        local report_timer 1
+        global VCKSS_REPORT_TIMER 1
+        quietly mata: vckss_timer__on(1)
     }
     capture noisily _fevc_command `0'
     local command_rc = _rc
     if "`report_timer'" != "" {
-        quietly timer off `report_timer'
+        quietly mata: vckss_timer__off(`report_timer')
         if !`command_rc' & inlist("$VCKSS_REPORT_LEVEL","1","2") & ///
             "$VCKSS_REPORT_API"=="2" & "`e(backend_selected)'"=="rust" {
-            mata: st_local("elapsed", strofreal(timer_value(`report_timer')[1], "%9.1f"))
+            mata: st_local("elapsed", strofreal(vckss_timer__seconds(`report_timer'), "%9.1f"))
             di as txt "  Total elapsed `elapsed's | Complete"
         }
-        quietly timer clear `report_timer'
+        quietly mata: vckss_timer__clear(`report_timer')
     }
+    quietly fevc__timer end
     foreach key in LEVEL API NOTICE ALLOWED TIMER {
         capture macro drop VCKSS_REPORT_`key'
     }
@@ -82,7 +79,7 @@ program define _fevc_command, eclass
     // can leak state into this estimate.
     capture mata: assert(vckss_scale__api_level() == 6 &          ///
         vckss_scale__build_id() ==                               ///
-        "vckss-scale-api6-prep-sem1-mata")
+        "vckss-scale-api6-prep-sem1-mata-timers1")
     if !_rc capture mata: vckss_scale_runtime__reset()
 
     capture mata: vckss_rng__api_level()
@@ -124,15 +121,7 @@ program define _fevc_command, eclass
         _vckss_display_failure
         exit 498
     }
-    capture quietly _vckss_stage_timer_ids
-    if _rc {
-        mata: st_numscalar("`outer_rng_restore_rc'",               ///
-            vckss_rng__guard_restore())
-        quietly _vckss_post_failure "TIMER_RESERVATION_FAILED"
-        di as error "two free command-stage timer IDs were not available"
-        _vckss_display_failure
-        exit 498
-    }
+    quietly _vckss_stage_timer_ids
     local stage_selection_timer = r(selection_timer)
     local stage_validation_timer = r(validation_timer)
     global VCKSS_STAGE_SELECTION_TIMER `stage_selection_timer'
@@ -177,7 +166,7 @@ program define _fevc_command, eclass
     local outer_scale_reset_rc = 0
     capture mata: assert(vckss_scale__api_level() == 6 &          ///
         vckss_scale__build_id() ==                               ///
-        "vckss-scale-api6-prep-sem1-mata")
+        "vckss-scale-api6-prep-sem1-mata-timers1")
     if !_rc {
         capture mata: vckss_scale_runtime__reset()
         local outer_scale_reset_rc = _rc
@@ -185,8 +174,8 @@ program define _fevc_command, eclass
     mata: st_numscalar("`outer_rng_restore_rc'",vckss_rng__guard_restore())
     foreach stage_timer in `stage_selection_timer'                ///
         `stage_validation_timer' {
-        capture quietly timer off `stage_timer'
-        capture quietly timer clear `stage_timer'
+        capture quietly mata: vckss_timer__off(`stage_timer')
+        capture quietly mata: vckss_timer__clear(`stage_timer')
     }
     macro drop VCKSS_STAGE_SELECTION_TIMER
     macro drop VCKSS_STAGE_VALIDATION_TIMER
@@ -4957,7 +4946,7 @@ program define _vckss_impl, eclass sortpreserve
         semantic_group_calls sort_calls compression_import_columns compression_import_rows {
         local prep_`field' = 0
     }
-    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
     tempvar requested touse hybrid_complete
     mark `requested' `if' `in'
     quietly count if `requested'
@@ -5213,11 +5202,11 @@ program define _vckss_impl, eclass sortpreserve
     if "`targetweight'" == "" quietly generate double `target' = `frequency' if `touse'
     else quietly generate double `target' = `targetweight' if `touse'
 
-    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+    quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
     local prep_mark_validate_seconds =                       ///
-        r(t$VCKSS_STAGE_SELECTION_TIMER)
-    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+        r(seconds)
+    quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
 
     tempvar initial_worker initial_firm pair_first unit_count worker_tag original_stayer
     if `implicit_match' {
@@ -5414,14 +5403,14 @@ program define _vckss_impl, eclass sortpreserve
         exit 0
     }
 
-    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+    quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
     local prep_initial_group_seconds =                      ///
-        r(t$VCKSS_STAGE_SELECTION_TIMER) -                  ///
+        r(seconds) -                  ///
         `prep_mark_validate_seconds'
-    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
 
-    local expected_mata_build "vckss-api25-control-posterior"
+    local expected_mata_build "vckss-api25-control-posterior-timers1"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 24 &                 ///
@@ -5465,7 +5454,7 @@ program define _vckss_impl, eclass sortpreserve
 
     capture mata: assert(vckss_graph__api_level() == 21 &          ///
         vckss_graph__build_id() ==                                 ///
-        "vckss-graph-api21-original-deletion-support")
+        "vckss-graph-api21-original-deletion-support-timers1")
     if _rc {
         capture findfile fevc_graph.mata
         if _rc {
@@ -5476,7 +5465,7 @@ program define _vckss_impl, eclass sortpreserve
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss_graph__api_level() == 21 &      ///
             vckss_graph__build_id() ==                             ///
-            "vckss-graph-api21-original-deletion-support")
+            "vckss-graph-api21-original-deletion-support-timers1")
         if _rc {
             quietly _vckss_post_failure "INVALID_GRAPH_RUNTIME"
             di as error "the loaded graph runtime does not match this command build"
@@ -5484,13 +5473,13 @@ program define _vckss_impl, eclass sortpreserve
         }
     }
 
-    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+    quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
     local prep_runtime_setup_seconds =                      ///
-        r(t$VCKSS_STAGE_SELECTION_TIMER) -                  ///
+        r(seconds) -                  ///
         `prep_mark_validate_seconds' -                      ///
         `prep_initial_group_seconds'
-    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
 
     /* The complete-case worker and firm maps above are exactly the graph's
        input maps.  The graph returns retained dense maps derived only from
@@ -5636,18 +5625,19 @@ program define _vckss_impl, eclass sortpreserve
         local hybrid_regression_variance = r(regression)
     }
 
-    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+    quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
     local prep_graph_boundary_elapsed =                     ///
-        r(t$VCKSS_STAGE_SELECTION_TIMER) -                  ///
+        r(seconds) -                  ///
         `prep_mark_validate_seconds' -                      ///
         `prep_initial_group_seconds' -                      ///
         `prep_runtime_setup_seconds'
-    local prep_graph_setup_io_seconds = max(0,              ///
+    local prep_graph_setup_io_seconds = ///
         `prep_graph_boundary_elapsed' -                     ///
         `graph_diagnostics'[1,12] -                         ///
-        `graph_diagnostics'[1,19])
-    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+        `graph_diagnostics'[1,19]
+    if !missing(`prep_graph_setup_io_seconds') local prep_graph_setup_io_seconds = max(0,`prep_graph_setup_io_seconds')
+    quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
 
     /* Deletion IDs need equality and canonical order, not consecutive values.
        Reuse the graph-stage map after pruning; gaps left by removed units are
@@ -5679,17 +5669,18 @@ program define _vckss_impl, eclass sortpreserve
     local parameters = `mover_parameters'
     if "`stayers'" == "both" local parameters =                    ///
         `mover_parameters' + `N_hybrid_stayers'
-    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+    quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
     local sample_selection_seconds =                          ///
-        r(t$VCKSS_STAGE_SELECTION_TIMER)
-    local prep_retained_map_seconds =                       ///
-        `graph_diagnostics'[1,19] + max(0,                   ///
+        r(seconds)
+    local prep_retained_map_seconds = ///
         `sample_selection_seconds' -                         ///
         `prep_mark_validate_seconds' -                       ///
         `prep_initial_group_seconds' -                       ///
         `prep_runtime_setup_seconds' -                       ///
-        `prep_graph_boundary_elapsed')
+        `prep_graph_boundary_elapsed'
+    if !missing(`prep_retained_map_seconds') local prep_retained_map_seconds = max(0,`prep_retained_map_seconds')
+    local prep_retained_map_seconds = `graph_diagnostics'[1,19] + `prep_retained_map_seconds'
     local selected_algorithm `algorithm'
     if "`selected_algorithm'" == "auto" {
         if `parameters' <= `exact_limit' local selected_algorithm exact
@@ -5728,8 +5719,8 @@ program define _vckss_impl, eclass sortpreserve
         "`engine_requested'" != "generic" &                       ///
         ("`stayers'" == "movers" | `N_hybrid_stayers' == 0))
     if "`selected_algorithm'" == "jla" & !`prep_mata_semantic' {
-        quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
-        quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+        quietly mata: vckss_timer__clear($VCKSS_STAGE_SELECTION_TIMER)
+        quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
         quietly generate double `semantic_target' =               ///
             `target'/`frequency' if `solve_touse'
         local semantic_key `solve_worker' `solve_firm'
@@ -5748,9 +5739,9 @@ program define _vckss_impl, eclass sortpreserve
         }
         else sort `semantic_key' `solve_worker' `solve_firm'
         local prep_sort_calls = `prep_sort_calls' + 1
-        quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-        quietly timer list $VCKSS_STAGE_SELECTION_TIMER
-        local semantic_order_seconds = r(t$VCKSS_STAGE_SELECTION_TIMER)
+        quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+        quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
+        local semantic_order_seconds = r(seconds)
         local prep_stata_semantic_ready = 1
     }
 
@@ -5800,7 +5791,7 @@ program define _vckss_impl, eclass sortpreserve
         local scale_runtime_loaded = (_rc == 0)
         capture mata: assert(vckss_scale__api_level() == 6 &       ///
             vckss_scale__build_id() ==                            ///
-            "vckss-scale-api6-prep-sem1-mata")
+            "vckss-scale-api6-prep-sem1-mata-timers1")
         if _rc {
             if `scale_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SCALE_RUNTIME"
@@ -5816,7 +5807,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_scale__api_level() == 6 &   ///
                 vckss_scale__build_id() ==                        ///
-                "vckss-scale-api6-prep-sem1-mata")
+                "vckss-scale-api6-prep-sem1-mata-timers1")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SCALE_RUNTIME"
                 di as error "the installed compressed-design runtime is incompatible with this command"
@@ -5857,7 +5848,7 @@ program define _vckss_impl, eclass sortpreserve
             local compression_aux_timer_2 = r(restore_timer)
             foreach compression_timer_id in `compression_timer'   ///
                 `compression_aux_timer_1' `compression_aux_timer_2' {
-                quietly timer clear `compression_timer_id'
+                quietly mata: vckss_timer__clear(`compression_timer_id')
             }
             capture quietly _fevc_lifecycle_phase,              ///
                 phase(compression_transition)
@@ -5870,7 +5861,7 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "the compression-transition phase marker could not be written"
                 exit 498
             }
-            quietly timer on `compression_timer'
+            quietly mata: vckss_timer__on(`compression_timer')
             local prep_compression_import_columns =               ///
                 cond(`prep_mata_semantic',                        ///
                     6 + ("`probeorder'" != ""), 7)
@@ -5884,9 +5875,9 @@ program define _vckss_impl, eclass sortpreserve
                 "`scale_prepare_diagnostics'",                   ///
                 "scale_prepare_status", "scale_prepare_message")
             local scale_prepare_rc = _rc
-            quietly timer off `compression_timer'
-            quietly timer list `compression_timer'
-            local compression_seconds = r(t`compression_timer')
+            quietly mata: vckss_timer__off(`compression_timer')
+            quietly fevc__timer read `compression_timer'
+            local compression_seconds = r(seconds)
             local scale_semantic_seconds = 0
             if !`scale_prepare_rc' {
                 capture confirm matrix `scale_prepare_diagnostics'
@@ -5900,8 +5891,9 @@ program define _vckss_impl, eclass sortpreserve
             }
             local semantic_order_seconds =                        ///
                 `semantic_order_seconds' + `scale_semantic_seconds'
-            local compression_seconds = max(0,                    ///
-                `compression_seconds' - `scale_semantic_seconds')
+            local compression_seconds = ///
+                `compression_seconds' - `scale_semantic_seconds'
+            if !missing(`compression_seconds') local compression_seconds = max(0,`compression_seconds')
             quietly _fevc_lifecycle_release_timers,             ///
                 timers(`compression_timer'                        ///
                     `compression_aux_timer_1'                      ///
@@ -5963,8 +5955,8 @@ program define _vckss_impl, eclass sortpreserve
             }
             // Preserve the semantic oracle if compressed preparation declines.
             if !`prep_stata_semantic_ready' {
-                quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
-                quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+                quietly mata: vckss_timer__clear($VCKSS_STAGE_SELECTION_TIMER)
+                quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
                 quietly generate double `semantic_target' =       ///
                     `target'/`frequency' if `solve_touse'
                 local semantic_key `solve_worker' `solve_firm'    ///
@@ -5978,11 +5970,11 @@ program define _vckss_impl, eclass sortpreserve
                 sort `semantic_key' `solve_worker' `solve_firm'   ///
                     `solve_deletion'
                 local prep_sort_calls = `prep_sort_calls' + 1
-                quietly timer off $VCKSS_STAGE_SELECTION_TIMER
-                quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+                quietly mata: vckss_timer__off($VCKSS_STAGE_SELECTION_TIMER)
+                quietly fevc__timer read $VCKSS_STAGE_SELECTION_TIMER
                 local semantic_order_seconds =                    ///
                     `semantic_order_seconds' +                    ///
-                    r(t$VCKSS_STAGE_SELECTION_TIMER)
+                    r(seconds)
                 local prep_stata_semantic_ready = 1
             }
         }
@@ -6402,7 +6394,7 @@ program define _vckss_impl, eclass sortpreserve
         capture mata: assert(vckss_solver__api_level() == 27 &     ///
             vckss_solver__route_api() == 1 &                      ///
             vckss_solver__build_id() ==                           ///
-            "vckss-solver-api27-memory-policy")
+            "vckss-solver-api27-memory-policy-timers1")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SOLVER_RUNTIME"
@@ -6419,7 +6411,7 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(vckss_solver__api_level() == 27 & ///
                 vckss_solver__route_api() == 1 &                  ///
                 vckss_solver__build_id() ==                       ///
-                "vckss-solver-api27-memory-policy")
+                "vckss-solver-api27-memory-policy-timers1")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"
@@ -6432,7 +6424,7 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(                                 ///
                 vckss_scale_engine__api_level() == 4 &            ///
                 vckss_scale_engine__build_id() ==                 ///
-                "vckss-scale-engine-api4-fe-buf1-buffered")
+                "vckss-scale-engine-api4-fe-buf1-buffered-timers1")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_ENGINE"
@@ -6449,7 +6441,7 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: assert(                             ///
                     vckss_scale_engine__api_level() == 4 &        ///
                     vckss_scale_engine__build_id() ==             ///
-                    "vckss-scale-engine-api4-fe-buf1-buffered")
+                    "vckss-scale-engine-api4-fe-buf1-buffered-timers1")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -6493,7 +6485,7 @@ program define _vckss_impl, eclass sortpreserve
             local restore_timer = r(restore_timer)
             foreach lifecycle_timer in `transition_timer' `work_timer' ///
                 `restore_timer' {
-                quietly timer clear `lifecycle_timer'
+                quietly mata: vckss_timer__clear(`lifecycle_timer')
             }
             quietly count if `touse'
             local lifecycle_sample_N = r(N)
@@ -6517,7 +6509,7 @@ program define _vckss_impl, eclass sortpreserve
             local old_preservemem_text = strtrim("`old_preservemem_text'")
             local transition_rc = 0
             local preserve_active = 0
-            quietly timer on `transition_timer'
+            quietly mata: vckss_timer__on(`transition_timer')
             capture quietly set max_preservemem 0
             if _rc local transition_rc = _rc
             if !`transition_rc' {
@@ -6531,9 +6523,9 @@ program define _vckss_impl, eclass sortpreserve
                 capture quietly clear
                 if _rc local transition_rc = _rc
             }
-            quietly timer off `transition_timer'
-            quietly timer list `transition_timer'
-            local life_transition_seconds = r(t`transition_timer')
+            quietly mata: vckss_timer__off(`transition_timer')
+            quietly fevc__timer read `transition_timer'
+            local life_transition_seconds = r(seconds)
             local life_preserve_forced_disk = 1
             local life_method PRESERVE_DISK
             if `transition_rc' {
@@ -6580,7 +6572,7 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "the final routed resource gate could not be configured"
                 exit 498
             }
-            quietly timer on `work_timer'
+            quietly mata: vckss_timer__on(`work_timer')
             capture noisily mata: vckss_scale_runtime__stata_run(   ///
                 `probes', `leverage_batch', `target_batch',         ///
                 `seed', `tolerance', `maxiter', `rank_tolerance',   ///
@@ -6596,9 +6588,9 @@ program define _vckss_impl, eclass sortpreserve
                 "pilot_failure_reason", "rng_contract",         ///
                 "rng_implementation", "rng_runtime")
             local mata_call_rc = _rc
-            quietly timer off `work_timer'
-            quietly timer list `work_timer'
-            local life_work_seconds = r(t`work_timer')
+            quietly mata: vckss_timer__off(`work_timer')
+            quietly fevc__timer read `work_timer'
+            local life_work_seconds = r(seconds)
             capture mata: vckss_solver__stata_res_rcpt(          ///
                 "`resource_components'",                        ///
                 "`resource_forecasts'", `resource_row',          ///
@@ -6621,7 +6613,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly _fevc_lifecycle_memory, stage(after_work)
             local life_mem_work_bytes = r(total_alloc_bytes)
 
-            quietly timer on `restore_timer'
+            quietly mata: vckss_timer__on(`restore_timer')
             capture mata: vckss_scale_runtime__reset()
             local scale_release_rc = _rc
             capture quietly clear
@@ -6629,9 +6621,9 @@ program define _vckss_impl, eclass sortpreserve
             local restoration_marker_rc = _rc
             capture quietly restore
             local restore_rc = _rc
-            quietly timer off `restore_timer'
-            quietly timer list `restore_timer'
-            local life_restore_seconds = r(t`restore_timer')
+            quietly mata: vckss_timer__off(`restore_timer')
+            quietly fevc__timer read `restore_timer'
+            local life_restore_seconds = r(seconds)
             quietly _fevc_lifecycle_memory, stage(restored)
             local life_mem_restored_bytes = r(total_alloc_bytes)
             local life_sample_restored = 1
@@ -6883,7 +6875,7 @@ program define _vckss_impl, eclass sortpreserve
             `hybrid_regression_variance'
     }
 
-    quietly timer on $VCKSS_STAGE_VALIDATION_TIMER
+    quietly mata: vckss_timer__on($VCKSS_STAGE_VALIDATION_TIMER)
     local generic_identity_resid = .
     local generic_complete_resid = .
     if "`selected_algorithm'" == "jla" &                         ///
@@ -7189,46 +7181,13 @@ program define _vckss_impl, eclass sortpreserve
        timer; semantic ordering and compressed preparation are timed
        separately; lifecycle transition/restore sit outside the numerical
        engine.  No profile value is consulted by routing or scientific gates. */
-    local prep_selection_other = max(0,                         ///
-        `sample_selection_seconds'-`graph_diagnostics'[1,12])
-    local prep_observed_total = `prep_selection_other' +        ///
-        `graph_diagnostics'[1,12] + `semantic_order_seconds' +  ///
-        `compression_seconds' + `life_transition_seconds' +    ///
-        `life_restore_seconds'
-    matrix `prep_profile' = (`prep_selection_other',             ///
-        `graph_diagnostics'[1,12], `semantic_order_seconds',     ///
-        `compression_seconds', `life_transition_seconds',       ///
-        `life_restore_seconds', `prep_observed_total')
-    matrix colnames `prep_profile' = selection_other graph_prune ///
-        semantic_order compression_prepare lifecycle_transition ///
-        lifecycle_restore observed_total
-
-    /* The boundary profile preserves the established prep_profile and adds
-       enough exclusive detail to attribute later scan/group/map changes.
-       Counts describe executed operations; they are not performance gates. */
-    local prep_boundary_observed_total =                        ///
-        `prep_mark_validate_seconds' +                          ///
-        `prep_initial_group_seconds' +                          ///
-        `prep_runtime_setup_seconds' +                          ///
-        `prep_graph_setup_io_seconds' +                         ///
-        `graph_diagnostics'[1,12] +                             ///
-        `prep_retained_map_seconds' +                           ///
-        `semantic_order_seconds' + `compression_seconds' +     ///
-        `life_transition_seconds' + `life_restore_seconds'
-    matrix `prep_boundary_profile' = (                          ///
-        `prep_mark_validate_seconds',                           ///
-        `prep_initial_group_seconds',                           ///
-        `prep_runtime_setup_seconds',                           ///
-        `prep_graph_setup_io_seconds',                          ///
-        `graph_diagnostics'[1,12],                              ///
-        `prep_retained_map_seconds',                            ///
-        `semantic_order_seconds', `compression_seconds',       ///
-        `life_transition_seconds', `life_restore_seconds',     ///
-        `prep_boundary_observed_total')
-    matrix colnames `prep_boundary_profile' = mark_validate     ///
-        initial_group runtime_setup graph_setup_io graph_prune  ///
-        retained_map semantic_order compression_prepare         ///
-        lifecycle_transition lifecycle_restore observed_total
+    quietly fevc__timer profiles `prep_profile' `prep_boundary_profile', ///
+        selection(`sample_selection_seconds') graph(`=`graph_diagnostics'[1,12]') ///
+        semantic(`semantic_order_seconds') compression(`compression_seconds') ///
+        transition(`life_transition_seconds') restore(`life_restore_seconds') ///
+        mark(`prep_mark_validate_seconds') group(`prep_initial_group_seconds') ///
+        runtime(`prep_runtime_setup_seconds') graphio(`prep_graph_setup_io_seconds') ///
+        map(`prep_retained_map_seconds')
 
     local prep_deletion_group_calls =                           ///
         cond("`deletion'" == "observation",0,1)
@@ -7837,9 +7796,9 @@ program define _vckss_impl, eclass sortpreserve
         if `q1computed'<4 ereturn local status "KSS_Q1_PARTIAL"
     }
 
-    quietly timer off $VCKSS_STAGE_VALIDATION_TIMER
-    quietly timer list $VCKSS_STAGE_VALIDATION_TIMER
-    local validation_seconds = r(t$VCKSS_STAGE_VALIDATION_TIMER)
+    quietly mata: vckss_timer__off($VCKSS_STAGE_VALIDATION_TIMER)
+    quietly fevc__timer read $VCKSS_STAGE_VALIDATION_TIMER
+    local validation_seconds = r(seconds)
     ereturn scalar sample_selection_seconds = `sample_selection_seconds'
     ereturn scalar validation_seconds = `validation_seconds'
 
@@ -9672,15 +9631,6 @@ end
 
 program define _vckss_stage_timer_ids, rclass
     version 18.0
-    local timers
-    forvalues id = 31/50 {
-        quietly capture timer list `id'
-        if missing(r(t`id')) local timers `timers' `id'
-        local timer_count : word count `timers'
-        if `timer_count' == 2 continue, break
-    }
-    local timer_count : word count `timers'
-    if `timer_count' != 2 exit 498
-    return scalar selection_timer = real(word("`timers'",1))
-    return scalar validation_timer = real(word("`timers'",2))
+    return scalar selection_timer = 31
+    return scalar validation_timer = 32
 end

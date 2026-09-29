@@ -1,6 +1,7 @@
 *! fevc Mata runtime 0.5.0-rc.1 05sep2026
 
 version 18.0
+quietly fevc__timer load
 
 mata:
 mata set matastrict on
@@ -18,7 +19,7 @@ real scalar vckss__api_level()
 
 string scalar vckss__build_id()
 {
-    return("vckss-api25-control-posterior")
+    return("vckss-api25-control-posterior-timers1")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -1118,9 +1119,9 @@ struct vckss_result scalar vckss__exact(
         }
         controls = canonical_controls.controls
     }
-    timer_clear(91)
-    timer_clear(92)
-    timer_on(91)
+    vckss_timer__clear(91)
+    vckss_timer__clear(92)
+    vckss_timer__on(91)
 
     if (deletion == "match") {
         row_order = order(deletion_id,1)
@@ -1226,8 +1227,8 @@ struct vckss_result scalar vckss__exact(
             return(vckss__failure("INVERSE_RESIDUAL_FAILED", "working inverse square root failed its residual gate"))
         }
     }
-    timer_off(91)
-    timer_on(92)
+    vckss_timer__off(91)
+    vckss_timer__on(92)
 
     if (deletion == "observation") {
         leverage_diagonal = rowsum(design_inverse :* design)
@@ -1330,7 +1331,7 @@ struct vckss_result scalar vckss__exact(
         }
     }
     correction[4] = correction[1] + correction[2] + 2 * correction[3]
-    timer_off(92)
+    vckss_timer__off(92)
     if (hasmissing(plugin) | hasmissing(correction)) {
         return(vckss__failure("NONFINITE_CORRECTION", "exact KSS correction is nonfinite"))
     }
@@ -1365,10 +1366,10 @@ struct vckss_result scalar vckss__exact(
     else out.inverse_relres = max((full_inverse.relres,working_inverse.relres,
         block_solver_residual))
     out.weighted_rss = sum(frequency:*residual:^2)
-    out.fit_seconds = vckss__timer_seconds(91)
+    out.fit_seconds = vckss_timer__seconds(91)
     out.leverage_seconds = 0
     out.target_seconds = 0
-    out.correction_seconds = vckss__timer_seconds(92)
+    out.correction_seconds = vckss_timer__seconds(92)
     out.preconditioner_seconds = 0
     out.schur_seconds = 0
     out.preconditioner_apply_seconds = 0
@@ -1518,9 +1519,9 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
         }
     }
 
-    timer_clear(91)
-    timer_clear(92)
-    timer_on(91)
+    vckss_timer__clear(91)
+    vckss_timer__clear(92)
+    vckss_timer__on(91)
     if (!vckss__exact_memory_check(n,full_parameters,controls_count,
         max(panel[.,2]-panel[.,1]:+1))) {
         return(vckss__failure("RESOURCE_LIMIT", "exact hybrid allocation forecast exceeds memory_gib()"))
@@ -1602,8 +1603,8 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
         100*rank_tolerance*(1+vckss__norm2(A))) {
         return(vckss__failure("INVERSE_RESIDUAL_FAILED", "combined working inverse square root failed its residual gate"))
     }
-    timer_off(91)
-    timer_on(92)
+    vckss_timer__off(91)
+    vckss_timer__on(92)
 
     /* Mover contribution: delete every physical copy in the declared match. */
     for (group=1; group<=mover_groups; group++) {
@@ -1717,7 +1718,7 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
 
     correction = mover_correction+stayer_correction
     correction[4] = correction[1]+correction[2]+2*correction[3]
-    timer_off(92)
+    vckss_timer__off(92)
     if (hasmissing(plugin) | hasmissing(correction)) {
         return(vckss__failure("NONFINITE_CORRECTION", "stayer-hybrid exact KSS correction is nonfinite"))
     }
@@ -1756,10 +1757,10 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
     else out.inverse_relres = max((full_inverse.relres,
         working_inverse.relres,block_solver_residual))
     out.weighted_rss = sum(frequency:*residual:^2)
-    out.fit_seconds = vckss__timer_seconds(91)
+    out.fit_seconds = vckss_timer__seconds(91)
     out.leverage_seconds = 0
     out.target_seconds = 0
-    out.correction_seconds = vckss__timer_seconds(92)
+    out.correction_seconds = vckss_timer__seconds(92)
     out.preconditioner_seconds = 0
     out.schur_seconds = 0
     out.preconditioner_apply_seconds = 0
@@ -2446,10 +2447,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     out.max_buffer_width = columns
     out.workspace_peak_bytes = workspace.modeled_bytes
 
-    timer_clear(96)
-    timer_clear(97)
-    timer_clear(98)
-    timer_on(96)
+    vckss_timer__clear(96)
+    vckss_timer__clear(97)
+    vckss_timer__clear(98)
+    vckss_timer__on(96)
     worker_rhs = right_hand_side[1..workers,.]
     if (rows(right_hand_side) == workers+firms) {
         full_firm_rhs =
@@ -2496,13 +2497,13 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     // residual against every original full-system RHS below remain mandatory.
     if (active_count > 0 & backend.exact_inverse == 1) {
         active_index = selectindex(active' :== 1)
-        timer_on(98)
+        vckss_timer__on(98)
         if (active_count == columns) {
             applied = (*backend.apply)(backend.context,design,residual)
         }
         else applied = (*backend.apply)(
             backend.context,design,residual[.,active_index])
-        timer_off(98)
+        vckss_timer__off(98)
         if (applied.status != "CONVERGED" |
             rows(applied.value) != firms |
             cols(applied.value) != active_count | hasmissing(applied.value)) {
@@ -2512,9 +2513,9 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.status = "INVALID_PRECONDITIONER_ACTION"
                 out.message = "exact-terminal backend returned an invalid inverse action"
             }
-            timer_off(96)
-            out.preconditioner_seconds = vckss__timer_seconds(98)
-            out.pcg_seconds = vckss__timer_seconds(96)
+            vckss_timer__off(96)
+            out.preconditioner_seconds = vckss_timer__seconds(98)
+            out.pcg_seconds = vckss_timer__seconds(96)
             return(out)
         }
         firm_coefficient[.,active_index] = applied.value
@@ -2532,13 +2533,13 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     }
     if (active_count > 0) {
         active_index = selectindex(active' :== 1)
-        timer_on(98)
+        vckss_timer__on(98)
         if (active_count == columns) {
             applied = (*backend.apply)(backend.context,design,residual)
         }
         else applied = (*backend.apply)(
             backend.context,design,residual[.,active_index])
-        timer_off(98)
+        vckss_timer__off(98)
         if (applied.status != "CONVERGED" |
             rows(applied.value) != firms |
             cols(applied.value) != active_count |
@@ -2549,9 +2550,9 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.status = "INVALID_PRECONDITIONER_ACTION"
                 out.message = "backend returned an invalid packed action"
             }
-            timer_off(96)
-            out.preconditioner_seconds = vckss__timer_seconds(98)
-            out.pcg_seconds = max((vckss__timer_seconds(96),
+            vckss_timer__off(96)
+            out.preconditioner_seconds = vckss_timer__seconds(98)
+            out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
                 out.schur_seconds+out.preconditioner_seconds))
             return(out)
         }
@@ -2570,10 +2571,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.status = "PCG_BREAKDOWN"
                 out.message = "firm mobility PCG residual became nonpositive"
                 out.rhs_status[column] = out.status
-                timer_off(96)
-                out.schur_seconds = vckss__timer_seconds(97)
-                out.preconditioner_seconds = vckss__timer_seconds(98)
-                out.pcg_seconds = max((vckss__timer_seconds(96),
+                vckss_timer__off(96)
+                out.schur_seconds = vckss_timer__seconds(97)
+                out.preconditioner_seconds = vckss_timer__seconds(98)
+                out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
                     out.schur_seconds+out.preconditioner_seconds))
                 return(out)
             }
@@ -2583,7 +2584,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     for (iteration=1; iteration<=maxiter & active_count>0; iteration++) {
         restart = J(1,columns,0)
         active_index = selectindex(active' :== 1)
-        timer_on(97)
+        vckss_timer__on(97)
         if (active_count == columns) {
             action = J(firms,columns,0)
             vckss__fe_schur_into(design,direction,&workspace,&action)
@@ -2602,7 +2603,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.legacy_schur_columns+active_count
             out.packed_fallback_batches = out.packed_fallback_batches+1
         }
-        timer_off(97)
+        vckss_timer__off(97)
         out.schur_actions = out.schur_actions+active_count
         out.schur_batches = out.schur_batches+1
         for (column=1; column<=columns; column++) {
@@ -2614,10 +2615,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.status = "PCG_BREAKDOWN"
                 out.message = "firm mobility PCG lost positive curvature"
                 out.rhs_status[column] = out.status
-                timer_off(96)
-                out.schur_seconds = vckss__timer_seconds(97)
-                out.preconditioner_seconds = vckss__timer_seconds(98)
-                out.pcg_seconds = max((vckss__timer_seconds(96),
+                vckss_timer__off(96)
+                out.schur_seconds = vckss_timer__seconds(97)
+                out.preconditioner_seconds = vckss_timer__seconds(98)
+                out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
                     out.schur_seconds+out.preconditioner_seconds))
                 return(out)
             }
@@ -2637,7 +2638,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 replacement_argument = firm_coefficient
             }
             else replacement_argument = firm_coefficient[.,active_index]
-            timer_on(97)
+            vckss_timer__on(97)
             if (active_count == columns) {
                 action = J(firms,columns,0)
                 vckss__fe_schur_into(design,replacement_argument,
@@ -2659,7 +2660,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.packed_fallback_batches =
                     out.packed_fallback_batches+1
             }
-            timer_off(97)
+            vckss_timer__off(97)
             out.schur_actions = out.schur_actions+active_count
             out.schur_batches = out.schur_batches+1
             explicit_residual = reduced_rhs-action
@@ -2693,13 +2694,13 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         active_count = sum(active)
         if (active_count == 0) break
         active_index = selectindex(active' :== 1)
-        timer_on(98)
+        vckss_timer__on(98)
         if (active_count == columns) {
             applied = (*backend.apply)(backend.context,design,residual)
         }
         else applied = (*backend.apply)(
             backend.context,design,residual[.,active_index])
-        timer_off(98)
+        vckss_timer__off(98)
         if (applied.status != "CONVERGED" |
             rows(applied.value) != firms |
             cols(applied.value) != active_count |
@@ -2710,10 +2711,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.status = "INVALID_PRECONDITIONER_ACTION"
                 out.message = "backend returned an invalid packed action"
             }
-            timer_off(96)
-            out.schur_seconds = vckss__timer_seconds(97)
-            out.preconditioner_seconds = vckss__timer_seconds(98)
-            out.pcg_seconds = max((vckss__timer_seconds(96),
+            vckss_timer__off(96)
+            out.schur_seconds = vckss_timer__seconds(97)
+            out.preconditioner_seconds = vckss_timer__seconds(98)
+            out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
                 out.schur_seconds+out.preconditioner_seconds))
             return(out)
         }
@@ -2733,10 +2734,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.status = "PCG_BREAKDOWN"
                 out.message = "firm mobility PCG residual became nonpositive"
                 out.rhs_status[column] = out.status
-                timer_off(96)
-                out.schur_seconds = vckss__timer_seconds(97)
-                out.preconditioner_seconds = vckss__timer_seconds(98)
-                out.pcg_seconds = max((vckss__timer_seconds(96),
+                vckss_timer__off(96)
+                out.schur_seconds = vckss_timer__seconds(97)
+                out.preconditioner_seconds = vckss_timer__seconds(98)
+                out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
                     out.schur_seconds+out.preconditioner_seconds))
                 return(out)
             }
@@ -2759,10 +2760,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.rhs_iterations[column] = maxiter
             }
         }
-        timer_off(96)
-        out.schur_seconds = vckss__timer_seconds(97)
-        out.preconditioner_seconds = vckss__timer_seconds(98)
-        out.pcg_seconds = max((vckss__timer_seconds(96),
+        vckss_timer__off(96)
+        out.schur_seconds = vckss_timer__seconds(97)
+        out.preconditioner_seconds = vckss_timer__seconds(98)
+        out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
             out.schur_seconds+out.preconditioner_seconds))
         return(out)
     }
@@ -2799,10 +2800,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
             }
         }
     }
-    timer_off(96)
-    out.schur_seconds = vckss__timer_seconds(97)
-    out.preconditioner_seconds = vckss__timer_seconds(98)
-    out.pcg_seconds = max((vckss__timer_seconds(96),
+    vckss_timer__off(96)
+    out.schur_seconds = vckss_timer__seconds(97)
+    out.preconditioner_seconds = vckss_timer__seconds(98)
+    out.pcg_seconds = vckss_timer__max((vckss_timer__seconds(96),
         out.schur_seconds+out.preconditioner_seconds))
     if (out.status == "SOLVER_RESIDUAL_FAILED") return(out)
     out.status = "CONVERGED"
@@ -3640,8 +3641,8 @@ void vckss__stata_prune_graph(
             "literal frequency total exceeds the exact binary64 integer range")
         return
     }
-    timer_clear(95)
-    timer_on(95)
+    vckss_timer__clear(95)
+    vckss_timer__on(95)
 
     if (deletion == "match") {
         deletion_order = order(deletion_id,1)
@@ -3778,8 +3779,8 @@ void vckss__stata_prune_graph(
     st_store(sample_index,keep_name,active)
     retained_rows = sum(active)
     retained_mass = sum(frequency:*active)
-    timer_off(95)
-    graph_seconds = vckss__timer_seconds(95)
+    vckss_timer__off(95)
+    graph_seconds = vckss_timer__seconds(95)
     diagnostics = (n,retained_rows,sum(frequency),retained_mass,
         graph_edges,articulation_removed,maximum_components,
         mover_input_rows,initial_component_rows,insufficient_removed,
@@ -4150,14 +4151,14 @@ struct vckss_result scalar vckss__jla_backend(
     if (base.status != "CONVERGED" | base.n != n |
         rows(base.worker) != n | rows(base.firm) != n |
         rows(base.frequency) != n | backend.apply == NULL |
-        missing(setup_seconds) | setup_seconds < 0) {
+        setup_seconds < 0) {
         return(vckss__failure("INVALID_SOLVER_BACKEND", "prepared JLA solver backend is invalid"))
     }
 
-    timer_clear(91)
-    timer_clear(92)
-    timer_clear(93)
-    timer_on(91)
+    vckss_timer__clear(91)
+    vckss_timer__clear(92)
+    vckss_timer__clear(93)
+    vckss_timer__on(91)
 
     solver_schur_actions = 0
     solver_schur_batches = 0
@@ -4370,8 +4371,8 @@ struct vckss_result scalar vckss__jla_backend(
     residual = working_y - fitted
     plugin = vckss__effect_plugin(
         coefficient[1..base_parameters],base,target_weight)
-    timer_off(91)
-    timer_on(92)
+    vckss_timer__off(91)
+    vckss_timer__on(92)
 
     if (vckss_rng__production_contract() == "") {
         return(vckss__failure(
@@ -4722,8 +4723,8 @@ struct vckss_result scalar vckss__jla_backend(
         }
     }
 
-    timer_off(92)
-    timer_on(93)
+    vckss_timer__off(92)
+    vckss_timer__on(93)
 
     // The target domain starts from its own registered mt64s stream.  Probe
     // atoms are generated in complete logical-probe order inside the loops
@@ -4893,7 +4894,7 @@ struct vckss_result scalar vckss__jla_backend(
     }
     correction = colsum(target_draws) :/ probes
     numerical_mcse = vckss__mcse(target_draws)
-    timer_off(93)
+    vckss_timer__off(93)
     if (hasmissing(plugin) | hasmissing(correction) |
         hasmissing(numerical_mcse)) {
         return(vckss__failure("NONFINITE_CORRECTION", "JLA target correction is nonfinite"))
@@ -4932,9 +4933,9 @@ struct vckss_result scalar vckss__jla_backend(
     out.weighted_rss = sum(frequency:*residual:^2)
     // Public stage timers are disjoint: setup/preconditioner preparation is
     // reported separately from the full fit, leverage, and target phases.
-    out.fit_seconds = vckss__timer_seconds(91)
-    out.leverage_seconds = vckss__timer_seconds(92)
-    out.target_seconds = vckss__timer_seconds(93)
+    out.fit_seconds = vckss_timer__seconds(91)
+    out.leverage_seconds = vckss_timer__seconds(92)
+    out.target_seconds = vckss_timer__seconds(93)
     out.correction_seconds = out.leverage_seconds+out.target_seconds
     out.preconditioner_seconds = setup_seconds
     out.schur_seconds = solver_schur_seconds
@@ -4988,14 +4989,14 @@ struct vckss_result scalar vckss__jla(
     struct vckss_solver_backend scalar backend
     real scalar setup_seconds
 
-    timer_clear(94)
-    timer_on(94)
+    vckss_timer__clear(94)
+    vckss_timer__on(94)
     base = vckss__fe_prepare(worker,firm,frequency,rank_tolerance)
-    timer_off(94)
+    vckss_timer__off(94)
     if (base.status != "CONVERGED") {
         return(vckss__failure(base.status,base.message))
     }
-    setup_seconds = vckss__timer_seconds(94)
+    setup_seconds = vckss_timer__seconds(94)
     backend = vckss__diagonal_backend()
     return(vckss__jla_backend(
         y,worker,firm,controls,frequency,target_weight,deletion_id,

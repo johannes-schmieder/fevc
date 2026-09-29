@@ -747,8 +747,8 @@ mod tests {
         let d = d2 + 11.0 * c2;
         let root = ((a - d) * (a - d) + 4.0 * 9.0 * 12.0 * cross * cross).sqrt();
         let mut expected = vec![(a + d - root) / 2.0, (a + d + root) / 2.0];
-        expected.extend(std::iter::repeat(d1 - c1).take(8));
-        expected.extend(std::iter::repeat(d2 - c2).take(11));
+        expected.extend(std::iter::repeat_n(d1 - c1, 8));
+        expected.extend(std::iter::repeat_n(d2 - c2, 11));
         expected.sort_by(f64::total_cmp);
         for (actual, expected) in spectrum.eigenvalues.iter().zip(expected) {
             assert!((actual - expected).abs() <= spectrum.error_bound + 1e-14);

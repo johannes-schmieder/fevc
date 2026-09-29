@@ -31,6 +31,8 @@ jobs:
       - name: Install development dependencies
         run: ./.venv/bin/python -m pip install --requirement requirements/dev.txt
       - name: Run Python tests
+        env:
+          FEVC_REQUIRE_HISTORY: "1"
         run: ./.venv/bin/python -m pytest -q
       - name: Check generated CMG source
         run: ./.venv/bin/python fevc/cmg/tools/assemble.py --all --check

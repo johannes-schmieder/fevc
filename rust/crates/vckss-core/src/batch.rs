@@ -160,9 +160,7 @@ pub fn apply_two_way_schur_batch_with_interrupt(
         for (worker, &diagonal) in operator.worker_diagonal().iter().enumerate() {
             if scale_work == next_checkpoint {
                 interrupt.checkpoint("batch_operator_scale")?;
-                next_checkpoint = next_checkpoint
-                    .checked_add(INTERRUPT_CHECK_CHUNK)
-                    .unwrap_or(usize::MAX);
+                next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
             }
             workspace.worker_sum[worker * columns + column] /= diagonal;
             scale_work += 1;
@@ -175,9 +173,7 @@ pub fn apply_two_way_schur_batch_with_interrupt(
         for (firm, &diagonal) in operator.firm_diagonal().iter().enumerate() {
             if diagonal_work == next_checkpoint {
                 interrupt.checkpoint("batch_operator_diagonal")?;
-                next_checkpoint = next_checkpoint
-                    .checked_add(INTERRUPT_CHECK_CHUNK)
-                    .unwrap_or(usize::MAX);
+                next_checkpoint = next_checkpoint.saturating_add(INTERRUPT_CHECK_CHUNK);
             }
             let offset = firm * columns + column;
             workspace.full_output[offset] = diagonal * workspace.full_firm[offset];

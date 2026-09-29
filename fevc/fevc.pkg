@@ -52,3 +52,5 @@ f fevc.sthlp
 f fevc__memory_options.ado
 f fevc__native_threads.ado
 f fevc__control_failure_post.ado
+f fevc_timer.mata
+f fevc__timer.ado

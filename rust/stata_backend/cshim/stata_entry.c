@@ -1501,6 +1501,12 @@ static int vckss_copy_marked_columns(
         if (value == 0.0) {
             continue;
         }
+        /* The count pass does not grant permission to write beyond storage
+           if the host's marked sample changes before or during ingestion. */
+        if (row >= rows) {
+            free(buffer);
+            return vckss_usage("marked-sample count changed during ingestion");
+        }
         for (variable = 0; variable < numeric_columns; ++variable) {
             if (SF_vdata((ST_int)variable + 2, observation, &value) != 0) {
                 free(buffer);

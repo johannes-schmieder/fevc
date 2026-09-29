@@ -1,6 +1,7 @@
 *! fevc compressed estimator engine 0.4.0-alpha.1 18aug2026
 
 version 18.0
+quietly fevc__timer load
 
 mata:
 mata set matastrict on
@@ -34,7 +35,7 @@ real scalar vckss_scale_engine__api_level()
 
 string scalar vckss_scale_engine__build_id()
 {
-    return("vckss-scale-engine-api4-fe-buf1-buffered")
+    return("vckss-scale-engine-api4-fe-buf1-buffered-timers1")
 }
 
 struct vckss_scale_engine_atom_batch
@@ -1341,17 +1342,17 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     out.target_weight_sum = target_mass
     out.preconditioner_ratio = base.preconditioner_ratio
 
-    timer_clear(91)
-    timer_clear(92)
-    timer_clear(93)
-    timer_clear(94)
-    timer_clear(99)
-    timer_on(91)
+    vckss_timer__clear(91)
+    vckss_timer__clear(92)
+    vckss_timer__clear(93)
+    vckss_timer__clear(94)
+    vckss_timer__clear(99)
+    vckss_timer__on(91)
     solved = vckss__fe_solve_matrix_backend(
         base,vckss__fe_transpose_full(base,design.cell_outcome_sum),
         tolerance,maxiter,backend)
     if (solved.status != "CONVERGED") {
-        timer_off(91)
+        vckss_timer__off(91)
         out.status = solved.status
         out.message = solved.message
         return(out)
@@ -1366,25 +1367,25 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     out.weighted_rss = vckss_scale_engine__column_sum(
         design.cell_outcome_centered_ss + design.cell_frequency:*
         (design.cell_outcome_mean-out.fitted_cell):^2)[1]
-    timer_off(91)
-    out.fit_seconds = vckss__timer_seconds(91)
+    vckss_timer__off(91)
+    out.fit_seconds = vckss_timer__seconds(91)
 
     /* Match leverage moments.  Fixed contiguous tiles and compensated batch
        merges retain logical probe order.  A different solve width may alter
        floating-point grouping, but it cannot alter the supplied atoms. */
-    timer_on(92)
+    vckss_timer__on(92)
     moment_subtotal = J(groups,5,0)
     moment_compensation = J(groups,5,0)
     for (batch_start=1; batch_start<=probes;
         batch_start=batch_start+leverage_batch) {
         batch_finish = min((probes,batch_start+leverage_batch-1))
         batch_columns = batch_finish-batch_start+1
-        timer_on(94)
+        vckss_timer__on(94)
         atom_batch = (*provider.leverage)(
             provider.context,batch_start,batch_finish)
-        timer_off(94)
+        vckss_timer__off(94)
         if (atom_batch.status != "CONVERGED") {
-            timer_off(92)
+            vckss_timer__off(92)
             out.status = atom_batch.status
             out.message = atom_batch.message
             return(out)
@@ -1394,7 +1395,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
             cols(unit_atoms) != batch_columns |
             !vckss_scale_eng__valid_atoms(
                 unit_atoms,design.unit_frequency)) {
-            timer_off(92)
+            vckss_timer__off(92)
             out.status = "INVALID_PROBE_ATOM"
             out.message = "deletion-unit atoms violate literal-copy sign-sum support"
             return(out)
@@ -1405,7 +1406,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         solved = vckss__fe_solve_matrix_backend(
             base,leverage_rhs,tolerance,maxiter,backend)
         if (solved.status != "CONVERGED") {
-            timer_off(92)
+            vckss_timer__off(92)
             out.status = solved.status
             out.message = solved.message
             return(out)
@@ -1423,7 +1424,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     batch_moments = moment_subtotal+moment_compensation
     if (rows(batch_moments) != groups | cols(batch_moments) != 5 |
         hasmissing(batch_moments)) {
-        timer_off(92)
+        vckss_timer__off(92)
         out.status = "JLA_MOMENT_FAILED"
         out.message = "matrix-wide finite-projection moments are nonfinite"
         return(out)
@@ -1440,7 +1441,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     if (hasmissing(out.unit_projection_share) |
         hasmissing(out.unit_residual_share) |
         min((p_first+m_first):/probes) <= block_tolerance) {
-        timer_off(92)
+        vckss_timer__off(92)
         out.status = "JLA_CONSTRAINT_FAILED"
         out.message = "JLA projection and residual masses do not have positive sum"
         return(out)
@@ -1457,13 +1458,13 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         (out.unit_residual_share-out.unit_projection_share):*
             mixed_second):/probes
     if (hasmissing(finite_bias) | hasmissing(finite_variance)) {
-        timer_off(92)
+        vckss_timer__off(92)
         out.status = "JLA_MOMENT_FAILED"
         out.message = "finite-projection moments are nonfinite"
         return(out)
     }
     if (min(finite_variance) < -100*rank_tolerance) {
-        timer_off(92)
+        vckss_timer__off(92)
         out.status = "JLA_MOMENT_FAILED"
         out.message = "finite-projection variance estimate is negative"
         return(out)
@@ -1474,7 +1475,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     /* Timer 99 is nested inside leverage/target stage timers.  It records
        only construction of D_g/K_c and target contraction/reduction; it is
        diagnostic attribution and must not be added to total_seconds. */
-    timer_on(99)
+    vckss_timer__on(99)
     residual_mass = design.unit_outcome_sum -
         design.unit_frequency:*out.fitted_cell[design.unit_cell]
     out.unit_residual_mass = residual_mass
@@ -1484,8 +1485,8 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         finite_bias,finite_variance,residual_mass,
         rank_tolerance,block_tolerance)
     if (unit_adjustments.status != "CONVERGED") {
-        timer_off(99)
-        timer_off(92)
+        vckss_timer__off(99)
+        vckss_timer__off(92)
         out.status = unit_adjustments.status
         out.message = unit_adjustments.message
         return(out)
@@ -1498,16 +1499,16 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         design.unit_outcome_sum:*out.unit_d,unit_plan)
     if (hasmissing(out.unit_d) |
         hasmissing(out.cell_correction_weight)) {
-        timer_off(99)
-        timer_off(92)
+        vckss_timer__off(99)
+        vckss_timer__off(92)
         out.status = "NONFINITE_CORRECTION"
         out.message = "compressed match correction is nonfinite"
         return(out)
     }
-    timer_off(99)
+    vckss_timer__off(99)
     out.max_leverage = max(out.unit_projection_share)
-    timer_off(92)
-    out.leverage_seconds = vckss__timer_seconds(92)
+    vckss_timer__off(92)
+    out.leverage_seconds = vckss_timer__seconds(92)
 
     /* End the leverage scratch lifetime before allocating the target's 2B
        coefficient and prediction matrices.  The result retains only the
@@ -1521,18 +1522,18 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
 
     /* Target directions are formed at exact (cell, per-copy target mass)
        strata.  No tolerance-based grouping is permitted. */
-    timer_on(93)
+    vckss_timer__on(93)
     out.target_draws = J(probes,4,.)
     for (batch_start=1; batch_start<=probes;
         batch_start=batch_start+target_batch) {
         batch_finish = min((probes,batch_start+target_batch-1))
         batch_columns = batch_finish-batch_start+1
-        timer_on(94)
+        vckss_timer__on(94)
         atom_batch = (*provider.target)(
             provider.context,batch_start,batch_finish)
-        timer_off(94)
+        vckss_timer__off(94)
         if (atom_batch.status != "CONVERGED") {
-            timer_off(93)
+            vckss_timer__off(93)
             out.status = atom_batch.status
             out.message = atom_batch.message
             return(out)
@@ -1542,7 +1543,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
             cols(target_atoms) != batch_columns |
             !vckss_scale_eng__valid_atoms(
                 target_atoms,design.strata.physical_count)) {
-            timer_off(93)
+            vckss_timer__off(93)
             out.status = "INVALID_PROBE_ATOM"
             out.message = "target-stratum atoms violate literal-copy sign-sum support"
             return(out)
@@ -1559,7 +1560,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         if (rows(direction_cell) != design.coefficient_cells |
             cols(direction_cell) != batch_columns |
             hasmissing(direction_cell)) {
-            timer_off(93)
+            vckss_timer__off(93)
             out.status = "TARGET_CENTERING_FAILED"
             out.message = "compressed target directions could not be centered"
             return(out)
@@ -1577,7 +1578,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         if (hasmissing(full_target_score) |
             rows(full_target_score) !=
                 base.worker_levels+base.firm_levels) {
-            timer_off(93)
+            vckss_timer__off(93)
             out.status = "TARGET_CENTERING_FAILED"
             out.message = "target score compatibility repair exceeded roundoff"
             return(out)
@@ -1593,30 +1594,30 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         solved = vckss__fe_solve_matrix_backend(
             base,target_rhs,tolerance,maxiter,backend)
         if (solved.status != "CONVERGED") {
-            timer_off(93)
+            vckss_timer__off(93)
             out.status = solved.status
             out.message = solved.message
             return(out)
         }
         out = vckss_scale_eng__record(out,solved,5,batch_start)
-        timer_on(99)
+        vckss_timer__on(99)
         target_prediction = solved.prediction
         target_contractions = vckss_scale_eng__target_contract(
             out.cell_correction_weight,target_prediction)
         if (rows(target_contractions) != batch_columns |
             cols(target_contractions) != 4 |
             hasmissing(target_contractions)) {
-            timer_off(99)
-            timer_off(93)
+            vckss_timer__off(99)
+            vckss_timer__off(93)
             out.status = "NONFINITE_CORRECTION"
             out.message = "matrix-wide target contractions are nonfinite"
             return(out)
         }
         out.target_draws[batch_start..batch_finish,.] =
             target_contractions
-        timer_off(99)
+        vckss_timer__off(99)
     }
-    timer_on(99)
+    vckss_timer__on(99)
     correction = vckss_scale_engine__column_sum(out.target_draws):/probes
     corrected = plugin-correction
     out.plugin = plugin
@@ -1632,25 +1633,25 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     if (hasmissing(plugin) | hasmissing(correction) |
         hasmissing(corrected) | hasmissing(out.numerical_mcse) |
         hasmissing(out.target_identity_residual)) {
-        timer_off(99)
-        timer_off(93)
+        vckss_timer__off(99)
+        vckss_timer__off(93)
         out.status = "NONFINITE_CORRECTION"
         out.message = "compressed target correction is nonfinite"
         return(out)
     }
     if (out.target_identity_residual >
         vckss_scale_eng__roundoff_gate()) {
-        timer_off(99)
-        timer_off(93)
+        vckss_timer__off(99)
+        vckss_timer__off(93)
         out.status = "TARGET_IDENTITY_FAILED"
         out.message = "compressed target accounting identities failed"
         return(out)
     }
-    timer_off(99)
-    timer_off(93)
-    out.target_seconds = vckss__timer_seconds(93)
-    out.rng_seconds = vckss__timer_seconds(94)
-    out.correction_seconds = vckss__timer_seconds(99)
+    vckss_timer__off(99)
+    vckss_timer__off(93)
+    out.target_seconds = vckss_timer__seconds(93)
+    out.rng_seconds = vckss_timer__seconds(94)
+    out.correction_seconds = vckss_timer__seconds(99)
     out.total_seconds =
         out.fit_seconds+out.leverage_seconds+out.target_seconds
     out.status = "CONVERGED"
@@ -1698,7 +1699,7 @@ struct vckss_result scalar vckss_scale_eng__as_result(
     if (source.status != "CONVERGED") {
         return(vckss__failure(source.status,source.message))
     }
-    if (missing(setup_seconds) | setup_seconds < 0) {
+    if (setup_seconds < 0) {
         return(vckss__failure(
             "INVALID_SOLVER_BACKEND","compressed setup time is invalid"))
     }

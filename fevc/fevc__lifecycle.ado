@@ -7,6 +7,18 @@
 // numerical inputs and outputs.
 program define fevc__lifecycle, rclass
     version 18.0
+    quietly fevc__timer begin
+    capture noisily _fevc_lifecycle_impl `0'
+    local rc = _rc
+    tempname results
+    _return hold `results'
+    quietly fevc__timer end
+    _return restore `results'
+    exit `rc'
+end
+
+program define _fevc_lifecycle_impl, rclass
+    version 18.0
     syntax, METHOD(string) SAMPLE(varname numeric) CALLBACK(name) [ ///
         CALLBACKOptions(string asis) CERTIFY FORCEDISK ]
 
@@ -59,7 +71,7 @@ program define fevc__lifecycle, rclass
     local work_timer = r(work_timer)
     local restore_timer = r(restore_timer)
     foreach timer in `transition_timer' `work_timer' `restore_timer' {
-        quietly timer clear `timer'
+        quietly mata: vckss_timer__clear(`timer')
     }
 
     local preserve_forced_disk = 0
@@ -68,7 +80,7 @@ program define fevc__lifecycle, rclass
     local changed_guard_active = 0
     tempfile lifecycle_data
 
-    quietly timer on `transition_timer'
+    quietly mata: vckss_timer__on(`transition_timer')
     if "`method'" == "preserve" {
         local reset_preservemem = 0
         if "`forcedisk'" != "" & !missing(c(max_preservemem)) {
@@ -112,7 +124,7 @@ program define fevc__lifecycle, rclass
             local transition_rc = _rc
         }
     }
-    quietly timer off `transition_timer'
+    quietly mata: vckss_timer__off(`transition_timer')
 
     if `transition_rc' {
         // A full preserve restores automatically at program termination.
@@ -129,7 +141,7 @@ program define fevc__lifecycle, rclass
         local mem_cleared_`quantity' = r(`quantity'_bytes)
     }
 
-    quietly timer on `work_timer'
+    quietly mata: vckss_timer__on(`work_timer')
     if strtrim(`"`callbackoptions'"') == "" {
         capture noisily `callback'
     }
@@ -137,7 +149,7 @@ program define fevc__lifecycle, rclass
         capture noisily `callback', `callbackoptions'
     }
     local work_rc = _rc
-    quietly timer off `work_timer'
+    quietly mata: vckss_timer__off(`work_timer')
 
     quietly _fevc_lifecycle_memory, stage(after_work)
     foreach quantity in data_used data_alloc mata_alloc total_alloc {
@@ -148,7 +160,7 @@ program define fevc__lifecycle, rclass
     // so restoration can never overlap a callback-created dataset.
     capture quietly clear
 
-    quietly timer on `restore_timer'
+    quietly mata: vckss_timer__on(`restore_timer')
     if "`method'" == "preserve" {
         capture quietly restore
         local restore_rc = _rc
@@ -164,7 +176,7 @@ program define fevc__lifecycle, rclass
             if _rc & !`restore_rc' local restore_rc = _rc
         }
     }
-    quietly timer off `restore_timer'
+    quietly mata: vckss_timer__off(`restore_timer')
 
     if `restore_rc' {
         quietly _fevc_lifecycle_release_timers,                 ///
@@ -217,8 +229,8 @@ program define fevc__lifecycle, rclass
 
     foreach label in transition work restore {
         local timer = ``label'_timer'
-        quietly timer list `timer'
-        local `label'_seconds = r(t`timer')
+        quietly fevc__timer read `timer'
+        local `label'_seconds = r(seconds)
     }
     quietly _fevc_lifecycle_release_timers,                     ///
         timers(`transition_timer' `work_timer' `restore_timer')
@@ -306,25 +318,12 @@ program define _fevc_lifecycle_memory, rclass
 end
 
 
-// Acquire three currently unused Stata timer IDs without disturbing caller
-// timers.  IDs 51--69 are reserved only for the duration of this prototype.
+// Logical slots are shared with the public compressed-command boundary.
 program define _fevc_lifecycle_timer_ids, rclass
     version 18.0
-    local timers
-    forvalues id = 51/69 {
-        quietly capture timer list `id'
-        if missing(r(t`id')) local timers `timers' `id'
-        local timer_count : word count `timers'
-        if `timer_count' == 3 continue, break
-    }
-    local timer_count : word count `timers'
-    if `timer_count' != 3 {
-        di as error "three free lifecycle timer IDs were not available"
-        exit 498
-    }
-    return scalar transition_timer = real(word("`timers'", 1))
-    return scalar work_timer = real(word("`timers'", 2))
-    return scalar restore_timer = real(word("`timers'", 3))
+    return scalar transition_timer = 51
+    return scalar work_timer = 52
+    return scalar restore_timer = 53
 end
 
 
@@ -332,8 +331,8 @@ program define _fevc_lifecycle_release_timers
     version 18.0
     syntax, TIMERS(numlist integer min=3 max=3)
     foreach timer of numlist `timers' {
-        capture quietly timer off `timer'
-        capture quietly timer clear `timer'
+        capture quietly mata: vckss_timer__off(`timer')
+        capture quietly mata: vckss_timer__clear(`timer')
     }
 end
 

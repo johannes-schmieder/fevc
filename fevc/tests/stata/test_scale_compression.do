@@ -15,7 +15,7 @@ quietly do "fevc/fevc_scale.mata"
 mata:
 assert(vckss_scale__api_level() == 6)
 assert(vckss_scale__build_id() ==
-    "vckss-scale-api6-prep-sem1-mata")
+    "vckss-scale-api6-prep-sem1-mata-timers1")
 void test_scale_compression()
 {
     real scalar n_rows
