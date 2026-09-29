@@ -16,6 +16,7 @@ if _rc {
 }
 else local pkgroot `"`c(pwd)'/fevc"'
 
+adopath ++ `"`pkgroot'"'
 quietly do `"`pkgroot'/fevc.mata"'
 quietly do `"`pkgroot'/fevc_scale.mata"'
 quietly do `"`pkgroot'/fevc_rng.mata"'

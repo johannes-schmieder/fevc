@@ -21,6 +21,7 @@ if !inlist("`scenario'", "easy", "moderate", "weak") | ///
 
 capture confirm file "fevc/fevc_cmg.mata"
 if _rc exit 601
+adopath ++ "`c(pwd)'/fevc"
 quietly do "fevc/fevc.mata"
 quietly do "fevc/fevc_cmg.mata"
 quietly do "fevc/tests/support/vckss_cmg_adapter.mata"

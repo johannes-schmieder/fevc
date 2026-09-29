@@ -6,6 +6,7 @@ if `"`pkgroot'"' == "" {
     findfile fevc.mata
     local pkgroot = subinstr(`"`r(fn)'"',"/fevc.mata","",.)
 }
+adopath ++ `"`pkgroot'"'
 quietly do `"`pkgroot'/fevc.mata"'
 mata:
 void vckss_test_control_arithmetic()

@@ -21,6 +21,7 @@ confirm file `"`package_root'/benchmarks/separations_sample.mata"'
 confirm file `"`prepared_dta'"'
 confirm file `"`matlab_detail'"'
 
+adopath ++ `"`package_root'"'
 mata: mata clear
 quietly do `"`package_root'/fevc.mata"'
 quietly do `"`package_root'/benchmarks/separations_sample.mata"'

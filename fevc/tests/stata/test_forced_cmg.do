@@ -8,6 +8,7 @@ if _rc {
     di as error "run the forced-CMG test from the repository root"
     exit 601
 }
+adopath ++ "`c(pwd)'/fevc"
 capture mata: vckss__api_level()
 if _rc quietly do "fevc/fevc.mata"
 capture mata: vckss_cmg__api_level()

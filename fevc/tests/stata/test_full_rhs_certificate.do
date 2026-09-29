@@ -9,6 +9,7 @@ if _rc {
     exit 601
 }
 
+adopath ++ "`c(pwd)'/fevc"
 quietly do "fevc/fevc.mata"
 
 mata:

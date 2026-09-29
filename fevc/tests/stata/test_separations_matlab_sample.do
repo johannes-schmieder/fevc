@@ -40,6 +40,7 @@ file write `detail' "1.52" _tab "5" _tab "5" _tab ".1" _n
 file close `detail'
 
 // Independently exercise the bridge audit before articulation pruning.
+adopath ++ `"`package_root'"'
 mata: mata clear
 quietly do `"`package_root'/fevc.mata"'
 quietly do `"`package_root'/benchmarks/separations_sample.mata"'

@@ -14,6 +14,7 @@ if _rc {
     }
 }
 
+adopath ++ "`pkgroot'"
 quietly do "`pkgroot'/fevc.mata"
 quietly do "`pkgroot'/fevc_scale.mata"
 quietly do "`pkgroot'/fevc_rng.mata"

@@ -23,6 +23,7 @@ if _rc {
     di as error "run lockstep_solver_benchmark.do from the source root"
     exit 601
 }
+adopath ++ "`c(pwd)'/fevc"
 quietly do "fevc/fevc.mata"
 
 local degree = cond("`scenario'" == "easy", 4, ///

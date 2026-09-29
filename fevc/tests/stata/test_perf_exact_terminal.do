@@ -6,9 +6,13 @@ capture confirm file "fevc/fevc.mata"
 if _rc {
     capture confirm file "../../fevc.mata"
     if _rc exit 601
+    adopath ++ "../.."
     quietly do "../../fevc.mata"
 }
-else quietly do "fevc/fevc.mata"
+else {
+    adopath ++ "`c(pwd)'/fevc"
+    quietly do "fevc/fevc.mata"
+}
 
 set obs 800
 generate long worker = floor((_n-1)/2)+1
