@@ -2,9 +2,13 @@
 
 The confirmed review fixes repair root-catalog drift, explicit Rust toolchain
 selection, caller-safe optional timing, C ingestion bounds, and environment-
-sensitive tests. Python source tests (835), CMG assembly and focused timer/C
-regressions pass; integrated and exact-source native qualification are in
-progress. Timer exhaustion leaves diagnostics missing and estimation available.
+sensitive tests. Python source tests (835), CMG, Rust 1.85.1/stable gates,
+Stata quick/full suites, installs and focused regressions pass. Source
+`70516881` passes exact-source native qualification on thin/universal arm64 and
+Rosetta plugins; `5387db8d` repairs standalone harness path setup, with ten
+isolated tests and three small harness checks passing. The integrated driver's
+final standalone smoke was retested after that fix. Timer exhaustion leaves
+diagnostics missing and estimation available.
 See the [repair record and deferred proposals](docs/REVIEW_FIXES_2026-09-29.md).
 No distributed binary or prior qualification/adoption record is changed.
 
