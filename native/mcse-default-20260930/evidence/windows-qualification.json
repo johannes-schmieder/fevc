@@ -1,0 +1,38 @@
+{
+  "schema": "FEVC-WINDOWS-EXACT-ARTIFACT-QUALIFICATION-V1",
+  "status": "PASS",
+  "build_source_commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+  "runtime_harness_source_commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+  "binary_sha256": "1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b",
+  "previous_binary_sha256": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57",
+  "hosted_build_run_id": "36771390189",
+  "hosted_rust_run_id": "36771376619",
+  "hosted_source_run_id": "36771376645",
+  "private_run_id": "win-20260930T202520Z-2a82f1e0",
+  "private_source_revision": "dirty-dc92561a2c02b647e1626bfd9abae5f9fd85653e58f67b9aabb1bc697339e2a3",
+  "private_archive_sha256": "eb546f936e9218b8386e1f90eaa3b0a4e451427a30ea6eb3fe18148bfd8f9406",
+  "private_receipt_sha256": "474065bb12780a97a6522ff885b6e2c3c5955ceec9807589143b5c8cb1f42e0c",
+  "harness_sha256": "696db58aab1cb3391af11b3670d642ae1406b39d22ce9a2cfa9dca694b0621cd",
+  "input_manifest_sha256": "59befb4e636e0c424952995a75146391d76fe08100e073dc6d8320f20fdc4e31",
+  "input_file_count": 1312,
+  "runtime_gates": [
+    "142-export canonical-header PE and system-only dependency audit",
+    "Fresh isolated net installation",
+    "Lifecycle and observation/individual/match component inference",
+    "Pooled deletion and positive projection regressions",
+    "MCSE default/all/off/conditional and compatibility alias",
+    "Projection and highrank/q1 attachment point/result/RNG equality",
+    "Installed plugin hash equals hosted candidate",
+    "Idle native registry"
+  ],
+  "cleanup": {
+    "instance_stopped": true,
+    "transient_objects_deleted": true,
+    "lock_released": true
+  },
+  "limitations": [
+    "The fixed controller returns aggregate source-bound project PASS; no raw Stata logs or individual project-check JSON are collected. The frozen driver writes PASS only after the listed gates.",
+    "A manifest-bound dirty transfer carries unchanged committed source plus the exact hosted DLL and input metadata; it changes no compiled or installed source.",
+    "No unsupported Windows route, statistical coverage, representative-scale, or release qualification is added."
+  ]
+}

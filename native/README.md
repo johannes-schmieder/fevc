@@ -1,6 +1,30 @@
 # Native package provenance
 
-The current control-basis repair is qualified for macOS arm64, macOS x86-64
+The default `mcse(all)` interface is qualified on all five repository plugin
+payloads. The [current adoption manifest](mcse-default-20260930/manifest.json)
+binds the exact artifacts and the source compatibility review. Mac thin and
+universal plugins pass under arm64 and Rosetta; SCC Linux job `7803612` passes
+the full suite and isolated install. Windows build
+[36771390189](https://github.com/johannes-schmieder/fevc/actions/runs/36771390189)
+passes static-CRT compilation, 14 standalone backend tests and the 142-export
+PE audit. Its exact DLL passes private Stata/MP 19 runtime, fresh installation,
+MCSE mode, projection/inference attachment and installed-hash checks; the
+[Windows receipt](mcse-default-20260930/evidence/windows-qualification.json)
+records cleanup and the stopped machine.
+
+Source `eee457b3` passes all six hosted Rust platform/toolchain jobs. A first
+hosted attempt exposed a test-only cache oracle invoking a local Python venv
+from an ordinary Rust regression. The narrow fix retains that regression and
+the explicit independent oracle; it changes no estimator or CI policy.
+Calibration and performance claims retain the scope of the
+[development receipt](../fevc/docs/mcse_default_development_20260930.json).
+Native Intel hardware, representative scale, broader statistical coverage,
+and a release remain outside these claims. The original platform receipts
+retain their dirty-source classification.
+
+## Previous control-basis repair
+
+The September 27 control-basis repair was qualified for macOS arm64, macOS x86-64
 under Rosetta, universal Mac payloads, and SCC Linux x86-64. The
 [adoption manifest](control-certificate-20260927/manifest.json) binds the exact
 four installed artifacts. Linux source `4064febe` passed its full Stata/MP 19

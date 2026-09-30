@@ -10,6 +10,9 @@
 - Native numerical V2 preserves point executors, adds separate replay work,
   and enables existing Windows point routes in source. Exact-artifact platform
   qualification and binary adoption are recorded separately.
+- Refresh all five plugins after Mac/Rosetta, SCC Linux and exact hosted
+  Windows/private Stata installation and runtime qualification. Preserve
+  original development receipts through a recorded source compatibility review.
 
 ## Mata all-probe MCSE performance — 2026-09-30
 

@@ -1,0 +1,61 @@
+{
+  "schema": "FEVC-MCSE-NATIVE-ADOPTION-V1",
+  "status": "QUALIFIED_REPOSITORY_PAYLOAD_NO_RELEASE",
+  "reviewed_base_commit": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+  "initial_publication_commit": "048cc20ffd89d23378330918a94990526e58aa67",
+  "windows_build_commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+  "binaries": [
+    {
+      "path": "fevc/fevc_rust_macos_arm64.plugin",
+      "sha256": "d9b55a424d7629f1102d8ff696971e5a22ca311f16b2cdb8264caa96ce78a0e0",
+      "bytes": 4713760,
+      "qualification": "Exact dirty development source plus recorded compatibility review"
+    },
+    {
+      "path": "fevc/fevc_rust_macos_x86_64.plugin",
+      "sha256": "b0096a6b573439a3386eff2e83061a7a537b9cc25e35b98c9e12306f30a2e8f7",
+      "bytes": 5403536,
+      "qualification": "Exact dirty development source plus recorded compatibility review"
+    },
+    {
+      "path": "fevc/fevc_rust_macos.plugin",
+      "sha256": "b44fe1d257b4c40e6c4d8d3741a7a482acf50956d9fd349ace622ab1a91a76c4",
+      "bytes": 10136864,
+      "qualification": "Exact dirty development source plus recorded compatibility review"
+    },
+    {
+      "path": "fevc/fevc_rust_linux_x64.plugin",
+      "sha256": "da640fae92e5a24df9e91eeb971c4e62179de3c738bd8e1ccd4163f6d178e3a8",
+      "bytes": 5807136,
+      "qualification": "Exact dirty development source plus recorded compatibility review"
+    },
+    {
+      "path": "fevc/fevc_rust_windows_x64.plugin",
+      "sha256": "1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b",
+      "bytes": 5492736,
+      "qualification": "Windows exact hosted artifact/private runtime"
+    }
+  ],
+  "linux_job_id": 7803612,
+  "linux_source_bundle_sha256": "63c1bc89d470f48adc17114c4f74f07a078b75322122af09f8c3585b857e3e69",
+  "windows_qualification": "evidence/windows-qualification.json",
+  "compatibility": "evidence/compatibility.json",
+  "calibration_and_performance": "../../fevc/docs/mcse_default_development_20260930.json",
+  "public_installation_status": "NOT_IN_THIS_QUALIFICATION_RECEIPT",
+  "unchanged_contracts": [
+    "point estimates",
+    "conditional MCSE",
+    "RNG/caller state",
+    "residual/scientific/memory gates",
+    "registered inputs and acceptance thresholds"
+  ],
+  "remaining": [
+    "Generic Mata percentage overhead parity remains unmet",
+    "Native Intel hardware and representative-scale qualification remain open",
+    "Broader Mata RNG calibration, statistical coverage and MCSE for projection/inference outputs are not claimed"
+  ],
+  "release": false,
+  "ci_policy_changed": false,
+  "large_cluster_campaign": false,
+  "public_installation_evidence": "publication.json, recorded separately after artifact publication"
+}

@@ -1,0 +1,135 @@
+{
+  "schema": "FEVC-MCSE-PUBLICATION-COMPATIBILITY-V1",
+  "reviewed_base": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+  "published_commit": "048cc20ffd89d23378330918a94990526e58aa67",
+  "qualified_source_class": "dirty exact manifests bound to reviewed base",
+  "calibration_manifest_sha256": "931aea0b1c2763dc75f07926df10f48be06f0082f1a08ff5978253314bf036ce",
+  "calibration_unchanged_files": 203,
+  "platform_source_comparisons": {
+    "mac": {
+      "source_manifest_sha256": "97c0d828823a01e175f5c886a02c13fbbc636fa84805627dbbfb1f770908bcd7",
+      "changed": [],
+      "unchanged_file_count": 254
+    },
+    "linux": {
+      "source_manifest_sha256": "7a2afa4abbeb047f06a79154c5297d391014a9f146391dd5621871139f27bb30",
+      "changed": [
+        {
+          "path": "SOURCE_COMMIT.txt",
+          "qualified_sha256": "d7efec0bdd43afaf0e0d375d7b535acc39224936dafccbf19004efc0725b548f",
+          "published_sha256": null
+        },
+        {
+          "path": "SOURCE_SNAPSHOT_KIND.txt",
+          "qualified_sha256": "379b7c5482b73f14fadd43ea77bb2feac5394ae2a9727344ac960921cfafb066",
+          "published_sha256": null
+        },
+        {
+          "path": "fevc/PLAN.md",
+          "qualified_sha256": "bd448ece34bcdbec1bcfb8000b72566733011da17a22b3c9aaed70ade1ab40e6",
+          "published_sha256": "b3d6c1fc62ce9d28acf2e06b53f2f463c2451b0859003bcd771f6fe22625287f"
+        },
+        {
+          "path": "fevc/docs/ALL_PROBE_MCSE_STATUS.md",
+          "qualified_sha256": "7bed3ce390c08ff2350778259e4016d261312ea094646c0f65599cffc1334a97",
+          "published_sha256": "42bf5df964a12e7e2fdfbaa3df2d94f82b8490cb7c19a3554304ad69ff03aede"
+        },
+        {
+          "path": "fevc/docs/README.md",
+          "qualified_sha256": "833586a0e799be2ade2ae297650ed8704ded57355ba1b9fc68017d8e91abdd2f",
+          "published_sha256": "dcf1f2c1e4118fa64e4f9c1b03e47321a3cefad89ae68087f0045433b9eabdc8"
+        },
+        {
+          "path": "fevc/docs/RUST_MATA_PARITY.md",
+          "qualified_sha256": "bd6d645658a2cbca8d3e7307d30f76c26d9c1bd08b2fa216e6be2226c8ec3090",
+          "published_sha256": "1c50fef6b60e332cd67ec5a32ba42dfee07e6dd1577104e362d9cfb82ad5e2b1"
+        },
+        {
+          "path": "fevc/docs/rust_mata_parity.json",
+          "qualified_sha256": "20d832732ac755d7fcb9281d2ae971fc7967c9799c631992cc19e9b382fc7e03",
+          "published_sha256": "4838bf703115da6f8137406442f305a5a72ebad3383849d02893bfac51c9b055"
+        }
+      ],
+      "unchanged_file_count": 1298
+    }
+  },
+  "status": "PASS_BOUNDARY_REVIEW",
+  "affected_surface": "Publication, current documentation/status and native payload adoption; estimator, build inputs, scientific inputs and registered gates unchanged.",
+  "limitations": [
+    "Original Mac/Linux receipts retain their dirty-source classification.",
+    "Linux SOURCE_COMMIT/SNAPSHOT files were transient bundle metadata.",
+    "Generic Mata percentage parity, native Intel hardware and broad production-scale/statistical coverage remain unqualified."
+  ],
+  "next_source": {
+    "commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+    "changed_paths": [
+      "rust/crates/vckss-core/src/generic_jla/numerical/cache.rs",
+      "rust/crates/vckss-core/src/generic_jla/numerical/tests.rs"
+    ],
+    "affected_surface": "Explicit core-unit-test cache activation only. Both changed modules are cfg(test); release estimator, installed runtimes, build recipes, inputs, acceptance thresholds and qualified Mac/Linux binary bytes are unchanged.",
+    "checks": [
+      "ordinary replay batch-width regression PASS",
+      "explicit independent Python complex-step oracle PASS",
+      "MSRV formatting and strict workspace/all-target Clippy PASS"
+    ],
+    "claims_reused": [
+      "fixed-data dense/native calibration",
+      "local complete-command timing/point equality",
+      "original Mac/Linux runtime/install qualification"
+    ],
+    "limitations": [
+      "Hosted normal Rust regression failure at first publication is retained; repaired hosted runs must pass independently."
+    ]
+  },
+  "checks_after_test_fix": {
+    "python": 866,
+    "cmg_assembly": "PASS",
+    "local_rust_workspace_all_targets": "PASS",
+    "explicit_python_cache_oracle": "PASS",
+    "clippy": "PASS",
+    "hosted_source_checks": "PASS",
+    "hosted_rust_all_six_toolchain_os_jobs": "PASS"
+  },
+  "evidence_inventory": {
+    "ordinary-rust-regression.txt": {
+      "sha256": "407134884ead19f0c422dae9a7f480c75e427a1a60a88267e3d6d6b34b519929",
+      "bytes": 3094
+    },
+    "explicit-python-oracle.txt": {
+      "sha256": "7951475c8f668b1da44b772a09bee67c6cc7212cd3ca3daf6c3ef76cc98bf2fe",
+      "bytes": 2993
+    },
+    "clippy.txt": {
+      "sha256": "60365b01550cf9edeac313e6cac2701a515cb2883c05066feb9b392c1cbdb959",
+      "bytes": 280
+    },
+    "python-source-gate.txt": {
+      "sha256": "c70aa9b9a2303ad6f258117316bc42ec30314dd70b4be7c22ec42995bab3e16b",
+      "bytes": 36386
+    },
+    "cmg-assembly.txt": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "hosted/artifact-verification.json": {
+      "sha256": "32e7de358d2a2224e7eac5c1622e7622069526dde85daeae6c54dd0cbffd0bf8",
+      "bytes": 466
+    },
+    "hosted/build-run.json": {
+      "sha256": "7455a125216a70726365733c8383da9ef66517c1eee7e2fe85ea4adb5ef92a8d",
+      "bytes": 1846
+    },
+    "hosted/source-run.json": {
+      "sha256": "720758076ed4ff64f1426c4e96305daeb88900176b7d8a312bf5e6465609441a",
+      "bytes": 2128
+    },
+    "hosted/build-log.txt": {
+      "sha256": "6121d1a16a449d34798fbdc202903d6231de4f7625bf0682fca5efce2b793816",
+      "bytes": 70628
+    },
+    "rust-workspace.txt": {
+      "sha256": "ecde172c71f8be80ead5743d20a478e4069081599e27a1ce9019cdda9854f4ef",
+      "bytes": 78333
+    }
+  }
+}

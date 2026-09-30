@@ -1,0 +1,14 @@
+{
+  "source_commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+  "archive_sha256": "2ab41fa98555c5aedc05931029670af4b1ba566c6b62db06fc9ee21de5fceb4e",
+  "candidate_sha256": "1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b",
+  "candidate_bytes": 5492736,
+  "files_verified": 60,
+  "exports": 142,
+  "dependencies": [
+    "api-ms-win-core-synch-l1-2-0.dll",
+    "KERNEL32.dll",
+    "ntdll.dll"
+  ],
+  "build_status": "BUILD_ONLY_NOT_STATA_TESTED"
+}

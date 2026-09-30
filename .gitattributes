@@ -49,6 +49,7 @@ rust/qualification/evidence/RC1-PLATFORMS/*/windows-receipt.json -text whitespac
 rust/qualification/evidence/INFERENCE-WINDOWS/*/windows-receipt.json -text whitespace=cr-at-eol
 native/deletion-unit-movers-20260926/evidence/windows-private-receipt.json -text whitespace=cr-at-eol
 native/deletion-unit-movers-20260926/evidence/windows-hosted-build.json -text whitespace=cr-at-eol
+native/mcse-default-20260930/evidence/windows-private-receipt.json -text whitespace=cr-at-eol
 
 # Preserve the fixed-width scheduler accounting bound by the Linux receipt.
 rust/qualification/evidence/INFERENCE-LINUX-SCC/*/qacct.txt whitespace=-blank-at-eol

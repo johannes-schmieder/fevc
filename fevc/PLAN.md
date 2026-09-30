@@ -16,12 +16,18 @@ identical recorded numeric comparisons. At 12,000 rows Rust all/off overhead
 is 17–23% cold and 15–22% warm; generic Mata overhead is 33% cold and 48%
 warm, so generic percentage parity remains unmet. Linux job 7803612 passes
 the single four-core retest, full suite and isolated install after a source-bundle inventory fix (`failed=0`, `exit_status=0`).
-The three Mac and one Linux exact qualified binaries are adopted locally.
-The owner has authorized committing and pushing this source, the existing
-hosted Windows build, and private AWS runtime and clean-install tests.
-Windows qualification and the fifth binary refresh are now in progress;
-the private machine is stopped before the run. The earlier development
-receipts retain their original source and qualification scope.
+All five qualified binaries are adopted. Source `048cc20f` is published;
+`eee457b3` confines the test-only Python cache oracle to its explicit gate,
+preserving the ordinary Rust regression and all estimator code. The repaired
+source passes all six hosted Rust platform/toolchain jobs, source CI, and
+Windows build 36771390189. Its exact Windows DLL passes private run
+`win-20260930T202520Z-2a82f1e0`, including isolated installation, MCSE modes,
+projection/inference attachments and installed-hash checks. The instance is
+stopped; transient objects and the shared lock are removed. The earlier
+development receipts retain their original source and qualification scope;
+the [native adoption and compatibility record](../native/mcse-default-20260930/manifest.json)
+binds their reuse. Public installer checks follow publication of the fifth
+artifact and are recorded separately.
 The [interface decision](docs/MCSE_DEFAULT_INTERFACE_2026-09-30.md) and
 [development report](docs/MCSE_DEFAULT_VALIDATION_2026-09-30.md) record current
 claims, source identities, retained failures and remaining qualification.

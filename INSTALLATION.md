@@ -49,12 +49,13 @@ fevc_run jla_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 ```
 
-The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/36237445599)
+The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/36771390189)
 also provides a standalone ZIP with a local installer, test do-file, and build
 receipt. It uses the same Windows binary as the repository installer. The ZIP
 is available as a GitHub Actions artifact for 14 days. This exact binary also
 passed isolated installation and licensed Stata/MP 19 tests on the private
-Windows test machine; [the qualification record](native/deletion-unit-movers-20260926/evidence/windows-qualification.json)
+Windows test machine, including the current MCSE modes and projection/inference
+attachments; [the qualification record](native/mcse-default-20260930/evidence/windows-qualification.json)
 binds the hosted build, runtime harness, and artifact hash.
 
 ## Local source installation
