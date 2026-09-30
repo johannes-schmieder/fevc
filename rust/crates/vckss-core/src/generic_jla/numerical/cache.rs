@@ -2,9 +2,34 @@
 //! Full response storage is compiled only into core unit tests.
 use super::*;
 
-#[derive(Default)]
+thread_local! {
+    static ENABLED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+pub(super) struct OracleGuard(bool);
+impl Drop for OracleGuard {
+    fn drop(&mut self) {
+        ENABLED.with(|enabled| enabled.set(self.0));
+    }
+}
+
+// Only the explicit Python oracle test captures full responses. Ordinary Rust
+// regressions must remain independent of a repository venv, including on CI.
+pub(super) fn enable_oracle() -> OracleGuard {
+    OracleGuard(ENABLED.with(|enabled| enabled.replace(true)))
+}
+
 pub(in crate::generic_jla) struct Cache {
+    enabled: bool,
     units: std::collections::BTreeMap<(u8, usize), Unit>,
+}
+impl Default for Cache {
+    fn default() -> Self {
+        Self {
+            enabled: ENABLED.with(std::cell::Cell::get),
+            units: std::collections::BTreeMap::new(),
+        }
+    }
 }
 #[derive(Default)]
 struct Unit {
@@ -26,6 +51,9 @@ impl Cache {
         rng: CounterRng,
         probe: usize,
     ) -> Result<()> {
+        if !self.enabled {
+            return Ok(());
+        }
         let c = &solution.coefficients;
         let predict = |row| {
             solver
@@ -80,6 +108,9 @@ impl Cache {
         correlations: &ObservationCorrelations,
         control: &[f64],
     ) {
+        if !self.enabled {
+            return;
+        }
         for ((kind, physical), unit) in &mut self.units {
             if *kind != 0 {
                 continue;
@@ -100,6 +131,9 @@ impl Cache {
         rank: usize,
         rhs: &[f64],
     ) {
+        if !self.enabled {
+            return;
+        }
         let unit = self.units.get_mut(&(1, group)).unwrap();
         unit.cp = (0..width)
             .flat_map(|i| {
@@ -124,6 +158,9 @@ impl Cache {
         residual: &[f64],
         plan: Option<&MatchPlan>,
     ) -> Result<()> {
+        if !self.enabled {
+            return Ok(());
+        }
         let predict = |side: usize, row| {
             let c = &pair[side].coefficients;
             solver
@@ -183,6 +220,9 @@ impl Cache {
         scores: &[Vec<Primitive>; 2],
         leverage: numerical_mc::Matrix3,
     ) {
+        if !self.enabled {
+            return;
+        }
         let mut input = format!(
             "{{\"r\":{r},\"t\":{t},\"scores\":{:?},\"leverage\":{leverage:?},\"units\":[",
             scores

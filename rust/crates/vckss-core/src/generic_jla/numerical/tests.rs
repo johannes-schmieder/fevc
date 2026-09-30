@@ -67,6 +67,7 @@ fn fixture() -> CompressedProblem {
 #[test]
 #[ignore = "explicit local oracle gate requires the repository Python venv and NumPy"]
 fn actual_cached_whole_responses_match_independent_dense_complex_step() {
+    let _oracle = cache::enable_oracle();
     let problem = fixture();
     for deletion in [DeletionMode::Observation, DeletionMode::Match] {
         for nuisance in [NuisanceMode::Joint, NuisanceMode::FixedOffset] {
