@@ -70,18 +70,25 @@ if `command_rc' == 0 local estimator_status "`e(status)'"
 local converged = (`command_rc' == 0 & ///
     "`estimator_status'" == "KSS_POINT_ESTIMATES_ONLY")
 
-tempname result_matrix mcse_matrix solver_rhs_matrix route_diagnostics
+tempname result_matrix mcse_matrix mcse_cov_raw solver_rhs_matrix route_diagnostics
 matrix `route_diagnostics' = J(1,12,.)
+matrix `mcse_cov_raw' = J(4,4,.)
+local mcse_mode all
+local mcse_method none
+local mcse_status point_failed
+local mcse_available = 0
 if "`route'" == "cmg" {
     capture matrix `route_diagnostics' = VCKSS_CMG_ROUTE_DIAGNOSTICS
 }
 if `converged' {
     matrix `result_matrix' = e(results)
-    if "`route'" == "exact" matrix `mcse_matrix' = J(1,4,.)
-    else {
-        matrix `mcse_matrix' = e(numerical_mcse)
-        matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
-    }
+    matrix `mcse_matrix' = e(mcse)
+    matrix `mcse_cov_raw' = e(mcse_cov_raw)
+    local mcse_mode "`e(mcse_mode)'"
+    local mcse_method "`e(mcse_method)'"
+    local mcse_status "`e(mcse_status)'"
+    local mcse_available = e(mcse_available)
+    if "`route'" != "exact" matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
     generate byte __kss_sample = e(sample)
     preserve
     keep if __kss_sample
@@ -95,6 +102,15 @@ if `converged' {
 preserve
 clear
 set obs 1
+generate str16 mcse_mode = "`mcse_mode'"
+generate str32 mcse_method = "`mcse_method'"
+generate str40 mcse_status = "`mcse_status'"
+generate byte mcse_available = `mcse_available'
+forvalues i=1/4 {
+    forvalues j=1/4 {
+        generate double mcse_cov_raw_`i'`j' = `mcse_cov_raw'[`i',`j']
+    }
+}
 generate str64 label = "`label'"
 generate str8 route = "`route'"
 generate str40 source_commit = "`source_commit'"

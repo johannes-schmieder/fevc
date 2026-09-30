@@ -1,5 +1,17 @@
 # Pending changes
 
+## September 30, 2026 — consistent MCSE stored results
+
+- Make `e(mcse)` the selected numerical diagnostic, all-probe by default,
+  with matching mode, method, status and availability. The `mcse` row of
+  `e(results)` and legacy general aliases report the same vector.
+- Add four-target raw/usable `e(mcse_cov_raw)` and `e(mcse_cov)`; preserve
+  conditional calculations in the explicit developer `e(mcse_conditional)`.
+  Off and unavailable diagnostics remain missing; exact all results are zero.
+- Align display, diagnostics, examples, help and active exporters with the
+  canonical returns. Preserve point/RNG contracts, numerical calculations,
+  native ABI and binaries.
+
 ## September 30, 2026 — numerical MCSE interface follow-up
 
 - Default `mcse(all)` reports approximate all-point-probe numerical MCSE;

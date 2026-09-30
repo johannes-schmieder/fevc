@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "benchmarks/alpha"
 
@@ -60,9 +62,24 @@ def test_receipt_width_matches_registered_column_names() -> None:
         .replace("///", " ")
         .split()
     )
-    assert len(columns) == 62
-    assert "matrix receipt = J(" + chr(96) + "reps',62,.)" in source
+    assert len(columns) == 79
+    assert "matrix receipt = J(" + chr(96) + "reps',79,.)" in source
     assert len(set(columns)) == len(columns)
+    assert "e(mcse)" in source and "e(mcse_cov_raw)" in source
+    for field in ("mcse_mode", "mcse_method", "mcse_status", "mcse_available"):
+        assert field in source
+
+
+def test_new_parity_export_rejects_withheld_all_probe_mcse() -> None:
+    module = analyzer_module()
+    rust, mata = parity_row("rust"), parity_row("mata")
+    for row in (rust, mata):
+        row.update(mcse_mode="all", mcse_method="crossfit_if_v1",
+                   mcse_status="ok_local", mcse_available="1")
+    assert module.cross_backend_parity("test", [rust], [mata])["status"] == "PASS"
+    mata.update(mcse_status="unstable_nonpsd", mcse_available="0")
+    with pytest.raises(RuntimeError, match="all-probe MCSE"):
+        module.cross_backend_parity("test", [rust], [mata])
 
 
 def test_driver_checks_science_and_complete_caller_state() -> None:

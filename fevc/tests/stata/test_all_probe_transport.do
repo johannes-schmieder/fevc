@@ -7,6 +7,8 @@ program define _all_probe_transport_point, eclass
     matrix `se'=(1,1,1,sqrt(6))
     ereturn matrix numerical_mcse=`se'
     ereturn local algorithm `algorithm'
+    ereturn scalar probes=2
+    ereturn scalar tolerance=1e-10
 end
 _all_probe_transport_point jla
 capture mata: vckss_nmc__schema()
@@ -68,6 +70,23 @@ _all_probe_transport_point exact
 mata: assert(vckss_nmc__stata_validate(0,1e-9))
 matrix `meta'[1,5]=.
 mata: assert(!vckss_nmc__stata_validate(0,1e-9))
+// Posting consumes transport matrices; use a fresh independent payload.
+_all_probe_transport_point jla
+matrix `cond'=I(3)
+matrix `lev'=-2*I(3)
+matrix `raw'=-I(3)
+matrix `usable'=J(3,3,.)
+matrix `se'=J(1,4,.)
+matrix `meta'=(2,2,1,1,2,2,4,4096,0,1,.5,.1,0,.,.)
+matrix `rhs'=(1,0,0 \ 1,1,0)
+global VCKSS_NMC_STATUS unstable_nonpsd
+global VCKSS_NMC_REQUESTED all
+quietly fevc__numerical post
+assert "`e(mcse_status)'"=="unstable_nonpsd" & e(mcse_available)==0
+mata: assert(all(missing(st_matrix("e(mcse)"))))
+matrix expected=(-1,0,0,-1 \ 0,-1,0,-1 \ 0,0,-1,-2 \ -1,-1,-2,-6)
+assert mreldif(expected,e(mcse_cov_raw))==0
+assert el(e(mcse_conditional),1,1)==1
 quietly fevc__numerical clear
 program drop _all_probe_transport_point
 di as result "PASS test_all_probe_transport.do"

@@ -125,8 +125,11 @@ assert `"`restored_sortedby'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
-tempname public_reference repeat_reference private_reference
+tempname public_reference repeat_reference private_reference private_expected
 matrix `public_reference' = e(results)
+// Frozen native point transport retains its conditional developer row.
+matrix `private_expected' = `public_reference'
+matrix `private_expected'[4,1] = e(mcse_conditional)
 quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
@@ -176,7 +179,7 @@ quietly fevc_rust solve `private_handle', algorithm(jla) deletion(match) ///
     signaturehi(`private_signature_hi') signaturelo(`private_signature_lo')
 quietly fevc_rust result `private_handle'
 matrix `private_reference' = r(result)
-assert mreldif(`public_reference',`private_reference') == 0
+assert mreldif(`private_expected',`private_reference') == 0
 quietly fevc_rust release `private_handle'
 restore
 quietly fevc_rust snapshot
@@ -336,7 +339,7 @@ if `auto_algorithm_rc' != 0 {
     display as error "detail=`e(withholding_detail)'"
 }
 assert `auto_algorithm_rc' == 0
-assert mreldif(e(results),`planned_reference') == 0
+assert mreldif(e(results),`private_expected') == 0
 assert `"`e(algorithm)'"' == "jla"
 assert `"`e(engine_requested)'"' == "generic"
 assert `"`e(engine_selected)'"' == "generic"

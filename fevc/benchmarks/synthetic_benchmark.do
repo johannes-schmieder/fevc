@@ -86,9 +86,14 @@ if "`e(status)'" != "KSS_POINT_ESTIMATES_ONLY" {
     exit 498
 }
 
-tempname result_matrix mcse_matrix solver_rhs_matrix
+tempname result_matrix mcse_matrix mcse_cov_raw solver_rhs_matrix
 matrix `result_matrix' = e(results)
-matrix `mcse_matrix' = e(numerical_mcse)
+matrix `mcse_matrix' = e(mcse)
+matrix `mcse_cov_raw' = e(mcse_cov_raw)
+local mcse_mode "`e(mcse_mode)'"
+local mcse_method "`e(mcse_method)'"
+local mcse_status "`e(mcse_status)'"
+local mcse_available = e(mcse_available)
 matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
 local returned_algorithm "`e(algorithm)'"
 local returned_status "`e(status)'"
@@ -107,6 +112,15 @@ local stata_flavor "`c(flavor)'"
 preserve
 clear
 set obs 1
+generate str16 mcse_mode = "`mcse_mode'"
+generate str32 mcse_method = "`mcse_method'"
+generate str40 mcse_status = "`mcse_status'"
+generate byte mcse_available = `mcse_available'
+forvalues i=1/4 {
+    forvalues j=1/4 {
+        generate double mcse_cov_raw_`i'`j' = `mcse_cov_raw'[`i',`j']
+    }
+}
 generate str64 run_id = "`run_id'"
 generate str32 scenario = "`scenario'"
 generate str40 source_commit = "`source_commit'"

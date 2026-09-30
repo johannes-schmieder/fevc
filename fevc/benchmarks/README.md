@@ -24,6 +24,15 @@ Choose the smallest input that exercises the changed behavior. Follow the
 command time only after validating the estimator, sample, targets, numerical
 results, process exits, and output inventory.
 
+New MCSE exports must save `e(mcse)` (all-probe by default), `e(mcse_mode)`,
+`e(mcse_method)`, `e(mcse_status)`, `e(mcse_available)` and
+`e(mcse_cov_raw)` together. Missing or withheld diagnostics remain missing;
+they cannot be replaced with conditional SEs or zeros. Current small command,
+paired-CMG, Separations and alpha writers include these fields. Their CSV raw
+covariance columns are `mcse_cov_raw_ij`, with one-based indices in the four
+main-target order. Historical protocols and archived receipts retain their
+original definitions; review their MCSE assumptions before any new campaign.
+
 Write new results under ignored `.local/` or `output/`, with exact source,
 input, seed, command, and environment identities. Keep restricted data and
 licensed comparator source outside this repository. Do not commit raw logs,

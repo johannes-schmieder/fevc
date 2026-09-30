@@ -709,7 +709,7 @@ assert colsof(e(rust_request_capability_receipt)) == 23
 assert colsof(e(rust_preparation_receipt)) == 8
 assert colsof(e(rust_graph_receipt)) == 18
 assert e(probes) == 0 & e(seed) == 0 & e(batch) == 0
-assert e(numerical_mcse_available) == 0
+assert e(mcse_available) == 1
 assert e(rust_full_fit_complete_residual) <=                    ///
     e(residual_acceptance_tolerance)
 assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)

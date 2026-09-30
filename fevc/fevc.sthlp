@@ -39,6 +39,8 @@ the correction brings the estimates closer to those true values.
         fevc log_wage productivity i.period, ///
             worker(worker_id) firm(firm_id)
         estat decomposition, full
+        matrix list e(mcse)
+        estat diagnostics
 {* example_end}{...}
         restore
 {txt}{...}
@@ -521,26 +523,53 @@ Caller timers are preserved on success, error, and interruption.
 {pstd}
 {cmd:e(b)} and {cmd:e(kss)} contain corrected worker variance, firm variance,
 raw worker-firm covariance, and total variance, in that order.
-{cmd:e(plugin)}, {cmd:e(correction)}, and {cmd:e(numerical_mcse)} hold their
-uncorrected estimates, bias corrections, and legacy conditional numerical MCSEs.
-By default, or with {cmd:mcse(all)}, {cmd:e(numerical_mccov_cond)},
-{cmd:e(numerical_mccov_leverage)}, {cmd:e(numerical_mccov_all_raw)} and
-{cmd:e(numerical_mccov_all)} are separate 3 by 3 matrices ordered worker
-variance, firm variance, raw worker-firm covariance. {cmd:e(numerical_mcse_all)}
-contains four MCSEs; its total uses the covariance and contrast (1,1,2).
-{cmd:e(numerical_mc_method)} is {cmd:crossfit_if_v1};
-{cmd:e(numerical_mc_status)} records availability. {cmd:e(mc_replay_rhs)},
-{cmd:e(mc_replay_attempted_rhs)}, {cmd:e(mc_replay_executed_rhs)},
-{cmd:e(mc_replay_generator_work)} and {cmd:e(mc_allocation_bound_bytes)}
-record additional work and scratch. {cmd:e(numerical_replay_rhs)} holds
-certified replay residuals with zero-based logical probe indices when present.
-Replay uses batches of at most four existing leverage directions in Rust and
-eight in Mata, bounded by the admitted leverage width, and reuses the prepared
-solver. {cmd:e(mcse_mode)} records {cmd:all}, {cmd:off} or the developer mode
-{cmd:conditional}. With {cmd:mcse(off)}, {cmd:e(numerical_mcse)} is missing,
-availability indicators are zero and all-probe matrices/work are absent. A failed batch withholds the all-probe MCSE and reports
-attempted work, executor-accounted completed work and the certified prefix separately;
-{cmd:e(mc_failed_replay_probe)} identifies the first uncertified direction.
+{cmd:e(plugin)} and {cmd:e(correction)} hold their uncorrected estimates
+and bias corrections. {cmd:e(mcse)} contains four numerical MCSEs for the
+selected mode: all main point probes by default. {cmd:e(results)} has rows
+{cmd:plugin}, {cmd:bias_correction}, {cmd:corrected} and {cmd:mcse}; its last row
+matches {cmd:e(mcse)}. {cmd:e(mcse_mode)} records {cmd:all}, {cmd:off} or the
+developer mode {cmd:conditional}. {cmd:e(mcse_method)}, {cmd:e(mcse_status)}
+and {cmd:e(mcse_available)} record the method, typed status and usability.
+The method is {cmd:crossfit_if_v1} for all-probe JLA, {cmd:exact} for exact
+zero MCSE, {cmd:conditional_target_v1} for the developer diagnostic, or
+{cmd:none} when off. Use {cmd:matrix list e(mcse)} or {cmd:estat diagnostics}.
+
+{pstd}
+{cmd:e(mcse_cov_raw)} and {cmd:e(mcse_cov)} are raw and usable 4 by 4 numerical
+covariances in the same target order. The total target is the exact linear
+combination worker variance + firm variance + 2 x covariance. Material negative
+eigenvalues preserve raw covariance and withhold usable covariance and MCSEs.
+Off, unavailable capability and the developer conditional mode have missing
+covariance matrices; conditional mode supplies only the conditional SE vector.
+Exact all mode returns zero covariance and zero MCSE with availability one.
+These diagnostics do not create econometric {cmd:e(V)}.
+
+{pstd}
+Compatibility returns {cmd:e(numerical_mcse)} and
+{cmd:e(numerical_mcse_available)} alias the selected public diagnostic.
+{cmd:e(numerical_mcse_all)} retains the all-probe vector when calculated;
+{cmd:e(numerical_mccov_cond)}, {cmd:e(numerical_mccov_leverage)},
+{cmd:e(numerical_mccov_all_raw)} and {cmd:e(numerical_mccov_all)} retain the
+3 by 3 primitive covariance attachments. The preserved developer conditional
+vector is {cmd:e(mcse_conditional)}, with
+{cmd:e(mcse_conditional_available)}, when all or conditional mode is selected.
+Exporters should save {cmd:e(mcse)}, mode, method, status, availability and
+{cmd:e(mcse_cov_raw)} rather than treating a withheld MCSE as zero.
+
+{pstd}
+{cmd:e(mc_replay_rhs)}, {cmd:e(mc_replay_attempted_rhs)},
+{cmd:e(mc_replay_executed_rhs)}, {cmd:e(mc_replay_generator_work)} and
+{cmd:e(mc_allocation_bound_bytes)} record additional work and scratch.
+{cmd:e(numerical_replay_rhs)} holds certified replay residuals with zero-based
+logical probe indices when present. Replay uses batches of at most four existing
+leverage directions in Rust and eight in Mata, bounded by the admitted leverage
+width, and reuses the prepared solver. {cmd:mcse(off)} skips additional work;
+{cmd:e(mcse)} and both public covariance matrices are missing and
+{cmd:e(mcse_available)} is zero, with status {cmd:off}. Legacy all-probe
+attachments and replay work are absent. A failed batch withholds the all-probe
+MCSE and reports attempted work, executor-accounted completed work and the
+certified prefix separately; {cmd:e(mc_failed_replay_probe)} identifies the
+first uncertified direction.
 
 {pstd}
 {cmd:e(decomposition)} adds the sorting row and shares; stored shares are

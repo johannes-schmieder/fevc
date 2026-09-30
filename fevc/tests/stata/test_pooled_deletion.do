@@ -200,7 +200,7 @@ foreach nuisance in joint fixedoffset {
             probes(4096) seed(9252026) backend(mata) nodisplay
         assert e(sample)==wanted_`population'
         matrix jla=e(kss)
-        matrix mcse=e(numerical_mcse)
+        matrix mcse=e(mcse_conditional)
         forvalues j=1/4 {
             assert abs(jla[1,`j']-literal[1,`j'])<=6*mcse[1,`j']+1e-8*max(1,abs(literal[1,`j']))
         }
@@ -270,7 +270,7 @@ if `native_units' {
                     preconditioner(`solver') mcse(conditional) nodisplay
                 assert e(sample)==wanted_`population'
                 matrix jla=e(kss)
-                matrix mcse=e(numerical_mcse)
+                matrix mcse=e(mcse_conditional)
                 forvalues j=1/4 {
                     assert abs(jla[1,`j']-literal[1,`j'])<=max(1e-8*max(1,abs(literal[1,`j'])),6*mcse[1,`j'])
                 }
@@ -346,7 +346,7 @@ foreach engine in compressed generic {
     assert e(sample)==wanted_movers
     assert e(deletion_units)==20
     matrix jla=e(kss)
-    matrix mcse=e(numerical_mcse)
+    matrix mcse=e(mcse_conditional)
     forvalues j=1/4 {
         assert abs(jla[1,`j']-exact[1,`j'])<=6*mcse[1,`j']+1e-8*max(1,abs(exact[1,`j']))
     }
@@ -362,7 +362,7 @@ if `native_units' {
         assert e(sample)==wanted_movers
         assert e(deletion_units)==20
         matrix jla=e(kss)
-        matrix mcse=e(numerical_mcse)
+        matrix mcse=e(mcse_conditional)
         forvalues j=1/4 {
             assert abs(jla[1,`j']-exact[1,`j'])<=max(1e-8*max(1,abs(exact[1,`j'])),6*mcse[1,`j'])
         }

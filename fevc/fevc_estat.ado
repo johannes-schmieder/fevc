@@ -251,20 +251,6 @@ program define _fevc_estat_diagnostics
             %20.4f e(validation_seconds)
     }
 
-    if e(numerical_mcse_available) & inlist("`e(mcse_mode)'","","conditional") {
-        tempname mcse
-        matrix `mcse' = e(numerical_mcse)
-        di as txt _newline "JLA numerical MCSE (conditional on leverage sketch)"
-        di as txt %-39s "Worker variance" as result             ///
-            %20.7g `mcse'[1,1]
-        di as txt %-39s "Firm variance" as result               ///
-            %20.7g `mcse'[1,2]
-        di as txt %-39s "Sorting: 2 x covariance" as result     ///
-            %20.7g 2*`mcse'[1,3]
-        di as txt %-39s "Total worker-firm variance" as result  ///
-            %20.7g `mcse'[1,4]
-        di as txt "These quantify randomized numerical error, not sampling uncertainty."
-    }
     fevc__display, numericaldiagnosticsonly
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
         fevc__display, inferencediagnosticsonly

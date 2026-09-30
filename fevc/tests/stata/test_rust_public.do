@@ -149,8 +149,11 @@ assert `"`r(datasignature)'"' == `"`caller_signature'"'
 local first_restored_sortedby : sortedby
 assert `"`first_restored_sortedby'"' == `"`caller_sortedby'"'
 
-tempname public_results public_rhs public_graph public_memory
+tempname public_results public_rhs public_graph public_memory private_expected
 matrix `public_results' = e(results)
+// The native point receipt's fourth row remains conditional by contract.
+matrix `private_expected' = `public_results'
+matrix `private_expected'[4,1] = e(mcse_conditional)
 matrix `public_rhs' = e(rust_rhs_receipts)
 matrix `public_graph' = e(rust_graph_receipt)
 matrix `public_memory' = e(rust_memory_receipt)
@@ -185,7 +188,7 @@ quietly fevc_rust solve `handle', seed(91827) probes(6) ///
     leveragebatch(3) targetbatch(3) route(diagonal)            ///
     tolerance(1e-10) maxiter(10000)
 quietly fevc_rust result `handle'
-assert mreldif(`public_results',r(result)) == 0
+assert mreldif(`private_expected',r(result)) == 0
 assert mreldif(`public_rhs',r(rhs_receipts)) == 0
 quietly count if public_sample != `rust_keep'
 assert r(N) == 0

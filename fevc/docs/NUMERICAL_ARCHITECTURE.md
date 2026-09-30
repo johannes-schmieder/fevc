@@ -273,11 +273,13 @@ stored row. Match and target passes aggregate the same literal copy signs
 before the solve. This is draw-for-draw equivalent to the canonical explicitly
 expanded calculation.
 
-`e(numerical_mcse)` is the Monte Carlo standard error of the second-pass
+`e(mcse_conditional)` is the developer Monte Carlo standard error of the second-pass
 target-probe mean conditional on the realized leverage sketch. It excludes
 leverage-sketch uncertainty, solver error, and econometric sampling
 uncertainty.
 
+The public `e(mcse)` reports the selected mode, all by default; its availability
+and covariance are described in [the return contract](FAILURES_AND_RETURNS.md).
 The default `mcse(all)` attachment adds local covariance for randomness
 in both existing point-probe stages. It accumulates parity-fold target means,
 pulls them through the fixed-R finite-projection formula and replays each

@@ -54,6 +54,10 @@ fevc log_wage i.year, worker(worker_id) firm(firm_id)
 
 * Show uncorrected estimates, estimated bias, and corrected components
 estat decomposition, full
+
+* Numerical MCSE (all main point probes by default)
+matrix list e(mcse)
+estat diagnostics
 ```
 
 Match deletion is the default. The displayed decomposition separates worker,

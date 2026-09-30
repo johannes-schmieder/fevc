@@ -25,6 +25,10 @@ fevc y c1 c2, worker(worker) firm(firm)                 ///
 assert "`e(estat_cmd)'" == "fevc_estat"
 matrix b_before = e(b)
 matrix decomposition_before = e(decomposition)
+matrix mcse_before = e(mcse)
+matrix covariance_before = e(mcse_cov_raw)
+assert "`e(mcse_mode)'"=="all" & e(mcse_available)==1
+assert "`e(mcse_method)'"=="exact" & "`e(mcse_status)'"=="exact_zero"
 
 estat decomposition
 assert mreldif(b_before,e(b)) == 0
@@ -37,6 +41,11 @@ estat dec
 estat sam
 estat com
 estat dia
+assert mreldif(mcse_before,e(mcse))==0
+assert mreldif(covariance_before,e(mcse_cov_raw))==0
+matrix posted=e(results)
+matrix row_mcse=posted[4,1..4]
+assert mreldif(row_mcse,e(mcse))==0
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 
 capture noisily estat sample, full

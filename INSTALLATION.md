@@ -47,6 +47,8 @@ fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 fevc_run jla_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
+matrix list e(mcse)
+estat diagnostics
 ```
 
 The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/36771390189)

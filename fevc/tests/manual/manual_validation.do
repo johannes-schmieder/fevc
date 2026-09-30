@@ -187,12 +187,16 @@ if !`exact_failed' {
     if !`jla_rc' {
         tempname jla_result jla_mcse
         matrix `jla_result' = e(kss)
-        matrix `jla_mcse' = e(numerical_mcse)
+        matrix `jla_mcse' = e(mcse)
         local jla_failed 0
         local jla_max_abs 0
         local jla_max_scaled 0
         local jla_note
-        forvalues column = 1/4 {
+        if e(mcse_available)!=1 {
+            local jla_failed 1
+            local jla_note "JLA numerical MCSE unavailable: `e(mcse_status)'"
+        }
+        else forvalues column = 1/4 {
             local difference = abs(`jla_result'[1,`column'] - ///
                 `exact_result'[1,`column'])
             local scale = max(1, abs(`jla_result'[1,`column']), ///
@@ -203,7 +207,7 @@ if !`exact_failed' {
             local jla_max_scaled = max(`jla_max_scaled', `scaled')
             if `difference' > `allowance' local jla_failed 1
         }
-        if `jla_failed' local jla_note "JLA difference exceeded its numerical envelope"
+        if `jla_failed' & "`jla_note'"=="" local jla_note "JLA difference exceeded its numerical envelope"
     }
     else local jla_note "fevc JLA returned r(`jla_rc')"
 }

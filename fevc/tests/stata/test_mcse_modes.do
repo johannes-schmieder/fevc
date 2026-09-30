@@ -33,6 +33,12 @@ foreach backend of local backends {
         matrix point=e(kss)
         assert "`e(mcse_mode)'"=="off" & "`e(numerical_mc_status)'"=="off"
         assert e(numerical_mcse_available)==0 & e(numerical_mcse_all_available)==0
+        assert e(mcse_available)==0 & "`e(mcse_method)'"=="none"
+        assert "`e(mcse_status)'"=="off"
+        mata: assert(all(missing(st_matrix("e(mcse)"))))
+        mata: assert(all(missing(st_matrix("e(mcse_cov_raw)"))))
+        mata: assert(all(missing(st_matrix("e(mcse_cov)"))))
+        mata: assert(all(missing(st_matrix("e(results)")[4,.])))
         capture confirm scalar e(mc_replay_rhs)
         assert _rc
         quietly fevc y `controls' [fw=copies], `common' numericalmcse(off)
@@ -45,23 +51,78 @@ foreach backend of local backends {
             if "`mode'"=="conditional" local option mcse(conditional)
             quietly fevc y `controls' [fw=copies], `common' `option'
             assert mreldif(point,e(kss))<1e-11
+            assert mreldif(e(mcse),e(numerical_mcse))==0
+            matrix selected=e(mcse)
+            matrix results=e(results)
+            matrix result_mcse=results[4,1..4]
+            assert mreldif(selected,result_mcse)==0
+            local rows : rownames results
+            assert "`rows'"=="plugin bias_correction corrected mcse"
+            assert colsof(e(mcse_cov_raw))==4 & rowsof(e(mcse_cov_raw))==4
             if "`mode'"=="conditional" {
                 assert "`e(mcse_mode)'"=="conditional"
                 assert "`e(numerical_mc_method)'"==""
+                assert "`e(mcse_method)'"=="conditional_target_v1"
+                assert "`e(mcse_status)'"=="conditional"
+                assert e(mcse_available)==e(mcse_conditional_available)
+                assert mreldif(e(mcse),e(mcse_conditional))==0
+                mata: assert(all(missing(st_matrix("e(mcse_cov_raw)"))))
             }
             else {
                 assert "`e(mcse_mode)'"=="all"
                 assert "`e(numerical_mc_method)'"=="crossfit_if_v1"
                 assert e(mc_replay_rhs)==33
+                assert "`e(mcse_method)'"=="crossfit_if_v1"
+                assert "`e(mcse_status)'"=="`e(numerical_mc_status)'"
+                assert e(mcse_available)==e(numerical_mcse_all_available)
+                assert mreldif(e(mcse),e(numerical_mcse_all))==0
+                // Independent linear map for the fourth target, vw+vf+2*cov.
+                matrix map=(1,0,0 \ 0,1,0 \ 0,0,1 \ 1,1,2)
+                matrix expected=map*e(numerical_mccov_all_raw)*map'
+                assert mreldif(expected,e(mcse_cov_raw))<1e-11
+                if e(mcse_available) {
+                    forvalues j=1/4 {
+                        assert abs(selected[1,`j']^2-el(e(mcse_cov),`j',`j'))<1e-11
+                    }
+                }
                 if "`mode'"=="default" matrix covariance=e(numerical_mccov_all_raw)
                 else assert mreldif(covariance,e(numerical_mccov_all_raw))<1e-11
             }
             assert `"`c(rngstate)'"'==`"`caller_rng'"'
         }
     }
+    quietly fevc y x [fw=copies], worker(worker) firm(firm) algorithm(jla) ///
+        backend(`backend') engine(generic) stayers(both) deletion(match) ///
+        targetweight(mass) probes(33) batch(7) seed(2026092911) nodisplay
+    matrix combined=e(results)
+    matrix hybrid=e(stayer_hybrid_results)
+    local combined_rows : rownames combined
+    local hybrid_rows : rownames hybrid
+    assert "`combined_rows'"=="plugin bias_correction corrected mcse"
+    assert "`hybrid_rows'"=="`combined_rows'"
+    assert mreldif(combined,hybrid)==0
     quietly fevc y x, worker(worker) firm(firm) algorithm(exact) backend(`backend') nodisplay
     assert "`e(numerical_mc_status)'"=="exact_zero"
     mata: assert(all(st_matrix("e(numerical_mcse_all)"):==0))
+    assert e(mcse_available)==1 & "`e(mcse_method)'"=="exact"
+    mata: assert(all(st_matrix("e(mcse)"):==0))
+    mata: assert(all(st_matrix("e(mcse_cov_raw)"):==0))
+    matrix combined=e(results)
+    matrix hybrid=e(stayer_hybrid_results)
+    local combined_rows : rownames combined
+    local hybrid_rows : rownames hybrid
+    assert "`combined_rows'"=="plugin bias_correction corrected mcse"
+    assert "`hybrid_rows'"=="`combined_rows'"
+    matrix exact_point=e(kss)
+    quietly fevc y x, worker(worker) firm(firm) algorithm(exact) backend(`backend') mcse(conditional) nodisplay
+    assert "`e(mcse_mode)'"=="conditional" & "`e(mcse_method)'"=="exact"
+    assert "`e(mcse_status)'"=="exact_zero" & e(mcse_available)==1
+    mata: assert(all(st_matrix("e(mcse)"):==0))
+    mata: assert(all(missing(st_matrix("e(mcse_cov_raw)"))))
+    assert mreldif(exact_point,e(kss))==0
+    quietly fevc y x, worker(worker) firm(firm) algorithm(exact) backend(`backend') mcse(off) nodisplay
+    assert "`e(mcse_status)'"=="off" & e(mcse_available)==0
+    assert mreldif(exact_point,e(kss))==0
     capture quietly fevc y, worker(worker) firm(firm) backend(`backend') mcse(all) numericalmcse(all) nodisplay
     assert _rc==198 & "`e(status)'"=="WITHHELD"
 }
@@ -85,6 +146,9 @@ assert "$VCKSS_NMC_MODE"=="off" & "$VCKSS_NMC_UNAVAILABLE"=="unavailable_capabil
 quietly _fevc_mcse_stub
 quietly fevc__numerical post
 assert "`e(mcse_mode)'"=="all" & "`e(numerical_mc_status)'"=="unavailable_capability"
+assert e(mcse_available)==0 & "`e(mcse_status)'"=="unavailable_capability"
+assert "`e(mcse_method)'"=="crossfit_if_v1"
+mata: assert(all(missing(st_matrix("e(mcse)"))))
 quietly fevc__numerical clear
 quietly fevc__numerical init a b c d f g h
 quietly fevc__numerical request all none ""

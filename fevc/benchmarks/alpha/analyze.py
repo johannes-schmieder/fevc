@@ -121,6 +121,16 @@ def cross_backend_parity(
 ) -> dict[str, object]:
     left = rust[0]
     right = mata[0]
+    for row in (left, right):
+        # Legacy archived protocols lack this family. New exports must not
+        # treat withheld all-probe MCSE as a usable equivalence envelope.
+        if "mcse_mode" in row and (
+            row["mcse_mode"] != "all"
+            or row.get("mcse_available") != "1"
+            or row.get("mcse_method") != "crossfit_if_v1"
+            or row.get("mcse_status") not in {"ok_local", "ok_local_psd_adjusted"}
+        ):
+            raise RuntimeError(f"{case_id}: all-probe MCSE is unavailable or inconsistent")
     for field in STRUCTURAL_FIELDS:
         if left[field] != right[field]:
             raise RuntimeError(

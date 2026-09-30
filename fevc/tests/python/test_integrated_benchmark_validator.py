@@ -30,12 +30,21 @@ def receipt(backend: str) -> dict[str, str]:
         "deletion_units": "20",
         "requested_probes": "10",
         "probes": "10",
+        "mcse_mode": "all",
+        "mcse_method": "crossfit_if_v1",
+        "mcse_status": "ok_local",
+        "mcse_available": "1",
     }
+    covariance = [[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 2], [1, 1, 2, 6]]
+    for i in range(4):
+        for j in range(4):
+            row[f"mcse_cov_raw_{i+1}{j+1}"] = str(1e-4 * covariance[i][j])
     for prefix in ("plugin", "correction", "corrected", "mcse"):
         for target in ("worker", "firm", "covariance", "total"):
             row[f"{prefix}_{target}"] = (
                 "-0.01" if target == "covariance" and prefix != "mcse" else "0.01"
             )
+    row["mcse_total"] = str(0.01 * 6**0.5)
     if backend == "rust":
         row.update(
             {
@@ -93,4 +102,41 @@ def test_mata_smoke_still_requires_mata_phase_timings(tmp_path: Path) -> None:
     row["graph_seconds"] = ""
     write_receipt(tmp_path, row)
     with pytest.raises(RuntimeError, match="graph_seconds"):
+        CHECKS.validate_benchmark(tmp_path)
+
+
+def test_withheld_mcse_retains_points_and_raw_covariance(tmp_path: Path) -> None:
+    row = receipt("mata")
+    row.update(mcse_status="unstable_nonpsd", mcse_available="0")
+    for target in ("worker", "firm", "covariance", "total"):
+        row[f"mcse_{target}"] = ""
+    for field in row:
+        if field.startswith("mcse_cov_raw_"):
+            row[field] = str(-float(row[field]))
+    write_receipt(tmp_path, row)
+    CHECKS.validate_benchmark(tmp_path)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("mcse_mode", "conditional"), ("mcse_method", ""),
+    ("mcse_status", "unknown"), ("mcse_available", "0"),
+    ("mcse_worker", ""), ("mcse_firm", "-1"),
+    ("mcse_cov_raw_11", ""), ("mcse_cov_raw_12", "2"),
+    ("mcse_cov_raw_44", "2"), ("mcse_cov_raw_33", "nan"),
+])
+def test_mcse_export_rejects_inconsistent_or_partial_receipts(
+    tmp_path: Path, field: str, value: str,
+) -> None:
+    row = receipt("mata")
+    row[field] = value
+    write_receipt(tmp_path, row)
+    with pytest.raises(RuntimeError, match="MCSE|mcse"):
+        CHECKS.validate_benchmark(tmp_path)
+
+
+def test_withheld_mcse_cannot_export_a_conditional_substitute(tmp_path: Path) -> None:
+    row = receipt("mata")
+    row.update(mcse_status="unstable_nonpsd", mcse_available="0")
+    write_receipt(tmp_path, row)
+    with pytest.raises(RuntimeError, match="must leave"):
         CHECKS.validate_benchmark(tmp_path)

@@ -59,11 +59,19 @@ error. It can accompany supported projection or sampling-inference requests,
 but those additional results receive no MCSE.
 
 ```stata
+fevc log_wage, worker(worker_id) firm(firm_id)
+matrix list e(mcse)
+estat diagnostics
+
 fevc log_wage, worker(worker_id) firm(firm_id) mcse(off)
 ```
 
 The results are displayed below the decomposition and stored in
-`e(numerical_mcse_all)`; `estat diagnostics` reports availability. A withheld
+`e(mcse)`; `estat diagnostics` reports method, status and availability.
+`e(mcse_cov_raw)` and `e(mcse_cov)` contain the raw and usable 4 by 4
+numerical covariances in the same target order. Save `e(mcse_mode)`,
+`e(mcse_method)`, `e(mcse_status)` and `e(mcse_available)` with exported MCSEs
+and raw covariance. The `mcse` row of `e(results)` matches `e(mcse)`. A withheld
 numerical diagnostic retains valid point estimates. See the
 [returned-results contract](docs/FAILURES_AND_RETURNS.md).
 

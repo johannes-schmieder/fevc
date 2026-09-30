@@ -36,7 +36,7 @@ assert "`e(deletion_rank_certificate)'" == ///
 assert e(N) == 24
 assert e(N_stored) == 24
 assert e(deletion_units) == 17
-assert e(numerical_mcse_available) == 0
+assert e(mcse_available) == 1
 assert e(information_rcond) > 0
 assert e(full_parameters) == 11
 assert e(correction_parameters) == 11

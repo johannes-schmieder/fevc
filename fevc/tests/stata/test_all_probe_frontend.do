@@ -23,7 +23,7 @@ foreach deletion in observation match {
             nuisance(`nuisance') targetweight(mass) probes(33) batch(7) ///
             probeorder(probe) preconditioner(diagonal) seed(2026092911) mcse(conditional) nodisplay
         matrix point=e(kss)
-        matrix conditional=e(numerical_mcse)
+        matrix conditional=e(mcse_conditional)
         assert "`e(numerical_mc_method)'"==""
         quietly fevc y x z [fw=f], worker(worker) firm(firm) ///
             algorithm(jla) backend(mata) engine(generic) deletion(`deletion') ///
@@ -31,7 +31,7 @@ foreach deletion in observation match {
             probeorder(probe) preconditioner(diagonal) seed(2026092911) ///
             numericalmcse(all) nodisplay
         mata: assert(vckss_nmc__relative_equal(st_matrix("point"),st_matrix("e(kss)")))
-        mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(numerical_mcse)")))
+        mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(mcse_conditional)")))
         assert "`e(numerical_mc_method)'"=="crossfit_if_v1"
         assert e(mc_leverage_probes)==33 & e(mc_target_probes)==33
         assert e(mc_target_fold_a)==17 & e(mc_target_fold_b)==16
@@ -48,12 +48,12 @@ foreach engine in generic compressed {
         backend(mata) engine(`engine') deletion(match) stayers(movers) ///
         targetweight(mass) probes(33) batch(7) seed(2026092911) mcse(conditional) nodisplay
     matrix point=e(kss)
-    matrix conditional=e(numerical_mcse)
+    matrix conditional=e(mcse_conditional)
     quietly fevc y [fw=f], worker(worker) firm(firm) algorithm(jla) ///
         backend(mata) engine(`engine') deletion(match) stayers(movers) ///
         targetweight(mass) probes(33) batch(7) seed(2026092911) numericalmcse(all) nodisplay
     mata: assert(vckss_nmc__relative_equal(st_matrix("point"),st_matrix("e(kss)")))
-    mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(numerical_mcse)")))
+    mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(mcse_conditional)")))
     assert e(mc_replay_rhs)==33
     assert `"`c(rngstate)'"'==`"`state'"'
 }

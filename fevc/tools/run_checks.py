@@ -161,13 +161,10 @@ def validate_benchmark(output: Path) -> None:
         "probes",
     ):
         finite(field, positive=True)
-    for prefix in ("plugin", "correction", "corrected", "mcse"):
+    for prefix in ("plugin", "correction", "corrected"):
         for target in ("worker", "firm", "covariance", "total"):
-            value = finite(
-                f"{prefix}_{target}", nonnegative=(prefix == "mcse")
-            )
-            if prefix == "mcse" and value < 0:
-                raise RuntimeError("KSS benchmark smoke returned a negative MCSE.")
+            finite(f"{prefix}_{target}")
+    validate_mcse_export(row)
 
     backend = row.get("backend_selected")
     if backend not in {"mata", "rust"}:
@@ -216,6 +213,68 @@ def validate_benchmark(output: Path) -> None:
         raise RuntimeError("KSS benchmark smoke returned an invalid rank certificate.")
 
 
+def validate_mcse_export(row: dict[str, str]) -> None:
+    """Validate a default-all export without substituting conditional SEs."""
+    status = row.get("mcse_status")
+    usable = status in {"exact_zero", "ok_local", "ok_local_psd_adjusted"}
+    withheld = {
+        "unstable_nonpsd", "nonsmooth_adjustment", "nonfinite_derivative",
+        "replay_failed", "unavailable_capability",
+    }
+    if (
+        row.get("mcse_mode") != "all"
+        or row.get("mcse_method") != ("exact" if status == "exact_zero" else "crossfit_if_v1")
+        or row.get("mcse_available") != ("1" if usable else "0")
+        or (not usable and status not in withheld)
+    ):
+        raise RuntimeError("MCSE export has inconsistent mode/method/status/availability.")
+    for target in ("worker", "firm", "covariance", "total"):
+        field = f"mcse_{target}"
+        raw = row.get(field)
+        if not usable:
+            if raw != "":
+                raise RuntimeError(f"Unavailable MCSE export must leave {field} missing.")
+            continue
+        try:
+            value = float(raw)
+        except (TypeError, ValueError) as error:
+            raise RuntimeError(f"MCSE export omitted {field}.") from error
+        if not math.isfinite(value) or value < 0 or (status == "exact_zero" and value != 0):
+            raise RuntimeError(f"MCSE export has invalid {field}.")
+    covariance: list[float | None] = []
+    for i in range(1, 5):
+        for j in range(1, 5):
+            field = f"mcse_cov_raw_{i}{j}"
+            raw = row.get(field)
+            if raw == "":
+                covariance.append(None)
+                continue
+            try:
+                value = float(raw)
+            except (TypeError, ValueError) as error:
+                raise RuntimeError(f"MCSE export omitted {field}.") from error
+            if not math.isfinite(value):
+                raise RuntimeError(f"MCSE export has invalid {field}.")
+            covariance.append(value)
+    finite_covariance = all(value is not None for value in covariance)
+    empty_covariance = all(value is None for value in covariance)
+    if not (finite_covariance or empty_covariance) or (
+        (usable or status == "unstable_nonpsd") and not finite_covariance
+    ):
+        raise RuntimeError("MCSE export has incomplete raw covariance.")
+    if finite_covariance:
+        scale = max(1.0, *(abs(value) for value in covariance))
+        for i in range(4):
+            for j in range(4):
+                if abs(covariance[4*i+j] - covariance[4*j+i]) > 1e-10*scale:
+                    raise RuntimeError("MCSE export has asymmetric raw covariance.")
+            total = covariance[4*i] + covariance[4*i+1] + 2*covariance[4*i+2]
+            if abs(covariance[4*i+3] - total) > 1e-10*scale:
+                raise RuntimeError("MCSE export has inconsistent total covariance.")
+        if status == "exact_zero" and any(value != 0 for value in covariance):
+            raise RuntimeError("Exact MCSE export has nonzero raw covariance.")
+
+
 def validate_separations_preparation(output: Path) -> None:
     prepared = output / "prepared.csv"
     metadata = output / "prepare.csv"
@@ -249,9 +308,22 @@ def validate_separations_preparation(output: Path) -> None:
         route_rows[route] = result_rows[0]
     fields = [
         f"{prefix}_{target}"
-        for prefix in ("plugin", "correction", "corrected", "mcse")
+        for prefix in ("plugin", "correction", "corrected")
         for target in ("worker", "firm", "covariance", "total")
     ]
+    for row in route_rows.values():
+        validate_mcse_export(row)
+    for field in ("mcse_mode", "mcse_method", "mcse_status", "mcse_available"):
+        if route_rows["b1"][field] != route_rows["cmg"][field]:
+            raise RuntimeError(f"Separations route MCSE {field} disagrees.")
+    if route_rows["b1"]["mcse_available"] == "1":
+        fields += [f"mcse_{target}" for target in ("worker", "firm", "covariance", "total")]
+    for i in range(1, 5):
+        for j in range(1, 5):
+            field = f"mcse_cov_raw_{i}{j}"
+            if route_rows["b1"][field] == "" and route_rows["cmg"][field] == "":
+                continue
+            fields.append(field)
     left = [float(route_rows["b1"][field]) for field in fields]
     right = [float(route_rows["cmg"][field]) for field in fields]
     if len(left) != len(right):
@@ -262,6 +334,13 @@ def validate_separations_preparation(output: Path) -> None:
     )
     if difference / max(scale, 1e-300) > 2e-9:
         raise RuntimeError("Separations fixture changed the estimator matrix by route.")
+    with (output / "exact/separations_fixture_exact.csv").open(newline="", encoding="utf-8") as handle:
+        exact_rows = list(csv.DictReader(handle))
+    if len(exact_rows) != 1 or exact_rows[0].get("converged") != "1":
+        raise RuntimeError("Separations exact export failed.")
+    validate_mcse_export(exact_rows[0])
+    if exact_rows[0]["mcse_status"] != "exact_zero":
+        raise RuntimeError("Separations exact export omitted zero MCSE.")
 
 
 def main() -> int:

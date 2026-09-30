@@ -10,9 +10,9 @@ The column order of every result matrix is:
 4. `total_variance`
 
 `e(results)` has rows `plugin`, `bias_correction`, `corrected`, and
-`numerical_mcse`. The corrected row is also stored in `e(b)` and `e(kss)`.
-The component rows are available separately as `e(plugin)`, `e(correction)`,
-and `e(numerical_mcse)`. Point-only and projection-only calls post no `e(V)`.
+`mcse`. Its last row equals the selected-mode diagnostic `e(mcse)`. The corrected row is also stored in `e(b)` and `e(kss)`.
+The component rows and selected MCSE are available separately as `e(plugin)`, `e(correction)`,
+and `e(mcse)`. Point-only and projection-only calls post no `e(V)`.
 The new explicit Rust structured candidate posts `e(V)` only for
 `inference(highrank)` when the joint covariance is admissible and every q0
 target check passes. Its q1 route posts no Gaussian `e(V)`. The independent
@@ -20,21 +20,35 @@ exact Mata family's posting contract is unchanged.
 
 ## All-point-probe numerical diagnostics
 
-`mcse(all)` is the default and posts three-by-three primitive matrices
-`e(numerical_mccov_cond)`, `e(numerical_mccov_leverage)`,
-`e(numerical_mccov_all_raw)` and `e(numerical_mccov_all)`, ordered worker
-variance, firm variance, worker–firm covariance. `e(numerical_mcse_all)` uses
-the same four target columns, including the exact `(1,1,2)` total contraction.
-These matrices are numerical diagnostics; they do not create `e(V)`.
+`mcse(all)` is the default. The canonical `e(mcse)` is a one-by-four SE
+vector in the target order above. `e(mcse_cov_raw)` and `e(mcse_cov)` are
+four-by-four raw and usable numerical covariances in the same order, including
+the exact `(1,1,2)` total contraction of the three primitive components.
+`e(mcse_mode)`, `e(mcse_method)`, `e(mcse_status)` and `e(mcse_available)`
+record requested mode, method, typed status and usability. Exporters must save
+these fields, the four SEs and raw covariance together. These numerical
+diagnostics do not create `e(V)`.
 
-Method `crossfit_if_v1` reports statuses `exact_zero`, `ok_local`,
-`ok_local_psd_adjusted`, `unstable_nonpsd`, `nonsmooth_adjustment`,
-`nonfinite_derivative` or `replay_failed`. Only the first three provide usable
-all-probe MCSEs. A tolerance-level PSD cleanup is scaled to conditional plus
-leverage covariance norm and receipted; material negative eigenvalues preserve
-raw covariance and withhold usable covariance. Derivative/replay unavailability
-retains an accepted point and conditional MCSE. Allocation, corruption,
-invariant failure and cancellation remain command failures.
+JLA all mode uses method `crossfit_if_v1`. Exact uses method `exact`, status
+`exact_zero`, availability one and zero SEs/covariance. JLA statuses `ok_local`
+and `ok_local_psd_adjusted` also provide usable MCSEs. Statuses
+`unstable_nonpsd`, `nonsmooth_adjustment`, `nonfinite_derivative`,
+`replay_failed` and `unavailable_capability` set availability zero and withhold
+the SE vector and usable covariance. Material negative eigenvalues preserve
+raw covariance; tolerance-level PSD cleanup is scaled to conditional plus
+leverage covariance norm and receipted. Diagnostic unavailability retains
+accepted points and the explicit developer conditional vector. Allocation,
+corruption, invariant failure and cancellation remain command failures.
+
+Compatibility `e(numerical_mcse)` and `e(numerical_mcse_available)` alias
+`e(mcse)` and its availability. The all-probe compatibility vector is
+`e(numerical_mcse_all)`; primitive three-by-three attachments remain
+`e(numerical_mccov_cond)`, `e(numerical_mccov_leverage)`,
+`e(numerical_mccov_all_raw)` and `e(numerical_mccov_all)`. Their primitive
+order is worker variance, firm variance and worker–firm covariance.
+`e(mcse_conditional)` and `e(mcse_conditional_available)` preserve the
+conditional calculation for development when mode is all or conditional.
+Legacy all-probe method/status returns retain their original meanings.
 
 `e(mc_*)` returns include stage/fold counts, certified/attempted/executed replay
 work, generator re-evaluations, allocation bound, PSD adjustment, residual and
@@ -47,13 +61,14 @@ this diagnostic for the main point estimates; no MCSE is attached to those
 additional results. Their estimates, covariance, intervals, simulations and
 scientific gates retain their existing contracts.
 
-`e(mcse_mode)` is `all`, `off` or the developer-only `conditional`.
-`mcse(off)` skips additional derivative/fold/replay work, sets
-`e(numerical_mcse)` to missing and both availability flags to zero, and posts
-status `off`. It creates no all-probe covariance or replay returns. The legacy
-conditional row of `e(results)` remains an internal point-result receipt;
-public numerical diagnostic availability is governed by the mode and flags.
-The developer mode preserves `e(numerical_mcse)` and status `conditional`.
+`mcse(off)` skips additional derivative/fold/replay work. Its public SE
+vector, covariance matrices and last row of `e(results)` are missing, with
+method `none`, status `off` and availability zero. Legacy all-probe attachments
+and replay returns are absent. The developer `mcse(conditional)` selects
+`e(mcse_conditional)` as `e(mcse)`, with method `conditional_target_v1` and
+status `conditional` for JLA. Its full covariance is unavailable and remains
+missing; no covariance is fabricated from the four SEs. Exact conditional
+mode has method `exact`, status `exact_zero` and zero SEs.
 `numericalmcse()` is an accepted compatibility alias; using both option names
 fails before RNG.
 

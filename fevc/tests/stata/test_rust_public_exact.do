@@ -92,7 +92,7 @@ foreach nuisance in joint fixedoffset {
             assert e(batch) == 0
             assert e(maxiter) == 0
             assert e(maxiter_requested) == 10000
-            assert e(numerical_mcse_available) == 0
+            assert e(mcse_available) == 1
             assert e(route_planned_rhs) == 0
             assert e(rust_support_flags) == 38
             assert e(rust_cap_supported) == 1

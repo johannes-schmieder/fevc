@@ -40,7 +40,7 @@ matrix weighted_match_jla = e(results)
 forvalues target_index = 1/4 {
     assert abs(el(e(correction),1,`target_index') - ///
         el(weighted_correction,1,`target_index')) < ///
-        6*el(e(numerical_mcse),1,`target_index') + 4e-4
+        6*el(e(mcse_conditional),1,`target_index') + 4e-4
 }
 
 fevc y c1 c2 [fw=freq], worker(worker) firm(firm) ///
@@ -56,7 +56,7 @@ matrix weighted_observation_jla = e(results)
 forvalues target_index = 1/4 {
     assert abs(el(e(correction),1,`target_index') - ///
         el(observation_correction,1,`target_index')) < ///
-        6*el(e(numerical_mcse),1,`target_index') + 4e-4
+        6*el(e(mcse_conditional),1,`target_index') + 4e-4
 }
 
 // Splitting only one stored row must preserve the same physical-copy stream.
@@ -92,7 +92,7 @@ assert mreldif(weighted_match_jla,e(results)) < 2e-9
 forvalues target_index = 1/4 {
     assert abs(el(e(correction),1,`target_index') - ///
         el(weighted_correction,1,`target_index')) < ///
-        6*el(e(numerical_mcse),1,`target_index') + 4e-4
+        6*el(e(mcse_conditional),1,`target_index') + 4e-4
 }
 
 fevc y c1 c2, worker(worker) firm(firm) deletion(observation) ///
@@ -107,7 +107,7 @@ assert mreldif(weighted_observation_jla,e(results)) < 2e-9
 forvalues target_index = 1/4 {
     assert abs(el(e(correction),1,`target_index') - ///
         el(observation_correction,1,`target_index')) < ///
-        6*el(e(numerical_mcse),1,`target_index') + 4e-4
+        6*el(e(mcse_conditional),1,`target_index') + 4e-4
 }
 
 // Minimal accepted R=2 stream: a frequency-two row and its two literal

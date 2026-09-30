@@ -1,4 +1,15 @@
-# Current checkpoint — default MCSE interface, 2026-09-30
+# Current checkpoint — canonical MCSE returns, 2026-09-30
+
+The naming follow-up makes `e(mcse)` and the `mcse` row of `e(results)`
+report the selected diagnostic, all-probe by default. Public metadata and
+four-target raw/usable covariance use the `mcse_*` family; conditional values
+remain explicit developer diagnostics. Display, help, examples and active
+exporters follow this contract. Numerical calculations, point/RNG contracts,
+native ABI and all five binaries are unchanged. Focused and integrated
+validation passes (879 Python tests, integrated Stata quick/full, native Mac
+functional checks, clean source installation and exporter smokes); see the [return report](docs/MCSE_RETURNS_2026-09-30.md).
+
+## Earlier default MCSE interface checkpoint — 2026-09-30
 
 The owner-authorized public `mcse(all|off)` option defaults to all, with
 `numericalmcse()` as a compatibility alias and conditional MCSE retained for

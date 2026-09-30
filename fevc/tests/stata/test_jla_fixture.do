@@ -33,7 +33,7 @@ assert "`e(deletion_rank_certificate)'" == ///
 assert e(probes) == 2000
 assert e(full_parameters) == 11
 assert e(correction_parameters) == 11
-assert e(numerical_mcse_available) == 1
+assert e(mcse_conditional_available) == 1
 assert missing(e(information_rcond))
 assert e(preconditioner_ratio) > 0 & e(preconditioner_ratio) <= 1
 assert e(setup_seconds) == e(preconditioner_seconds)
@@ -49,13 +49,13 @@ assert e(solver_max_residual) < 1e-10
 assert abs(el(e(plugin),1,1) - .23886949630417731) < 2e-10
 assert abs(el(e(plugin),1,4) - .21441326290890825) < 2e-10
 assert abs(el(e(correction),1,1) + .019250119561150449) < ///
-    5*el(e(numerical_mcse),1,1) + 2e-4
+    5*el(e(mcse_conditional),1,1) + 2e-4
 assert abs(el(e(correction),1,2) + .0078437874259815812) < ///
-    5*el(e(numerical_mcse),1,2) + 2e-4
+    5*el(e(mcse_conditional),1,2) + 2e-4
 assert abs(el(e(correction),1,3) + .0043493658055976927) < ///
-    5*el(e(numerical_mcse),1,3) + 2e-4
+    5*el(e(mcse_conditional),1,3) + 2e-4
 assert abs(el(e(correction),1,4) + .035792638598327396) < ///
-    5*el(e(numerical_mcse),1,4) + 2e-4
+    5*el(e(mcse_conditional),1,4) + 2e-4
 assert abs(el(e(correction),1,4) - ///
     (el(e(correction),1,1)+el(e(correction),1,2)+ ///
     2*el(e(correction),1,3))) < 2e-12
@@ -91,16 +91,16 @@ assert "`e(deletion_rank_certificate)'" == ///
 assert e(deletion_rank_gap) > 0 & e(deletion_rank_gap) <= 1
 assert abs(el(e(plugin),1,1) - .23886949630417761) < 2e-10
 assert abs(el(e(correction),1,1) + .00467505214166742) < ///
-    5*el(e(numerical_mcse),1,1) + 3e-4
+    5*el(e(mcse_conditional),1,1) + 3e-4
 assert abs(el(e(correction),1,4) + .01849902060699364) < ///
-    5*el(e(numerical_mcse),1,4) + 3e-4
+    5*el(e(mcse_conditional),1,4) + 3e-4
 
 fevc y c1 c2, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) nuisance(joint) probes(2000) seed(20260814) ///
     tolerance(1e-12) backend(mata) rng(stata) nodisplay
 assert abs(el(e(correction),1,1) - .017319153327137557) < ///
-    5*el(e(numerical_mcse),1,1) + 3e-4
+    5*el(e(mcse_conditional),1,1) + 3e-4
 assert abs(el(e(correction),1,4) - .01816335608515773) < ///
-    5*el(e(numerical_mcse),1,4) + 3e-4
+    5*el(e(mcse_conditional),1,4) + 3e-4
 
 di as result "PASS test_jla_fixture.do"

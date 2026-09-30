@@ -47,8 +47,8 @@ set sortseed 20260825
 local rng_before `"`c(rngstate)'"'
 local sort_rng_before `"`c(sortrngstate)'"'
 
-matrix receipt = J(`reps',62,.)
-matrix colnames receipt = run total_s n_stored n_physical n_retained workers firms cells units strata probes selected_batch iterations max_resid accept_tol identity_resid memory_bytes sample_n sample_ok data_ok rng_ok sort_ok result_diff r11 r21 r31 r41 r12 r22 r32 r42 r13 r23 r33 r43 r14 r24 r34 r44 mcse1 mcse2 mcse3 mcse4 ingest_s canon_s graph_s compress_s plan_s stayer_s solve_s native_s fit_s leverage_s target_s correction_s rng_s setup_s schur_s pcg_s precond_s rust_words rust_draws
+matrix receipt = J(`reps',79,.)
+matrix colnames receipt = run total_s n_stored n_physical n_retained workers firms cells units strata probes selected_batch iterations max_resid accept_tol identity_resid memory_bytes sample_n sample_ok data_ok rng_ok sort_ok result_diff r11 r21 r31 r41 r12 r22 r32 r42 r13 r23 r33 r43 r14 r24 r34 r44 mcse1 mcse2 mcse3 mcse4 ingest_s canon_s graph_s compress_s plan_s stayer_s solve_s native_s fit_s leverage_s target_s correction_s rng_s setup_s schur_s pcg_s precond_s rust_words rust_draws mcse_available mcse_cov_raw_11 mcse_cov_raw_21 mcse_cov_raw_31 mcse_cov_raw_41 mcse_cov_raw_12 mcse_cov_raw_22 mcse_cov_raw_32 mcse_cov_raw_42 mcse_cov_raw_13 mcse_cov_raw_23 mcse_cov_raw_33 mcse_cov_raw_43 mcse_cov_raw_14 mcse_cov_raw_24 mcse_cov_raw_34 mcse_cov_raw_44
 
 local rhs
 if `controls' == 1 local rhs control
@@ -87,7 +87,7 @@ forvalues run = 1/`reps' {
     di as txt "ALPHA_BENCH_GATE eV_rc " _rc
     assert _rc != 0
     matrix one_result = e(results)
-    matrix one_mcse = e(numerical_mcse)
+    matrix one_mcse = e(mcse)
     if `run' == 1 matrix reference = one_result
     local result_difference = mreldif(reference,one_result)
     tempvar in_sample
@@ -125,6 +125,11 @@ forvalues run = 1/`reps' {
     }
     matrix receipt[`run',1] = (`run',`total',e(N_stored),e(N_physical),e(N_retained),e(worker_levels),e(firm_levels),e(coefficient_cells),e(deletion_units),e(target_strata),e(probes),e(batch),e(solver_iterations),e(complete_residual_max),e(residual_acceptance_tolerance),e(target_identity_residual),e(memory_forecast_bytes),`sample_n',`sample_ok',`data_ok',`rng_ok',`sort_ok',`result_difference')
     matrix receipt[`run',24] = (vec(one_result)',one_mcse,`ingest',`canon',`graph',`compress',`plan',`stayer',`solve',`native',e(fit_seconds),e(leverage_seconds),e(target_seconds),e(correction_seconds),e(rng_seconds),e(setup_seconds),e(schur_seconds),e(pcg_seconds),e(preconditioner_apply_seconds),`words',`draws')
+    matrix raw_cov=e(mcse_cov_raw)
+    matrix receipt[`run',63]=(e(mcse_available),vec(raw_cov)')
+    local mcse_mode`run' `e(mcse_mode)'
+    local mcse_method`run' `e(mcse_method)'
+    local mcse_status`run' `e(mcse_status)'
     local engine`run' `e(engine_selected)'
     local route`run' `e(preconditioner_selected)'
     local status`run' `e(status)'
@@ -140,10 +145,16 @@ generate str12 deletion = "`deletion'"
 generate byte controls = `controls'
 generate byte processors = c(processors)
 generate str8 temperature = cond(run==1,"cold","warm")
+generate str16 mcse_mode = ""
+generate str32 mcse_method = ""
+generate str40 mcse_status = ""
 generate str16 engine = ""
 generate str16 route = ""
 generate str48 estimator_status = ""
 forvalues run = 1/`reps' {
+    replace mcse_mode = "`mcse_mode`run''" in `run'
+    replace mcse_method = "`mcse_method`run''" in `run'
+    replace mcse_status = "`mcse_status`run''" in `run'
     replace engine = "`engine`run''" in `run'
     replace route = "`route`run''" in `run'
     replace estimator_status = "`status`run''" in `run'

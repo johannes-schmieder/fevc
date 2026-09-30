@@ -314,7 +314,7 @@ def test_compact_display_and_postestimation_surface_are_documented() -> None:
         "Estimated bias",
         "% of Var(Y)",
         "KSS corrected = plug-in - estimated bias",
-        "JLA numerical MCSE",
+        "Approximate numerical MCSE (all main point probes)",
         "Econometric component inference",
         "Explicit structured-model diagnostics",
         "Omitted variance drivers can invalidate SEs and intervals",

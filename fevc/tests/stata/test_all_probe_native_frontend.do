@@ -31,7 +31,7 @@ foreach deletion in observation match {
             nuisance(`nuisance') targetweight(mass) probes(33) batch(7) ///
             stayers(both) preconditioner(diagonal) seed(2026092911) mcse(conditional) nodisplay
         matrix point=e(kss)
-        matrix conditional=e(numerical_mcse)
+        matrix conditional=e(mcse_conditional)
         assert "`e(numerical_mc_method)'"==""
         quietly fevc y x z [fw=f], worker(worker) firm(firm) ///
             algorithm(jla) backend(rust) engine(generic) deletion(`deletion') ///
@@ -39,7 +39,7 @@ foreach deletion in observation match {
             stayers(both) preconditioner(diagonal) seed(2026092911) ///
             numericalmcse(all) nodisplay
         mata: assert(vckss_nmc__relative_equal(st_matrix("point"),st_matrix("e(kss)")))
-        mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(numerical_mcse)")))
+        mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(mcse_conditional)")))
         assert "`e(numerical_mc_method)'"=="crossfit_if_v1"
         assert e(mc_leverage_probes)==33 & e(mc_target_probes)==33
         assert e(mc_target_fold_a)==17 & e(mc_target_fold_b)==16
@@ -56,12 +56,12 @@ foreach engine in generic {
         backend(rust) engine(auto) deletion(match) stayers(both) ///
         targetweight(mass) probes(33) batch(auto) seed(2026092911) mcse(conditional) nodisplay
     matrix point=e(kss)
-    matrix conditional=e(numerical_mcse)
+    matrix conditional=e(mcse_conditional)
     quietly fevc y [fw=f], worker(worker) firm(firm) algorithm(jla) ///
         backend(rust) engine(auto) deletion(match) stayers(both) ///
         targetweight(mass) probes(33) batch(auto) seed(2026092911) numericalmcse(all) nodisplay
     mata: assert(vckss_nmc__relative_equal(st_matrix("point"),st_matrix("e(kss)")))
-    mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(numerical_mcse)")))
+    mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(mcse_conditional)")))
     assert e(mc_replay_rhs)==33
     assert `"`c(rngstate)'"'==`"`state'"'
 }
@@ -87,12 +87,12 @@ foreach route in auto cmg {
     quietly fevc y x z [fw=f], worker(worker) firm(firm) algorithm(jla) backend(rust) ///
         engine(generic) preconditioner(`route') batch(auto) probes(33) seed(2026092911) mcse(conditional) nodisplay
     matrix point=e(kss)
-    matrix conditional=e(numerical_mcse)
+    matrix conditional=e(mcse_conditional)
     local selected `e(preconditioner_selected)'
     quietly fevc y x z [fw=f], worker(worker) firm(firm) algorithm(jla) backend(rust) ///
         engine(generic) preconditioner(`route') batch(auto) probes(33) seed(2026092911) numericalmcse(all) nodisplay
     mata: assert(vckss_nmc__relative_equal(st_matrix("point"),st_matrix("e(kss)")))
-    mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(numerical_mcse)")))
+    mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(mcse_conditional)")))
     assert "`e(preconditioner_selected)'"=="`selected'"
     assert e(mc_replay_rhs)==33 & e(mc_replay_executed_rhs)==33
     assert "`e(full_cmg_model_schema)'"=="CMG-FULL-NUMERICAL-MODEL-V1"
@@ -116,14 +116,14 @@ foreach route in auto cmg {
             engine(auto) stayers(movers) deletion(match) nuisance(`nuisance') ///
             preconditioner(`route') batch(7) probes(33) seed(2026092911) mcse(conditional) nodisplay
         matrix point=e(kss)
-        matrix conditional=e(numerical_mcse)
+        matrix conditional=e(mcse_conditional)
         local selected `e(preconditioner_selected)'
         assert "`e(engine_selected)'"=="compressed"
         quietly fevc y [fw=f], worker(worker) firm(firm) algorithm(jla) backend(rust) ///
             engine(auto) stayers(movers) deletion(match) nuisance(`nuisance') ///
             preconditioner(`route') batch(7) probes(33) seed(2026092911) numericalmcse(all) nodisplay
         mata: assert(vckss_nmc__relative_equal(st_matrix("point"),st_matrix("e(kss)")))
-        mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(numerical_mcse)")))
+        mata: assert(vckss_nmc__relative_equal(st_matrix("conditional"),st_matrix("e(mcse_conditional)")))
         assert "`e(preconditioner_selected)'"=="`selected'"
         assert "`e(engine_selected)'"=="compressed" & e(mc_replay_rhs)==33
     }

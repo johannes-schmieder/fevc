@@ -98,6 +98,10 @@ quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 fevc_run exact_controls using fevc.sthlp
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(mcse_mode)'"=="all" & "`e(mcse_status)'"=="exact_zero"
+assert e(mcse_available)==1
+mata: assert(all(st_matrix("e(mcse)"):==0))
+mata: assert(all(st_matrix("e(mcse_cov_raw)"):==0))
 assert "`e(backend_requested)'" == "auto"
 assert "`e(backend_selected)'" == "mata"
 assert e(backend_fallback) == 1

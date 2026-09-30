@@ -37,14 +37,14 @@ forvalues trial = 1/6 {
         probes(50) batch(7) seed(`trial_seed') tolerance(1e-12) nodisplay
     scalar low_error = low_error + ///
         (el(e(correction),1,4)-el(exact_correction,1,4))^2
-    scalar low_mcse = low_mcse + el(e(numerical_mcse),1,4)
+    scalar low_mcse = low_mcse + el(e(mcse_conditional),1,4)
 
     fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
         deletionid(match) algorithm(jla) nuisance(joint) ///
         probes(800) batch(19) seed(`trial_seed') tolerance(1e-12) nodisplay
     scalar high_error = high_error + ///
         (el(e(correction),1,4)-el(exact_correction,1,4))^2
-    scalar high_mcse = high_mcse + el(e(numerical_mcse),1,4)
+    scalar high_mcse = high_mcse + el(e(mcse_conditional),1,4)
 }
 assert high_error < low_error
 assert high_mcse < .4*low_mcse

@@ -135,6 +135,16 @@ program define fevc__numerical, eclass
         exit
     }
     if "`action'" != "post" exit 198
+    // Direct executor tests use frozen point receipts without a public request.
+    if "$VCKSS_NMC_REQUESTED"=="" exit
+    // Success routes and the outer wrapper both post; normalize each fit once.
+    if "`e(mcse_method)'" != "" exit
+    tempname conditional
+    capture confirm matrix e(numerical_mcse)
+    if _rc matrix `conditional'=J(1,4,.)
+    else matrix `conditional'=e(numerical_mcse)
+    matrix colnames `conditional'=worker_variance firm_variance worker_firm_covariance total_variance
+    local conditional_available = (e(numerical_mcse_available)==1 | "`e(algorithm)'"=="exact")
     ereturn local mcse_mode "$VCKSS_NMC_REQUESTED"
     if "$VCKSS_NMC_MODE" == "off" {
         tempname omitted
@@ -145,13 +155,17 @@ program define fevc__numerical, eclass
         ereturn scalar numerical_mcse_all_available=0
         ereturn local numerical_mc_status "off"
         if "$VCKSS_NMC_UNAVAILABLE"!="" ereturn local numerical_mc_status "$VCKSS_NMC_UNAVAILABLE"
+        quietly _fevc_post_mcse
         exit
     }
+    ereturn matrix mcse_conditional=`conditional'
+    ereturn scalar mcse_conditional_available=`conditional_available'
     if "$VCKSS_NMC_MODE" != "all" {
         ereturn local numerical_mc_status "conditional"
+        if "`e(algorithm)'"=="exact" ereturn local numerical_mc_status "exact_zero"
+        quietly _fevc_post_mcse
         exit
     }
-    if "`e(numerical_mc_method)'" == "crossfit_if_v1" exit
     if "`e(algorithm)'" == "exact" {
         foreach field in COND LEV RAW ALL {
             matrix ${VCKSS_NMC_`field'} = J(3,3,0)
@@ -208,6 +222,67 @@ program define fevc__numerical, eclass
     }
     ereturn scalar numerical_mcse_all_available = ///
         inlist("$VCKSS_NMC_STATUS","exact_zero","ok_local","ok_local_psd_adjusted")
+    quietly _fevc_post_mcse
+end
+
+program define _fevc_post_mcse, eclass
+    version 18.0
+    tempname se raw usable map results legacy hybrid
+    local targets worker_variance firm_variance worker_firm_covariance total_variance
+    matrix `se'=J(1,4,.)
+    matrix `raw'=J(4,4,.)
+    matrix `usable'=J(4,4,.)
+    local available=0
+    local method none
+    if "`e(mcse_mode)'"=="conditional" {
+        matrix `se'=e(mcse_conditional)
+        local available=e(mcse_conditional_available)
+        local method conditional_target_v1
+        // This developer diagnostic has no full covariance attachment.
+    }
+    if "`e(mcse_mode)'"=="all" {
+        local method crossfit_if_v1
+        capture confirm matrix e(numerical_mcse_all)
+        if !_rc {
+            matrix `se'=e(numerical_mcse_all)
+            local available=e(numerical_mcse_all_available)
+            // Total variance is exactly vw+vf+2*cov, including cross terms.
+            matrix `map'=(1,0,0 \ 0,1,0 \ 0,0,1 \ 1,1,2)
+            matrix `raw'=`map'*e(numerical_mccov_all_raw)*`map''
+            matrix `usable'=`map'*e(numerical_mccov_all)*`map''
+        }
+    }
+    if "`e(numerical_mc_status)'"=="exact_zero" local method exact
+    matrix colnames `se'=`targets'
+    foreach m in raw usable {
+        matrix rownames ``m''=`targets'
+        matrix colnames ``m''=`targets'
+    }
+    // Legacy general names alias the selected diagnostic, never a fallback.
+    matrix `legacy'=`se'
+    ereturn matrix numerical_mcse=`legacy'
+    ereturn scalar numerical_mcse_available=`available'
+    ereturn matrix mcse=`se'
+    ereturn matrix mcse_cov_raw=`raw'
+    ereturn matrix mcse_cov=`usable'
+    ereturn scalar mcse_available=`available'
+    ereturn local mcse_status "`e(numerical_mc_status)'"
+    ereturn local mcse_method "`method'"
+    capture confirm matrix e(results)
+    if !_rc {
+        matrix `results'=e(results)
+        matrix `results'[4,1]=e(mcse)
+        matrix rownames `results'=plugin bias_correction corrected mcse
+        ereturn matrix results=`results'
+    }
+    // This is an alias for the same combined headline population.
+    capture confirm matrix e(stayer_hybrid_results)
+    if !_rc {
+        matrix `hybrid'=e(stayer_hybrid_results)
+        matrix `hybrid'[4,1]=e(mcse)
+        matrix rownames `hybrid'=plugin bias_correction corrected mcse
+        ereturn matrix stayer_hybrid_results=`hybrid'
+    }
 end
 
 program define _fevc_numerical_failure

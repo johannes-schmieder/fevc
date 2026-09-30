@@ -16,6 +16,7 @@ and the installed `help fevc`.
 
 - [Numerical architecture](NUMERICAL_ARCHITECTURE.md).
 - [Finite-projection JLA](JLA_FINITE_PROJECTION.md).
+- [Canonical MCSE stored results](MCSE_RETURNS_2026-09-30.md).
 - [Default MCSE interface](MCSE_DEFAULT_INTERFACE_2026-09-30.md),
   [all-point-probe MCSE derivation](ALL_PROBE_MCSE.md) and
   [implementation status](ALL_PROBE_MCSE_STATUS.md).
