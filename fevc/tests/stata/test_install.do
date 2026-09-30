@@ -18,7 +18,8 @@ capture findfile fevc.ado
 assert _rc == 0
 local installed_ado `"`r(fn)'"'
 assert strpos(`"`installed_ado'"',`"`install_root'"') == 1
-capture findfile fevc.mata
+capture findfile fevc_numerical.mata
+findfile fevc.mata
 assert _rc == 0
 capture findfile fevc_inference.mata
 assert _rc == 0
@@ -38,6 +39,10 @@ capture findfile fevc_scale_engine.mata
 assert _rc == 0
 capture findfile fevc_scale_runtime.mata
 assert _rc == 0
+foreach helper in fevc__numerical.ado fevc__rust_numerical.ado {
+    quietly findfile `helper'
+    assert strpos(`"`r(fn)'"',`"`install_root'"') == 1
+}
 capture findfile fevc__display.ado
 assert _rc == 0
 capture findfile fevc__lifecycle.ado

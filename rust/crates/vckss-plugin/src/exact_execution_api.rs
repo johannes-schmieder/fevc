@@ -149,12 +149,14 @@ pub extern "C" fn vckss_rust_engine_solve_exact_legacy_execution_interrupt_v1(
                 generation,
                 request.options,
                 Some(threads),
+                false,
                 V4SolveExecution::Coordinated(&mut callback),
             ),
             None => solve_engine_v2_execution(
                 generation,
                 request.options,
                 Some(threads),
+                false,
                 V4SolveExecution::Caller(&mut NeverInterrupt),
             ),
         }

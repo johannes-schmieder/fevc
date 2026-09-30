@@ -253,13 +253,13 @@ static int vckss_save_u64_parts(
     return vckss_save_u64(low_name, value & UINT64_C(0xffffffff));
 }
 
-static int vckss_full_cmg_model_receipt(uint64_t generation)
+static int vckss_cmg_model_work(uint64_t generation, int numerical)
 {
     VckssFullCmgModelReceiptV1 receipt;
     int status;
     memset(&receipt, 0, sizeof(receipt));
-    status = vckss_rust_engine_full_cmg_model_receipt_v1(
-        generation, &receipt, (uint32_t)sizeof(receipt));
+    status = numerical ? vckss_rust_engine_numerical_cmg_work_v1(generation, &receipt, (uint32_t)sizeof(receipt)) :
+        vckss_rust_engine_full_cmg_model_receipt_v1(generation, &receipt, (uint32_t)sizeof(receipt));
     if (status != 0) return vckss_rust_failure(status);
     if (receipt.struct_size != sizeof(receipt) || receipt.schema_version != 1u ||
         receipt.generation != generation ||
@@ -330,13 +330,21 @@ static int vckss_exact_execution_receipt(uint64_t generation)
     return status;
 }
 
-static int vckss_generic_execution_receipt(uint64_t generation)
+static int vckss_generic_execution_receipt(uint64_t generation, int numerical)
 {
     VckssGenericExecutionReceiptV1 r;
     uint64_t logical = 0;
     int status;
     memset(&r, 0, sizeof(r));
-    status = vckss_rust_engine_generic_execution_receipt_v1(generation, &r, sizeof(r));
+    if (numerical) {
+        VckssGenericExecutionReceiptV2 combined;
+        memset(&combined, 0, sizeof(combined));
+        status = vckss_rust_engine_generic_execution_receipt_v2(generation, &combined, sizeof(combined));
+        if (status == 0 && (combined.struct_size != sizeof(combined) || combined.schema_version != 2u))
+            return vckss_usage("invalid numerical execution receipt schema");
+        r = combined.point_work;
+        if (status == 0) status = vckss_save_u64("__vckss_gex_replay", combined.replay_rhs_count);
+    } else status = vckss_rust_engine_generic_execution_receipt_v1(generation, &r, sizeof(r));
     if (status != 0) return vckss_rust_failure(status);
     const uint64_t counts[] = {r.fit_rhs_count, r.control_projection_rhs_count,
         r.point_probe_rhs_count, r.projection_rhs_count, r.component_rhs_count, r.gram_rhs_count};
@@ -415,7 +423,15 @@ static int vckss_component_batch_receipt(uint64_t generation)
     memset(&work, 0, sizeof(work));
     status = vckss_rust_engine_component_batch_receipt_v1(generation, &r, sizeof(r));
     if (status != 0) return vckss_rust_failure(status);
-    status = vckss_rust_engine_generic_execution_receipt_v1(generation, &work, sizeof(work));
+    VckssGenericExecutionReceiptV2 combined;
+    memset(&combined, 0, sizeof(combined));
+    status = vckss_rust_engine_generic_execution_receipt_v2(generation, &combined, sizeof(combined));
+    if (status != 0) return vckss_rust_failure(status);
+    if (combined.struct_size != sizeof(combined) || combined.schema_version != 2u ||
+        combined.point_work.struct_size != sizeof(combined.point_work) || combined.point_work.schema_version != 1u) {
+        return vckss_usage("invalid numerical combined work header");
+    }
+    work = combined.point_work;
     if (status != 0) return vckss_rust_failure(status);
     const uint64_t values[] = {r.struct_size, r.schema_version, r.policy,
         r.selection_reason, r.generation, r.declared_component_width,
@@ -896,6 +912,7 @@ static int vckss_probe(void)
          * Identify the Stata selectors independently, without reusing ABI bits. */
         (status = vckss_save_u64("__vckss_rust_progress_api", 2u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_execution_api", 3u)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_numerical_api", vckss_rust_numerical_schema_v2())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_api", vckss_rust_exact_execution_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_resolved_api", vckss_rust_exact_resolved_execution_schema_v2())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_legacy_api", vckss_rust_exact_legacy_execution_schema_v1())) != 0) {
@@ -2239,12 +2256,15 @@ static int vckss_augment_component_inference(int argc, char *argv[], int match, 
     return vckss_export_component_inference_augmentation(generation);
 }
 
-static int vckss_solve_with_legacy_execution(int argc, char *argv[], int legacy_execution)
+static int vckss_solve_with_legacy_execution(int argc, char *argv[], int legacy_execution, int numerical)
 {
     uint64_t generation;
     uint32_t exact_threads = 0;
     int status;
 
+    if (numerical && (legacy_execution || (argc != 16 && argc != 29))) {
+        return vckss_usage("numerical legacy V2 requires a frozen V2 or V3 point request");
+    }
     if (legacy_execution) {
         if (argc != 17 || vckss_parse_u32(argv[16], &exact_threads) != 0 ||
             exact_threads == 0 || strcmp(argv[9], "exact") != 0) {
@@ -2392,7 +2412,8 @@ static int vckss_solve_with_legacy_execution(int argc, char *argv[], int legacy_
         }
         request.options.request_signature =
             (signature_hi << 32) | (signature_lo & UINT64_C(0xffffffff));
-        status = vckss_rust_engine_solve_interrupt_v3(generation, &request);
+        status = numerical ? vckss_rust_engine_solve_numerical_generic_legacy_v2(generation, &request)
+            : vckss_rust_engine_solve_interrupt_v3(generation, &request);
         return status == 0 ? 0 : vckss_rust_failure(status);
     }
     if (argc != 16) {
@@ -2464,6 +2485,7 @@ static int vckss_solve_with_legacy_execution(int argc, char *argv[], int legacy_
         }
         status = legacy_execution
             ? vckss_rust_engine_solve_exact_legacy_execution_interrupt_v1(generation, &request, exact_threads)
+            : numerical ? vckss_rust_engine_solve_numerical_legacy_v2(generation, &request)
             : vckss_rust_engine_solve_interrupt_v2(generation, &request);
         return status == 0 ? 0 : vckss_rust_failure(status);
     }
@@ -2471,7 +2493,7 @@ static int vckss_solve_with_legacy_execution(int argc, char *argv[], int legacy_
 
 static int vckss_solve(int argc, char *argv[])
 {
-    return vckss_solve_with_legacy_execution(argc, argv, 0);
+    return vckss_solve_with_legacy_execution(argc, argv, 0, 0);
 }
 
 static int vckss_solve_full(int argc, char *argv[])
@@ -2550,7 +2572,7 @@ static int vckss_solve_generic_execution(int argc, char *argv[], int execution_v
 
     // Versions 3/4 are distinct explicit/resolved exact selectors: V4 + threads,
     // without a generic execution-mode argument. Older arities stay frozen.
-    if (argc != (execution_version >= 3 ? 34 : (execution_version ? 36 : 35)) ||
+    if (argc != (execution_version >= 7 ? 41 : (execution_version >= 5 ? 36 : (execution_version >= 3 ? 34 : (execution_version ? 36 : 35)))) ||
         (execution_version == 1 && strcmp(argv[35], "1") != 0)) {
         return vckss_usage("Rust solveexecution requires the planned solve arguments and a valid automatic component-batch mode");
     }
@@ -2562,7 +2584,7 @@ static int vckss_solve_generic_execution(int argc, char *argv[], int execution_v
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
+    if (vckss_parse_u64(argv[1], &generation) != 0 || (generation == 0 && execution_version != 6 && execution_version != 8) ||
         vckss_parse_u64(argv[2], &request.options.v4.v3.v2.v1.seed) != 0 ||
         vckss_parse_u32(argv[3], &request.options.v4.v3.v2.v1.probes) != 0 ||
         vckss_parse_u32(argv[4], &request.options.v4.v3.v2.v1.leverage_batch_width) != 0 ||
@@ -2607,7 +2629,45 @@ static int vckss_solve_generic_execution(int argc, char *argv[], int execution_v
     request.options.v4.v3.v2.v1.rng_contract = VCKSS_RNG_COUNTER_V1;
     request.options.v4.v3.request_signature =
         (signature_hi << 32) | (signature_lo & UINT64_C(0xffffffff));
-    if (execution_version >= 3) {
+    if (execution_version >= 5) {
+        VckssNumericalRequestV1 numerical;
+        memset(&numerical, 0, sizeof(numerical));
+        numerical.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        numerical.struct_size = (uint32_t)sizeof(numerical);
+        numerical.schema_version = 1u;
+        numerical.threads = request.options.threads;
+        numerical.point = request.options.v4;
+        numerical.point.v3.v2.v1.struct_size = (uint32_t)sizeof(numerical.point);
+        if (vckss_parse_u32(argv[34], &numerical.tolerance_supplied) != 0 ||
+            numerical.tolerance_supplied > 1u ||
+            vckss_parse_u32(argv[35], &numerical.controls_count) != 0) {
+            return vckss_usage("invalid numerical V1 controls or tolerance intent");
+        }
+        if (execution_version >= 7) {
+            VckssNumericalRequestV2 attached;
+            memset(&attached, 0, sizeof(attached));
+            attached.v1 = numerical;
+            attached.v1.struct_size = (uint32_t)sizeof(attached);
+            attached.v1.schema_version = 2u;
+            if (vckss_parse_u32(argv[36], &attached.execution_mode) != 0 ||
+                vckss_parse_u32(argv[37], &attached.component_batch_mode) != 0 ||
+                vckss_parse_u32(argv[38], &attached.full_cmg) != 0 ||
+                vckss_parse_u32(argv[39], &attached.v1.projection_requested) != 0 ||
+                vckss_parse_u32(argv[40], &attached.v1.component_requested) != 0)
+                return vckss_usage("invalid numerical V2 executor or attachment intent");
+            status = vckss_rust_engine_numerical_preflight_v2(&attached);
+            if (status == 0 && execution_version == 7)
+                status = vckss_rust_engine_solve_numerical_interrupt_v2(generation, &attached,
+                    request.interrupt_poll, request.interrupt_context, request.checkpoint_interval);
+            return status == 0 ? 0 : vckss_rust_failure(status);
+        }
+        status = vckss_rust_engine_numerical_preflight_v1(&numerical);
+        if (status == 0 && execution_version == 5) {
+            status = vckss_rust_engine_solve_numerical_interrupt_v1(generation,
+                &numerical, request.interrupt_poll, request.interrupt_context,
+                request.checkpoint_interval);
+        }
+    } else if (execution_version >= 3) {
         VckssExactExecutionRequestInterruptV1 exact;
         uint32_t algorithm = execution_version == 3 ? VCKSS_ALGORITHM_EXACT : VCKSS_ALGORITHM_AUTO;
         if (request.options.v4.v3.v2.algorithm != algorithm)
@@ -2655,6 +2715,142 @@ static int vckss_solve_generic_execution(int argc, char *argv[], int execution_v
         status = vckss_rust_engine_solve_interrupt_v8(generation, &request8);
     } else status = vckss_rust_engine_solve_interrupt_v6(generation, &request);
     return status == 0 ? 0 : vckss_rust_failure(status);
+}
+
+
+/* Numerical V1 owns separate matrices and RHS receipts. Validate all caller
+ * destinations before the first write; Stata's matrix cells do not carry NaN. */
+static int vckss_numerical_result(int argc, char *argv[])
+{
+    VckssNumericalResultV1 r;
+    VckssNumericalRhsV1 *rhs = NULL;
+    uint64_t generation, written = 0, i;
+    uint32_t m, row, column;
+    double meta[15];
+    const double (*matrices[4])[3];
+    int status;
+    if (argc != 9 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0)
+        return vckss_usage("numericalresultv1 requires a generation and seven distinct matrix names");
+    for (i = 2; i < 9; ++i) {
+        uint64_t j;
+        if (argv[i][0] == '\0') return vckss_usage("empty numerical matrix destination");
+        for (j = i + 1; j < 9; ++j)
+            if (strcmp(argv[i], argv[j]) == 0) return vckss_usage("numerical matrix destinations overlap");
+    }
+    memset(&r, 0, sizeof(r));
+    status = vckss_rust_engine_numerical_result_v1(generation, &r, (uint32_t)sizeof(r));
+    if (status != 0) return vckss_rust_failure(status);
+    if (r.struct_size != sizeof(r) || r.schema_version != 1u || r.generation != generation ||
+        r.status < 1u || r.status > 7u ||
+        (r.status == 1u ? (r.engine != 3u || r.leverage_probes != 0u || r.target_probes != 0u ||
+            r.certified_replay_rhs != 0u || r.attempted_replay_rhs != 0u || r.executed_replay_rhs != 0u ||
+            r.replay_generator_words != 0u || r.allocation_bound_bytes != 0u) :
+            (r.engine != 1u && r.engine != 2u)) ||
+        (r.status != 1u && r.leverage_probes < 2u) || r.target_probes != r.leverage_probes ||
+        r.target_fold_a != r.target_probes / 2u + r.target_probes % 2u ||
+        r.target_fold_b != r.target_probes / 2u ||
+        r.certified_replay_rhs > r.leverage_probes ||
+        r.executed_replay_rhs < r.certified_replay_rhs ||
+        r.executed_replay_rhs > r.attempted_replay_rhs ||
+        r.attempted_replay_rhs > r.leverage_probes ||
+        r.certified_replay_rhs > INT32_MAX ||
+        !isfinite(r.maximum_replay_complete_residual) || r.maximum_replay_complete_residual < 0 ||
+        !isfinite(r.maximum_point_complete_residual) || r.maximum_point_complete_residual < 0)
+        return vckss_usage("invalid numerical V1 result header or work accounting");
+    for (i = 2; i < 6; ++i)
+        if (SF_row(argv[i]) != 3 || SF_col(argv[i]) != 3)
+            return vckss_usage("numerical covariance destinations must be 3 by 3");
+    if (SF_row(argv[6]) != 1 || SF_col(argv[6]) != 4 ||
+        SF_row(argv[7]) != 1 || SF_col(argv[7]) != 15 ||
+        SF_row(argv[8]) < (ST_int)r.certified_replay_rhs || SF_col(argv[8]) != 3)
+        return vckss_usage("invalid numerical MCSE, metadata or replay destination size");
+    if (r.certified_replay_rhs > SIZE_MAX / sizeof(*rhs))
+        return vckss_usage("numerical replay buffer size overflow");
+    if (r.certified_replay_rhs != 0) {
+        rhs = vckss_calloc((size_t)r.certified_replay_rhs, sizeof(*rhs));
+        if (rhs == NULL) return vckss_c_failure(VCKSS_ERROR_ALLOCATION_FAILED, "ALLOCATION_FAILED",
+            "ALLOCATION_FAILED [numerical_result]: could not allocate replay export", VCKSS_STATA_MEMORY_ERROR);
+    }
+    status = vckss_rust_engine_numerical_rhs_v1(generation, rhs, r.certified_replay_rhs, &written);
+    if (status != 0) { free(rhs); return vckss_rust_failure(status); }
+    if (written != r.certified_replay_rhs) { free(rhs); return vckss_usage("numerical replay count mismatch"); }
+    for (i = 0; i < written; ++i) {
+        if (rhs[i].schema_version != 1u || rhs[i].phase != 1u || rhs[i].probe != i ||
+            rhs[i].reserved != 0u || !isfinite(rhs[i].complete_residual) || rhs[i].complete_residual < 0) {
+            free(rhs); return vckss_usage("invalid numerical replay receipt");
+        }
+    }
+    matrices[0] = r.conditional; matrices[1] = r.leverage;
+    matrices[2] = r.raw; matrices[3] = r.usable;
+    for (m = 0; m < 4; ++m) {
+        for (row = 0; row < 3; ++row) {
+            for (column = 0; column < 3; ++column) {
+                double value = matrices[m][row][column];
+                int required = m == 0 || (r.status <= 4u && m <= 2u) || (r.status <= 3u && m == 3u);
+                int missing = m == 3u && r.status >= 4u;
+                if (isinf(value) || (required && !isfinite(value)) || (missing && !isnan(value))) {
+                    free(rhs); return vckss_usage("invalid numerical covariance availability");
+                }
+            }
+        }
+    }
+    for (column=0; column<4; ++column) {
+        if (isinf(r.mcse[column]) || (r.status<=3u && (!isfinite(r.mcse[column]) || r.mcse[column]<0)) ||
+            (r.status>=4u && !isnan(r.mcse[column]))) {
+            free(rhs); return vckss_usage("invalid numerical MCSE availability");
+        }
+    }
+    if (isinf(r.psd_adjustment) || isinf(r.minimum_constrained) ||
+        isinf(r.minimum_residual_margin) || isinf(r.maximum_sensitivity_ratio) ||
+        r.replay_generator_words > VCKSS_MAX_EXACT_STATA_INTEGER ||
+        r.allocation_bound_bytes > VCKSS_MAX_EXACT_STATA_INTEGER) {
+        free(rhs); return vckss_usage("invalid or unrepresentable numerical metadata");
+    }
+    for (m = 0; m < 4; ++m) {
+        for (row = 0; row < 3; ++row) {
+            for (column = 0; column < 3; ++column) {
+                double value = matrices[m][row][column];
+                if (isinf(value)) { free(rhs); return vckss_usage("infinite numerical covariance"); }
+                if (isnan(value)) value = SV_missval;
+                status = SF_mat_store(argv[m + 2], row + 1, column + 1, value);
+                if (status != 0) { free(rhs); return status; }
+            }
+        }
+    }
+    for (column = 0; column < 4; ++column) {
+        double value = r.mcse[column];
+        if (isinf(value)) { free(rhs); return vckss_usage("infinite numerical MCSE"); }
+        if (isnan(value)) value = SV_missval;
+        status = SF_mat_store(argv[6], 1, column + 1, value);
+        if (status != 0) { free(rhs); return status; }
+    }
+    meta[0]=r.leverage_probes; meta[1]=r.target_probes;
+    meta[2]=r.target_fold_a; meta[3]=r.target_fold_b;
+    meta[4]=(double)r.certified_replay_rhs; meta[5]=(double)r.attempted_replay_rhs;
+    meta[6]=(double)r.replay_generator_words; meta[7]=(double)r.allocation_bound_bytes;
+    meta[8]=r.psd_adjustment; meta[9]=r.minimum_constrained;
+    meta[10]=r.minimum_residual_margin; meta[11]=r.maximum_sensitivity_ratio;
+    meta[12]=r.maximum_replay_complete_residual; meta[13]=SV_missval;
+    meta[14]=r.failed_replay_probe == UINT32_MAX ? SV_missval : r.failed_replay_probe;
+    for (column = 0; column < 15; ++column) {
+        if (isinf(meta[column])) { free(rhs); return vckss_usage("infinite numerical metadata"); }
+        if (isnan(meta[column])) meta[column]=SV_missval;
+        status = SF_mat_store(argv[7], 1, column + 1, meta[column]);
+        if (status != 0) { free(rhs); return status; }
+    }
+    for (i=0; i<written; ++i) {
+        if ((status=SF_mat_store(argv[8], (ST_int)i+1, 1, rhs[i].phase)) != 0 ||
+            (status=SF_mat_store(argv[8], (ST_int)i+1, 2, rhs[i].probe)) != 0 ||
+            (status=SF_mat_store(argv[8], (ST_int)i+1, 3, rhs[i].complete_residual)) != 0) {
+            free(rhs); return status;
+        }
+    }
+    free(rhs);
+    if ((status=vckss_save_u64("__vckss_nmc_status",r.status)) != 0 ||
+        (status=vckss_save_u64("__vckss_nmc_executed",r.executed_replay_rhs)) != 0 ||
+        (status=vckss_save_u64("__vckss_nmc_error",r.replay_error_code)) != 0 ||
+        (status=vckss_save_u64("__vckss_nmc_point_rhs",r.point_rhs)) != 0) return status;
+    return 0;
 }
 
 static int vckss_save_components(const char *prefix, const VckssComponentVectorV1 *value)
@@ -4000,14 +4196,25 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
     if (strcmp(argv[0], "solvefull") == 0) {
         return vckss_solve_full(argc, argv);
     }
+    if (strcmp(argv[0], "solvenumericalv2") == 0) return vckss_solve_generic_execution(argc, argv, 7);
+    if (strcmp(argv[0], "numericalpreflightv2") == 0) return vckss_solve_generic_execution(argc, argv, 8);
+    if (strcmp(argv[0], "solvenumericalv1") == 0) {
+        return vckss_solve_generic_execution(argc, argv, 5);
+    }
+    if (strcmp(argv[0], "numericalpreflightv1") == 0) {
+        return vckss_solve_generic_execution(argc, argv, 6);
+    }
     if (strcmp(argv[0], "solveexecution") == 0) {
         return vckss_solve_generic_execution(argc, argv, 0);
     }
     if (strcmp(argv[0], "solveexactexecution") == 0) {
         return vckss_solve_generic_execution(argc, argv, 3);
     }
+    if (strcmp(argv[0], "solvenumericallegacyv2") == 0) {
+        return vckss_solve_with_legacy_execution(argc, argv, 0, 1);
+    }
     if (strcmp(argv[0], "solveexactlegacyv1") == 0) {
-        return vckss_solve_with_legacy_execution(argc, argv, 1);
+        return vckss_solve_with_legacy_execution(argc, argv, 1, 0);
     }
     if (strcmp(argv[0], "solveexactresolvedv2") == 0) {
         return vckss_solve_generic_execution(argc, argv, 4);
@@ -4031,17 +4238,23 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
     if (strcmp(argv[0], "solveexecutionv8") == 0) {
         return vckss_solve_generic_execution(argc, argv, 2);
     }
-    if (strcmp(argv[0], "executionreceipt") == 0) {
+    if (strcmp(argv[0], "executionreceipt") == 0 || strcmp(argv[0], "executionnumericalreceiptv2") == 0) {
         if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0u) {
             return vckss_usage("Rust executionreceipt requires one positive integer generation");
         }
-        return vckss_generic_execution_receipt(generation);
+        return vckss_generic_execution_receipt(generation, strcmp(argv[0], "executionnumericalreceiptv2") == 0);
     }
     if (strcmp(argv[0], "componentbatchreceipt") == 0) {
         if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0u)
             return vckss_usage("Rust componentbatchreceipt requires one positive generation");
         return vckss_component_batch_receipt(generation);
     }
+    if (strcmp(argv[0], "numericalcmgworkv1") == 0) {
+        if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0)
+            return vckss_usage("numerical CMG work requires a positive generation");
+        return vckss_cmg_model_work(generation, 1);
+    }
+    if (strcmp(argv[0], "numericalresultv1") == 0) return vckss_numerical_result(argc, argv);
     if (strcmp(argv[0], "result") == 0) {
         if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
             return vckss_usage("Rust result requires one positive integer generation");
@@ -4052,7 +4265,7 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
         if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0u) {
             return vckss_usage("Rust fullcmgmodelreceipt requires one positive integer generation");
         }
-        return vckss_full_cmg_model_receipt(generation);
+        return vckss_cmg_model_work(generation, 0);
     }
     if (strcmp(argv[0], "fullcmgreceipt") == 0) {
         if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {

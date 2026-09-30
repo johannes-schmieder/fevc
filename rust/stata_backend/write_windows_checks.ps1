@@ -12,7 +12,7 @@ if ($installedHash -ne $build.sha256) { throw 'Installed plugin differs from the
 if (($identity.PSObject.Properties.Name -contains 'candidate_sha256') -and
     $installedHash -ne $identity.candidate_sha256) { throw 'Installed plugin differs from CI artifact' }
 $gates = @{}
-foreach ($gate in @('pe_import_export','clean_install','lifecycle','observation_component','individual_component','match_component','pooled_deletion','registry_idle')) { $gates[$gate] = 'PASS' }
+foreach ($gate in @('pe_import_export','clean_install','lifecycle','observation_component','individual_component','match_component','pooled_deletion','mcse_modes','mcse_attachments','registry_idle')) { $gates[$gate] = 'PASS' }
 if ($build.rust_test_scope -notin @('HOSTED_CI_PASS','PRIVATE_BUILD_AND_TEST_PASS')) { throw 'Missing Rust test provenance' }
 $gates['rust_workspace'] = $build.rust_test_scope
 $gates['rust_backend'] = $build.rust_test_scope

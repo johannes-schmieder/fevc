@@ -67,6 +67,10 @@ def source_rows(root: Path) -> list[tuple[PurePosixPath, bytes, int]]:
         raise ValueError("working-tree source archive is empty")
     rows = []
     for relative in selected:
+        # Match git archive's export-ignore policy: qualification builds its
+        # own native artifact; installed plugins must not enter source bundles.
+        if relative.suffix == ".plugin":
+            continue
         if relative.parts[0] in {"KSS_Veneto_replication", ".local", ".git"}:
             raise ValueError(f"restricted source path: {relative}")
         source = root.joinpath(*relative.parts)

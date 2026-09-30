@@ -1,10 +1,13 @@
 *! version 0.4.0-alpha.1 13sep2026
 program define fevc__rust_cmg_model, rclass
     version 18.0
-    args handle controls nuisance probes cmg_rhs
+    args handle controls nuisance probes cmg_rhs numerical executed
     // Separate additive model accounting from the frozen 46-field FE receipt.
-    fevc_rust fullcmgmodelreceipt `handle'
-    local logical = `controls'+1+(`controls'>0 & `nuisance'==2)+3*`probes'
+    if "`numerical'"=="" local numerical = 0
+    if "`executed'"=="" local executed = 0
+    local selector = cond(`numerical',"numericalcmgworkv1","fullcmgmodelreceipt")
+    fevc_rust `selector' `handle'
+    local logical = `controls'+1+(`controls'>0 & `nuisance'==2)+3*`probes'+`executed'
     local controlled = cond(`controls'>0,1+2*`probes'*(`nuisance'==1),0)
     if r(struct_size)!=56 | r(schema_version)!=1 | r(generation)!=`handle' | ///
         r(controls_count)!=`controls' | r(nuisance_mode)!=`nuisance' | ///
@@ -21,5 +24,5 @@ program define fevc__rust_cmg_model, rclass
         r(controlled_rhs_count),r(control_refinement_rhs_count))
     matrix colnames `model' = controls nuisance logical_rhs strict_rhs controlled_rhs refinement_rhs
     return matrix receipt = `model'
-    return local schema "CMG-FULL-MODEL-V1"
+    return local schema = cond(`numerical',"CMG-FULL-NUMERICAL-MODEL-V1","CMG-FULL-MODEL-V1")
 end

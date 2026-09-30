@@ -28,6 +28,7 @@ def test_package_manifest_is_complete() -> None:
         "THIRD_PARTY_NOTICES.txt",
         "fevc.ado",
         "fevc.mata",
+        "fevc_numerical.mata",
         "fevc_inference.mata",
         "fevc_graph.mata",
         "fevc_cmg.mata",
@@ -38,6 +39,8 @@ def test_package_manifest_is_complete() -> None:
         "fevc_scale_engine.mata",
         "fevc_scale_runtime.mata",
         "fevc__display.ado",
+        "fevc__numerical.ado",
+        "fevc__rust_numerical.ado",
         "fevc__progress.ado",
         "fevc__lifecycle.ado",
         "fevc__memory_options.ado",
@@ -162,7 +165,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "vckss-api25-control-posterior-timers1"
+    build_id = "vckss-api25-control-posterior-nmc4-timers1"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -173,7 +176,7 @@ def test_mata_api_guard_agrees() -> None:
     solver = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
     assert "return(27)" in solver
-    assert "vckss-solver-api27-memory-policy-timers1" in solver
+    assert "vckss-solver-api27-memory-policy-nmc4-timers1" in solver
     assert "vckss_solver__route_api()" in solver
     assert "vckss_solver__pilot_api()" not in solver
     resource = (ROOT / "fevc_resource.mata").read_text(encoding="utf-8")
@@ -232,6 +235,7 @@ def test_runtime_has_no_external_language_dependency() -> None:
         for name in (
             "fevc.ado",
             "fevc.mata",
+        "fevc_numerical.mata",
             "fevc_graph.mata",
             "fevc_cmg.mata",
             "fevc_solver.mata",

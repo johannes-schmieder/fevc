@@ -31,6 +31,51 @@ static PEAK: AtomicUsize = AtomicUsize::new(0);
 static TEST_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
+fn all_probe_incremental_heap_is_bounded_by_its_reserved_payload() {
+    use vckss_core::generic_jla::run_generic_jla_with_numerical_mc_interrupt;
+    use vckss_core::interrupt::NeverInterrupt;
+    let _lock = TEST_LOCK.lock().unwrap();
+    let problem = q32_problem(false);
+    for deletion in [DeletionMode::Observation, DeletionMode::Match] {
+        let options = GenericJlaOptions {
+            deletion,
+            probes: 17,
+            leverage_batch_width: 3,
+            target_batch_width: 5,
+            memory_budget: MemoryBudget::Unspecified,
+            ..GenericJlaOptions::default()
+        };
+        let execution = GenericJlaExecutionOptions {
+            estimator: options,
+            routing: ModelRoutingOptions {
+                route: ModelSolverRoute::Diagonal,
+                solver: options.solver,
+                ..ModelRoutingOptions::default()
+            },
+            leverage_batch: BatchRequest::Explicit(3),
+            target_batch: BatchRequest::Explicit(5),
+            wallseconds: None,
+        };
+        let (baseline, base_peak, base_live) =
+            measured_live(|| run_generic_jla_routed(&problem, execution).unwrap());
+        let ((point, diagnostic), peak, live) = measured_live(|| {
+            run_generic_jla_with_numerical_mc_interrupt(
+                &problem,
+                execution,
+                None,
+                &mut NeverInterrupt,
+            )
+            .unwrap()
+        });
+        assert_eq!(point.corrected, baseline.corrected);
+        let bound = diagnostic.allocation_bound_bytes;
+        eprintln!("all-probe {deletion:?}: baseline_heap_peak={base_peak} enabled_heap_peak={peak} baseline_retained={base_live} enabled_retained={live} reserved_increment={bound}");
+        assert!(peak as u64 <= base_peak as u64 + bound);
+        assert!(live as u64 <= base_live as u64 + bound);
+    }
+}
+
+#[test]
 fn isolated_diagonal_queue_incremental_heap_stays_within_admitted_payload() {
     let _lock = TEST_LOCK.lock().unwrap();
     let mut worker = Vec::new();

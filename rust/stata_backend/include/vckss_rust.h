@@ -1436,6 +1436,15 @@ typedef struct VckssGenericExecutionReceiptV1 {
     double maximum_complete_residual;
 } VckssGenericExecutionReceiptV1;
 
+typedef struct VckssGenericExecutionReceiptV2 {
+    uint32_t struct_size, schema_version;
+    VckssGenericExecutionReceiptV1 point_work;
+    uint64_t replay_rhs_count;
+} VckssGenericExecutionReceiptV2;
+int32_t vckss_rust_engine_generic_execution_receipt_v2(uint64_t,
+    VckssGenericExecutionReceiptV2 *, uint32_t);
+_Static_assert(sizeof(VckssGenericExecutionReceiptV2) == 176, "generic V2 work layout");
+
 typedef struct VckssComponentBatchReceiptV1 {
     uint32_t struct_size;
     uint32_t schema_version;
@@ -2181,6 +2190,63 @@ typedef struct {
 _Static_assert(sizeof(VckssMemoryForecastV1) == 32, "unexpected memory forecast size");
 #endif
 int32_t vckss_rust_engine_memory_forecast_v1(uint64_t, VckssMemoryForecastV1 *, uint32_t);
+
+
+/* Additive numerical transport; old requests/receipts remain frozen. These
+ * exports alone do not advertise a Stata command capability. */
+typedef struct {
+    uint32_t abi_version, struct_size, schema_version, threads;
+    uint32_t tolerance_supplied, projection_requested, component_requested, reserved;
+    uint32_t controls_count, reserved_2;
+    VckssEngineSolveRequestV4 point;
+} VckssNumericalRequestV1;
+
+typedef struct VckssNumericalRequestV2 {
+    VckssNumericalRequestV1 v1;
+    uint32_t execution_mode, component_batch_mode, full_cmg, reserved;
+} VckssNumericalRequestV2;
+uint32_t vckss_rust_numerical_schema_v2(void);
+/* Numerical schema V2 attaches to frozen legacy point requests. */
+int32_t vckss_rust_engine_solve_numerical_legacy_v2(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV2 *request);
+int32_t vckss_rust_engine_solve_numerical_generic_legacy_v2(
+    uint64_t generation, const VckssEngineSolveRequestInterruptV3 *request);
+
+int32_t vckss_rust_engine_numerical_preflight_v2(const VckssNumericalRequestV2 *);
+int32_t vckss_rust_engine_solve_numerical_interrupt_v2(uint64_t, const VckssNumericalRequestV2 *,
+    VckssInterruptPollV1, void *, uint32_t);
+_Static_assert(sizeof(VckssNumericalRequestV2) == 344, "numerical V2 request layout");
+typedef struct {
+    uint32_t struct_size, schema_version;
+    uint64_t generation;
+    uint32_t status, engine, leverage_probes, target_probes, target_fold_a, target_fold_b;
+    uint64_t certified_replay_rhs, executed_replay_rhs, attempted_replay_rhs, replay_generator_words, allocation_bound_bytes;
+    uint32_t failed_replay_probe, replay_error_code;
+    double psd_adjustment, minimum_constrained, minimum_residual_margin, maximum_sensitivity_ratio;
+    double score_means[2][3];
+    double conditional[3][3], leverage[3][3], raw[3][3], usable[3][3], mcse[4];
+    uint64_t point_rhs;
+    double maximum_point_complete_residual, maximum_replay_complete_residual;
+} VckssNumericalResultV1;
+typedef struct {
+    uint32_t schema_version, phase, probe, reserved;
+    double complete_residual;
+} VckssNumericalRhsV1;
+uint32_t vckss_rust_numerical_schema_v1(void);
+int32_t vckss_rust_engine_numerical_preflight_v1(const VckssNumericalRequestV1 *);
+int32_t vckss_rust_engine_solve_numerical_v1(uint64_t, const VckssNumericalRequestV1 *);
+int32_t vckss_rust_engine_solve_numerical_interrupt_v1(uint64_t, const VckssNumericalRequestV1 *,
+    VckssInterruptPollV1, void *, uint32_t);
+int32_t vckss_rust_engine_numerical_result_v1(uint64_t, VckssNumericalResultV1 *, uint32_t);
+int32_t vckss_rust_engine_numerical_cmg_work_v1(uint64_t, VckssFullCmgModelReceiptV1 *, uint32_t);
+int32_t vckss_rust_engine_numerical_rhs_v1(uint64_t, VckssNumericalRhsV1 *, uint64_t, uint64_t *);
+#if !defined(__cplusplus)
+_Static_assert(sizeof(VckssNumericalRequestV1) == 328, "numerical request layout");
+_Static_assert(offsetof(VckssNumericalRequestV1, point) == 40, "numerical point offset");
+_Static_assert(sizeof(VckssNumericalResultV1) == 512, "numerical result layout");
+_Static_assert(offsetof(VckssNumericalResultV1, conditional) == 168, "numerical covariance offset");
+_Static_assert(sizeof(VckssNumericalRhsV1) == 24, "numerical RHS layout");
+#endif
 
 #ifdef __cplusplus
 }

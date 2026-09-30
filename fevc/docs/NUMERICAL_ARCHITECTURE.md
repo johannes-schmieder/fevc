@@ -278,6 +278,32 @@ target-probe mean conditional on the realized leverage sketch. It excludes
 leverage-sketch uncertainty, solver error, and econometric sampling
 uncertainty.
 
+The default `mcse(all)` attachment adds local covariance for randomness
+in both existing point-probe stages. It accumulates parity-fold target means,
+pulls them through the fixed-R finite-projection formula and replays each
+original leverage atom with bounded certified replay (up to four directions in
+Rust or eight in Mata, never wider than the admitted leverage batch). Copy-level nonlinear
+multipliers and whole deletion-unit/combined-population scores are retained
+before covariance products. The signed cross-fold estimate has coefficient one
+on the finite-R interaction term; no variance floor is added.
+
+Derivative state and six fold/score coordinates grow linearly in stored rows,
+physical copies or compressed units/cells and the leverage count. A production
+row-by-probe cache is prohibited. Replay re-evaluations are separate from unique
+estimator draws and preserve the original runtime-scoped stream. Mata restores
+the saved post-point streams; the outer command restores the complete caller
+snapshot on every exit. Numerical V2 carries the original executor and attachment
+intent in a 344-byte request and exports a 176-byte combined work receipt. Its
+160-byte point-work prefix excludes replay; replay is separately reconciled.
+The result/RHS layouts and all older solve/receipt layouts remain frozen.
+Legacy compressed/generic point executors have additive V2 numerical selectors
+using their unchanged requests. `mcse(off)` skips new derivative/fold/replay
+work. The developer conditional mode retains the earlier numerical diagnostic.
+Projection/component-inference results receive no MCSE; the main point
+attachment uses the same point and attachment executor selected with MCSE off.
+See the [default/interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md), [the derivation and interface](ALL_PROBE_MCSE.md) and
+[implementation evidence and limits](ALL_PROBE_MCSE_STATUS.md).
+
 ## Memory and runtime boundary
 
 The JLA path does not form an observation-by-parameter design, a parameter

@@ -80,6 +80,42 @@ runtime-RSS allowances. Read `e(memory_forecast_scope)` before comparing
 backends. A zero conditional reserve means the model reports no separate
 reserve, not that the calculation has zero uncertainty.
 
+## All-point-probe attachment
+
+`mcse(off)` removes the additional derivative, fold and replay reservation.
+Default all-MCSE can therefore increase the admission forecast; strict budgets
+may reject an all request that admits the same point calculation with MCSE off.
+It does not weaken allocation or residual gates.
+
+The default `mcse(all)` adds pre-RNG admission reserve for derivative state,
+compensated target folds, leverage scores, replay scratch and result export.
+Replay width is at most four in Rust and eight in Mata, and never exceeds the
+admitted point leverage width; no rows-by-probes matrix is retained.
+Observation derivatives and fold storage are allocated only for
+observation/stayer-observation portions.
+The generic Rust row reserve is conservatively 640 bytes per stored row;
+compressed reserve includes four atom/RHS columns.
+Mata uses conservative increments `192*physical_copies + 640*stored_rows +
+512*R + 4096` for generic execution and `576*deletion_units +
+640*coefficient_cells + 512*R + 4096` for compressed execution. These increments
+enter the existing phase-scratch model and preserve budget presence/policy.
+The larger Mata reserve covers eight-direction buffers and six fixed target-fold
+weights per physical observation copy. It trades bounded memory for less replay
+work; it does not store copy-by-probe responses. Short-panel gather plans have
+at most twice as many entries as source rows. Derivative tiles contain at most
+1,024 copies and shrink on small inputs; diagnostic boundaries retain scalar
+status handling. Rust allocation and admission identities are unchanged.
+
+Rust charges the bounded attachment while solver state is live and reconciles
+owned receipts and overlapping C/Stata destinations at export, including two
+24-byte-per-replay-RHS transport copies. The prepared-data identity excludes
+the numerical reserve; the command admission peak includes it. There is no
+allocation proportional to rows times probe count. `e(mc_allocation_bound_bytes)`
+reports the attachment bound, while command forecasts describe the applicable
+peak lifetime. Allocation high-water and complete-process RSS are measured and
+reported separately in the [source-bound status](ALL_PROBE_MCSE_STATUS.md).
+A warning or disabled forecast policy never permits corrupt result receipts.
+
 ## Returned results
 
 These returns are available after successful completion. Byte amounts use

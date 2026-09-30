@@ -41,6 +41,33 @@ selects `CMG_FULL_V2` through explicit Rust or qualified macOS/Linux automatic
 routing. Current qualification and release boundaries are recorded in
 [`../../fevc/PLAN.md`](../../fevc/PLAN.md).
 
+## All-probe numerical attachment
+
+The frontend defaults to `mcse(all)`; `mcse(off)` omits additional derivative,
+fold and replay work. `mcse(conditional)` is a developer option and
+`numericalmcse()` remains a compatibility alias. Supported projection and
+component-inference attachments keep their existing computation and results;
+MCSE covers only main point estimates.
+
+Numerical V2 adds a 344-byte request carrying the original point executor,
+automatic component-width intent and prepared attachment flags, plus a
+176-byte combined work receipt with the frozen 160-byte point-work prefix and
+separate replay work. Numerical V1's 328-byte request retains its platform and
+point-only restrictions. The 512-byte numerical result and 24-byte replay RHS
+layouts remain unchanged. Additive legacy V2 numerical selectors consume the
+frozen compressed V2 and generic V3 interrupt requests, preserving their point
+receipts and literal batches. Native V2 is enabled on macOS, Linux and existing
+supported Windows routes; this does not enable new Windows solver/inference
+routes. Runtime probe `numerical_api=2` is distinct from qualification.
+
+An implicit default with an older runtime preserves point routing and reports
+MCSE unavailable. Explicit all requires V2 before preparation/RNG. The original
+V1 work getter refuses numerical-attached contexts; V2 reconciles total work
+without changing V1 meanings. Exact-artifact platform qualification and adopted
+binary identities are recorded separately. See the
+[default/interface decision](../../fevc/docs/MCSE_DEFAULT_INTERFACE_2026-09-30.md)
+and [implementation status](../../fevc/docs/ALL_PROBE_MCSE_STATUS.md).
+
 ## Public and legacy memory policy
 
 The additive V6 request is 304 bytes with an exact V4 prefix; its interrupt

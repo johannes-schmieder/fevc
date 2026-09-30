@@ -321,3 +321,14 @@ now use original deletion-unit support, matching Mata. Additive readiness bit
 No ABI layout, observation definition, articulation restriction or numerical
 acceptance threshold changes. See the [integration record](DELETION_UNIT_MOVERS_2026-09-26.md)
 for source-bound validation and platform qualification status.
+
+## 2026-09-30: default numerical MCSE and orthogonal attachments
+
+The owner selected public `mcse(all|off)`, default all, with conditional MCSE
+retained as a developer option and `numericalmcse()` as a compatibility alias.
+Main point MCSE can accompany supported projection or inference; their extra
+results receive no MCSE. The native V2 interface preserves original point
+executors and adds separate replay accounting, including existing Windows
+routes. Binary refresh and scoped Linux SCC qualification are authorized;
+release, CI policy and large cluster campaigns remain separate decisions.
+See [the interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md).

@@ -38,8 +38,11 @@ fevc/fevc.pkg
 fevc/fevc.sthlp
 fevc/fevc__display.ado
 fevc/fevc__lifecycle.ado
+fevc/fevc__numerical.ado
+fevc/fevc__rust_numerical.ado
 fevc/fevc_cmg.mata
 fevc/fevc_graph.mata
+fevc/fevc_numerical.mata
 fevc/fevc_resource.mata
 fevc/fevc_rng.mata
 fevc/fevc_run.ado

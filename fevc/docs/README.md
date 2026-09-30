@@ -16,6 +16,9 @@ and the installed `help fevc`.
 
 - [Numerical architecture](NUMERICAL_ARCHITECTURE.md).
 - [Finite-projection JLA](JLA_FINITE_PROJECTION.md).
+- [Default MCSE interface](MCSE_DEFAULT_INTERFACE_2026-09-30.md),
+  [all-point-probe MCSE derivation](ALL_PROBE_MCSE.md) and
+  [implementation status](ALL_PROBE_MCSE_STATUS.md).
 - [Control-basis certification](CONTROL_BASIS_CERTIFICATION.md) and
   [block-control derivation](BLOCK_CONTROL_DERIVATION.md).
 - [Matrix-free component inference](MATRIX_FREE_COMPONENT_INFERENCE.md) and
@@ -27,6 +30,9 @@ and the installed `help fevc`.
 
 - [Contributing](../../CONTRIBUTING.md) and [testing](../TESTING.md).
 - [Current checkpoint](../PLAN.md).
+- [Default MCSE interface validation](MCSE_DEFAULT_VALIDATION_2026-09-30.md).
+- [All-probe MCSE optimization and qualification](ALL_PROBE_OPTIMIZATION_2026-09-30.md).
+- [Mata all-probe MCSE performance and validation](MATA_ALL_MCSE_OPTIMIZATION_2026-09-30.md).
 - [Model-operator interrupt experiment](INTERRUPT_CHUNKS_2026-09-29.md).
 - [Review fixes and deferred proposals](REVIEW_FIXES_2026-09-29.md).
 - [Control-span reliability candidate](CONTROL_SPAN_REPAIR_2026-09-28.md).

@@ -41,6 +41,7 @@ def test_legacy_distributed_runtime_filenames_are_rejected() -> None:
         assert MODULE.LEGACY_DISTRIBUTED_BASENAME.fullmatch(value)
     for value in (
         "fevc.mata",
+        "fevc_numerical.mata",
         "fevc__display.ado",
         "fevc__lifecycle.ado",
         "fevc_estat.ado",
@@ -67,7 +68,7 @@ def test_private_vckss_build_ids_cannot_be_rebranded() -> None:
     ):
         assert MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)
     for value in (
-        "vckss-api25-control-posterior-timers1",
+        "vckss-api25-control-posterior-nmc4-timers1",
         "vckss-inference-api1-block-projection",
     ):
         assert not MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)

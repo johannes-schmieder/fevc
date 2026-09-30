@@ -1,5 +1,40 @@
 # Pending changes
 
+## September 30, 2026 — numerical MCSE interface follow-up
+
+- Default `mcse(all)` reports approximate all-point-probe numerical MCSE;
+  `mcse(off)` omits additional work and display. `numericalmcse()` remains an
+  alias, and conditional MCSE remains a developer option.
+- Supported projection/inference requests may accompany main-point MCSE.
+  Their extra results receive no MCSE.
+- Native numerical V2 preserves point executors, adds separate replay work,
+  and enables existing Windows point routes in source. Exact-artifact platform
+  qualification and binary adoption are recorded separately.
+
+## Mata all-probe MCSE performance — 2026-09-30
+
+- Batch analytic copy derivatives, prepare bounded panel gathers, and use quad
+  reductions and crossproducts for target folds and whole-probe replay scores.
+  Allocate observation folds only for the observation/stayer portion.
+- Replay up to eight admitted directions and batch compressed cursor state
+  management while retaining the original per-probe RNG calls. Increase Mata
+  admission reserves for the bounded buffers and fixed copy-fold weights.
+- Preserve point/conditional results, scientific gates, RNG and caller state.
+  The private Mata module advances to API 4; the public syntax and native
+  numerical V1 interface are unchanged.
+
+## All-probe MCSE performance — 2026-09-30
+
+- Load native covariance validation through a small Mata module. Replay up to four existing directions per solve in Rust and Mata, reuse scratch, pack Counter-V1 words, fuse observation RHS/pullbacks, cache target predictions and allocate observation derivatives only when needed.
+- Preserve point/conditional results and RNG semantics; failed batches retain explicit attempted, completed and certified work counts. Calibration, performance and local native reruns are recorded separately.
+
+## Opt-in all-point-probe numerical MCSE — 2026-09-29
+
+- Add `numericalmcse(all)` with separate conditional, signed leverage and raw/usable all-probe covariance, two logical target folds and bounded-memory original-probe replay. Preserve point estimates, conditional MCSE, RNG and scientific gates.
+- Add Mata and versioned native request/result/RHS/work transport, typed diagnostic unavailability, memory charging and caller-state checks. No numerical covariance is posted in `e(V)`.
+- Qualification remains in progress; see `docs/ALL_PROBE_MCSE_STATUS.md`. Distributed binaries, releases and CI policy are unchanged.
+
+
 ## Direct control-basis certification — 2026-09-27
 
 - Certify the final canonical controls from an independent inverse/reconstruction

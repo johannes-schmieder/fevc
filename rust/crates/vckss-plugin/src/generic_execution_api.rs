@@ -246,6 +246,71 @@ pub(super) enum GenericExecutionPlan {
         threads: usize,
         full_cmg: FullCmgPlanOptions,
     },
+    NumericalResolved {
+        threads: usize,
+        full_cmg: FullCmgPlanOptions,
+    },
+}
+
+pub(super) fn numerical_execution_plan(
+    point: VckssEngineSolveRequestV4,
+    threads: u32,
+    mode: u32,
+    automatic: u32,
+    tolerance_supplied: u32,
+    full_cmg: u32,
+) -> Result<(Option<GenericExecutionPlan>, Option<FullCmgPlanOptions>)> {
+    if mode == 0 {
+        if automatic != 0 {
+            return Err(abi_error("automatic component batches require an executor"));
+        }
+        let cmg = (full_cmg == 1).then(|| {
+            FullCmgPlanOptions::production(
+                threads as usize,
+                point.v3.v2.v1.pcg_tolerance,
+                (tolerance_supplied == 1).then_some(point.v3.v2.v1.pcg_tolerance),
+            )
+        });
+        return Ok((None, cmg));
+    }
+    if full_cmg != 0 {
+        return Err(abi_error("executor and legacy full-CMG intents overlap"));
+    }
+    let mut v6 = VckssEngineSolveRequestV6 {
+        v4: point,
+        threads,
+        execution_mode: mode,
+        ..Default::default()
+    };
+    if mode == VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO {
+        let mut v8 = VckssEngineSolveRequestV8::default();
+        v6.v4.v3.v2.v1.struct_size = size_of::<VckssEngineSolveRequestV8>() as u32;
+        v8.v7.v6 = v6;
+        v8.resolved_execution_mode = mode;
+        v8.tolerance_supplied = tolerance_supplied;
+        if automatic != 0 {
+            return Err(abi_error(
+                "resolved automatic executor has literal component policy",
+            ));
+        }
+        let plan = validate_v8(v8)?;
+        let GenericExecutionPlan::ResolvedExecution { full_cmg, .. } = plan else {
+            unreachable!()
+        };
+        Ok((Some(plan), Some(full_cmg)))
+    } else if automatic == 1 {
+        v6.v4.v3.v2.v1.struct_size = size_of::<VckssEngineSolveRequestV7>() as u32;
+        let (plan, cmg) = validate_v7(VckssEngineSolveRequestV7 {
+            v6,
+            component_batch_mode: 1,
+            reserved_7: 0,
+        })?;
+        Ok((Some(plan), cmg))
+    } else {
+        v6.v4.v3.v2.v1.struct_size = size_of::<VckssEngineSolveRequestV6>() as u32;
+        let (plan, cmg) = validate(v6)?;
+        Ok((Some(plan), cmg))
+    }
 }
 
 fn validate(
@@ -665,7 +730,49 @@ pub extern "C" fn vckss_rust_engine_generic_execution_receipt_v1(
         let handle = ContextHandle::from_generation(generation)?;
         let state = lock_engine("generic_execution")?;
         let solved = state.registry.result(handle)?;
-        write_output(output, receipt(generation, solved)?);
+        write_output(output, receipt(generation, solved, false)?);
+        Ok(())
+    })
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+#[repr(C)]
+pub struct VckssGenericExecutionReceiptV2 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub point_work: VckssGenericExecutionReceiptV1,
+    pub replay_rhs_count: u64,
+}
+const _: [(); 176] = [(); size_of::<VckssGenericExecutionReceiptV2>()];
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_generic_execution_receipt_v2(
+    generation: u64,
+    output: *mut VckssGenericExecutionReceiptV2,
+    capacity: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssGenericExecutionReceiptV2>(
+            output.cast(),
+            capacity,
+            "numerical execution receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("generic_execution")?;
+        let solved = state.registry.result(handle)?;
+        let replay_rhs_count = solved.numerical.as_ref().map_or(0, |n| match n {
+            numerical_api::Attachment::Generic(n) => n.replay_executed_rhs_count as u64,
+            _ => 0,
+        });
+        write_output(
+            output,
+            VckssGenericExecutionReceiptV2 {
+                struct_size: size_of::<VckssGenericExecutionReceiptV2>() as u32,
+                schema_version: 2,
+                point_work: receipt(generation, solved, true)?,
+                replay_rhs_count,
+            },
+        );
         Ok(())
     })
 }
@@ -718,7 +825,7 @@ pub extern "C" fn vckss_rust_engine_component_batch_receipt_v1(
                 gram_width: to_u64(batch.gram_width, "Gram width")?,
                 automatic_cap: to_u64(batch.automatic_cap, "automatic component cap")?,
                 permitted_threads: to_u64(batch.permitted_threads, "component threads")?,
-                maximum_rhs_capacity: receipt(generation, solved)?.maximum_rhs_capacity,
+                maximum_rhs_capacity: receipt(generation, solved, true)?.maximum_rhs_capacity,
                 command_peak_forecast_bytes: result.receipt.execution.memory.peak_bytes,
             },
         );
@@ -726,12 +833,25 @@ pub extern "C" fn vckss_rust_engine_component_batch_receipt_v1(
     })
 }
 
-fn receipt(generation: u64, solved: &EngineSolved) -> Result<VckssGenericExecutionReceiptV1> {
+fn receipt(
+    generation: u64,
+    solved: &EngineSolved,
+    numerical: bool,
+) -> Result<VckssGenericExecutionReceiptV1> {
+    if solved.numerical.is_some() && !numerical {
+        return Err(unsupported(
+            "all-probe work requires the numerical V1 receipt",
+        ));
+    }
     let EngineEstimate::GenericJla(result) = &solved.result else {
         return Err(unsupported(
             "generic execution receipt requires a V6 generic result",
         ));
     };
+    let replay = solved.numerical.as_ref().map_or(0, |n| match n {
+        numerical_api::Attachment::Generic(n) => n.replay_executed_rhs_count as u64,
+        _ => 0,
+    });
     let execution = &result.receipt.execution;
     let gram = result
         .component_inference
@@ -790,7 +910,11 @@ fn receipt(generation: u64, solved: &EngineSolved) -> Result<VckssGenericExecuti
     .ok_or_else(|| resource_error("generic_execution", "logical RHS count overflow"))?;
     let (permitted, workers, active, capacity) = if let Some(queue) = &execution.diagonal_queue {
         value.execution_mode = VCKSS_GENERIC_EXECUTION_DIAGONAL_QUEUE;
-        value.queued_rhs_count = to_u64(queue.work.completed_rhs, "queued RHS count")?;
+        value.queued_rhs_count = to_u64(queue.work.completed_rhs, "queued RHS count")?
+            .checked_sub(replay)
+            .ok_or_else(|| {
+                BackendError::invariant("generic_execution", "replay queue count underflow")
+            })?;
         if value.queued_rhs_count.checked_add(value.fit_rhs_count) != Some(value.logical_rhs_count)
         {
             return Err(BackendError::invariant(
@@ -808,9 +932,16 @@ fn receipt(generation: u64, solved: &EngineSolved) -> Result<VckssGenericExecuti
         (&execution.direct_attachments, &execution.full_cmg)
     {
         value.execution_mode = VCKSS_GENERIC_EXECUTION_DIRECT_ATTACHMENTS;
-        value.cmg_rhs_count = cmg.rhs_count;
+        value.cmg_rhs_count = cmg.rhs_count.checked_sub(replay).ok_or_else(|| {
+            BackendError::invariant("generic_execution", "replay CMG count underflow")
+        })?;
         value.control_refinement_rhs_count = attachment.control_refinement_rhs;
-        if value.logical_rhs_count != to_u64(attachment.logical_rhs, "direct logical RHS count")?
+        if value.logical_rhs_count
+            != to_u64(attachment.logical_rhs, "direct logical RHS count")?
+                .checked_sub(replay)
+                .ok_or_else(|| {
+                    BackendError::invariant("generic_execution", "replay logical count underflow")
+                })?
             || value
                 .logical_rhs_count
                 .checked_add(value.control_refinement_rhs_count)

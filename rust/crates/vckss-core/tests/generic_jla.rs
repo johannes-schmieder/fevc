@@ -45,6 +45,9 @@ mod queued_component;
 #[path = "generic_jla/direct_component.rs"]
 mod direct_component;
 
+#[path = "generic_jla/numerical_attachment.rs"]
+mod numerical_attachment;
+
 fn fixture(controls: bool) -> CompressedProblem {
     let mut worker = Vec::new();
     let mut firm = Vec::new();

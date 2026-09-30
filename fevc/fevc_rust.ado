@@ -62,6 +62,7 @@ program define fevc_rust, rclass
         capture scalar drop __vckss_rust_core_flags
         capture scalar drop __vckss_rust_progress_api
         capture scalar drop __vckss_rust_execution_api
+        capture scalar drop __vckss_rust_numerical_api
         capture scalar drop __vckss_rust_exact_api
         capture scalar drop __vckss_rust_exact_resolved_api
         capture scalar drop __vckss_rust_exact_legacy_api
@@ -75,7 +76,7 @@ program define fevc_rust, rclass
         local execution_api = 0
         capture confirm scalar __vckss_rust_execution_api
         if !_rc local execution_api = scalar(__vckss_rust_execution_api)
-        foreach name in exact_api exact_resolved_api exact_legacy_api {
+        foreach name in numerical_api exact_api exact_resolved_api exact_legacy_api {
             local `name' = 0
             capture confirm scalar __vckss_rust_`name'
             if !_rc local `name' = scalar(__vckss_rust_`name')
@@ -86,10 +87,11 @@ program define fevc_rust, rclass
         return scalar support_flags = scalar(__vckss_rust_support_flags)
         return scalar deterministic_parallelism = scalar(__vckss_rust_deterministic)
         return scalar execution_api = `execution_api'
+        return scalar numerical_api = `numerical_api'
         return scalar exact_api = `exact_api'
         return scalar exact_resolved_api = `exact_resolved_api'
         return scalar exact_legacy_api = `exact_legacy_api'
-        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api exact_api exact_resolved_api exact_legacy_api {
+        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api numerical_api exact_api exact_resolved_api exact_legacy_api {
             capture scalar drop __vckss_rust_`name'
         }
         return local backend "rust"
@@ -1583,8 +1585,15 @@ program define fevc_rust, rclass
             di as err "executionreceipt requires one positive integer native generation"
             exit 198
         }
-        capture noisily fevc__rust_plugin_call `plugin', executionreceipt `handle'
+        local receipt_selector executionreceipt
+        if "$VCKSS_NMC_MODE"=="all" local receipt_selector executionnumericalreceiptv2
+        capture noisily fevc__rust_plugin_call `plugin', `receipt_selector' `handle'
         local execution_export_rc = _rc
+        if !`execution_export_rc' & "$VCKSS_NMC_MODE"=="all" {
+            capture assert scalar(__vckss_gex_replay)==real("$VCKSS_NMC_EXECUTED")
+            if _rc local execution_export_rc = 498
+        }
+        capture scalar drop __vckss_gex_replay
         if `execution_export_rc' {
             foreach name in struct schema generation mode threads workers active cmg_concurrency ///
                 capacity leverage target fit rank point projection component gram logical queued ///
@@ -1642,14 +1651,14 @@ program define fevc_rust, rclass
         exit
     }
 
-    if "`subcommand'" == "fullcmgmodelreceipt" {
+    if inlist("`subcommand'","fullcmgmodelreceipt","numericalcmgworkv1") {
         syntax anything(name=handle id="native Rust generation")
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
             di as err "fullcmgmodelreceipt requires one positive integer native generation"
             exit 198
         }
-        fevc__rust_plugin_call `plugin', fullcmgmodelreceipt `handle'
+        fevc__rust_plugin_call `plugin', `subcommand' `handle'
         foreach pair in struct:struct_size schema:schema_version generation:generation ///
             controls:controls_count nuisance:nuisance_mode logical_rhs:logical_rhs_count ///
             strict_rhs:explicit_options_rhs_count controlled_rhs:controlled_rhs_count ///
@@ -1731,10 +1740,15 @@ program define fevc_rust, rclass
         exit
     }
 
-    if "`subcommand'" == "solve" {
+    if "`subcommand'" == "numericalresult" {
+        fevc__rust_numerical `plugin' `0'
+        return add
+        exit
+    }
+    if inlist("`subcommand'","solve","numericalpreflight") {
         gettoken handle 0 : 0, parse(" ,")
         capture confirm integer number `handle'
-        if _rc | real("`handle'") <= 0 {
+        if _rc | real("`handle'") < 0 | (real("`handle'")==0 & "`subcommand'"=="solve") {
             di as err "solve requires one positive integer native generation"
             exit 198
         }
@@ -1753,7 +1767,15 @@ program define fevc_rust, rclass
             LEVERAGEBATCHMODE(string) TARGETBATCHMODE(string)                ///
             FALLBACK(integer -1) WALLSECONDS(real 0) FULLCMG(integer 0) ///
             THREADS(integer 1) TOLERANCESUPPLIED(integer 0) EXECUTION(integer 0) ///
-            COMPONENTBATCHAUTO(integer 0) EXACTEXECUTION(integer 0) EXACTLEGACY(integer 0)]
+            COMPONENTBATCHAUTO(integer 0) EXACTEXECUTION(integer 0) EXACTLEGACY(integer 0) ///
+            NUMERICALALL(integer 0) NUMERICALCONTROLS(integer 0) ///
+            NUMERICALPROJECTION(integer 0) NUMERICALCOMPONENT(integer 0)]
+        if "`subcommand'"=="numericalpreflight" local numericalall = 2
+        if !inlist(`numericalall',0,1,2) | `numericalcontrols'<0 | ///
+            (`numericalall' & (`exactexecution' | `exactlegacy')) {
+            di as err "invalid numerical V1 execution request"
+            exit 198
+        }
         if !inlist(`exactlegacy',0,1) | (`exactlegacy' & ///
             (`exactexecution' | `execution' | `fullcmg' | `componentbatchauto' | ///
              `capabilityschema' | `capabilityprofile' | "`engine'"!="" | ///
@@ -1863,7 +1885,7 @@ program define fevc_rust, rclass
                 di as err "invalid full-CMG solve controls"
                 exit 198
             }
-            if `fullcmg' {
+            if `fullcmg' & !`numericalall' {
                 fevc__rust_solve_v5 `plugin' `handle' `seed' `probes'   ///
                     `leveragebatch' `targetbatch' `route' `tolerance_arg' ///
                     `maxiter' `algorithm' `deletion' `nuisance' `exactlimit' ///
@@ -1887,7 +1909,7 @@ program define fevc_rust, rclass
                 `wallsecondssupplied' `physical_arg' `capabilityschema'  ///
                 `capabilityprofile' `frequencyused' `signature_hi_arg'   ///
                 `signature_lo_arg' `leveragebatchmode'                   ///
-                `targetbatchmode' `fallback' `wallseconds_arg' `execution' `threads' `componentbatchauto' `tolerancesupplied' `exactexecution'
+                `targetbatchmode' `fallback' `wallseconds_arg' `execution' `threads' `componentbatchauto' `tolerancesupplied' `exactexecution' `numericalall' `numericalcontrols' `fullcmg' `numericalprojection' `numericalcomponent'
             return add
             exit
         }
@@ -1897,6 +1919,7 @@ program define fevc_rust, rclass
         }
         if "`engine'" == "" {
             local selector solve
+            if `numericalall' local selector solvenumericallegacyv2
             local thread_arg
             if `exactlegacy' {
                 local selector solveexactlegacyv1
@@ -1951,7 +1974,9 @@ program define fevc_rust, rclass
             local physical_arg = strtrim(strofreal(`physicallimit', "%21.0f"))
             local signature_hi_arg = strtrim(strofreal(`signaturehi', "%21.0f"))
             local signature_lo_arg = strtrim(strofreal(`signaturelo', "%21.0f"))
-            fevc__rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
+            local selector solve
+            if `numericalall' local selector solvenumericallegacyv2
+            fevc__rust_plugin_call `plugin', `selector' `handle' `seed' `probes'  ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
                 `algorithm' `deletion' `nuisance' `exactlimit' `blocksizelimit' ///
                 `rank_tolerance_arg' `block_tolerance_arg' `engine' `batchmode' ///

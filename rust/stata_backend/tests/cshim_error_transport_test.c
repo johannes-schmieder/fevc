@@ -21,6 +21,33 @@ int32_t vckss_rust_report_call_v1(const VckssProgressOptionsV1 *options,
     return operation(context);
 }
 
+uint32_t vckss_rust_numerical_schema_v1(void) { return 1u; }
+uint32_t vckss_rust_numerical_schema_v2(void) { return 2u; }
+int32_t vckss_rust_engine_numerical_preflight_v2(const VckssNumericalRequestV2 *r) { (void)r; return 11; }
+int32_t vckss_rust_engine_solve_numerical_interrupt_v2(uint64_t g, const VckssNumericalRequestV2 *r,
+    VckssInterruptPollV1 p, void *c, uint32_t i) { (void)g; (void)r; (void)p; (void)c; (void)i; return 11; }
+int32_t vckss_rust_engine_generic_execution_receipt_v2(uint64_t g, VckssGenericExecutionReceiptV2 *r,
+    uint32_t n) { (void)n; memset(r,0,sizeof(*r)); r->struct_size=sizeof(*r); r->schema_version=2;
+    return vckss_rust_engine_generic_execution_receipt_v1(g,&r->point_work,sizeof(r->point_work)); }
+
+int32_t vckss_rust_engine_numerical_preflight_v1(const VckssNumericalRequestV1 *r) { (void)r; return 11; }
+int32_t vckss_rust_engine_solve_numerical_interrupt_v1(uint64_t g, const VckssNumericalRequestV1 *r,
+    VckssInterruptPollV1 p, void *c, uint32_t i) { (void)g; (void)r; (void)p; (void)c; (void)i; return 11; }
+int32_t vckss_rust_engine_numerical_cmg_work_v1(uint64_t g, VckssFullCmgModelReceiptV1 *r,
+    uint32_t n) { (void)g; (void)r; (void)n; return 11; }
+static VckssNumericalResultV1 numerical_result;
+static int numerical_writes;
+static int numerical_corrupt_rhs;
+int32_t vckss_rust_engine_numerical_result_v1(uint64_t g, VckssNumericalResultV1 *r, uint32_t n) {
+    assert(n==sizeof(*r)); *r=numerical_result; r->generation=g; return 0;
+}
+int32_t vckss_rust_engine_numerical_rhs_v1(uint64_t g, VckssNumericalRhsV1 *r, uint64_t n, uint64_t *written) {
+    (void)g; assert(n==numerical_result.certified_replay_rhs);
+    for(uint64_t i=0;i<n;++i) r[i]=(VckssNumericalRhsV1){1u,1u,(uint32_t)i,0u,0.0};
+    if(n && numerical_corrupt_rhs) r[0].phase=2u;
+    *written=n; return 0;
+}
+
 uint32_t vckss_rust_abi_version(void) { return VCKSS_RUST_ABI_VERSION_V1; }
 const char *vckss_rust_backend_version(void) { return VCKSS_RUST_RUNTIME_BUILD_ID; }
 int32_t vckss_rust_backend_capabilities_v1(VckssBackendCapabilitiesV1 *output, uint32_t capacity)
@@ -787,6 +814,7 @@ static ST_int mock_macro_save(char *name, char *value)
 
 static ST_int mock_matrix_store(char *name, ST_int row, ST_int column, ST_double value)
 {
+    if(strncmp(name,"nmc",3)==0) ++numerical_writes;
     (void)name;
     (void)row;
     (void)column;
@@ -796,12 +824,14 @@ static ST_int mock_matrix_store(char *name, ST_int row, ST_int column, ST_double
 
 static ST_int mock_matrix_rows(char *name)
 {
+    if(strncmp(name,"nmc",3)==0) return strcmp(name,"nmcse")==0 || strcmp(name,"nmcmeta")==0 ? 1 : 3;
     assert(strcmp(name, "R") == 0);
     return matrix_rows;
 }
 
 static ST_int mock_matrix_columns(char *name)
 {
+    if(strncmp(name,"nmc",3)==0) return strcmp(name,"nmcse")==0 ? 4 : strcmp(name,"nmcmeta")==0 ? 15 : 3;
     assert(strcmp(name, "R") == 0);
     return matrix_columns;
 }
@@ -983,6 +1013,22 @@ int main(void)
     plugin.rowsof = mock_matrix_rows;
     plugin.colsof = mock_matrix_columns;
     _stata_ = &plugin;
+    {
+        char *a[]={"numericalresultv1","1","nmccond","nmclev","nmcraw","nmcall","nmcse","nmcmeta","nmcrhs"};
+        numerical_result=(VckssNumericalResultV1){.struct_size=sizeof(numerical_result),.schema_version=1u,
+            .status=2u,.engine=2u,.leverage_probes=3u,.target_probes=3u,.target_fold_a=2u,.target_fold_b=1u,
+            .certified_replay_rhs=3u,.executed_replay_rhs=3u,.attempted_replay_rhs=3u,.failed_replay_probe=UINT32_MAX};
+        assert(vckss_numerical_result(9,a)==0 && numerical_writes==64);
+        numerical_writes=0; numerical_result.schema_version=2u;
+        assert(vckss_numerical_result(9,a)==198 && numerical_writes==0);
+        numerical_result.schema_version=1u; numerical_corrupt_rhs=1;
+        assert(vckss_numerical_result(9,a)==198 && numerical_writes==0);
+        numerical_corrupt_rhs=0; numerical_result.usable[0][0]=INFINITY;
+        assert(vckss_numerical_result(9,a)==198 && numerical_writes==0);
+        numerical_result.usable[0][0]=0; a[3]=a[2];
+        assert(vckss_numerical_result(9,a)==198 && numerical_writes==0);
+    }
+
     test_marked_column_bounds(&plugin);
 
     {
@@ -1070,12 +1116,13 @@ int main(void)
 
     reset_transport();
     assert(vckss_probe() == 0);
-    assert(saved_execution_api == 3 && saved_progress_api == 2 && scalar_calls == 10);
+    assert(saved_execution_api == 3 && saved_progress_api == 2 && scalar_calls == 11);
     reset_transport();
     fail_execution_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
     assert(saved_execution_api == -1 && release_calls == 0 && clear_calls == 0);
 
+    for (int numerical = 0; numerical <= 1; ++numerical) {
     for (int mode = 1; mode <= 2; ++mode) {
         reset_transport();
         char *args[] = {"solveexecution", "705", "17", "17", "3", "2", "diagonal",
@@ -1154,26 +1201,27 @@ int main(void)
                 case 13: execution_receipt.maximum_active_workers = mode == 1 ? 0 : 1; break;
                 case 14: execution_receipt.execution_mode = 0; break;
             }
-            assert(vckss_generic_execution_receipt(705) == (corrupt ? 498 : 0));
+            assert(vckss_generic_execution_receipt(705, numerical) == (corrupt ? 498 : 0));
             if (corrupt) assert_released_idle(705);
-            else assert(active_generation == 705 && scalar_calls == 23);
+            else assert(active_generation == 705 && scalar_calls == 23 + numerical);
         }
-    }
+    }    }
+
     reset_transport();
     active_generation = 705;
     fail_scalar = 1;
-    assert(vckss_generic_execution_receipt(705) != 0);
+    assert(vckss_generic_execution_receipt(705, 0) != 0);
     assert_released_idle(705);
 
     reset_transport();
     active_generation = UINT64_C(701);
-    assert(vckss_full_cmg_model_receipt(active_generation) == 0);
+    assert(vckss_cmg_model_work(active_generation, 0) == 0);
     assert(active_generation == UINT64_C(701));
     for (int corrupt = 1; corrupt <= 3; ++corrupt) {
         reset_transport();
         active_generation = UINT64_C(701);
         corrupt_full_cmg_model_receipt = corrupt;
-        assert(vckss_full_cmg_model_receipt(active_generation) == 498);
+        assert(vckss_cmg_model_work(active_generation, 0) == 498);
         assert_released_idle(UINT64_C(701));
     }
 
@@ -1655,3 +1703,6 @@ int main(void)
     assert(strstr(vckss_last_native_detail, "primary") != NULL);
     return 0;
 }
+
+int32_t vckss_rust_engine_solve_numerical_legacy_v2(uint64_t generation, const VckssEngineSolveRequestInterruptV2 *request) { (void)generation; (void)request; return 11; }
+int32_t vckss_rust_engine_solve_numerical_generic_legacy_v2(uint64_t generation, const VckssEngineSolveRequestInterruptV3 *request) { (void)generation; (void)request; return 11; }

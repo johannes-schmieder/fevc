@@ -75,6 +75,7 @@ Only frequency weights ({cmd:[fw=}{it:frequency}{cmd:]}) are supported.
     {cmd:deletionid(}{it:varname}{cmd:)}{col 40}optional match identifier
     {cmd:stayers(both|movers)}{col 40}include eligible stayers or movers only
     {cmd:probes(}{it:#}{cmd:)}{col 40}approximation precision; default 200
+    {cmd:mcse(all|off)}{col 40}numerical MCSE; default all
     {cmd:seed(}{it:#}{cmd:)}{col 40}estimation seed; default 8675309
     {cmd:nolog}{col 40}suppress progress messages
   {hline 76}
@@ -128,8 +129,41 @@ The usual inference restrictions continue to apply.
 (JLA). More probes reduce numerical approximation error but take longer.
 Start with the default 200; increase it if the reported numerical MCSE is
 large relative to the components you wish to interpret. Numerical MCSE is
-{bf:not a sampling standard error}; it also excludes uncertainty from the
-initial leverage approximation.
+{bf:not a sampling standard error}. The default includes the local contribution
+of both leverage and target probes.
+
+{phang}
+{cmd:mcse(all)}, the default, reports approximate numerical MCSE for the four
+main point estimates when both point probe stages are redrawn. It uses two
+target folds and deterministic replay of the original leverage directions.
+It excludes finite-probe bias, solver and floating-point error, and sampling
+uncertainty. Exact estimation returns zero numerical covariance without replay.
+A substantive negative eigenvalue or nonsmooth/failed replay withholds the
+all-probe diagnostic while retaining a valid point estimate. Raw signed
+covariance remains available when computed.
+
+{phang}
+{cmd:mcse(off)} skips all-probe derivative, fold and replay work and suppresses
+numerical MCSE output. Numerical MCSE returns are unavailable, rather than zero.
+{cmd:numericalmcse()} remains a compatibility alias; specifying both names is
+an error. The developer-only {cmd:mcse(conditional)} retains the earlier MCSE
+conditional on the realized leverage sketch and performs no leverage replay.
+
+{phang}
+MCSE may accompany any otherwise supported {cmd:project()} or sampling-inference
+request. It describes the main point estimates only. No MCSE is computed for
+projection coefficients, their covariance, sampling covariance, confidence
+intervals or their additional simulations. Numerical covariance is never
+posted as econometric {cmd:e(V)}. The main display and {cmd:estat diagnostics}
+show method availability.
+
+{phang}
+Mata and numerical V2 native plugins implement the diagnostic on their supported
+point routes. For an older plugin, an omitted {cmd:mcse()} preserves the selected
+point backend and reports {cmd:unavailable_capability}; explicit {cmd:mcse(all)}
+requires the matching interface and fails before preparation and estimator RNG.
+The native interface does not expand platform support for projection, inference
+or solver routes.
 
 {phang}
 {cmd:seed()} makes the randomized calculation reproducible within the
@@ -488,7 +522,27 @@ Caller timers are preserved on success, error, and interruption.
 {cmd:e(b)} and {cmd:e(kss)} contain corrected worker variance, firm variance,
 raw worker-firm covariance, and total variance, in that order.
 {cmd:e(plugin)}, {cmd:e(correction)}, and {cmd:e(numerical_mcse)} hold their
-uncorrected estimates, bias corrections, and numerical MCSEs.
+uncorrected estimates, bias corrections, and legacy conditional numerical MCSEs.
+By default, or with {cmd:mcse(all)}, {cmd:e(numerical_mccov_cond)},
+{cmd:e(numerical_mccov_leverage)}, {cmd:e(numerical_mccov_all_raw)} and
+{cmd:e(numerical_mccov_all)} are separate 3 by 3 matrices ordered worker
+variance, firm variance, raw worker-firm covariance. {cmd:e(numerical_mcse_all)}
+contains four MCSEs; its total uses the covariance and contrast (1,1,2).
+{cmd:e(numerical_mc_method)} is {cmd:crossfit_if_v1};
+{cmd:e(numerical_mc_status)} records availability. {cmd:e(mc_replay_rhs)},
+{cmd:e(mc_replay_attempted_rhs)}, {cmd:e(mc_replay_executed_rhs)},
+{cmd:e(mc_replay_generator_work)} and {cmd:e(mc_allocation_bound_bytes)}
+record additional work and scratch. {cmd:e(numerical_replay_rhs)} holds
+certified replay residuals with zero-based logical probe indices when present.
+Replay uses batches of at most four existing leverage directions in Rust and
+eight in Mata, bounded by the admitted leverage width, and reuses the prepared
+solver. {cmd:e(mcse_mode)} records {cmd:all}, {cmd:off} or the developer mode
+{cmd:conditional}. With {cmd:mcse(off)}, {cmd:e(numerical_mcse)} is missing,
+availability indicators are zero and all-probe matrices/work are absent. A failed batch withholds the all-probe MCSE and reports
+attempted work, executor-accounted completed work and the certified prefix separately;
+{cmd:e(mc_failed_replay_probe)} identifies the first uncertified direction.
+
+{pstd}
 {cmd:e(decomposition)} adds the sorting row and shares; stored shares are
 proportions, while the display reports percentages.
 

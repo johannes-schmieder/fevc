@@ -1,4 +1,91 @@
-# Current checkpoint — 2026-09-29
+# Current checkpoint — default MCSE interface, 2026-09-30
+
+The owner-authorized public `mcse(all|off)` option defaults to all, with
+`numericalmcse()` as a compatibility alias and conditional MCSE retained for
+development. Supported projection and sampling inference keep their original
+results; MCSE covers only the four main point estimates. Native numerical V2
+preserves point executors and frozen receipt meanings, reconciles separate
+replay work and enables existing Windows point routes in source.
+
+Fresh prescribed calibration completes 239,616 attempts across 72 dense/native
+cells: all 540 complete contrast screens pass; the 18 nested cells retain their
+`observed_complete` diagnostic classification. Full local native Stata and
+Mac thin/universal arm64/Rosetta mode, attachment and install qualification
+pass. The integrated source gate and all 300 timing commands pass, with 14,004
+identical recorded numeric comparisons. At 12,000 rows Rust all/off overhead
+is 17–23% cold and 15–22% warm; generic Mata overhead is 33% cold and 48%
+warm, so generic percentage parity remains unmet. Linux job 7803612 passes
+the single four-core retest, full suite and isolated install after a source-bundle inventory fix (`failed=0`, `exit_status=0`).
+The three Mac and one Linux exact qualified binaries are adopted locally.
+The owner has authorized committing and pushing this source, the existing
+hosted Windows build, and private AWS runtime and clean-install tests.
+Windows qualification and the fifth binary refresh are now in progress;
+the private machine is stopped before the run. The earlier development
+receipts retain their original source and qualification scope.
+The [interface decision](docs/MCSE_DEFAULT_INTERFACE_2026-09-30.md) and
+[development report](docs/MCSE_DEFAULT_VALIDATION_2026-09-30.md) record current
+claims, source identities, retained failures and remaining qualification.
+No release, tag, CI-policy change or large cluster campaign is included.
+
+## Earlier Mata checkpoint — 2026-09-30
+
+The Mata all-MCSE follow-up replaces scalar scoring/group gathers with bounded
+analytic tiles, prepared panels and quad contractions, and admits at most eight
+replay directions. Generic all commands improve 2.11–2.12× cold and 2.46× warm
+on the 12,000-row benchmark. Added overhead is 31–33% cold / 45–48% warm;
+compressed cold overhead is 19%, comparable to Rust's 21% on that input.
+Generic percentage parity with Rust remains unmet. Final source gates, Stata
+quick/full and focused width-eight independent-oracle checks pass. Original
+streams match across 324 old/new fits; re-auditing 239,616 existing prescribed
+calibration attempts reproduces all 72 prior audits, without fresh calibration
+draws or a broader Mata RNG qualification claim. The
+[Mata report](docs/MATA_ALL_MCSE_OPTIMIZATION_2026-09-30.md) and
+[receipt](docs/mata_all_mcse_optimization_development_20260930.json) record the
+source, performance, memory tradeoff and remaining scope. Public defaults and
+syntax, native binaries, CI policy and prior evidence are preserved.
+
+## Earlier MCSE optimization checkpoint — 2026-09-30
+
+Issue #7 MCSE performance changes are implemented in the preserved `main`
+worktree: small numerical Mata preflight, bounded four-direction replay,
+packed Counter-V1 reuse, fixed scratch and lazy match-only observation state.
+Point/conditional results, RNG/caller state and scientific gates are preserved.
+M0–M4 pass within local development scope, including 239,616 prescribed
+calibration attempts, independent review, 192 complete-command timings and
+final Mac thin/universal arm64/Rosetta clean-install qualification.
+Cold Rust all-probe commands improve 1.55–2.47×; warm Rust gains are small,
+and Mata improves 1.05–1.33× on the fixed inputs. Exact measurement scope,
+allocation/RSS, failures and remaining platform/scale/adoption qualification
+are in the [optimization report](docs/ALL_PROBE_OPTIMIZATION_2026-09-30.md)
+and [source-bound receipt](docs/all_probe_optimization_development_20260930.json).
+Original runtimes and earlier receipts remain intact. No release, CI policy
+change or cluster campaign is included.
+
+## Implementation checkpoint — 2026-09-29
+
+Issue [#7](https://github.com/johannes-schmieder/fevc/issues/7) is implemented
+in the current `main` worktree, starting from its reviewed clean source
+`ecd62544`. M0–M3 deliver independent mathematical/reference tests, bounded
+Rust/Mata generic and compressed replay, combined stayers, and the additive
+numerical V1 native/frontend interface. The opt-in `numericalmcse(all)` preserves
+points, conditional MCSE, production RNG and caller state; raw signed covariance
+and typed unavailability remain separate from sampling inference.
+
+M4 records prescribed dense and current-source Counter-V1 calibration (27
+complete plus nine nested cells per campaign), independent review, bounded
+allocation, complete-command measurements and source-local native/install
+checks (866 Python tests, Stata quick/full and local Mac thin/universal arm64
+and Rosetta). The final 24 paired timing commands preserve point/conditional
+results; prior local runtimes are restored after private qualification.
+The failed v2 validator-profile run and superseded candidate checks are
+preserved. Evidence scopes and remaining clean-commit/platform/scale/release
+qualification are explicit in the [contract](docs/ALL_PROBE_MCSE.md),
+[status](docs/ALL_PROBE_MCSE_STATUS.md) and
+[completion receipt](docs/all_probe_frontend_development_20260929.json).
+Distributed binaries and CI policy are unchanged; no commit, push, issue
+mutation, release or cluster campaign was made.
+
+## Interrupt optimization checkpoint — 2026-09-29
 
 The bounded interrupt optimization moves branches out of the scalar and batched
 generic model operators, RHS reduction and worker reconstruction. Arithmetic

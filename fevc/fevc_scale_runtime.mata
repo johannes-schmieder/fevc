@@ -6,6 +6,12 @@ mata:
 mata set matastrict on
 mata set matalnum off
 
+real scalar vckss_scale_runtime__nmc_api()
+{
+    return(1)
+}
+
+
 /*
 The lightweight prepared-state owner and constructor live in fevc_scale.mata
 so eligibility diagnostics and numerical work share one canonical compression
@@ -21,7 +27,7 @@ real scalar vckss_scale_runtime__api_level()
 
 string scalar vckss_scale_runtime__build_id()
 {
-    return("vckss-scale-runtime-api3-fe-buf1-buffered")
+    return("vckss-scale-runtime-api3-fe-buf1-nmc4")
 }
 
 real rowvector vckss_srt__diagnostics(
@@ -82,6 +88,7 @@ void vckss_scale_runtime__stata_run(
     struct vckss_scale_rng_context scalar rng_context
     struct vckss_scale_atom_provider scalar provider
     struct vckss_scale_route_context scalar route_context
+    struct vckss_nmc__attachment scalar numerical
     struct vckss_route_result scalar routed
     struct vckss_result scalar out
     struct vckss_scale_engine_result scalar rich
@@ -115,6 +122,9 @@ void vckss_scale_runtime__stata_run(
                 &VCKSS_SCALE_RUNTIME.design,provider,
                 probes,leverage_batch,target_batch,
                 tolerance,maxiter,rank_tolerance,block_tolerance)
+            if (st_global("VCKSS_NMC_MODE") == "all") {
+                route_context.numerical = &numerical
+            }
             if (route_context.status != "CONVERGED") {
                 routed.estimator = vckss__failure(
                     route_context.status,"compressed route context is invalid")
@@ -151,6 +161,9 @@ void vckss_scale_runtime__stata_run(
         }
     }
     out = routed.estimator
+    if (st_global("VCKSS_NMC_MODE") == "all" & out.status == "CONVERGED") {
+        vckss_nmc__stata_export(numerical)
+    }
     results = out.plugin \ out.correction \ out.corrected \
         out.numerical_mcse
     st_matrix(results_name,results)

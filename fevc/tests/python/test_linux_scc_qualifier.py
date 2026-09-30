@@ -228,6 +228,7 @@ def test_dirty_bundle_binds_current_source_without_private_veneto() -> None:
     assert "rust/experiments/optimization_parity_20260913/run_development_smoke.sge" in files
     assert "rust/experiments/optimization_parity_20260913/run_development_cell.sge" in files
     assert not any(path.startswith("KSS_Veneto_replication/") for path in files)
+    assert not any(Path(name).suffix == ".plugin" for name in files)
     assert len(files) == count
     for row in files["SOURCE_FILES.sha256"].decode().splitlines():
         expected, relative = row.split("  ", 1)

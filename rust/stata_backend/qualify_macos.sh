@@ -317,6 +317,7 @@ source_inputs=(
   "${package_dir}/fevc__native_threads.ado"
   "${package_dir}/fevc__control_failure_post.ado"
   "${package_dir}/fevc.mata"
+  "${package_dir}/fevc_numerical.mata"
   "${package_dir}/fevc_graph.mata"
   "${package_dir}/fevc_cmg.mata"
   "${package_dir}/fevc_solver.mata"
@@ -335,6 +336,8 @@ source_inputs=(
   "${package_dir}/fevc__simulate_data.ado"
   "${package_dir}/fevc_rust.ado"
   "${package_dir}/fevc__rust_plugin_call.ado"
+  "${package_dir}/fevc__numerical.ado"
+  "${package_dir}/fevc__rust_numerical.ado"
   "${package_dir}/fevc__rust_solve_v4.ado"
   "${package_dir}/fevc__rust_solve_v5.ado"
   "${package_dir}/fevc__rust_cmg_model.ado"
@@ -373,6 +376,15 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_public.do"
   "${package_dir}/tests/stata/test_rust_exact_controls.do"
   "${package_dir}/tests/stata/test_rust_generic_jla.do"
+  "${package_dir}/tests/stata/test_all_probe_frontend.do"
+  "${package_dir}/tests/stata/test_all_probe_native_frontend.do"
+  "${package_dir}/tests/stata/test_mcse_modes.do"
+  "${package_dir}/tests/stata/test_mcse_attachments.do"
+  "${package_dir}/tests/stata/test_all_probe_math.do"
+  "${package_dir}/tests/stata/test_all_probe_replay.do"
+  "${package_dir}/tests/stata/test_all_probe_scale.do"
+  "${package_dir}/tests/stata/test_all_probe_transport.do"
+  "${package_dir}/tests/stata/test_all_probe_shared_atoms.do"
   "${package_dir}/tests/stata/test_rust_planned_v4.do"
   "${package_dir}/tests/stata/test_rust_planned_compressed.do"
   "${package_dir}/tests/stata/test_rust_planned_compressed_post.do"
@@ -1083,6 +1095,32 @@ else
 fi
 
 source_manifest_after=${temporary_root}/source-manifest-after.sha256
+# Exercise the additive numerical interface on each exact candidate artifact.
+for numerical_arch in arm64 x86_64; do
+  if [[ "${numerical_arch}" == x86_64 && "${rosetta_status}" != AVAILABLE ]]; then
+    continue
+  fi
+  run_stata_case "${numerical_arch}" numerical-thin \
+    "${package_dir}/tests/stata/test_all_probe_native_frontend.do" \
+    'FEVC ALL PROBE NATIVE FRONTEND PASS' "${test_package_dir}"
+  run_stata_case "${numerical_arch}" numerical-universal \
+    "${package_dir}/tests/stata/test_all_probe_native_frontend.do" \
+    'FEVC ALL PROBE NATIVE FRONTEND PASS' "${universal_test_package_dir}"
+  for numerical_package in "${test_package_dir}" "${universal_test_package_dir}"; do
+    numerical_label=thin
+    [[ "${numerical_package}" != "${universal_test_package_dir}" ]] || numerical_label=universal
+    run_stata_case "${numerical_arch}" "mcse-modes-${numerical_label}" \
+      "${package_dir}/tests/stata/test_mcse_modes.do" \
+      'PASS test_mcse_modes.do' "${numerical_package}"
+    run_stata_case "${numerical_arch}" "mcse-attachments-${numerical_label}" \
+      "${package_dir}/tests/stata/test_mcse_attachments.do" \
+      'PASS test_mcse_attachments.do' "${numerical_package}"
+  done
+  run_stata_case "${numerical_arch}" numerical-shared-atoms \
+    "${package_dir}/tests/stata/test_all_probe_shared_atoms.do" \
+    'FEVC ALL PROBE SHARED ATOMS PASS' "${test_package_dir}"
+done
+
 write_source_manifest "${source_manifest_after}"
 source_hash_after=$(hash_file "${source_manifest_after}")
 [[ "${source_hash_before}" == "${source_hash_after}" ]] || \
@@ -1148,6 +1186,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'parallel_deletion_policy=deletion-unit mover support; older-runtime preflight fallback/withholding; independent pooled oracle on each tested artifact/architecture\n'
   printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-and-generic-jla-stayer-hybrid-backend-rust-stayers-both-combined-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-counter-v1-lifecycle;public-generic-jla-observation-component-inference-structured-common-leverage-q0-q1-spectrum-counter-v1;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
   printf 'excluded_claims=public-release,Windows,Linux,native-Intel,representative-scale,human-license-provenance-review\n'
+  printf 'tested_numerical_route=numerical-v2-default-all-off-alias-developer-conditional-counter-jla-generic-compressed-legacy-executors-controls-both-nuisance-deletion-default-stayers-frequency-targetmass-auto-diagonal-cmg-exact-zero-clean-install; main-point-mcse-with-unchanged-supported-projection-highrank-q1-attachments\n'
   printf 'tested_match_component_route=public-generic-jla-fixedoffset-movers-match-q0-q1-structured-common-leverage-diagonal-cmg-counter-v1-frequency-targetweight-declared-match-id-unit-receipt-v1\n'
   printf 'commit=%s\n' "${commit}"
   printf 'branch=%s\n' "${branch}"

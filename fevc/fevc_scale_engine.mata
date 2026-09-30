@@ -7,6 +7,12 @@ mata:
 mata set matastrict on
 mata set matalnum off
 
+real scalar vckss_scale_eng__nmc_api()
+{
+    return(1)
+}
+
+
 /*
 This file is the numerical, no-control, match-deletion KSS-SCALE fast path.
 It consumes a prepared vckss_scale_design.  The retained Stata rows are not
@@ -35,7 +41,7 @@ real scalar vckss_scale_engine__api_level()
 
 string scalar vckss_scale_engine__build_id()
 {
-    return("vckss-scale-engine-api4-fe-buf1-buffered-timers1")
+    return("vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
 }
 
 struct vckss_scale_engine_atom_batch
@@ -201,6 +207,7 @@ struct vckss_scale_route_context
     real scalar rank_tolerance
     real scalar block_tolerance
     struct vckss_scale_engine_result scalar last
+    pointer(struct vckss_nmc__attachment scalar) scalar numerical
 }
 
 struct vckss_scale_engine_atom_batch scalar vckss_scale_eng__empty_atoms()
@@ -1170,9 +1177,22 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     real scalar tolerance,
     real scalar maxiter,
     real scalar rank_tolerance,
-    real scalar block_tolerance)
+    real scalar block_tolerance,
+    | pointer(struct vckss_nmc__attachment scalar) scalar numerical)
 {
     struct vckss_scale_engine_result scalar out
+    pointer scalar registered_leverage, registered_target, matrix_leverage, matrix_target
+    struct vckss_scale_atom_provider scalar replay_provider
+    struct vckss_scale_rng_context scalar replay_rng
+    pointer(struct vckss_scale_rng_context scalar) scalar original_rng
+    struct vckss_nmc__finite scalar derivative
+    real scalar replay_first, replay_width, replay_column, replay_batch
+    real matrix replay_atoms, replay_receipts
+    real colvector replay_root
+    real scalar all_probe, group, probe, column, fold, fold_count
+    real matrix gradients, folds, compensation, values, scores
+    real rowvector u, beta
+    string scalar diagnostic_status
     struct vckss_scale_engine_atom_batch scalar atom_batch
     struct vckss_scatter_plan scalar strata_plan, unit_plan
     struct vckss_scale_unit_adjust_batch scalar unit_adjustments
@@ -1235,7 +1255,58 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         out.message = "invalid compressed estimator tuning parameter"
         return(out)
     }
+    all_probe = 0
+    if (args()>=12) all_probe = (numerical != NULL)
     groups = design.deletion_units
+    if (all_probe) {
+        registered_leverage = &vckss_scale_eng__rng_lev()
+        registered_target = &vckss_scale_eng__rng_target()
+        matrix_leverage = &vckss_scale_eng__mat_leverage()
+        matrix_target = &vckss_scale_eng__mat_target()
+        // Own the original replay provenance before either estimator domain
+        // starts. A contract label alone cannot certify a supplied twin.
+        if (provider.contract == vckss_rng__production_contract() &
+            provider.leverage == registered_leverage &
+            provider.target == registered_target & provider.context != NULL) {
+            original_rng = provider.context
+            replay_rng = *original_rng
+            if (replay_rng.status != "CONVERGED" | replay_rng.leverage_initialized |
+                replay_rng.target_initialized) {
+                out.status = "INVALID_PROBE_PROVIDER"
+                out.message = "replay requires the original unopened cursor configuration"
+                return(out)
+            }
+            // Replay owns only the leverage cursor. Target addressing stays
+            // with the original provider and needs no retained clone here.
+            replay_rng.stratum_rank = replay_rng.stratum_trials = J(0,1,.)
+            replay_provider = vckss_scale_eng__rng_provider(&replay_rng)
+        }
+        else if (provider.contract == "TEST_MATRIX_ATOMS" &
+            provider.leverage == matrix_leverage &
+            provider.target == matrix_target & provider.context != NULL) {
+            replay_provider = provider
+        }
+        else {
+            out.status = "INVALID_PROBE_PROVIDER"
+            out.message = "original-atom replay requires a certified built-in provider"
+            return(out)
+        }
+        gradients = J(groups,6,0)
+        folds = compensation = J(groups,6,0)
+        diagnostic_status = "ok_local"
+        (*numerical).leverage_probes = (*numerical).target_probes = probes
+        (*numerical).folds = (ceil(probes/2),floor(probes/2))
+        (*numerical).replay_rhs = J(0,3,.)
+        (*numerical).replay_failure = ""
+        (*numerical).failed_replay_probe = .
+        (*numerical).replay_attempted_rhs = 0
+        (*numerical).replay_seconds = .
+        (*numerical).replay_generator_evaluations = 0
+        (*numerical).allocation_bound_bytes = 576*groups+640*design.coefficient_cells+512*probes+4096
+        (*numerical).minimum_constrained = (*numerical).minimum_margin = .
+        (*numerical).sensitivity_ratio = 0
+        (*numerical).covariance = vckss_nmc__finalize(J(3,3,.),J(3,3,.))
+    }
     strata = design.strata.count
     target_mass = design.target_weight_sum
     if (strata < 1 | rows(design.strata.cell) != strata |
@@ -1469,6 +1540,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         out.message = "finite-projection variance estimate is negative"
         return(out)
     }
+    if (all_probe & min(finite_variance)<0) diagnostic_status = "nonsmooth_adjustment"
     finite_variance = finite_variance:*(finite_variance:>0)
     out.unit_finite_bias = finite_bias
     out.unit_finite_variance = finite_variance
@@ -1479,6 +1551,27 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     residual_mass = design.unit_outcome_sum -
         design.unit_frequency:*out.fitted_cell[design.unit_cell]
     out.unit_residual_mass = residual_mass
+    if (all_probe) {
+        for (group=1; group<=groups; group++) {
+            u = (p_first[group]/probes,m_first[group]/probes,p_second[group],
+                m_second[group],mixed_second[group])
+            derivative = vckss_nmc__finite_derivative(u,probes)
+            (*numerical).minimum_constrained = min(((*numerical).minimum_constrained,sum(u[1..2])))
+            (*numerical).minimum_margin = min(((*numerical).minimum_margin,derivative.m))
+            if (derivative.status != "ok_local") {
+                diagnostic_status = derivative.status
+                continue
+            }
+            beta = vckss_nmc__observation_gradient(derivative,0)
+            if (hasmissing(beta)) {
+                diagnostic_status = "nonfinite_derivative"
+                continue
+            }
+            gradients[group,.] = (beta,vckss__compensated_column_sum((beta:*u)')[1])
+            (*numerical).sensitivity_ratio = max(((*numerical).sensitivity_ratio,
+                sqrt(max((derivative.variance,0)))/derivative.m))
+        }
+    }
     /* D_g = E_g(m_g^-1+B_g m_g^-2-V_g m_g^-3). */
     unit_adjustments = vckss_scale_eng__unit_adjust_all(
         out.unit_projection_share,out.unit_residual_share,
@@ -1602,6 +1695,19 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         out = vckss_scale_eng__record(out,solved,5,batch_start)
         vckss_timer__on(99)
         target_prediction = solved.prediction
+        if (all_probe & diagnostic_status == "ok_local") {
+            for (column=1; column<=batch_columns; column++) {
+                probe = batch_start+column-1
+                fold = mod(probe,2) ? 1 : 4
+                fold_count = mod(probe,2) ? ceil(probes/2) : floor(probes/2)
+                values = design.unit_outcome_sum:*out.unit_residual_mass:*
+                    (target_prediction[design.unit_cell,2*column-1]:^2,
+                     target_prediction[design.unit_cell,2*column]:^2,
+                     target_prediction[design.unit_cell,2*column-1]:*
+                     target_prediction[design.unit_cell,2*column]):/fold_count
+                vckss_nmc__fold_add(folds,compensation,values,fold)
+            }
+        }
         target_contractions = vckss_scale_eng__target_contract(
             out.cell_correction_weight,target_prediction)
         if (rows(target_contractions) != batch_columns |
@@ -1656,6 +1762,72 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         out.fit_seconds+out.leverage_seconds+out.target_seconds
     out.status = "CONVERGED"
     out.message = "experimental compressed no-control match KSS calculation converged"
+    if (all_probe) {
+        (*numerical).covariance = vckss_nmc__finalize(vckss_nmc__cross_covariance(
+            out.target_draws[.,1..3],out.target_draws[.,1..3]),J(3,3,.))
+        if (diagnostic_status != "ok_local") {
+            (*numerical).covariance.status = diagnostic_status
+            return(out)
+        }
+        scores = J(probes,6,.)
+        vckss_timer__clear(95)
+        vckss_timer__on(95)
+        replay_batch = min((leverage_batch,8))
+        replay_receipts = J(probes,3,.)
+        replay_root = sqrt(design.unit_frequency)
+        values = J(groups,6,0)
+        for (replay_first=1; replay_first<=probes; replay_first=replay_first+replay_batch) {
+            replay_width = min((replay_batch,probes-replay_first+1))
+            /* The registered cursor still makes one original draw per logical
+               probe internally. Batch its caller-state capture/restoration;
+               neither atom addressing nor the RNG call shape changes. */
+            atom_batch = (*replay_provider.leverage)(replay_provider.context,
+                replay_first,replay_first+replay_width-1)
+            if (atom_batch.status != "CONVERGED" |
+                rows(atom_batch.value)!=groups | cols(atom_batch.value)!=replay_width |
+                !vckss_scale_eng__valid_atoms(atom_batch.value,design.unit_frequency)) {
+                out.status = atom_batch.status == "CONVERGED" ? "INVALID_PROBE_ATOM" : atom_batch.status
+                out.message = "original leverage replay provider failed"
+                return(out)
+            }
+            (*numerical).replay_generator_evaluations =
+                (*numerical).replay_generator_evaluations+groups*replay_width
+            replay_atoms = atom_batch.value
+            (*numerical).replay_attempted_rhs = (*numerical).replay_attempted_rhs+replay_width
+            cell_atoms = vckss_scale_eng__scatter_planned(replay_atoms,unit_plan)
+            solved = vckss__fe_solve_matrix_backend(base,
+                vckss__fe_transpose_full(base,cell_atoms),tolerance,maxiter,backend)
+            if (solved.status != "CONVERGED") {
+                if (replay_first>1) (*numerical).replay_rhs = replay_receipts[|1,1\replay_first-1,3|]
+                (*numerical).failed_replay_probe = replay_first
+                (*numerical).replay_failure = solved.status
+                if (solved.status == "PCG_BREAKDOWN" | solved.status == "PCG_NONCONVERGENCE" |
+                    solved.status == "PRECONDITIONER_BREAKDOWN" | solved.status == "PULLBACK_BREAKDOWN" |
+                    solved.status == "SOLVER_RESIDUAL_FAILED") {
+                    (*numerical).covariance.status = "replay_failed"
+                    vckss_timer__off(95)
+                    (*numerical).replay_seconds = vckss_timer__seconds(95)
+                    return(out)
+                }
+                out.status = solved.status; out.message = solved.message
+                return(out)
+            }
+            for (replay_column=1; replay_column<=replay_width; replay_column++) {
+            probe = replay_first+replay_column-1
+            replay_receipts[probe,.] = (probe,solved.rhs_iterations[replay_column],solved.rhs_relres[replay_column])
+            unit_projection = replay_root:*solved.prediction[design.unit_cell,replay_column]
+            unit_random_residual = replay_atoms[.,replay_column]:/replay_root-unit_projection
+            values = -vckss_nmc__block_score(gradients,
+                unit_projection,unit_random_residual):*folds
+            scores[probe,.] = vckss__compensated_column_sum(values)
+            }
+        }
+        (*numerical).replay_rhs = replay_receipts
+        vckss_timer__off(95)
+        (*numerical).replay_seconds = vckss_timer__seconds(95)
+        (*numerical).covariance = vckss_nmc__finalize((*numerical).covariance.conditional,
+            vckss_nmc__cross_covariance(scores[.,1..3],scores[.,4..6]))
+    }
     return(out)
 }
 
@@ -1788,6 +1960,7 @@ struct vckss_scale_route_context scalar vckss_scale_eng__route_context(
     out.rank_tolerance = rank_tolerance
     out.block_tolerance = block_tolerance
     out.last = vckss_scale_eng__empty_result()
+    out.numerical = NULL
     if (design != NULL) {
         if ((*design).status == "CONVERGED" &
             provider.status == "CONVERGED" & probes >= 2 &
@@ -1825,11 +1998,20 @@ struct vckss_result scalar vckss_scale_eng__route_callback(
         return(vckss__failure(
             "INVALID_INPUT","compressed design reference is unavailable"))
     }
+    if ((*source).numerical != NULL) {
+        (*source).last = vckss_scale_eng__run_prepared(
+        *(*source).design,base,backend,(*source).provider,
+        (*source).probes,(*source).leverage_batch,(*source).target_batch,
+        (*source).tolerance,(*source).maxiter,(*source).rank_tolerance,
+        (*source).block_tolerance,(*source).numerical)
+    }
+    else {
     (*source).last = vckss_scale_eng__run_prepared(
         *(*source).design,base,backend,(*source).provider,
         (*source).probes,(*source).leverage_batch,(*source).target_batch,
         (*source).tolerance,(*source).maxiter,(*source).rank_tolerance,
         (*source).block_tolerance)
+    }
     return(vckss_scale_eng__as_result((*source).last,setup_seconds))
 }
 

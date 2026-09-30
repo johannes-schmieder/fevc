@@ -89,3 +89,12 @@ If files were copied manually or multiple installations exist, inspect `which
 fevc` and `adopath` and remove only the identified obsolete package files;
 the installer does not delete files by wildcard. Other packages can also
 have underscore-prefixed filenames.
+
+## Numerical MCSE interface
+
+Current source defaults to `mcse(all)` and accepts `mcse(off)` to skip the
+additional work. Native all-MCSE requires the numerical V2 interface. With an
+older plugin, an implicit default preserves point estimation and reports MCSE
+unavailable; an explicit `mcse(all)` requires a matching plugin. Restart Stata
+when replacing loaded Mata/native runtimes. Platform qualification and binary
+adoption are recorded in [the current checkpoint](fevc/PLAN.md).

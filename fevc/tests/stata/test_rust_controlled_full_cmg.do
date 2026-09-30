@@ -33,14 +33,14 @@ foreach deletion in match observation {
             quietly fevc y x z [fw=copies], worker(worker) firm(firm) deletion(`deletion') ///
                 nuisance(`nuisance') `id' `pop' targetweight(mass) algorithm(jla) ///
                 backend(rust) rng(counter_v1) engine(generic) preconditioner(cmg) ///
-                batch(1) probes(9) seed(81227) nodisplay
+                batch(1) probes(9) seed(81227) mcse(conditional) nodisplay
             matrix reference = e(kss)
             generate byte reference_sample = e(sample)
             foreach route in auto cmg {
                 fevc y x z [fw=copies], worker(worker) firm(firm) deletion(`deletion') ///
                     nuisance(`nuisance') `id' `pop' targetweight(mass) algorithm(jla) ///
                     backend(rust) rng(counter_v1) engine(auto) preconditioner(`route') ///
-                    batch(auto) probes(9) seed(81227) nodisplay
+                    batch(auto) probes(9) seed(81227) mcse(conditional) nodisplay
                 assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
                 assert `"`e(engine_selected)'"'=="generic"
                 assert `"`e(stayers)'"'=="`population'"
@@ -76,7 +76,7 @@ foreach deletion in match observation {
 foreach deletion in match observation {
     quietly fevc y, worker(worker) firm(firm) deletion(`deletion') stayers(movers) ///
         nuisance(fixedoffset) algorithm(jla) backend(rust) rng(counter_v1) ///
-        probeorder(key) probes(9) seed(81227) nodisplay
+        probeorder(key) probes(9) seed(81227) mcse(conditional) nodisplay
     assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
     assert e(full_cmg_model_receipt)[1,1]==0
     assert e(full_cmg_model_receipt)[1,3]==28
@@ -85,13 +85,13 @@ foreach deletion in match observation {
 // Controlled admission does not borrow the relaxed no-control probe default.
 quietly fevc y x z [fw=copies], worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) backend(rust) rng(counter_v1) probes(33) seed(81227) ///
-    tolerance(1e-12) targetweight(mass) nodisplay
+    tolerance(1e-12) targetweight(mass) mcse(conditional) nodisplay
 assert e(full_cmg_receipt)[1,19]==1e-12
 assert e(leverage_batch)==32 & e(target_batch)==32
 // Explicit strict budgets fail closed and leave the caller and registry reusable.
 capture noisily fevc y x z [fw=copies], worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) backend(rust) rng(counter_v1) probes(9) seed(81227) ///
-    targetweight(mass) memory_gib(.000001) memorycheck(error) nodisplay
+    targetweight(mass) memory_gib(.000001) memorycheck(error) mcse(conditional) nodisplay
 assert _rc!=0
 assert `"`c(rngstate)'"'==`"`state'"'
 assert `"`c(sortrngstate)'"'==`"`sortstate'"'
@@ -99,7 +99,7 @@ quietly fevc_rust snapshot
 assert r(state)==0 & r(handle)==0
 quietly fevc y x z [fw=copies], worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) backend(rust) rng(counter_v1) probes(9) seed(81227) ///
-    targetweight(mass) memory_gib(1) memorycheck(error) nodisplay
+    targetweight(mass) memory_gib(1) memorycheck(error) mcse(conditional) nodisplay
 assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
 assert e(memory_budget_supplied)==1
 quietly _datasignature

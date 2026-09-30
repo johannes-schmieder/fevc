@@ -3,6 +3,21 @@
 version 18.0
 quietly fevc__timer load
 
+/* Replay snapshots use the package's registered stream-state representation. */
+capture mata: vckss_rng__api_level()
+if _rc {
+    quietly findfile fevc_rng.mata
+    quietly do `"`r(fn)'"'
+}
+
+/* Numerical types are shared with the lightweight native validator. */
+capture mata: vckss_nmc__module_api()
+if _rc {
+    quietly findfile fevc_numerical.mata
+    quietly do `"`r(fn)'"'
+}
+mata: assert(vckss_nmc__module_api()==4 & vckss_nmc__build_id()=="vckss-numerical-api4-vector-replay8")
+
 mata:
 mata set matastrict on
 mata set matalnum off
@@ -19,7 +34,7 @@ real scalar vckss__api_level()
 
 string scalar vckss__build_id()
 {
-    return("vckss-api25-control-posterior-timers1")
+    return("vckss-api25-control-posterior-nmc4-timers1")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -4033,9 +4048,17 @@ struct vckss_result scalar vckss__jla_backend(
     real scalar setup_seconds,
     | real colvector semantic_rank,
     real scalar semantic_atom_mode,
-    real colvector stayer_mask)
+    real colvector stayer_mask,
+    pointer(struct vckss_nmc__attachment scalar) scalar numerical)
 {
     struct vckss_result scalar out
+    struct vckss_nmc__state scalar numerical_state
+    struct vckss_rng__stream_snapshot scalar replay_start, replay_post
+    real scalar all_probe, replay_restore_rc, point_clipped
+    real matrix replay_scores, primitive_draws
+    real scalar replay_first, replay_width, replay_column, replay_batch
+    real matrix replay_physical_batch, replay_sum_batch, replay_receipts, replay_contributions
+    real colvector replay_physical_q
     struct vckss_joint_design scalar full_joint, working_joint
     struct vckss_solve_result scalar solved, projection_solved, target_solved
     struct vckss_maker_result scalar reduced_maker
@@ -4101,7 +4124,9 @@ struct vckss_result scalar vckss__jla_backend(
     out = vckss__empty_result()
     deletion_rank_gap = .
     use_semantic_atoms = 0
-    hybrid = (args() >= 23)
+    hybrid = (args() >= 23 && rows(stayer_mask) > 0)
+    all_probe = 0; point_clipped = 0
+    if (args() >= 24) all_probe = (numerical != NULL)
     if (args() >= 22) {
         if (!(semantic_atom_mode == 0 | semantic_atom_mode == 1)) {
             return(vckss__failure(
@@ -4252,6 +4277,21 @@ struct vckss_result scalar vckss__jla_backend(
         }
     }
 
+    if (all_probe) {
+        numerical_state = vckss_nmc__new(n,sum(frequency),
+            deletion == "match" ? groups : 0,probes)
+        (*numerical).leverage_probes = (*numerical).target_probes = probes
+        (*numerical).folds = (ceil(probes/2),floor(probes/2))
+        (*numerical).replay_rhs = J(0,3,.)
+        (*numerical).replay_failure = ""
+        (*numerical).failed_replay_probe = .
+        (*numerical).replay_attempted_rhs = 0
+        (*numerical).replay_seconds = .
+        (*numerical).replay_generator_evaluations = 0
+        (*numerical).allocation_bound_bytes = numerical_state.allocation_bound_bytes
+        (*numerical).covariance = vckss_nmc__finalize(J(3,3,.),J(3,3,.))
+    }
+
     full_joint = vckss__joint_prepare(
         base,controls,tolerance,maxiter,rank_tolerance,backend)
     if (full_joint.status != "CONVERGED") {
@@ -4384,6 +4424,11 @@ struct vckss_result scalar vckss__jla_backend(
         return(vckss__failure(
             "RNG_SETUP_FAILED",
             "the leverage-domain mt64s stream could not be initialized"))
+    }
+    if (all_probe) {
+        replay_start = vckss_rng__capture_streams((1\2))
+        if (replay_start.status != "OK") return(vckss__failure(
+            "RNG_SETUP_FAILED","original leverage replay snapshot failed"))
     }
     physical_count = sum(frequency)
     physical_panel = vckss__physical_panels(frequency)
@@ -4598,6 +4643,7 @@ struct vckss_result scalar vckss__jla_backend(
     if (min(finite_variance) < -100*rank_tolerance) {
         return(vckss__failure("JLA_MOMENT_FAILED", "finite-projection variance estimate is negative"))
     }
+    if (all_probe & min(finite_variance) < 0) point_clipped = 1
     finite_variance = finite_variance :* (finite_variance :> 0)
     if (hybrid) {
         stayer_p_mean = stayer_p_first :/ probes
@@ -4627,6 +4673,7 @@ struct vckss_result scalar vckss__jla_backend(
             return(vckss__failure("JLA_MOMENT_FAILED",
                 "finite-projection stayer variance estimate is negative"))
         }
+        if (all_probe & min(stayer_finite_variance) < 0) point_clipped = 1
         stayer_finite_variance = stayer_finite_variance :*
             (stayer_finite_variance :> 0)
     }
@@ -4663,6 +4710,12 @@ struct vckss_result scalar vckss__jla_backend(
             frequency
         deleted_adjusted = residual :* inverse_weight
         maximum_leverage = max(p_constrained+copy_control_leverage)
+        if (all_probe) {
+            vckss_nmc__observation_prepare(numerical_state,(1..n)',
+                physical_panel,physical_row,projection_square_sum,
+                projection_fourth_sum,copy_first_correlation,
+                copy_third_correlation,control_leverage)
+        }
     }
     else {
         deleted_adjusted = J(n,1,.)
@@ -4691,6 +4744,13 @@ struct vckss_result scalar vckss__jla_backend(
             solver_residual = max((solver_residual,reduced_maker.relres))
             transformed_residual = reduced_maker.actions[.,1]
             inverse_common = reduced_maker.actions[.,2]
+            if (all_probe) {
+                vckss_nmc__block_prepare(numerical_state,group,index,
+                    (p_mean[group],m_mean[group],p_second[group],
+                     m_second[group],mixed_second[group]),inverse_common,
+                    (common_direction'*transformed_residual)[1],
+                    (common_direction'*inverse_common)[1],1-eigmax)
+            }
             deleted_adjusted[index] = transformed_residual +
                 finite_bias[group] :* inverse_common :*
                 (common_direction'*transformed_residual)[1,1] -
@@ -4720,9 +4780,19 @@ struct vckss_result scalar vckss__jla_backend(
                 residual[stayer_index] :* inverse_weight
             maximum_leverage = max((maximum_leverage,
                 max(stayer_p_constrained+copy_control_leverage)))
+            if (all_probe) {
+                vckss_nmc__observation_prepare(numerical_state,stayer_index,
+                    stayer_physical_panel,stayer_physical_row,projection_square_sum,
+                    projection_fourth_sum,copy_first_correlation,
+                    copy_third_correlation,control_leverage)
+            }
         }
     }
 
+    if (all_probe & numerical_state.status == "ok_local") {
+        vckss_nmc__target_prepare(numerical_state,working_y,residual,
+            frequency,row_order,deletion_panel)
+    }
     vckss_timer__off(92)
     vckss_timer__on(93)
 
@@ -4837,6 +4907,13 @@ struct vckss_result scalar vckss__jla_backend(
             target_prediction_batch[.,2:*(1..batch_columns)]
         total_projection_batch =
             worker_projection_batch+firm_projection_batch
+        if (all_probe & numerical_state.status == "ok_local") {
+            for (batch_column=1; batch_column<=batch_columns; batch_column++) {
+                vckss_nmc__target(numerical_state,batch_start+batch_column-1,
+                    worker_projection_batch[.,batch_column],
+                    firm_projection_batch[.,batch_column],row_order,deletion_panel)
+            }
+        }
         if (deletion == "observation") {
             correction_weight = weighted_y:*deleted_adjusted
             target_draws[|batch_start,1\batch_finish,1|] =
@@ -4963,6 +5040,123 @@ struct vckss_result scalar vckss__jla_backend(
     out.fe_workspace_peak_bytes = fe_profile[8]
     out.fe_cell_bytes_avoided = fe_profile[9]
     out.probes = probes
+    if (all_probe) {
+        if (point_clipped) numerical_state.status = "nonsmooth_adjustment"
+        primitive_draws = target_draws[.,1..3]
+        (*numerical).covariance = vckss_nmc__finalize(
+            vckss_nmc__cross_covariance(primitive_draws,primitive_draws),J(3,3,.))
+        (*numerical).minimum_constrained = numerical_state.minimum_constrained
+        (*numerical).minimum_margin = numerical_state.minimum_margin
+        (*numerical).sensitivity_ratio = numerical_state.sensitivity_ratio
+        if (numerical_state.status != "ok_local") {
+            (*numerical).covariance.status = numerical_state.status
+            return(out)
+        }
+        if (hasmissing(numerical_state.observation_fold) |
+            hasmissing(numerical_state.block_fold)) {
+            (*numerical).covariance.status = "nonfinite_derivative"
+            return(out)
+        }
+        replay_post = vckss_rng__capture_streams((1\2))
+        if (replay_post.status != "OK" |
+            vckss_rng__restore_streams(replay_start)) return(vckss__failure(
+                "RNG_SETUP_FAILED","original leverage replay restoration failed"))
+        replay_scores = J(probes,6,.)
+        vckss_timer__clear(95)
+        vckss_timer__on(95)
+        replay_batch = min((batch,8))
+        replay_receipts = J(probes,3,.)
+        replay_contributions = J(rows(deletion_panel),6,0)
+        numerical_state.copy_fold = numerical_state.observation_fold[numerical_state.copy_group,.]
+        numerical_state.copy_group = numerical_state.copy_order = J(0,1,.)
+        for (replay_first=1; replay_first<=probes; replay_first=replay_first+replay_batch) {
+            replay_width = min((replay_batch,probes-replay_first+1))
+            replay_sum_batch = J(n,replay_width,0)
+            replay_physical_batch = J(rows(numerical_state.copy),replay_width,0)
+            /* Keep each original scalar RNG request in its original order. */
+            for (replay_column=1; replay_column<=replay_width; replay_column++) {
+            probe = replay_first+replay_column-1
+            replay_physical_q = J(0,1,.)
+            if (deletion == "observation") {
+                replay_physical_q = 2:*rbinomial(physical_count,1,1,0.5):-1
+                rademacher_sum = panelsum(replay_physical_q,physical_panel)
+                (*numerical).replay_generator_evaluations =
+                    (*numerical).replay_generator_evaluations+physical_count
+            }
+            else if (hybrid) {
+                rademacher_sum = J(n,1,0)
+                rademacher_sum[mover_index] = vckss__rademacher_sum_prepared(
+                    mover_physical_count,mover_physical_panel)
+                replay_physical_q = 2:*rbinomial(stayer_physical_count,1,1,0.5):-1
+                rademacher_sum[stayer_index] = panelsum(
+                    replay_physical_q,stayer_physical_panel)
+                (*numerical).replay_generator_evaluations =
+                    (*numerical).replay_generator_evaluations+physical_count
+            }
+            else if (use_semantic_atoms) {
+                rademacher_sum = J(n,1,0)
+                semantic_atom_batch = vckss__draw_semantic_atoms(
+                    unit_semantic_rank,deletion_frequency,1)
+                if (hasmissing(semantic_atom_batch)) {
+                    replay_restore_rc = vckss_rng__restore_streams(replay_post)
+                    if (replay_restore_rc) return(vckss__failure("RNG_SETUP_FAILED",
+                        "post-point RNG restoration failed after atom failure"))
+                    return(vckss__failure("RNG_SEMANTIC_DRAW_FAILED",
+                        "original leverage replay atoms could not be generated"))
+                }
+                rademacher_sum[unit_representative] = semantic_atom_batch
+                (*numerical).replay_generator_evaluations =
+                    (*numerical).replay_generator_evaluations+groups
+            }
+            else {
+                rademacher_sum = vckss__rademacher_sum_prepared(
+                    physical_count,physical_panel)
+                (*numerical).replay_generator_evaluations =
+                    (*numerical).replay_generator_evaluations+physical_count
+            }
+            replay_sum_batch[.,replay_column] = rademacher_sum
+            if (rows(replay_physical_q)>0) replay_physical_batch[.,replay_column] = replay_physical_q
+            }
+            (*numerical).replay_attempted_rhs = (*numerical).replay_attempted_rhs+replay_width
+            projection_solved = vckss__fe_solve_matrix_backend(base,
+                vckss__fe_transpose_full(base,replay_sum_batch),tolerance,maxiter,backend)
+            if (projection_solved.status != "CONVERGED") {
+                if (replay_first>1) (*numerical).replay_rhs = replay_receipts[|1,1\replay_first-1,3|]
+                (*numerical).failed_replay_probe = replay_first
+                (*numerical).replay_failure = projection_solved.status
+                replay_restore_rc = vckss_rng__restore_streams(replay_post)
+                if (replay_restore_rc) return(vckss__failure("RNG_SETUP_FAILED",
+                    "post-point RNG restoration failed after replay failure"))
+                if (projection_solved.status == "PCG_BREAKDOWN" |
+                    projection_solved.status == "PCG_NONCONVERGENCE" |
+                    projection_solved.status == "PRECONDITIONER_BREAKDOWN" |
+                    projection_solved.status == "PULLBACK_BREAKDOWN" |
+                    projection_solved.status == "SOLVER_RESIDUAL_FAILED") {
+                    (*numerical).covariance.status = "replay_failed"
+                    vckss_timer__off(95)
+                    (*numerical).replay_seconds = vckss_timer__seconds(95)
+                    return(out)
+                }
+                return(vckss__failure(projection_solved.status,projection_solved.message))
+            }
+            for (replay_column=1; replay_column<=replay_width; replay_column++) {
+                probe = replay_first+replay_column-1
+                replay_receipts[probe,.] = (probe,projection_solved.rhs_iterations[replay_column],projection_solved.rhs_relres[replay_column])
+                replay_scores[probe,.] = vckss_nmc__score(numerical_state,
+                    projection_solved.prediction[.,replay_column],replay_physical_batch[.,replay_column],
+                    replay_sum_batch[.,replay_column],row_order,deletion_panel,replay_contributions)
+            }
+        }
+        (*numerical).replay_rhs = replay_receipts
+        replay_restore_rc = vckss_rng__restore_streams(replay_post)
+        vckss_timer__off(95)
+        (*numerical).replay_seconds = vckss_timer__seconds(95)
+        if (replay_restore_rc) return(vckss__failure("RNG_SETUP_FAILED",
+            "post-point RNG restoration failed after leverage replay"))
+        (*numerical).covariance = vckss_nmc__finalize(
+            (*numerical).covariance.conditional,vckss_nmc__cross_covariance(
+                replay_scores[.,1..3],replay_scores[.,4..6]))
+    }
     return(out)
 }
 
@@ -5187,5 +5381,6 @@ void vckss__stata_exact_stayer_hybrid(
     st_local(status_local,out.status)
     st_local(message_local,out.message)
 }
+
 
 end

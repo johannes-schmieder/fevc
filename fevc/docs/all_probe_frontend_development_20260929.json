@@ -1,0 +1,2194 @@
+{
+  "schema": "FEVC_ALL_PROBE_FRONTEND_DEVELOPMENT_V1",
+  "created_utc": "2026-09-30T03:02:33.346391+00:00",
+  "issue": "https://github.com/johannes-schmieder/fevc/issues/7",
+  "issue_snapshot_sha256": "5946afe606aaa80908f2298014b277a0f653577e9369ecded90909b25ef37136",
+  "reviewed_source": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+  "initial_checkout": "clean main identical to reviewed source; no existing uncommitted work",
+  "classification": "completed local development; no clean-commit adoption/release claim",
+  "milestones": {
+    "M0": "implemented and locally validated",
+    "M1": "implemented and locally validated",
+    "M2": "implemented and locally validated",
+    "M3": "implemented and locally validated",
+    "M4": "implemented and locally validated"
+  },
+  "source_checkpoint": {
+    "inventory": ".local/issue7-20260929/final-source-checkpoint-v2/inventory.json",
+    "sha256": "d54f04d65aecd96bef73083368fb3b2e3e88ee1dfbf14a80c364912e388818f6",
+    "files": [
+      {
+        "path": "fevc.pkg",
+        "sha256": "657bc3af9e7005d730aea0eb9873df02e23a20f56e314f2329406c947dc334f3",
+        "bytes": 2083
+      },
+      {
+        "path": "fevc/CHANGELOG.md",
+        "sha256": "3ade26e8457eeddba054a88087201e5cec42b84eca91fa0e460ed0bf44e94b9c",
+        "bytes": 42417
+      },
+      {
+        "path": "fevc/PLAN.md",
+        "sha256": "6411756ef13f745ced6d9f41edeade01bb16348e14799b686817d9ff52dcfef4",
+        "bytes": 6768
+      },
+      {
+        "path": "fevc/benchmarks/prep_bnd1_matlab/bundle_allowlist.txt",
+        "sha256": "51b30223ab4aa0d812518c7fb937b93e39901b1b69069864c6e425bfc63db206",
+        "bytes": 1955
+      },
+      {
+        "path": "fevc/benchmarks/prod_bundle_allowlist.txt",
+        "sha256": "bd47326b20e6d13d219b3e2b52d7b9d2818f0baf148492eb3ea6030402c4c9c3",
+        "bytes": 1387
+      },
+      {
+        "path": "fevc/benchmarks/scale_bundle_allowlist.txt",
+        "sha256": "2eddce322c0d01a66ea2bc7ea2c0f02f0da72d08e2c500ddb9598ebcfecff37d",
+        "bytes": 4839
+      },
+      {
+        "path": "fevc/docs/ALL_PROBE_MCSE.md",
+        "sha256": "556c28d23caa6ac864cea3f3c7a0e5b7b1cbf6daf5ee26aa01dfb30d7135b513",
+        "bytes": 47930
+      },
+      {
+        "path": "fevc/docs/ALL_PROBE_MCSE_STATUS.md",
+        "sha256": "0816303708d7ca0071c28820cfbbb5a6ad7489aee8e00c4565712748138ec81b",
+        "bytes": 14432
+      },
+      {
+        "path": "fevc/docs/FAILURES_AND_RETURNS.md",
+        "sha256": "f8484e29d7782256b244cf64cb0e97e29b856b40ef1de11d37a34b06e0d8b0cf",
+        "bytes": 29516
+      },
+      {
+        "path": "fevc/docs/MEMORY.md",
+        "sha256": "51bf01eb1bdef81ba0172160bac7176a602d358ffeb014ab3756979bfcf67fe4",
+        "bytes": 9265
+      },
+      {
+        "path": "fevc/docs/NUMERICAL_ARCHITECTURE.md",
+        "sha256": "09f3444b8052b353a78de942acfafc1341bfd84d80a44c0fc7d29b5d80242205",
+        "bytes": 20845
+      },
+      {
+        "path": "fevc/docs/README.md",
+        "sha256": "c6676443394e74f8ebea620589eb7e5233f77a9a4e80ee46f4df61514a2fcd7a",
+        "bytes": 2078
+      },
+      {
+        "path": "fevc/docs/RUST_MATA_PARITY.md",
+        "sha256": "f768241755cb24a23e5a820847579a64dcc24b4e2712e10c4cd65ba4c6ed3d34",
+        "bytes": 6730
+      },
+      {
+        "path": "fevc/docs/all_probe_development_20260929.json",
+        "sha256": "a6df5af8a736f60c8be8ee07e407fc212bc9f4b049d33bcd8eeb6f2166a542de",
+        "bytes": 95114
+      },
+      {
+        "path": "fevc/docs/all_probe_native_development_20260929.json",
+        "sha256": "5b7f48601813c12a77c0ec7db3a62ccefd3b86a300a4ffaf4ed5c46d616e7b4c",
+        "bytes": 11681
+      },
+      {
+        "path": "fevc/docs/rust_mata_parity.json",
+        "sha256": "092a755b35d705c97d6a4b116c765d592171c14c34eb2a5c8b3d644d7e634554",
+        "bytes": 8855
+      },
+      {
+        "path": "fevc/fevc.ado",
+        "sha256": "6d2d08ed6131f773c87f78025720757d65da8975cc0dcd9a1d09b8e48a85e5fc",
+        "bytes": 533825
+      },
+      {
+        "path": "fevc/fevc.mata",
+        "sha256": "f925ed7f42b10914bc0abe4bcc3dc0dab54519e967d96249a89933af66f7ff96",
+        "bytes": 243340
+      },
+      {
+        "path": "fevc/fevc.pkg",
+        "sha256": "2352645a51fb9c298cafae7d3537f9b0a732e5c6a463bf7890f4a8cbb3844cb1",
+        "bytes": 1653
+      },
+      {
+        "path": "fevc/fevc.sthlp",
+        "sha256": "696ecb46e674d0c9ebae98b209d29cfdb5ffdc3cb620cd03a44744761c7b91b8",
+        "bytes": 26197
+      },
+      {
+        "path": "fevc/fevc__display.ado",
+        "sha256": "766f460718e4f520575d58feab412457135b19a1e7c24b25283e73633ceb718f",
+        "bytes": 20911
+      },
+      {
+        "path": "fevc/fevc__numerical.ado",
+        "sha256": "9040ae8abc5b6352251f6df1e883f68a5115687d58e45a0104ab2c12bd41c270",
+        "bytes": 8281
+      },
+      {
+        "path": "fevc/fevc__rust_cmg_model.ado",
+        "sha256": "1295a8e6218460aa6ed22cd43d19c32334bb3f8be6d27a6780b1aa338d9cb5cc",
+        "bytes": 1663
+      },
+      {
+        "path": "fevc/fevc__rust_numerical.ado",
+        "sha256": "41f1d1d8d2e95e389ee16defda9cae89b32ab3e40683ecd968f9a490d75ff375",
+        "bytes": 2170
+      },
+      {
+        "path": "fevc/fevc__rust_solve_v4.ado",
+        "sha256": "601fde6d24d0f0239f6fca83ddbbbedb95fc3f1bd87b4e4396a740d5f8877d76",
+        "bytes": 8559
+      },
+      {
+        "path": "fevc/fevc_estat.ado",
+        "sha256": "426d78dadf7ac54bc9d2ecea792959e91e619a4f0d02184556d7a0c4073d3775",
+        "bytes": 11798
+      },
+      {
+        "path": "fevc/fevc_rng.mata",
+        "sha256": "bf8b7325667e8f41ddebc09577650103897a8b7e1fa96edec95b45a0ffc22e7f",
+        "bytes": 32788
+      },
+      {
+        "path": "fevc/fevc_rust.ado",
+        "sha256": "51a5b5a443494a1a33052d311fc3a4107358fd42b1c33cbd2f03ffd08d878993",
+        "bytes": 124913
+      },
+      {
+        "path": "fevc/fevc_scale_engine.mata",
+        "sha256": "96e9bf954645d51966065af5440415b216cf4187123fbf1f7c481a5d21fc774a",
+        "bytes": 80614
+      },
+      {
+        "path": "fevc/fevc_scale_runtime.mata",
+        "sha256": "ea694457cbb54189c72ee6587ab55ca2cee7e0e92820e9919209e013d47661e5",
+        "bytes": 8021
+      },
+      {
+        "path": "fevc/fevc_solver.mata",
+        "sha256": "97a0fd0a8e48f252f7c4ffa6d71ea3393c33967f9dd772fcc6d996acae62c7b9",
+        "bytes": 81266
+      },
+      {
+        "path": "fevc/tests/python/test_all_probe_native.py",
+        "sha256": "11c60c1f8ef2f0cbef4a962ec99bf024aafb77f892c2b294f81e21f43055594c",
+        "bytes": 5675
+      },
+      {
+        "path": "fevc/tests/python/test_all_probe_reference.py",
+        "sha256": "08c83e5ea9c564c5ab135a7a5890d1dbfd6d8e0e22067673f6c360914f81ed79",
+        "bytes": 23559
+      },
+      {
+        "path": "fevc/tests/python/test_fevc_public_identity.py",
+        "sha256": "f8e4fb55aa1520a4ee26c00173dff17b95b6b36932a1f98b0dbe8f1e2788ca49",
+        "bytes": 3066
+      },
+      {
+        "path": "fevc/tests/python/test_helper_naming.py",
+        "sha256": "bbb047679dc124f1c620e9ef246862b4237bf92c5a1856adbc824a070ffe639f",
+        "bytes": 2593
+      },
+      {
+        "path": "fevc/tests/python/test_match_documentation.py",
+        "sha256": "073a5dcd29c2280626f5d1e80f980bf963102d6891451b1a68599e9e009a111b",
+        "bytes": 5213
+      },
+      {
+        "path": "fevc/tests/python/test_package_layout.py",
+        "sha256": "db89e88ec8e052d15c956dd78b148546be2cbc278af90b7a5efe788055f54915",
+        "bytes": 33739
+      },
+      {
+        "path": "fevc/tests/python/test_scale_resource.py",
+        "sha256": "c766e4b68dbc6d0f5cb189235bc5904ce5bd63d1d858cede02fc68a65d08605b",
+        "bytes": 10313
+      },
+      {
+        "path": "fevc/tests/stata/run_all.do",
+        "sha256": "77e20567f12abdf35e98945f5b940190b022aed32b8db36227c3ddbc1900adea",
+        "bytes": 5711
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_frontend.do",
+        "sha256": "2a8412be497fee2bc94ffcd5f10a36bbbe6f3c2acfa37151f10892bb98f89b83",
+        "bytes": 4336
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_math.do",
+        "sha256": "e4becf53f224ad8a1d7b4fa7e543a2dc4ad5b7f51d24839a82091c7bd6de2aff",
+        "bytes": 5839
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_native_frontend.do",
+        "sha256": "82cca7db4886a37d44d71dad7796b06c2aecbc958299ddbbc456c539d362ffdb",
+        "bytes": 6758
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_replay.do",
+        "sha256": "43d546747b0e2e2ee5593f9f5a1b6e1272ea072f9257b3024b28c631d31b3934",
+        "bytes": 14288
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_scale.do",
+        "sha256": "5b7b08775eb08d21085ba8cab449b88d0524d826c81922152c0478c7e9fbbbfb",
+        "bytes": 4924
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_shared_atoms.do",
+        "sha256": "f2a6a8809f8015058fc3c6172be3f7a35bcebf4dff469ab23f03b8e2121b882b",
+        "bytes": 3039
+      },
+      {
+        "path": "fevc/tests/stata/test_all_probe_transport.do",
+        "sha256": "2c421f137d0ba88c196947f5fe7eb50bc5e2aec45129386d72540e29cd042eed",
+        "bytes": 2368
+      },
+      {
+        "path": "fevc/tests/stata/test_install.do",
+        "sha256": "8892aa3407a3e8e613d8533d6f90ddd5c65d9abe5656070430be3b085522f284",
+        "bytes": 7024
+      },
+      {
+        "path": "fevc/tests/stata/test_load.do",
+        "sha256": "16cecc6a91ce0b9502bf40d3be79c942e68e299706e791e688245fbfb06a32da",
+        "bytes": 1880
+      },
+      {
+        "path": "fevc/tests/stata/test_rust_public_install.do",
+        "sha256": "2a13c06efe2b056d1e658c63f237d3ea50c11ca29360145dd274578476f3bf5c",
+        "bytes": 7824
+      },
+      {
+        "path": "fevc/tests/stata/test_scale_engine.do",
+        "sha256": "e2eae6897fe93ba1520930998be3b3f74e2e3a9767d998ea0989809760c4ac94",
+        "bytes": 21631
+      },
+      {
+        "path": "fevc/tests/stata/test_scale_resource.do",
+        "sha256": "924a396aedbce8e082f9ce4741052d864d1fe5128600413303f7c089b51d39f3",
+        "bytes": 8490
+      },
+      {
+        "path": "fevc/tools/all_probe_cache_oracle.py",
+        "sha256": "fb432d8d0a3f08d7ddec8f3e91ebc9fc7f12a4a9658cca616e264353fbc5d25b",
+        "bytes": 3102
+      },
+      {
+        "path": "fevc/tools/all_probe_calibration.py",
+        "sha256": "ff4255576ec5f16b329d928d4819d97da311bd2af5b5a178d12c149bdfe0a8e3",
+        "bytes": 6734
+      },
+      {
+        "path": "fevc/tools/all_probe_native.py",
+        "sha256": "84db299bb648591daea5117268ffebf7dca94f5317e297e0645c431e0fc7d217",
+        "bytes": 16457
+      },
+      {
+        "path": "fevc/tools/all_probe_nested_audit.py",
+        "sha256": "e776bb403e179ed363fe5d328a169848cc0d9694208553825421cb096fbb2edd",
+        "bytes": 5683
+      },
+      {
+        "path": "fevc/tools/all_probe_reference.py",
+        "sha256": "970a3fa1d1d445497ca9cc2f86954af40cb87d6d2de27a603b91e44a6818985e",
+        "bytes": 23777
+      },
+      {
+        "path": "rust/crates/vckss-core/examples/all_probe_reference.rs",
+        "sha256": "924f461c94ae27521ca315feeb04fa7d48334be8589be14c787477f7dc1d3a13",
+        "bytes": 9569
+      },
+      {
+        "path": "rust/crates/vckss-core/src/engine.rs",
+        "sha256": "cf58cc8d71972d54b3893cc0d97c17865aafc34712f449a93c8b437095444319",
+        "bytes": 174084
+      },
+      {
+        "path": "rust/crates/vckss-core/src/engine/numerical.rs",
+        "sha256": "292ecaa849f67271cfdfe9cb3ff2f01c3f9deab42874500eb5acbf17568eeb0e",
+        "bytes": 13311
+      },
+      {
+        "path": "rust/crates/vckss-core/src/generic_jla.rs",
+        "sha256": "0279ace384b6c21422f7041f202b59840fbd40a1ff3484b04d1889bbf08c6619",
+        "bytes": 365195
+      },
+      {
+        "path": "rust/crates/vckss-core/src/generic_jla/numerical.rs",
+        "sha256": "0328ad3ed702e14d504d4f990ed4cf2e00f7fcd2fe3b154f359ae54730ad37c8",
+        "bytes": 27013
+      },
+      {
+        "path": "rust/crates/vckss-core/src/generic_jla/numerical/cache.rs",
+        "sha256": "506df2e470be5110ab1f4e45b5488c085c00d7c245ee864958b3bd5c0d75fda8",
+        "bytes": 7909
+      },
+      {
+        "path": "rust/crates/vckss-core/src/generic_jla/numerical/tests.rs",
+        "sha256": "5f2277db16620456b75e1c27197c9056a29e0235f53f9c2a049382c16e89ce3a",
+        "bytes": 5458
+      },
+      {
+        "path": "rust/crates/vckss-core/src/lib.rs",
+        "sha256": "366c2d3e99f9e3e8ca5acfb3845d18b18507a73e7bf7d5b9ff89dd003dcf3c8c",
+        "bytes": 9036
+      },
+      {
+        "path": "rust/crates/vckss-core/src/numerical_mc.rs",
+        "sha256": "3bb8582fe3e5c9e1348e75b025cee40834708aa60731395af4ae404741ef0a2e",
+        "bytes": 10262
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/generic_jla.rs",
+        "sha256": "04c096a57b133837e8ad49890c8a6abf936cfc410b5a03cd8a7914aff5bab711",
+        "bytes": 146731
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/generic_jla/numerical_attachment.rs",
+        "sha256": "ea7edc99e27a086d5144a9acd74446abfda44cd4d75ad1794293d8d51b65904d",
+        "bytes": 30530
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/generic_jla_memory.rs",
+        "sha256": "f3ee83baf949614122ed4bf99d6f167a3f4534a3056da3993e0b867b7b5ae85a",
+        "bytes": 56770
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/numerical_mc.rs",
+        "sha256": "d8e062e48d97ce0e9a3bc752261563f8d7c601b96e86bb58aa8b0a4c6fbe8c04",
+        "bytes": 26532
+      },
+      {
+        "path": "rust/crates/vckss-plugin/src/ffi_engine.rs",
+        "sha256": "dc644ea6cbc785737423b74361cb9161790962369b64a7f2cf86728f68a2bb6c",
+        "bytes": 415663
+      },
+      {
+        "path": "rust/crates/vckss-plugin/src/generic_execution_api.rs",
+        "sha256": "87056279e89fe1a458416c7419fa5f539df99ffea918ab4163db6537c61302ec",
+        "bytes": 30635
+      },
+      {
+        "path": "rust/crates/vckss-plugin/src/numerical_api.rs",
+        "sha256": "a9a2b758de87101efc168b408d359ef39185bd66a5916bd817c0af907cfac5f4",
+        "bytes": 19922
+      },
+      {
+        "path": "rust/crates/vckss-plugin/tests/engine_ffi.rs",
+        "sha256": "75609528af260d0f22ea18b71b798a21b387ce53ec41a37347496fd510cf0ad3",
+        "bytes": 216514
+      },
+      {
+        "path": "rust/crates/vckss-plugin/tests/engine_ffi/numerical.rs",
+        "sha256": "874ceef3f58468eff267f60a7dcc98f988aa086770cf05ae6ccdf3220c6acfe4",
+        "bytes": 16242
+      },
+      {
+        "path": "rust/stata_backend/README.md",
+        "sha256": "2ab8bbfaa835a46fcf6d8a8883a19cf1545848e60819c703e1265c0932cfe120",
+        "bytes": 13397
+      },
+      {
+        "path": "rust/stata_backend/cshim/stata_entry.c",
+        "sha256": "935398b989dffecd71d1fe73701cf56d79b1f445d76250e254450b107be966d5",
+        "bytes": 222844
+      },
+      {
+        "path": "rust/stata_backend/include/vckss_rust.h",
+        "sha256": "5fd993e55008630756d66c4559de53c95537ce61f05b4644fea5c37806179719",
+        "bytes": 90223
+      },
+      {
+        "path": "rust/stata_backend/qualify_macos.sh",
+        "sha256": "849f6d8bd4e5a5030ebd51c7fed65bf401e7b3eebc218ff081f25d334722ffe3",
+        "bytes": 82353
+      },
+      {
+        "path": "rust/stata_backend/tests/abi_header_compat_test.c",
+        "sha256": "970afe395ca700c1c90d6a6daabd42fdf3d01a17cdfb30507a9a22e43d36e554",
+        "bytes": 10429
+      },
+      {
+        "path": "rust/stata_backend/tests/cshim_error_transport_test.c",
+        "sha256": "c8d64d5ee94e2f8fc8a6653e7f9288459025e6bef5ef0ababebc35627a14c0b2",
+        "bytes": 67131
+      }
+    ],
+    "base_and_overlay_retained": true,
+    "self_exclusion": "this receipt is excluded from its own source hash",
+    "issue_snapshot": {
+      "path": ".local/issue7-20260929/final-source-checkpoint-v2/issue.json",
+      "sha256": "5946afe606aaa80908f2298014b277a0f653577e9369ecded90909b25ef37136"
+    }
+  },
+  "versions": {
+    "python": "3.13.0 (main, Oct  7 2024, 05:02:14) [Clang 15.0.0 (clang-1500.3.9.4)]",
+    "numpy": "2.5.2",
+    "rust": "rustc1.85.1/cargo1.85.1 locked; explicit /Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin",
+    "stata": "MP19.0.115; native/Rosetta environments and toolchain/SDK in profile receipt"
+  },
+  "gates": [
+    {
+      "gate": "source",
+      "command": "./.venv/bin/python fevc/tools/run_checks.py",
+      "exit": 0,
+      "marker": "FEVC LOCAL QUALIFICATION PASS",
+      "log": ".local/issue7-20260929/completion-logs/source.log",
+      "sha256": "4f3bb5bf3d229e9d229a8d4b052f11ecf17dd0894a1db13a93ff710809742df6",
+      "tests_passed": 0,
+      "tests_ignored": 0,
+      "python_tests_passed": 866
+    },
+    {
+      "gate": "workspace",
+      "command": "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked",
+      "exit": 0,
+      "marker": "test result: ok.",
+      "log": ".local/issue7-20260929/completion-logs/workspace.log",
+      "sha256": "2a7b9696475961d071270d35ca2b69e15ce3bef1eb4e69c492867d64b595b0a6",
+      "tests_passed": 712,
+      "tests_ignored": 2,
+      "scope": "Full workspace pass preceded final compressed literal native-adapter repair; unchanged core identity8b8663cd retained in fresh campaign; changed plugin rerun in full after repair, plus final native profile. This earlier gate alone is not current exact-commit qualification."
+    },
+    {
+      "gate": "plugin-final",
+      "command": "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml -p vckss-plugin --all-targets --locked",
+      "exit": 0,
+      "marker": "test result: ok.",
+      "log": ".local/issue7-20260929/completion-logs/plugin-final.log",
+      "sha256": "e42f423e8d77c4b66394637bfecdec3b5f5fb169fbca2335463d927ff5631fb6",
+      "tests_passed": 113,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "clippy",
+      "command": "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings",
+      "exit": 0,
+      "marker": "Finished",
+      "log": ".local/issue7-20260929/completion-logs/clippy.log",
+      "sha256": "c3382056b1240d9794f59e12842fdb9ff5d9070ef08d427ccbac054f266b8b22",
+      "tests_passed": 0,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "cache-oracle",
+      "command": "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml -p vckss-core actual_cached_whole_responses_match_independent_dense_complex_step --locked -- --ignored --nocapture",
+      "exit": 0,
+      "marker": "1 passed; 0 failed",
+      "log": ".local/issue7-20260929/completion-logs/cache-oracle.log",
+      "sha256": "eac4281ca45db3417f0bf4e131a37b9fe35bb678dd129ebb7fbdf3b7e8e3004c",
+      "tests_passed": 1,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "allocation",
+      "command": "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml -p vckss-core --test generic_jla_memory all_probe --locked -- --nocapture",
+      "exit": 0,
+      "marker": "1 passed; 0 failed",
+      "log": ".local/issue7-20260929/completion-logs/allocation.log",
+      "sha256": "016d84a75fff57e885c2245a98561ed24f9935656a29a53b765cbe63e4481a22",
+      "tests_passed": 1,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "native-interface",
+      "command": "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml -p vckss-plugin --test engine_ffi numerical --locked",
+      "exit": 0,
+      "marker": "4 passed; 0 failed",
+      "log": ".local/issue7-20260929/completion-logs/native-interface.log",
+      "sha256": "f56d79dab156051191ef31d98e48da21202c1ad326e8b6ace83058063fdefd06",
+      "tests_passed": 4,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "frontend-atoms",
+      "command": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do .local/issue7-20260929/native-literal-final-smoke.do",
+      "exit": 0,
+      "marker": "FEVC ALL PROBE SHARED ATOMS PASS",
+      "log": ".local/issue7-20260929/completion-logs/frontend-atoms.log",
+      "sha256": "75b2b542a76d91fcdb2966b21efc4b5d0741ea217956faaac0061e8035fc73d3",
+      "tests_passed": 0,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "native-profile",
+      "command": "DEVELOPER_DIR=/Library/Developer/CommandLineTools bash rust/stata_backend/qualify_macos.sh --receipt .local/issue7-20260929/native-qualification-v4.txt --artifacts-dir .local/issue7-20260929/native-qualification-v4",
+      "exit": 0,
+      "marker": "macOS Rust plugin candidate qualification complete: LOCAL_CHECKPOINT_DIRTY_TREE",
+      "log": ".local/issue7-20260929/completion-logs/native-profile.log",
+      "sha256": "21ffc702bbf5523e37126225f6c9073327dc597e020f6ba1f2d9a22e544a5ccf",
+      "tests_passed": 20,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "documentation",
+      "command": "./.venv/bin/python -m pytest -q fevc/tests/python/test_native_release.py fevc/tests/python/test_match_documentation.py fevc/tests/python/test_fevc_public_identity.py",
+      "exit": 0,
+      "marker": "42 passed",
+      "log": ".local/issue7-20260929/completion-logs/documentation.log",
+      "sha256": "e9b06a13fec8f5583c6f1630561ef4b617b7963917e24903de075dc8654a0078",
+      "tests_passed": 0,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "route-reconciliation",
+      "command": "./.venv/bin/python .local/issue7-20260929/command-route-reconciliation-v2/run.py",
+      "exit": 0,
+      "marker": "rust-compressed_match PASS",
+      "log": ".local/issue7-20260929/completion-logs/route-reconciliation.log",
+      "sha256": "2388d0e7e1eae01084968f0bf118cf0429cc621ed799ab0f3619692c17e95005",
+      "tests_passed": 0,
+      "tests_ignored": 0
+    },
+    {
+      "gate": "overhead",
+      "command": "./.venv/bin/python .local/issue7-20260929/command-overhead-v5/run.py",
+      "exit": 0,
+      "marker": "rust-compressed_match-all-1",
+      "log": ".local/issue7-20260929/completion-logs/overhead.log",
+      "sha256": "485063d7dd1019c8b88dd21405be9cea950a0332824cfe601eacfe796f70b93a",
+      "tests_passed": 0,
+      "tests_ignored": 0
+    }
+  ],
+  "native": {
+    "receipt": ".local/issue7-20260929/native-qualification-v4.txt",
+    "sha256": "1a189337ea7020798584ff504b678c25ff99e02385c3bb3f36fae8236861a825",
+    "fields": {
+      "classification": "LOCAL_CHECKPOINT_DIRTY_TREE",
+      "scope": "source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control observation/match JLA point CMG_FULL_V2 cells through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts",
+      "parallel_deletion_policy": "deletion-unit mover support; older-runtime preflight fallback/withholding; independent pooled oracle on each tested artifact/architecture",
+      "tested_routes": "exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-and-generic-jla-stayer-hybrid-backend-rust-stayers-both-combined-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-counter-v1-lifecycle;public-generic-jla-observation-component-inference-structured-common-leverage-q0-q1-spectrum-counter-v1;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install",
+      "excluded_claims": "public-release,Windows,Linux,native-Intel,representative-scale,human-license-provenance-review",
+      "tested_numerical_route": "additive-numerical-v1-counter-jla-generic-compressed-controls-both-nuisance-deletion-default-stayers-frequency-targetmass-auto-diagonal-cmg-exact-zero-clean-install; projection-and-sampling-inference-intersections-unsupported",
+      "tested_match_component_route": "public-generic-jla-fixedoffset-movers-match-q0-q1-structured-common-leverage-diagonal-cmg-counter-v1-frequency-targetweight-declared-match-id-unit-receipt-v1",
+      "commit": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+      "branch": "main",
+      "dirty_status_start": "dirty",
+      "dirty_status_end": "dirty",
+      "source_manifest_sha256": "bef6e867a854fe7fe957bf31a7010d7a758d01d6c17d8aec38450bdc428bdc33",
+      "source_file_count": "251",
+      "stata_spi_stplugin_c_sha256": "ab694f53e30a404bbfbe59d301a81b8bc59eeecf84bc5427eb65cbf0c5020d6d",
+      "stata_spi_stplugin_h_sha256": "0d32086bfb7a621e30ed7fefa41b351b6733bb4561da28a4c581580d62c64e8b",
+      "cshim_interrupt_test": "PASS",
+      "cshim_error_transport_test": "PASS",
+      "abi_header_compat_test": "PASS",
+      "cargo_fmt": "PASS",
+      "cargo_clippy": "PASS",
+      "cargo_test": "PASS",
+      "qualifier_sha256": "849f6d8bd4e5a5030ebd51c7fed65bf401e7b3eebc218ff081f25d334722ffe3",
+      "host_macos": "26.6.2",
+      "rustc": "rustc 1.85.1 (4eb161250 2025-03-15)",
+      "cargo": "cargo 1.85.1 (d73d2caf9 2024-12-31)",
+      "clang": "Apple clang version 17.0.0 (clang-1700.6.3.2)",
+      "apple_toolchain_kind": "COMMAND_LINE_TOOLS",
+      "apple_compiler_path": "/Library/Developer/CommandLineTools/usr/bin/clang",
+      "apple_sdk_path": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+      "apple_sdk_version": "26.2",
+      "xcode": "NOT_USED_COMMAND_LINE_TOOLS",
+      "stata_binary_sha256": "178db3b78a3768ebfe88c36e845df292611b4b8ef0342c47a58e4641d0e6a16b",
+      "stata_binary_architectures": "x86_64 arm64",
+      "stata_arm64_environment": "VCKSS_STATA_ENV version=19 edition=MP os=Unix machine=Mac (Apple Silicon)",
+      "stata_x86_64_environment": "VCKSS_STATA_ENV version=19 edition=MP os=Unix machine=Macintosh (Intel 64-bit)",
+      "target_arm64": "aarch64-apple-darwin",
+      "target_x86_64": "x86_64-apple-darwin",
+      "deployment_floor_arm64": "11.0",
+      "deployment_floor_x86_64": "10.13",
+      "install_id": "@rpath/fevc_rust_macos.plugin",
+      "required_exports": "_pginit,_stata_call,_vckss_rust_report_call_v1,_vckss_rust_exact_execution_schema_v1,_vckss_rust_exact_legacy_execution_schema_v1,_vckss_rust_engine_solve_exact_legacy_execution_interrupt_v1,_vckss_rust_exact_resolved_execution_schema_v2,_vckss_rust_engine_solve_exact_resolved_execution_v2,_vckss_rust_engine_solve_exact_resolved_execution_interrupt_v2,_vckss_rust_engine_solve_exact_execution_v1,_vckss_rust_engine_solve_exact_execution_interrupt_v1,_vckss_rust_engine_exact_execution_receipt_v1,_vckss_rust_engine_full_cmg_model_receipt_v1,_vckss_rust_engine_default_solve_request_v6,_vckss_rust_engine_default_solve_request_interrupt_v6,_vckss_rust_engine_solve_v6,_vckss_rust_engine_solve_interrupt_v6,_vckss_rust_engine_generic_execution_receipt_v1,_vckss_rust_engine_default_solve_request_interrupt_v7,_vckss_rust_engine_solve_interrupt_v7,_vckss_rust_engine_component_batch_receipt_v1,_vckss_rust_engine_default_solve_request_v8,_vckss_rust_engine_default_solve_request_interrupt_v8,_vckss_rust_engine_solve_v8,_vckss_rust_engine_solve_interrupt_v8,_vckss_rust_abi_version,_vckss_rust_backend_version,_vckss_rust_capabilities_json,_vckss_rust_last_error,_vckss_rust_selftest,_vckss_rust_backend_capabilities_v1,_vckss_rust_backend_request_capability_v1,_vckss_rust_backend_request_capability_v2,_vckss_rust_backend_request_capability_v3,_vckss_rust_session_prepare_v1,_vckss_rust_session_preparation_receipt_v1,_vckss_rust_session_release_v1,_vckss_rust_session_clear_abandoned_v1,_vckss_rust_session_snapshot_v1,_vckss_rust_session_last_error,_vckss_rust_engine_default_solve_request_v1,_vckss_rust_engine_default_prepare_request_v3,_vckss_rust_engine_default_solve_request_v2,_vckss_rust_engine_default_solve_request_v3,_vckss_rust_engine_default_solve_request_v4,_vckss_rust_engine_default_solve_request_v5,_vckss_rust_engine_default_prepare_request_interrupt_v1,_vckss_rust_engine_default_prepare_request_interrupt_v2,_vckss_rust_engine_default_prepare_request_interrupt_v3,_vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1,_vckss_rust_engine_default_projection_augmentation_request_interrupt_v1,_vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1,_vckss_rust_engine_default_solve_request_interrupt_v1,_vckss_rust_engine_default_solve_request_interrupt_v2,_vckss_rust_engine_default_solve_request_interrupt_v3,_vckss_rust_engine_default_solve_request_interrupt_v4,_vckss_rust_engine_default_solve_request_interrupt_v5,_vckss_rust_engine_prepare_v1,_vckss_rust_engine_admit_prepare_v2,_vckss_rust_engine_admit_prepare_v3,_vckss_rust_engine_admit_prepare_probe_order_v1,_vckss_rust_engine_admit_prepare_v4,_vckss_rust_engine_prepare_v2,_vckss_rust_engine_prepare_v3,_vckss_rust_engine_prepare_interrupt_v1,_vckss_rust_engine_prepare_interrupt_v2,_vckss_rust_engine_prepare_interrupt_v3,_vckss_rust_engine_prepare_interrupt_v4,_vckss_rust_engine_augment_stayers_v1,_vckss_rust_engine_augment_stayers_interrupt_v1,_vckss_rust_engine_stayer_augmentation_receipt_v1,_vckss_rust_engine_augment_projection_interrupt_v1,_vckss_rust_engine_projection_augmentation_receipt_v1,_vckss_rust_engine_augment_component_inference_interrupt_v1,_vckss_rust_engine_augment_match_component_inference_interrupt_v1,_vckss_rust_engine_component_inference_unit_receipt_v1,_vckss_rust_component_inference_interface_version,_vckss_rust_engine_augment_component_inference_interrupt_v2,_vckss_rust_engine_augment_match_component_inference_interrupt_v2,_vckss_rust_engine_augment_component_inference_interrupt_v3,_vckss_rust_engine_augment_match_component_inference_interrupt_v3,_vckss_rust_engine_augment_component_inference_interrupt_v4,_vckss_rust_engine_augment_match_component_inference_interrupt_v4,_vckss_rust_engine_augment_component_inference_interrupt_v5,_vckss_rust_engine_augment_match_component_inference_interrupt_v5,_vckss_rust_engine_component_inference_augmentation_receipt_v1,_vckss_rust_engine_preparation_receipt_v1,_vckss_rust_engine_preparation_receipt_v2,_vckss_rust_engine_preparation_receipt_v3,_vckss_rust_engine_preparation_receipt_v4,_vckss_rust_engine_retained_mask_v1,_vckss_rust_engine_solve_v1,_vckss_rust_engine_solve_v2,_vckss_rust_engine_solve_v3,_vckss_rust_engine_solve_v4,_vckss_rust_engine_solve_v5,_vckss_rust_engine_solve_interrupt_v1,_vckss_rust_engine_solve_interrupt_v2,_vckss_rust_engine_solve_interrupt_v3,_vckss_rust_engine_solve_interrupt_v4,_vckss_rust_engine_solve_interrupt_v5,_vckss_rust_engine_result_v1,_vckss_rust_engine_stayer_hybrid_result_v1,_vckss_rust_engine_projection_result_v1,_vckss_rust_engine_projection_result_receipt_v1,_vckss_rust_engine_component_inference_result_v2,_vckss_rust_engine_component_inference_result_v3,_vckss_rust_engine_component_inference_result_v4,_vckss_rust_engine_component_inference_result_v5,_vckss_rust_engine_detailed_receipt_v1,_vckss_rust_engine_detailed_receipt_v2,_vckss_rust_engine_detailed_receipt_v3,_vckss_rust_engine_detailed_receipt_v4,_vckss_rust_engine_detailed_receipt_v5,_vckss_rust_engine_detailed_receipt_v6,_vckss_rust_engine_execution_plan_receipt_v1,_vckss_rust_engine_detailed_receipt_v7,_vckss_rust_engine_performance_receipt_v1,_vckss_rust_engine_full_cmg_receipt_v1,_vckss_rust_engine_rhs_receipts_v1,_vckss_rust_engine_rhs_receipts_v2,_vckss_rust_engine_release_v1,_vckss_rust_engine_clear_abandoned_v1,_vckss_rust_engine_snapshot_v1,_vckss_rust_engine_last_error,_vckss_rust_engine_admit_prepare_memory_v1,_vckss_rust_engine_prepare_memory_interrupt_v1,_vckss_rust_engine_memory_policy_v1,_vckss_rust_engine_memory_forecast_v1,_vckss_rust_numerical_schema_v1,_vckss_rust_engine_numerical_preflight_v1,_vckss_rust_engine_solve_numerical_v1,_vckss_rust_engine_solve_numerical_interrupt_v1,_vckss_rust_engine_numerical_result_v1,_vckss_rust_engine_numerical_cmg_work_v1,_vckss_rust_engine_numerical_rhs_v1",
+      "universal_dependencies_arm64": "@rpath/fevc_rust_macos.plugin,/usr/lib/libSystem.B.dylib",
+      "universal_dependencies_x86_64": "@rpath/fevc_rust_macos.plugin,/usr/lib/libSystem.B.dylib",
+      "artifact_arm64_sha256": "9231a7f4a729ae3300cc980084ef669cfab104f6f07af70f25a32a39f8a58a1a",
+      "artifact_x86_64_sha256": "10d4b2a33e107e8231ce294210560ab9f0732d54a0ae7be45f33bb0436ff973d",
+      "artifact_universal_sha256": "1c53238d1e5c6ad82d6646f5b1cf1ea1f855bde2a98591942619c8f57eb46e46",
+      "tested_arm64_thin_sha256": "9231a7f4a729ae3300cc980084ef669cfab104f6f07af70f25a32a39f8a58a1a",
+      "tested_x86_64_thin_sha256": "10d4b2a33e107e8231ce294210560ab9f0732d54a0ae7be45f33bb0436ff973d",
+      "tested_universal_sha256": "1c53238d1e5c6ad82d6646f5b1cf1ea1f855bde2a98591942619c8f57eb46e46",
+      "artifact_arm64_file": "Mach-O 64-bit dynamically linked shared library arm64",
+      "artifact_x86_64_file": "Mach-O 64-bit dynamically linked shared library x86_64",
+      "artifact_universal_file": "Mach-O universal binary with 2 architectures: [x86_64:Mach-O 64-bit dynamically linked shared library x86_64] [arm64]",
+      "artifact_arm64_architectures": "arm64",
+      "artifact_x86_64_architectures": "x86_64",
+      "artifact_universal_architectures": "x86_64 arm64",
+      "stata_tested_artifact": "ad-hoc-signed thin arm64 and x86_64 candidates tested under architecture-specific names; byte-identical universal candidate tested separately under both aliases",
+      "package_policy": "tracked manifest ships portable dispatcher and loader helpers but no plugin binaries or tests; qualifier generates a temporary local macOS artifact manifest containing the tested thin binaries",
+      "codesign": "adhoc-verified",
+      "arm64_lifecycle": "FEVC RUST PLUGIN PASS",
+      "arm64_public_timers": "PASS test_timer_ownership.do",
+      "arm64_diagnostic": "FEVC RUST MATA DIAGNOSTIC PASS",
+      "arm64_shared_atoms": "PASS test_rust_mata_shared_atoms.do",
+      "arm64_public_route": "PASS test_rust_public.do",
+      "arm64_exact_controls": "FEVC RUST EXACT CONTROLS PASS",
+      "arm64_private_generic": "FEVC RUST GENERIC JLA PASS",
+      "arm64_private_planned_v4": "FEVC RUST PLANNED V4 PASS",
+      "arm64_private_planned_compressed": "FEVC RUST PLANNED COMPRESSED V4 PASS",
+      "arm64_public_planned_compressed": "FEVC RUST COMPRESSED PUBLIC ROUTES PASS",
+      "arm64_public_exact": "FEVC RUST PUBLIC EXACT PASS",
+      "arm64_public_generic": "FEVC RUST PUBLIC GENERIC PASS",
+      "arm64_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "arm64_public_subsample": "PASS test_subsample_equivalence.do",
+      "arm64_public_component_inference": "PASS test_rust_component_inference.do",
+      "arm64_public_match_component_inference": "PASS test_rust_match_component_inference.do",
+      "arm64_public_individual_inference": "PASS test_rust_individual_inference.do",
+      "arm64_backend_routing": "PASS test_backend_routing.do",
+      "arm64_universal_lifecycle": "FEVC RUST PLUGIN PASS",
+      "arm64_universal_public_timers": "PASS test_timer_ownership.do",
+      "arm64_universal_public_route": "PASS test_rust_public.do",
+      "arm64_universal_exact_controls": "FEVC RUST EXACT CONTROLS PASS",
+      "arm64_universal_private_generic": "FEVC RUST GENERIC JLA PASS",
+      "arm64_universal_private_planned_v4": "FEVC RUST PLANNED V4 PASS",
+      "arm64_universal_private_planned_compressed": "FEVC RUST PLANNED COMPRESSED V4 PASS",
+      "arm64_universal_public_planned_compressed": "FEVC RUST COMPRESSED PUBLIC ROUTES PASS",
+      "arm64_universal_public_exact": "FEVC RUST PUBLIC EXACT PASS",
+      "arm64_universal_public_generic": "FEVC RUST PUBLIC GENERIC PASS",
+      "arm64_universal_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "arm64_universal_public_subsample": "PASS test_subsample_equivalence.do",
+      "arm64_clean_install": "PASS test_rust_public_install.do",
+      "arm64_canonical_install_unavailable": "PASS test_rust_public_install.do",
+      "arm64_test_status": "PASS_NATIVE",
+      "rosetta_status": "AVAILABLE",
+      "x86_64_test_status": "PASS_ROSETTA",
+      "x86_64_lifecycle": "FEVC RUST PLUGIN PASS",
+      "x86_64_public_timers": "PASS test_timer_ownership.do",
+      "x86_64_diagnostic": "FEVC RUST MATA DIAGNOSTIC PASS",
+      "x86_64_shared_atoms": "PASS test_rust_mata_shared_atoms.do",
+      "x86_64_public_route": "PASS test_rust_public.do",
+      "x86_64_exact_controls": "FEVC RUST EXACT CONTROLS PASS",
+      "x86_64_private_generic": "FEVC RUST GENERIC JLA PASS",
+      "x86_64_private_planned_v4": "FEVC RUST PLANNED V4 PASS",
+      "x86_64_private_planned_compressed": "FEVC RUST PLANNED COMPRESSED V4 PASS",
+      "x86_64_public_planned_compressed": "FEVC RUST COMPRESSED PUBLIC ROUTES PASS",
+      "x86_64_public_exact": "FEVC RUST PUBLIC EXACT PASS",
+      "x86_64_public_generic": "FEVC RUST PUBLIC GENERIC PASS",
+      "x86_64_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "x86_64_public_subsample": "PASS test_subsample_equivalence.do",
+      "x86_64_public_component_inference": "PASS test_rust_component_inference.do",
+      "x86_64_public_match_component_inference": "PASS test_rust_match_component_inference.do",
+      "x86_64_public_individual_inference": "PASS test_rust_individual_inference.do",
+      "x86_64_backend_routing": "PASS test_backend_routing.do",
+      "x86_64_universal_lifecycle": "FEVC RUST PLUGIN PASS",
+      "x86_64_universal_public_timers": "PASS test_timer_ownership.do",
+      "x86_64_universal_public_route": "PASS test_rust_public.do",
+      "x86_64_universal_exact_controls": "FEVC RUST EXACT CONTROLS PASS",
+      "x86_64_universal_private_generic": "FEVC RUST GENERIC JLA PASS",
+      "x86_64_universal_private_planned_v4": "FEVC RUST PLANNED V4 PASS",
+      "x86_64_universal_private_planned_compressed": "FEVC RUST PLANNED COMPRESSED V4 PASS",
+      "x86_64_universal_public_planned_compressed": "FEVC RUST COMPRESSED PUBLIC ROUTES PASS",
+      "x86_64_universal_public_exact": "FEVC RUST PUBLIC EXACT PASS",
+      "x86_64_universal_public_generic": "FEVC RUST PUBLIC GENERIC PASS",
+      "x86_64_universal_public_stayer_hybrid": "PASS test_stayers_hybrid.do",
+      "x86_64_universal_public_subsample": "PASS test_subsample_equivalence.do",
+      "x86_64_clean_install": "PASS test_rust_public_install.do",
+      "x86_64_canonical_install_unavailable": "PASS test_rust_public_install.do",
+      "command.fetch": "VCKSS_STATA_SPI_DIR=<temporary>/stata-spi rust/stata_backend/fetch_stata_spi.sh",
+      "command.cshim_interrupt_test": "clang -std=c11 -Wall -Wextra -Werror -DSYSTEM=APPLEMAC -I <temporary>/stata-spi -I rust/stata_backend/cshim -I rust/stata_backend/include rust/stata_backend/tests/cshim_interrupt_test.c -o <temporary>/vckss-cshim-interrupt-test; <temporary>/vckss-cshim-interrupt-test",
+      "command.cshim_error_transport_test": "clang -std=c11 -Wall -Wextra -Werror -ffunction-sections -DSYSTEM=APPLEMAC -I <temporary>/stata-spi -I rust/stata_backend/cshim -I rust/stata_backend/include rust/stata_backend/tests/cshim_error_transport_test.c -Wl,-dead_strip -o <temporary>/vckss-cshim-error-transport-test; <temporary>/vckss-cshim-error-transport-test",
+      "command.abi_header_compat_test": "clang -std=c11 -Wall -Wextra -Werror -I rust/stata_backend/include -c rust/stata_backend/tests/abi_header_compat_test.c -o <temporary>/vckss-abi-header-compat.o",
+      "command.cargo_fmt": "<rust-1.85.1-cargo> fmt --manifest-path rust/stata_backend/Cargo.toml --all -- --check",
+      "command.cargo_clippy": "VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.85.1-cargo> clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings",
+      "command.cargo_test": "VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.85.1-cargo> test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets",
+      "command.toolchain": "rustup which --toolchain 1.85.1 cargo; rustup which --toolchain 1.85.1 rustc",
+      "command.toolchain_preflight": "PATH=<rust-1.85.1-bin>:$PATH RUSTC=<rust-1.85.1-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_TARGET_DIR=<temporary>/rust-toolchain-preflight/target <rust-1.85.1-cargo> check --offline --quiet --target aarch64-apple-darwin",
+      "command.targets": "rustup target add --toolchain 1.85.1 aarch64-apple-darwin x86_64-apple-darwin",
+      "command.build_arm64": "VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target MACOSX_DEPLOYMENT_TARGET=11.0 PATH=<rust-1.85.1-bin>:$PATH RUSTC=<rust-1.85.1-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= <rust-1.85.1-cargo> build --manifest-path rust/stata_backend/Cargo.toml --locked --release --target aarch64-apple-darwin",
+      "command.build_x86_64": "VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target MACOSX_DEPLOYMENT_TARGET=10.13 PATH=<rust-1.85.1-bin>:$PATH RUSTC=<rust-1.85.1-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= <rust-1.85.1-cargo> build --manifest-path rust/stata_backend/Cargo.toml --locked --release --target x86_64-apple-darwin",
+      "command.sign_thin": "codesign --force --sign - --timestamp=none <thin-artifact>",
+      "command.universal": "lipo -create <arm64> <x86_64> -output <universal>; codesign --force --sign - --timestamp=none <universal>",
+      "command.test_arm64_lifecycle": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_plugin.do <temporary-package>",
+      "command.test_arm64_diagnostic": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_mata_diagnostic.do <temporary-package>",
+      "command.test_arm64_shared_atoms": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_mata_shared_atoms.do <temporary-package>",
+      "command.test_arm64_public_route": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-package>",
+      "command.test_arm64_exact_controls": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-thin-package>",
+      "command.test_arm64_private_generic": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_generic_jla.do <temporary-thin-package>",
+      "command.test_arm64_private_planned_v4": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_v4.do <temporary-thin-package>",
+      "command.test_arm64_private_planned_compressed": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>",
+      "command.test_arm64_public_planned_compressed": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>",
+      "command.test_arm64_public_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-thin-package>",
+      "command.test_arm64_public_observation_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-thin-package>",
+      "arm64_public_stayer_options": "STAYER_OPTION_SYMMETRY_PASS",
+      "command.test_arm64_public_stayer_options": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-thin-package>",
+      "command.test_arm64_public_pooled_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-thin-package>",
+      "command.test_arm64_public_point_routes_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-thin-package>",
+      "command.test_arm64_public_controlled_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-thin-package>",
+      "command.test_arm64_public_generic_execution": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-thin-package>",
+      "command.test_arm64_public_progress": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-thin-package>",
+      "command.test_arm64_public_timers": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_timer_ownership.do <temporary-thin-package>",
+      "command.test_arm64_public_exact": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>",
+      "command.test_arm64_public_generic": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>",
+      "command.test_arm64_public_stayer_hybrid": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>",
+      "command.test_arm64_public_subsample": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-thin-package>",
+      "command.test_arm64_public_component_inference": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>",
+      "command.test_arm64_public_match_component_inference": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>",
+      "command.test_arm64_public_individual_inference": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>",
+      "command.test_arm64_backend_routing": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_backend_routing.do <temporary-thin-package>",
+      "command.test_arm64_universal_public_route": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-universal-package>",
+      "command.test_arm64_universal_exact_controls": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-universal-package>",
+      "command.test_arm64_universal_private_generic": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_generic_jla.do <temporary-universal-package>",
+      "command.test_arm64_universal_private_planned_v4": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_v4.do <temporary-universal-package>",
+      "command.test_arm64_universal_private_planned_compressed": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_planned_compressed": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_observation_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-universal-package>",
+      "arm64_universal_public_stayer_options": "STAYER_OPTION_SYMMETRY_PASS",
+      "command.test_arm64_universal_public_stayer_options": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_pooled_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_point_routes_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_controlled_full_cmg": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_generic_execution": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_progress": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_timers": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_timer_ownership.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_exact": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_generic": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_stayer_hybrid": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>",
+      "command.test_arm64_universal_public_subsample": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-universal-package>",
+      "command.test_arm64_clean_install": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>",
+      "command.test_arm64_canonical_install_unavailable": "arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do fevc <isolated-plus> unavailable",
+      "command.test_x86_64_lifecycle": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_plugin.do <temporary-package>",
+      "command.test_x86_64_diagnostic": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_mata_diagnostic.do <temporary-package>",
+      "command.test_x86_64_shared_atoms": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_mata_shared_atoms.do <temporary-package>",
+      "command.test_x86_64_public_route": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-package>",
+      "command.test_x86_64_exact_controls": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-thin-package>",
+      "command.test_x86_64_private_generic": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_generic_jla.do <temporary-thin-package>",
+      "command.test_x86_64_private_planned_v4": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_v4.do <temporary-thin-package>",
+      "command.test_x86_64_private_planned_compressed": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>",
+      "command.test_x86_64_public_planned_compressed": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>",
+      "command.test_x86_64_public_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-thin-package>",
+      "command.test_x86_64_public_observation_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-thin-package>",
+      "x86_64_public_stayer_options": "STAYER_OPTION_SYMMETRY_PASS",
+      "command.test_x86_64_public_stayer_options": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-thin-package>",
+      "command.test_x86_64_public_pooled_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-thin-package>",
+      "command.test_x86_64_public_point_routes_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-thin-package>",
+      "command.test_x86_64_public_controlled_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-thin-package>",
+      "command.test_x86_64_public_generic_execution": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-thin-package>",
+      "command.test_x86_64_public_progress": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-thin-package>",
+      "command.test_x86_64_public_timers": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_timer_ownership.do <temporary-thin-package>",
+      "command.test_x86_64_public_exact": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>",
+      "command.test_x86_64_public_generic": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>",
+      "command.test_x86_64_public_stayer_hybrid": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>",
+      "command.test_x86_64_public_subsample": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-thin-package>",
+      "command.test_x86_64_public_component_inference": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>",
+      "command.test_x86_64_public_match_component_inference": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>",
+      "command.test_x86_64_public_individual_inference": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>",
+      "command.test_x86_64_backend_routing": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_backend_routing.do <temporary-thin-package>",
+      "command.test_x86_64_universal_public_route": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-universal-package>",
+      "command.test_x86_64_universal_exact_controls": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-universal-package>",
+      "command.test_x86_64_universal_private_generic": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_generic_jla.do <temporary-universal-package>",
+      "command.test_x86_64_universal_private_planned_v4": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_v4.do <temporary-universal-package>",
+      "command.test_x86_64_universal_private_planned_compressed": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_planned_compressed": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_full_cmg_v2.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_observation_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_observation_full_cmg.do <temporary-universal-package>",
+      "x86_64_universal_public_stayer_options": "STAYER_OPTION_SYMMETRY_PASS",
+      "command.test_x86_64_universal_public_stayer_options": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayer_option_symmetry.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_pooled_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_pooled_full_cmg.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_point_routes_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_point_routes_full_cmg.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_controlled_full_cmg": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_controlled_full_cmg.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_generic_execution": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_execution_paths.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_progress": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_progress.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_timers": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_timer_ownership.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_exact": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_generic": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_stayer_hybrid": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-universal-package>",
+      "command.test_x86_64_universal_public_subsample": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-universal-package>",
+      "command.test_x86_64_clean_install": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>",
+      "command.test_x86_64_canonical_install_unavailable": "arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_install.do fevc <isolated-plus> unavailable",
+      "stata_logs": "sanitized command transcripts copied to the requested artifacts directory; startup banners and raw logs deleted on exit"
+    },
+    "artifacts_and_sanitized_logs": ".local/issue7-20260929/native-qualification-v4",
+    "adopted_or_distributed": false,
+    "prior_runtime_restoration": {
+      "receipt": ".local/issue7-20260929/prior-runtime-v1/restoration.json",
+      "sha256": "3b282536e76a43aebe2df74f7afd9b406cb048d6aa0224366eaf4a1ba459da86",
+      "files": [
+        {
+          "path": "fevc/fevc_rust_linux_x64.plugin",
+          "sha256": "d11b4601d3a2552a1df3bcc64e5fa626cd316526d387c54b35e7d09265305701",
+          "mode": 420
+        },
+        {
+          "path": "fevc/fevc_rust_macos.plugin",
+          "sha256": "21b4d3dff3cd22d44db2476963ac6e5d3be84e53ba80c5ed8085a4b7072e4802",
+          "mode": 420
+        },
+        {
+          "path": "fevc/fevc_rust_macos_arm64.plugin",
+          "sha256": "49643507573324d67edcda34df8b3dfacb0cd10562c5b6355aa9c965fe4ec607",
+          "mode": 420
+        },
+        {
+          "path": "fevc/fevc_rust_macos_x86_64.plugin",
+          "sha256": "d2bddffce6e86a1446931750c4b6cc195ae89b6fbebfd3f2f3274ec02deeb143",
+          "mode": 420
+        },
+        {
+          "path": "fevc/fevc_rust_windows_x64.plugin",
+          "sha256": "afcf431045ed3ea1d8051ca2d0de97ece836a25f71782f7c59eb6ac784f80d57",
+          "mode": 420
+        }
+      ],
+      "qualifier_temporary_staging": "restored after immutable private candidate export; no artifact adopted"
+    },
+    "source_manifest": {
+      "path": ".local/issue7-20260929/native-qualification-v4/source-manifest.sha256",
+      "sha256": "bef6e867a854fe7fe957bf31a7010d7a758d01d6c17d8aec38450bdc428bdc33",
+      "current_source_match": true
+    },
+    "numerical_logs": [
+      {
+        "path": ".local/issue7-20260929/native-qualification-v4/stata-logs/stata-arm64-numerical-thin__test-package.log.sanitized.log",
+        "sha256": "f9665e0cd4fc7f9e3a524aa9acc4dffe60ea8fa907c3a26679a208dfc7200e39",
+        "marker": "FEVC ALL PROBE NATIVE FRONTEND PASS"
+      },
+      {
+        "path": ".local/issue7-20260929/native-qualification-v4/stata-logs/stata-arm64-numerical-universal__test-package-universal.log.sanitized.log",
+        "sha256": "f63ccc579fd40d87ce1b843829921880ea22749d5597200c90971462c1e97d46",
+        "marker": "FEVC ALL PROBE NATIVE FRONTEND PASS"
+      },
+      {
+        "path": ".local/issue7-20260929/native-qualification-v4/stata-logs/stata-arm64-numerical-shared-atoms__test-package.log.sanitized.log",
+        "sha256": "8573b446ee95e4f4128d8fe250b9ac1f4c38eefa4afb588dc003decdaa944859",
+        "marker": "FEVC ALL PROBE SHARED ATOMS PASS"
+      },
+      {
+        "path": ".local/issue7-20260929/native-qualification-v4/stata-logs/stata-x86_64-numerical-thin__test-package.log.sanitized.log",
+        "sha256": "7cb0d7b2e8cbd72e52d5c5023a7f5837f84083eab630337f6aa1608e57686ca0",
+        "marker": "FEVC ALL PROBE NATIVE FRONTEND PASS"
+      },
+      {
+        "path": ".local/issue7-20260929/native-qualification-v4/stata-logs/stata-x86_64-numerical-universal__test-package-universal.log.sanitized.log",
+        "sha256": "8df3cf43ad52170d474c1ba9995fa66d515d31ebc83dd7e01e4f5614e42c660e",
+        "marker": "FEVC ALL PROBE NATIVE FRONTEND PASS"
+      },
+      {
+        "path": ".local/issue7-20260929/native-qualification-v4/stata-logs/stata-x86_64-numerical-shared-atoms__test-package.log.sanitized.log",
+        "sha256": "8573b446ee95e4f4128d8fe250b9ac1f4c38eefa4afb588dc003decdaa944859",
+        "marker": "FEVC ALL PROBE SHARED ATOMS PASS"
+      }
+    ]
+  },
+  "calibration": {
+    "complete_audit": ".local/issue7-20260929/confirmation-native-v3/complete-audit.json",
+    "sha256": "2826325b8bd5dcabf6a1ecce23c262e5fda82ac3835003401d6c19d066c9e397",
+    "complete_cells": 27,
+    "nested_cells": 9,
+    "attempted": 119808,
+    "maximum_screen": 0.10356563343093189,
+    "failed_cells": [],
+    "qualification": "generic diagonal Counter-V1 core only; preserved dense campaign scope in initial receipt"
+  },
+  "compatibility": {
+    "from_campaign": "confirmation-native-v3",
+    "to_frontend": "current dirty main + exact native source manifest",
+    "changed_surface": "native adapter and final frontend tests: compressed literal auto/CMG now preserves baseline point family; added tests and native registration",
+    "core_source_before": "8b8663cd12271d850e72015e32bada431eca62e375307d91d2771d34f40c0a2e",
+    "core_source_after": "8b8663cd12271d850e72015e32bada431eca62e375307d91d2771d34f40c0a2e",
+    "claims_reused": "generic diagonal Counter-V1 core calibration only",
+    "unchanged": [
+      "all calibrated production core/build/source-bundle/reference-binary/input/DGP/RNG-seed/acceptance identities"
+    ],
+    "checks": [
+      "independent 180 output and 96 source hash reconciliation",
+      "complete current core identity check",
+      "focused native matrix/atom tests and source-local candidate profile"
+    ],
+    "excluded": [
+      "calibration carry-forward to compressed/Mata/native frontend or other platform"
+    ],
+    "paths": [
+      "rust/crates/vckss-plugin/src/numerical_api.rs",
+      "rust/crates/vckss-plugin/tests/engine_ffi/numerical.rs",
+      "fevc/tests/stata/test_all_probe_native_frontend.do",
+      "fevc/tests/stata/test_all_probe_shared_atoms.do",
+      "fevc/tests/stata/test_rust_public_install.do",
+      "fevc/tests/stata/run_all.do",
+      "rust/stata_backend/qualify_macos.sh"
+    ]
+  },
+  "overhead": {
+    "result": ".local/issue7-20260929/command-overhead-v5/result.json",
+    "sha256": "8aad124acbc384109948c29eb377b84683d8bcbd4c048d630164be21a1650c96",
+    "manifest": {
+      "schema": "FEVC_ALL_PROBE_COMMAND_OVERHEAD_V1",
+      "created_utc": "2026-09-30T02:54:46.168879+00:00",
+      "base": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+      "scope": "paired complete-command development measurement; not representative-scale qualification or statistical calibration",
+      "fixture": {
+        "rows": 1200,
+        "workers": 100,
+        "firms": 12,
+        "copies": 2400,
+        "controls": 2,
+        "frequency": "1+mod(row,3)",
+        "mass": "f*(1+.1*mod(row,4))",
+        "stayers": "last five workers fixed firm; compressed uses movers"
+      },
+      "R": 200,
+      "T": 200,
+      "batch": 7,
+      "seed": 2026092911,
+      "replications": 2,
+      "cells": [
+        {
+          "key": "mata-generic_observation-conditional-0",
+          "backend": "mata",
+          "route": "generic_observation",
+          "mode": "conditional",
+          "replication": 0
+        },
+        {
+          "key": "mata-generic_observation-all-0",
+          "backend": "mata",
+          "route": "generic_observation",
+          "mode": "all",
+          "replication": 0
+        },
+        {
+          "key": "mata-generic_observation-conditional-1",
+          "backend": "mata",
+          "route": "generic_observation",
+          "mode": "conditional",
+          "replication": 1
+        },
+        {
+          "key": "mata-generic_observation-all-1",
+          "backend": "mata",
+          "route": "generic_observation",
+          "mode": "all",
+          "replication": 1
+        },
+        {
+          "key": "mata-generic_match-conditional-0",
+          "backend": "mata",
+          "route": "generic_match",
+          "mode": "conditional",
+          "replication": 0
+        },
+        {
+          "key": "mata-generic_match-all-0",
+          "backend": "mata",
+          "route": "generic_match",
+          "mode": "all",
+          "replication": 0
+        },
+        {
+          "key": "mata-generic_match-conditional-1",
+          "backend": "mata",
+          "route": "generic_match",
+          "mode": "conditional",
+          "replication": 1
+        },
+        {
+          "key": "mata-generic_match-all-1",
+          "backend": "mata",
+          "route": "generic_match",
+          "mode": "all",
+          "replication": 1
+        },
+        {
+          "key": "mata-compressed_match-conditional-0",
+          "backend": "mata",
+          "route": "compressed_match",
+          "mode": "conditional",
+          "replication": 0
+        },
+        {
+          "key": "mata-compressed_match-all-0",
+          "backend": "mata",
+          "route": "compressed_match",
+          "mode": "all",
+          "replication": 0
+        },
+        {
+          "key": "mata-compressed_match-conditional-1",
+          "backend": "mata",
+          "route": "compressed_match",
+          "mode": "conditional",
+          "replication": 1
+        },
+        {
+          "key": "mata-compressed_match-all-1",
+          "backend": "mata",
+          "route": "compressed_match",
+          "mode": "all",
+          "replication": 1
+        },
+        {
+          "key": "rust-generic_observation-conditional-0",
+          "backend": "rust",
+          "route": "generic_observation",
+          "mode": "conditional",
+          "replication": 0
+        },
+        {
+          "key": "rust-generic_observation-all-0",
+          "backend": "rust",
+          "route": "generic_observation",
+          "mode": "all",
+          "replication": 0
+        },
+        {
+          "key": "rust-generic_observation-conditional-1",
+          "backend": "rust",
+          "route": "generic_observation",
+          "mode": "conditional",
+          "replication": 1
+        },
+        {
+          "key": "rust-generic_observation-all-1",
+          "backend": "rust",
+          "route": "generic_observation",
+          "mode": "all",
+          "replication": 1
+        },
+        {
+          "key": "rust-generic_match-conditional-0",
+          "backend": "rust",
+          "route": "generic_match",
+          "mode": "conditional",
+          "replication": 0
+        },
+        {
+          "key": "rust-generic_match-all-0",
+          "backend": "rust",
+          "route": "generic_match",
+          "mode": "all",
+          "replication": 0
+        },
+        {
+          "key": "rust-generic_match-conditional-1",
+          "backend": "rust",
+          "route": "generic_match",
+          "mode": "conditional",
+          "replication": 1
+        },
+        {
+          "key": "rust-generic_match-all-1",
+          "backend": "rust",
+          "route": "generic_match",
+          "mode": "all",
+          "replication": 1
+        },
+        {
+          "key": "rust-compressed_match-conditional-0",
+          "backend": "rust",
+          "route": "compressed_match",
+          "mode": "conditional",
+          "replication": 0
+        },
+        {
+          "key": "rust-compressed_match-all-0",
+          "backend": "rust",
+          "route": "compressed_match",
+          "mode": "all",
+          "replication": 0
+        },
+        {
+          "key": "rust-compressed_match-conditional-1",
+          "backend": "rust",
+          "route": "compressed_match",
+          "mode": "conditional",
+          "replication": 1
+        },
+        {
+          "key": "rust-compressed_match-all-1",
+          "backend": "rust",
+          "route": "compressed_match",
+          "mode": "all",
+          "replication": 1
+        }
+      ],
+      "source_hashes": {
+        "fevc/fevc_scale_engine.mata": "96e9bf954645d51966065af5440415b216cf4187123fbf1f7c481a5d21fc774a",
+        "fevc/fevc.ado": "6d2d08ed6131f773c87f78025720757d65da8975cc0dcd9a1d09b8e48a85e5fc",
+        "fevc/fevc__hybrid_sample.ado": "2dc25e22d67449de56c596bd656682d73f7c0e64286770f8f335170b2147d3e9",
+        "fevc/fevc__rust_component_fetch.ado": "be64d70b47f59571eeed3e06767907515dea5b684ded9e84d12bbde62543530c",
+        "fevc/fevc__display.ado": "766f460718e4f520575d58feab412457135b19a1e7c24b25283e73633ceb718f",
+        "fevc/fevc__native_threads.ado": "fa8be26895fb8d4b6afa5a48f72c814d014fe760827117573635536e4537718d",
+        "fevc/fevc__rust_macos.ado": "a85eaf5ead0bb2aa8b8421d246119ee316d5cdbb18d9fe16700bb64f256fc0e5",
+        "fevc/fevc__rust_plugin_call.ado": "67b3aa2a7bbf06aa4852e157a5f4aa12840badbec84ffd94bebefde6b04824c1",
+        "fevc/fevc__rust_component_attach.ado": "026dd6a3a40cd66b9006ec9b25ea9a925b9b35e403362542dd21079cc917ad02",
+        "fevc/fevc__rust_reconcile_exact_v7.ado": "d9ed45b417bcab498db86ff16e3ec8025b5ced7c16cda91d51bd0f2489c0f185",
+        "fevc/fevc__rust_post_stayer_hybrid.ado": "c6fc1a530478eebfc80dd6b3ba1a5db9fb9381d73fac854f5d3c24f9b6ccca9f",
+        "fevc/fevc__rust_solve_v4.ado": "601fde6d24d0f0239f6fca83ddbbbedb95fc3f1bd87b4e4396a740d5f8877d76",
+        "fevc/fevc__rust_solve_v5.ado": "397a17b0270888a5e6f7825a39f5a07dcfec747ef3d235df565ec29ecc49f9e4",
+        "fevc/fevc__rust_reconcile_comp_v7.ado": "306f8c005a34696812864464bc5af50206306d26ec5a085df8c63b7b888386cf",
+        "fevc/fevc__stayer_population_post.ado": "4e70d476472b956b423977f505a319d045ad2e6c43078b36f52da10a99924d7a",
+        "fevc/fevc_timer.mata": "1209d7d2f21b1bfa365889a009bc5e1a0cda902d7b5b917ce0bf01e5ef6f3d80",
+        "fevc/fevc_scale_runtime.mata": "ea694457cbb54189c72ee6587ab55ca2cee7e0e92820e9919209e013d47661e5",
+        "fevc/fevc__rust_public_call.ado": "a128e9e46df863d5649c6bdf66b712d4a1f000b61c970b99a5b9ba6deefeecfe",
+        "fevc/fevc__rust_capture_stayers.ado": "071e451cf4fd556911ee1f62e9bcc28b05ae77a793e434ec5d94d04049d9812f",
+        "fevc/fevc__memory_options.ado": "fb81e093af50999c092d87e43cb7d4fe8200e02ff50f767963c5704ac069ba34",
+        "fevc/fevc_rust.ado": "51a5b5a443494a1a33052d311fc3a4107358fd42b1c33cbd2f03ffd08d878993",
+        "fevc/fevc__rust_windows.ado": "686fecb89736db99840d05845543fb56e36c1da10ac45ba519806c767bcef99f",
+        "fevc/fevc_scale.mata": "b03fe48c4cb67731b4097bed39f9a4e74f229a54dc4d7ee6eec7a27aa6d28d12",
+        "fevc/fevc_solver.mata": "97a0fd0a8e48f252f7c4ffa6d71ea3393c33967f9dd772fcc6d996acae62c7b9",
+        "fevc/fevc_cmg.mata": "3572a105f25316fc1ddbfb2697dbb8ad63808c637ef1d2079e6416c14a790c47",
+        "fevc/fevc__lifecycle.ado": "1b37efb6c3e39f05f7e493f2ed102cbcab58fda641ebaa37ee55884acec13287",
+        "fevc/fevc__simulate_data.ado": "bc277879909b543f945ac94e870652692f2efb9bfc4db3406f960671da66eabc",
+        "fevc/fevc__numerical.ado": "9040ae8abc5b6352251f6df1e883f68a5115687d58e45a0104ab2c12bd41c270",
+        "fevc/fevc_inference.mata": "87eaf8193f5b39d0507a45b8e228feeb37794bf1c07c46098134d06f8dfa6954",
+        "fevc/fevc__failure_guidance.ado": "e0b34dfe1c6b8cc9d1b7db5b12ba443aa1e0758a94357c7662e421d10699fc10",
+        "fevc/fevc_resource.mata": "cbce6379400199ca7ac8414f2229f6e68f81439ff6a0223544042a5c38b73ca5",
+        "fevc/fevc__rust_core_ready.ado": "e09f650d76768592b7b4a603b67db4c09f14dacb153645040b71d4a4ba45d774",
+        "fevc/fevc__rust_numerical.ado": "41f1d1d8d2e95e389ee16defda9cae89b32ab3e40683ecd968f9a490d75ff375",
+        "fevc/fevc__rust_comp_batch_receipt.ado": "7ced3a9d460bf299f94bbb00fae4feabc3185d69eb7e67d39756ec84fdc11808",
+        "fevc/fevc.mata": "f925ed7f42b10914bc0abe4bcc3dc0dab54519e967d96249a89933af66f7ff96",
+        "fevc/fevc__rust_component_post.ado": "a04d171e2123e4418136047bc7fb23f8074f6b25ec8c7f449a21abcb195fbe02",
+        "fevc/fevc__timer.ado": "c4dce56ee8af187e0fa61341cefdf4d0f99f3ea367afaa853ac51591267c66ee",
+        "fevc/fevc_run.ado": "fca93b5751254ef4e441c5760ebb1dd3e8c232a118df0b5df53df11c659830e9",
+        "fevc/fevc__rust_cmg_model.ado": "1295a8e6218460aa6ed22cd43d19c32334bb3f8be6d27a6780b1aa338d9cb5cc",
+        "fevc/fevc__exact_inference_model_post.ado": "26e8ab485fc80ecf1e8d0ec0c53da3195c3ad32509cc32dde5cf31a6d972bd45",
+        "fevc/fevc__rust_linux.ado": "e57acd40fcb4e6127926d65c023fd4190180b4a2e2c9c530d1df9d451ca6b368",
+        "fevc/fevc__component_model_route.ado": "81f1fbe3ff27b49ae59dc6a9b617035c5a05f4de39389952830fa14f3eb950ea",
+        "fevc/fevc__observation_population.ado": "a873571e005542709739600419447ba37a7c6829cabdc0c9328c76d9f7616359",
+        "fevc/fevc__rust_plan_receipt.ado": "5e8b6524dd9f9107237e0dae0297a0c426f5fc66cedbe5d6905916fbaceee1fd",
+        "fevc/fevc_rng.mata": "bf8b7325667e8f41ddebc09577650103897a8b7e1fa96edec95b45a0ffc22e7f",
+        "fevc/fevc_graph.mata": "238d10656ca6bb830f51bc42d53b0df9b82423d425d9f3688f53655046daadfb",
+        "fevc/fevc__control_failure_post.ado": "f400d51899b4c390c5d931d10265db5c1007d9bd19a9a7f9a85ca4230cd88b44",
+        "fevc/fevc__rust_post_comp_v7.ado": "a99e027cb9727d08bbdb46844b6e06ceb8cafa3bb4dff1cfd551db6683d2f324",
+        "fevc/fevc__progress.ado": "d4491b8a6209ae0e714364c8d9e99ec1ef28fceabe7d06b582745bd879a161b6",
+        "fevc/fevc__rust_post_exact_v7.ado": "19a8a6d9d672917ba84b8ece3f95394f7c4a27b97f628c38e26d3fdf6a7fe2fc",
+        "fevc/fevc_estat.ado": "426d78dadf7ac54bc9d2ecea792959e91e619a4f0d02184556d7a0c4073d3775",
+        "rust/stata_backend/target/release/libvckss_stata.dylib": "15a09f1e77fe709df7a25ede5a0c6a910da359c11102e8f402747b6dc74d9a71",
+        ".local/issue7-20260929/command-overhead-v5/command.do": "4750a705c47c38b569125c069ea7cdd8030e8cc5bcf3b596489d81d14305d858",
+        ".local/issue7-20260929/command-overhead-v5/run.py": "74b093618f7225b1cae5dcc8cadbeb20ffb76e68f99291a5201c6b67a6ba98f8"
+      },
+      "expected_outputs": "one raw CSV, Stata log, process-time/RSS log and execution JSON per cell; paired normalized point and conditional differences <=1e-11",
+      "predecessor": "v1 canceled before measurement because native compressed literal routing required repair",
+      "registration": "v5 uses existing admissible hybrid-match point tuple without probeorder for both runtimes. v4 failed strict Rust baseline hybrid-match probeorder preflight; this is development performance registration, not scientific confirmation. Production, dataset, seed, R/T and thresholds unchanged.",
+      "expected_dimensions": {
+        "generic_observation": {
+          "retained": 1200,
+          "stored": 1200,
+          "physical": 2400
+        },
+        "generic_match": {
+          "retained": 1200,
+          "stored": 1200,
+          "physical": 2400
+        },
+        "compressed_match": {
+          "retained": 1140,
+          "stored": 1140,
+          "physical": 2280
+        }
+      },
+      "probeorder": {
+        "generic_observation": "probe",
+        "generic_match": "omitted: existing hybrid-match point frontend excludes probeorder",
+        "compressed_match": "probe"
+      }
+    },
+    "pairs": [
+      {
+        "backend": "mata",
+        "route": "generic_observation",
+        "replication": 0,
+        "base_seconds": 0.894,
+        "all_seconds": 1.567,
+        "overhead_seconds": 0.6729999999999999,
+        "overhead_ratio": 0.7527964205816553,
+        "base_rss": 43073536,
+        "all_rss": 44548096,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 1028096.0
+      },
+      {
+        "backend": "mata",
+        "route": "generic_observation",
+        "replication": 1,
+        "base_seconds": 0.894,
+        "all_seconds": 1.558,
+        "overhead_seconds": 0.664,
+        "overhead_ratio": 0.7427293064876959,
+        "base_rss": 43220992,
+        "all_rss": 43892736,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 1028096.0
+      },
+      {
+        "backend": "mata",
+        "route": "generic_match",
+        "replication": 0,
+        "base_seconds": 0.904,
+        "all_seconds": 1.568,
+        "overhead_seconds": 0.664,
+        "overhead_ratio": 0.7345132743362832,
+        "base_rss": 42909696,
+        "all_rss": 44138496,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 1028096.0
+      },
+      {
+        "backend": "mata",
+        "route": "generic_match",
+        "replication": 1,
+        "base_seconds": 0.898,
+        "all_seconds": 1.682,
+        "overhead_seconds": 0.7839999999999999,
+        "overhead_ratio": 0.8730512249443205,
+        "base_rss": 43171840,
+        "all_rss": 45105152,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 1028096.0
+      },
+      {
+        "backend": "mata",
+        "route": "compressed_match",
+        "replication": 0,
+        "base_seconds": 0.991,
+        "all_seconds": 1.363,
+        "overhead_seconds": 0.372,
+        "overhead_ratio": 0.3753784056508578,
+        "base_rss": 41353216,
+        "all_rss": 40828928,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 398336.0
+      },
+      {
+        "backend": "mata",
+        "route": "compressed_match",
+        "replication": 1,
+        "base_seconds": 0.971,
+        "all_seconds": 1.372,
+        "overhead_seconds": 0.40100000000000013,
+        "overhead_ratio": 0.41297631307929983,
+        "base_rss": 40452096,
+        "all_rss": 42287104,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 398336.0
+      },
+      {
+        "backend": "rust",
+        "route": "generic_observation",
+        "replication": 0,
+        "base_seconds": 0.334,
+        "all_seconds": 0.694,
+        "overhead_seconds": 0.35999999999999993,
+        "overhead_ratio": 1.0778443113772451,
+        "base_rss": 41189376,
+        "all_rss": 42319872,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 546496.0
+      },
+      {
+        "backend": "rust",
+        "route": "generic_observation",
+        "replication": 1,
+        "base_seconds": 0.334,
+        "all_seconds": 0.6990000000000001,
+        "overhead_seconds": 0.36500000000000005,
+        "overhead_ratio": 1.092814371257485,
+        "base_rss": 41435136,
+        "all_rss": 42532864,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 546496.0
+      },
+      {
+        "backend": "rust",
+        "route": "generic_match",
+        "replication": 0,
+        "base_seconds": 0.348,
+        "all_seconds": 0.697,
+        "overhead_seconds": 0.349,
+        "overhead_ratio": 1.0028735632183907,
+        "base_rss": 41730048,
+        "all_rss": 42123264,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 546496.0
+      },
+      {
+        "backend": "rust",
+        "route": "generic_match",
+        "replication": 1,
+        "base_seconds": 0.342,
+        "all_seconds": 0.691,
+        "overhead_seconds": 0.3489999999999999,
+        "overhead_ratio": 1.0204678362573096,
+        "base_rss": 41189376,
+        "all_rss": 42598400,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 546496.0
+      },
+      {
+        "backend": "rust",
+        "route": "compressed_match",
+        "replication": 0,
+        "base_seconds": 0.175,
+        "all_seconds": 0.516,
+        "overhead_seconds": 0.341,
+        "overhead_ratio": 1.9485714285714288,
+        "base_rss": 39403520,
+        "all_rss": 40976384,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 78736.0
+      },
+      {
+        "backend": "rust",
+        "route": "compressed_match",
+        "replication": 1,
+        "base_seconds": 0.17,
+        "all_seconds": 0.518,
+        "overhead_seconds": 0.348,
+        "overhead_ratio": 2.0470588235294116,
+        "base_rss": 39895040,
+        "all_rss": 41304064,
+        "normalized_errors": {
+          "point": 0.0,
+          "conditional": 0.0
+        },
+        "allocation_bound": 78736.0
+      }
+    ],
+    "limitations": "Two paired runs, fixed fixture/seed, fresh process per command. RSS includes Stata/libraries/dataset; forecasts and tracked Rust allocation peaks have different scopes. No representative-scale or universal timing claim.",
+    "actual_routes": {
+      "path": ".local/issue7-20260929/command-route-reconciliation-v2/result.json",
+      "sha256": "4789a353811d5c224f02421160b072af812b276e05763abf0c9d179d8f63bace",
+      "results": [
+        {
+          "key": "mata-generic_observation",
+          "metadata": {
+            "backend": "mata",
+            "engine": "generic",
+            "algorithm": "jla",
+            "preconditioner": "DIAGONAL"
+          },
+          "errors": {
+            "point": 0.0,
+            "conditional": 0.0
+          }
+        },
+        {
+          "key": "mata-generic_match",
+          "metadata": {
+            "backend": "mata",
+            "engine": "generic",
+            "algorithm": "jla",
+            "preconditioner": "DIAGONAL"
+          },
+          "errors": {
+            "point": 0.0,
+            "conditional": 0.0
+          }
+        },
+        {
+          "key": "mata-compressed_match",
+          "metadata": {
+            "backend": "mata",
+            "engine": "compressed",
+            "algorithm": "jla",
+            "preconditioner": "DIAGONAL"
+          },
+          "errors": {
+            "point": 0.0,
+            "conditional": 0.0
+          }
+        },
+        {
+          "key": "rust-generic_observation",
+          "metadata": {
+            "backend": "rust",
+            "engine": "generic",
+            "algorithm": "jla",
+            "preconditioner": "DIAGONAL"
+          },
+          "errors": {
+            "point": 0.0,
+            "conditional": 0.0
+          }
+        },
+        {
+          "key": "rust-generic_match",
+          "metadata": {
+            "backend": "rust",
+            "engine": "generic",
+            "algorithm": "jla",
+            "preconditioner": "DIAGONAL"
+          },
+          "errors": {
+            "point": 0.0,
+            "conditional": 0.0
+          }
+        },
+        {
+          "key": "rust-compressed_match",
+          "metadata": {
+            "backend": "rust",
+            "engine": "compressed",
+            "algorithm": "jla",
+            "preconditioner": "DIAGONAL"
+          },
+          "errors": {
+            "point": 0.0,
+            "conditional": 0.0
+          }
+        }
+      ]
+    },
+    "observed_commands": [
+      {
+        "seconds": 0.894,
+        "forecast": 75066250.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4912740017633949,
+        "point2": 0.5081877413038527,
+        "point3": 0.10252392260401542,
+        "point4": 1.2045095882752785,
+        "conditional1": 0.0003061119091499587,
+        "conditional2": 0.0002131842507136364,
+        "conditional3": 0.0001746262299036003,
+        "conditional4": 0.0002431180945164156,
+        "key": "mata-generic_observation-conditional-0",
+        "backend": "mata",
+        "route": "generic_observation",
+        "mode": "conditional",
+        "replication": 0,
+        "max_rss_bytes": 43073536,
+        "process_wall_seconds": 0.9393313750624657
+      },
+      {
+        "seconds": 1.567,
+        "forecast": 76094212.0,
+        "bound": 1028096.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4912740017633949,
+        "point2": 0.5081877413038527,
+        "point3": 0.10252392260401542,
+        "point4": 1.2045095882752785,
+        "conditional1": 0.0003061119091499587,
+        "conditional2": 0.0002131842507136364,
+        "conditional3": 0.0001746262299036003,
+        "conditional4": 0.0002431180945164156,
+        "key": "mata-generic_observation-all-0",
+        "backend": "mata",
+        "route": "generic_observation",
+        "mode": "all",
+        "replication": 0,
+        "max_rss_bytes": 44548096,
+        "process_wall_seconds": 1.6113915843889117
+      },
+      {
+        "seconds": 0.894,
+        "forecast": 75066250.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4912740017633949,
+        "point2": 0.5081877413038527,
+        "point3": 0.10252392260401542,
+        "point4": 1.2045095882752785,
+        "conditional1": 0.0003061119091499587,
+        "conditional2": 0.0002131842507136364,
+        "conditional3": 0.0001746262299036003,
+        "conditional4": 0.0002431180945164156,
+        "key": "mata-generic_observation-conditional-1",
+        "backend": "mata",
+        "route": "generic_observation",
+        "mode": "conditional",
+        "replication": 1,
+        "max_rss_bytes": 43220992,
+        "process_wall_seconds": 0.933750166092068
+      },
+      {
+        "seconds": 1.558,
+        "forecast": 76094213.0,
+        "bound": 1028096.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4912740017633949,
+        "point2": 0.5081877413038527,
+        "point3": 0.10252392260401542,
+        "point4": 1.2045095882752785,
+        "conditional1": 0.0003061119091499587,
+        "conditional2": 0.0002131842507136364,
+        "conditional3": 0.0001746262299036003,
+        "conditional4": 0.0002431180945164156,
+        "key": "mata-generic_observation-all-1",
+        "backend": "mata",
+        "route": "generic_observation",
+        "mode": "all",
+        "replication": 1,
+        "max_rss_bytes": 43892736,
+        "process_wall_seconds": 1.6006312081590295
+      },
+      {
+        "seconds": 0.904,
+        "forecast": 75058541.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.43385681288385297,
+        "point2": 0.4932572037587938,
+        "point3": 0.1095828659589359,
+        "point4": 1.1462797485605187,
+        "conditional1": 0.0016649053135281203,
+        "conditional2": 0.0008089027044754148,
+        "conditional3": 0.0009776746787347483,
+        "conditional4": 0.001581366789635674,
+        "key": "mata-generic_match-conditional-0",
+        "backend": "mata",
+        "route": "generic_match",
+        "mode": "conditional",
+        "replication": 0,
+        "max_rss_bytes": 42909696,
+        "process_wall_seconds": 0.9423093749210238
+      },
+      {
+        "seconds": 1.568,
+        "forecast": 76086503.0,
+        "bound": 1028096.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.43385681288385297,
+        "point2": 0.4932572037587938,
+        "point3": 0.1095828659589359,
+        "point4": 1.1462797485605187,
+        "conditional1": 0.0016649053135281203,
+        "conditional2": 0.0008089027044754148,
+        "conditional3": 0.0009776746787347483,
+        "conditional4": 0.001581366789635674,
+        "key": "mata-generic_match-all-0",
+        "backend": "mata",
+        "route": "generic_match",
+        "mode": "all",
+        "replication": 0,
+        "max_rss_bytes": 44138496,
+        "process_wall_seconds": 1.6057316660881042
+      },
+      {
+        "seconds": 0.898,
+        "forecast": 75058540.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.43385681288385297,
+        "point2": 0.4932572037587938,
+        "point3": 0.1095828659589359,
+        "point4": 1.1462797485605187,
+        "conditional1": 0.0016649053135281203,
+        "conditional2": 0.0008089027044754148,
+        "conditional3": 0.0009776746787347483,
+        "conditional4": 0.001581366789635674,
+        "key": "mata-generic_match-conditional-1",
+        "backend": "mata",
+        "route": "generic_match",
+        "mode": "conditional",
+        "replication": 1,
+        "max_rss_bytes": 43171840,
+        "process_wall_seconds": 0.9422336667776108
+      },
+      {
+        "seconds": 1.682,
+        "forecast": 76086502.0,
+        "bound": 1028096.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.43385681288385297,
+        "point2": 0.4932572037587938,
+        "point3": 0.1095828659589359,
+        "point4": 1.1462797485605187,
+        "conditional1": 0.0016649053135281203,
+        "conditional2": 0.0008089027044754148,
+        "conditional3": 0.0009776746787347483,
+        "conditional4": 0.001581366789635674,
+        "key": "mata-generic_match-all-1",
+        "backend": "mata",
+        "route": "generic_match",
+        "mode": "all",
+        "replication": 1,
+        "max_rss_bytes": 45105152,
+        "process_wall_seconds": 1.7254097498953342
+      },
+      {
+        "seconds": 0.991,
+        "forecast": 74376080.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.36947170712718486,
+        "point2": 0.4982738622528237,
+        "point3": 0.09847493676724242,
+        "point4": 1.0646954429144935,
+        "conditional1": 0.0033024743821637196,
+        "conditional2": 0.0015985094388371271,
+        "conditional3": 0.0017648175938094317,
+        "conditional4": 0.0025061873852206006,
+        "key": "mata-compressed_match-conditional-0",
+        "backend": "mata",
+        "route": "compressed_match",
+        "mode": "conditional",
+        "replication": 0,
+        "max_rss_bytes": 41353216,
+        "process_wall_seconds": 1.035192749928683
+      },
+      {
+        "seconds": 1.363,
+        "forecast": 74774277.0,
+        "bound": 398336.0,
+        "replay": 200.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.36947170712718486,
+        "point2": 0.4982738622528237,
+        "point3": 0.09847493676724242,
+        "point4": 1.0646954429144935,
+        "conditional1": 0.0033024743821637196,
+        "conditional2": 0.0015985094388371271,
+        "conditional3": 0.0017648175938094317,
+        "conditional4": 0.0025061873852206006,
+        "key": "mata-compressed_match-all-0",
+        "backend": "mata",
+        "route": "compressed_match",
+        "mode": "all",
+        "replication": 0,
+        "max_rss_bytes": 40828928,
+        "process_wall_seconds": 1.4038330418989062
+      },
+      {
+        "seconds": 0.971,
+        "forecast": 74376077.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.36947170712718486,
+        "point2": 0.4982738622528237,
+        "point3": 0.09847493676724242,
+        "point4": 1.0646954429144935,
+        "conditional1": 0.0033024743821637196,
+        "conditional2": 0.0015985094388371271,
+        "conditional3": 0.0017648175938094317,
+        "conditional4": 0.0025061873852206006,
+        "key": "mata-compressed_match-conditional-1",
+        "backend": "mata",
+        "route": "compressed_match",
+        "mode": "conditional",
+        "replication": 1,
+        "max_rss_bytes": 40452096,
+        "process_wall_seconds": 1.013828540686518
+      },
+      {
+        "seconds": 1.372,
+        "forecast": 74774283.0,
+        "bound": 398336.0,
+        "replay": 200.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.36947170712718486,
+        "point2": 0.4982738622528237,
+        "point3": 0.09847493676724242,
+        "point4": 1.0646954429144935,
+        "conditional1": 0.0033024743821637196,
+        "conditional2": 0.0015985094388371271,
+        "conditional3": 0.0017648175938094317,
+        "conditional4": 0.0025061873852206006,
+        "key": "mata-compressed_match-all-1",
+        "backend": "mata",
+        "route": "compressed_match",
+        "mode": "all",
+        "replication": 1,
+        "max_rss_bytes": 42287104,
+        "process_wall_seconds": 1.4150816248729825
+      },
+      {
+        "seconds": 0.334,
+        "forecast": 18699560.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.49158732829841706,
+        "point2": 0.5088624602639436,
+        "point3": 0.10230616675313521,
+        "point4": 1.205062122068631,
+        "conditional1": 0.0002885054727406732,
+        "conditional2": 0.000203740404632345,
+        "conditional3": 0.0001725515954380211,
+        "conditional4": 0.0002382637841084836,
+        "key": "rust-generic_observation-conditional-0",
+        "backend": "rust",
+        "route": "generic_observation",
+        "mode": "conditional",
+        "replication": 0,
+        "max_rss_bytes": 41189376,
+        "process_wall_seconds": 0.37376795802265406
+      },
+      {
+        "seconds": 0.694,
+        "forecast": 19246056.0,
+        "bound": 546496.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.49158732829841706,
+        "point2": 0.5088624602639436,
+        "point3": 0.10230616675313521,
+        "point4": 1.205062122068631,
+        "conditional1": 0.0002885054727406732,
+        "conditional2": 0.000203740404632345,
+        "conditional3": 0.0001725515954380211,
+        "conditional4": 0.0002382637841084836,
+        "key": "rust-generic_observation-all-0",
+        "backend": "rust",
+        "route": "generic_observation",
+        "mode": "all",
+        "replication": 0,
+        "max_rss_bytes": 42319872,
+        "process_wall_seconds": 0.7313616252504289
+      },
+      {
+        "seconds": 0.334,
+        "forecast": 18699560.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.49158732829841706,
+        "point2": 0.5088624602639436,
+        "point3": 0.10230616675313521,
+        "point4": 1.205062122068631,
+        "conditional1": 0.0002885054727406732,
+        "conditional2": 0.000203740404632345,
+        "conditional3": 0.0001725515954380211,
+        "conditional4": 0.0002382637841084836,
+        "key": "rust-generic_observation-conditional-1",
+        "backend": "rust",
+        "route": "generic_observation",
+        "mode": "conditional",
+        "replication": 1,
+        "max_rss_bytes": 41435136,
+        "process_wall_seconds": 0.37349124997854233
+      },
+      {
+        "seconds": 0.6990000000000001,
+        "forecast": 19246056.0,
+        "bound": 546496.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.49158732829841706,
+        "point2": 0.5088624602639436,
+        "point3": 0.10230616675313521,
+        "point4": 1.205062122068631,
+        "conditional1": 0.0002885054727406732,
+        "conditional2": 0.000203740404632345,
+        "conditional3": 0.0001725515954380211,
+        "conditional4": 0.0002382637841084836,
+        "key": "rust-generic_observation-all-1",
+        "backend": "rust",
+        "route": "generic_observation",
+        "mode": "all",
+        "replication": 1,
+        "max_rss_bytes": 42532864,
+        "process_wall_seconds": 0.7394053749740124
+      },
+      {
+        "seconds": 0.348,
+        "forecast": 18863624.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4357556156236364,
+        "point2": 0.4960927645114632,
+        "point3": 0.10979037591306551,
+        "point4": 1.1514291319612306,
+        "conditional1": 0.0015790876057663215,
+        "conditional2": 0.000747146197447106,
+        "conditional3": 0.0009071113784969704,
+        "conditional4": 0.0015878074424119188,
+        "key": "rust-generic_match-conditional-0",
+        "backend": "rust",
+        "route": "generic_match",
+        "mode": "conditional",
+        "replication": 0,
+        "max_rss_bytes": 41730048,
+        "process_wall_seconds": 0.38943837489932775
+      },
+      {
+        "seconds": 0.697,
+        "forecast": 19410120.0,
+        "bound": 546496.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4357556156236364,
+        "point2": 0.4960927645114632,
+        "point3": 0.10979037591306551,
+        "point4": 1.1514291319612306,
+        "conditional1": 0.0015790876057663215,
+        "conditional2": 0.000747146197447106,
+        "conditional3": 0.0009071113784969704,
+        "conditional4": 0.0015878074424119188,
+        "key": "rust-generic_match-all-0",
+        "backend": "rust",
+        "route": "generic_match",
+        "mode": "all",
+        "replication": 0,
+        "max_rss_bytes": 42123264,
+        "process_wall_seconds": 0.7370439171791077
+      },
+      {
+        "seconds": 0.342,
+        "forecast": 18863624.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4357556156236364,
+        "point2": 0.4960927645114632,
+        "point3": 0.10979037591306551,
+        "point4": 1.1514291319612306,
+        "conditional1": 0.0015790876057663215,
+        "conditional2": 0.000747146197447106,
+        "conditional3": 0.0009071113784969704,
+        "conditional4": 0.0015878074424119188,
+        "key": "rust-generic_match-conditional-1",
+        "backend": "rust",
+        "route": "generic_match",
+        "mode": "conditional",
+        "replication": 1,
+        "max_rss_bytes": 41189376,
+        "process_wall_seconds": 0.37911358335986733
+      },
+      {
+        "seconds": 0.691,
+        "forecast": 19410120.0,
+        "bound": 546496.0,
+        "replay": 200.0,
+        "retained": 1200.0,
+        "stored": 1200.0,
+        "physical": 2400.0,
+        "point1": 0.4357556156236364,
+        "point2": 0.4960927645114632,
+        "point3": 0.10979037591306551,
+        "point4": 1.1514291319612306,
+        "conditional1": 0.0015790876057663215,
+        "conditional2": 0.000747146197447106,
+        "conditional3": 0.0009071113784969704,
+        "conditional4": 0.0015878074424119188,
+        "key": "rust-generic_match-all-1",
+        "backend": "rust",
+        "route": "generic_match",
+        "mode": "all",
+        "replication": 1,
+        "max_rss_bytes": 42598400,
+        "process_wall_seconds": 0.7270875419490039
+      },
+      {
+        "seconds": 0.175,
+        "forecast": 495228.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.37442493573193175,
+        "point2": 0.5021526771307813,
+        "point3": 0.09788262821159721,
+        "point4": 1.0723428692859074,
+        "conditional1": 0.002951462239880949,
+        "conditional2": 0.0015499030925093707,
+        "conditional3": 0.0015823935527665874,
+        "conditional4": 0.0027099014402185975,
+        "key": "rust-compressed_match-conditional-0",
+        "backend": "rust",
+        "route": "compressed_match",
+        "mode": "conditional",
+        "replication": 0,
+        "max_rss_bytes": 39403520,
+        "process_wall_seconds": 0.21699366671964526
+      },
+      {
+        "seconds": 0.516,
+        "forecast": 573964.0,
+        "bound": 78736.0,
+        "replay": 200.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.37442493573193175,
+        "point2": 0.5021526771307813,
+        "point3": 0.09788262821159721,
+        "point4": 1.0723428692859074,
+        "conditional1": 0.002951462239880949,
+        "conditional2": 0.0015499030925093707,
+        "conditional3": 0.0015823935527665874,
+        "conditional4": 0.0027099014402185975,
+        "key": "rust-compressed_match-all-0",
+        "backend": "rust",
+        "route": "compressed_match",
+        "mode": "all",
+        "replication": 0,
+        "max_rss_bytes": 40976384,
+        "process_wall_seconds": 0.5559637919068336
+      },
+      {
+        "seconds": 0.17,
+        "forecast": 495228.0,
+        "bound": 0.0,
+        "replay": 0.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.37442493573193175,
+        "point2": 0.5021526771307813,
+        "point3": 0.09788262821159721,
+        "point4": 1.0723428692859074,
+        "conditional1": 0.002951462239880949,
+        "conditional2": 0.0015499030925093707,
+        "conditional3": 0.0015823935527665874,
+        "conditional4": 0.0027099014402185975,
+        "key": "rust-compressed_match-conditional-1",
+        "backend": "rust",
+        "route": "compressed_match",
+        "mode": "conditional",
+        "replication": 1,
+        "max_rss_bytes": 39895040,
+        "process_wall_seconds": 0.2090119579806924
+      },
+      {
+        "seconds": 0.518,
+        "forecast": 573964.0,
+        "bound": 78736.0,
+        "replay": 200.0,
+        "retained": 1140.0,
+        "stored": 1140.0,
+        "physical": 2280.0,
+        "point1": 0.37442493573193175,
+        "point2": 0.5021526771307813,
+        "point3": 0.09788262821159721,
+        "point4": 1.0723428692859074,
+        "conditional1": 0.002951462239880949,
+        "conditional2": 0.0015499030925093707,
+        "conditional3": 0.0015823935527665874,
+        "conditional4": 0.0027099014402185975,
+        "key": "rust-compressed_match-all-1",
+        "backend": "rust",
+        "route": "compressed_match",
+        "mode": "all",
+        "replication": 1,
+        "max_rss_bytes": 41304064,
+        "process_wall_seconds": 0.5547909578308463
+      }
+    ],
+    "private_package": {
+      "path": ".local/issue7-20260929/native-candidate-v3/package",
+      "sha256_files": {
+        "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+        "THIRD_PARTY_NOTICES.txt": "3ff608a89355dd85f5a1f61140a0ec5b107842d373559df2d3d507f2f9918bb9",
+        "fevc.ado": "6d2d08ed6131f773c87f78025720757d65da8975cc0dcd9a1d09b8e48a85e5fc",
+        "fevc.mata": "f925ed7f42b10914bc0abe4bcc3dc0dab54519e967d96249a89933af66f7ff96",
+        "fevc.pkg": "2352645a51fb9c298cafae7d3537f9b0a732e5c6a463bf7890f4a8cbb3844cb1",
+        "fevc.sthlp": "696ecb46e674d0c9ebae98b209d29cfdb5ffdc3cb620cd03a44744761c7b91b8",
+        "fevc__component_model_route.ado": "81f1fbe3ff27b49ae59dc6a9b617035c5a05f4de39389952830fa14f3eb950ea",
+        "fevc__control_failure_post.ado": "f400d51899b4c390c5d931d10265db5c1007d9bd19a9a7f9a85ca4230cd88b44",
+        "fevc__display.ado": "766f460718e4f520575d58feab412457135b19a1e7c24b25283e73633ceb718f",
+        "fevc__exact_inference_model_post.ado": "26e8ab485fc80ecf1e8d0ec0c53da3195c3ad32509cc32dde5cf31a6d972bd45",
+        "fevc__failure_guidance.ado": "e0b34dfe1c6b8cc9d1b7db5b12ba443aa1e0758a94357c7662e421d10699fc10",
+        "fevc__hybrid_sample.ado": "2dc25e22d67449de56c596bd656682d73f7c0e64286770f8f335170b2147d3e9",
+        "fevc__lifecycle.ado": "1b37efb6c3e39f05f7e493f2ed102cbcab58fda641ebaa37ee55884acec13287",
+        "fevc__memory_options.ado": "fb81e093af50999c092d87e43cb7d4fe8200e02ff50f767963c5704ac069ba34",
+        "fevc__native_threads.ado": "fa8be26895fb8d4b6afa5a48f72c814d014fe760827117573635536e4537718d",
+        "fevc__numerical.ado": "9040ae8abc5b6352251f6df1e883f68a5115687d58e45a0104ab2c12bd41c270",
+        "fevc__observation_population.ado": "a873571e005542709739600419447ba37a7c6829cabdc0c9328c76d9f7616359",
+        "fevc__progress.ado": "d4491b8a6209ae0e714364c8d9e99ec1ef28fceabe7d06b582745bd879a161b6",
+        "fevc__rust_capture_stayers.ado": "071e451cf4fd556911ee1f62e9bcc28b05ae77a793e434ec5d94d04049d9812f",
+        "fevc__rust_cmg_model.ado": "1295a8e6218460aa6ed22cd43d19c32334bb3f8be6d27a6780b1aa338d9cb5cc",
+        "fevc__rust_comp_batch_receipt.ado": "7ced3a9d460bf299f94bbb00fae4feabc3185d69eb7e67d39756ec84fdc11808",
+        "fevc__rust_component_attach.ado": "026dd6a3a40cd66b9006ec9b25ea9a925b9b35e403362542dd21079cc917ad02",
+        "fevc__rust_component_fetch.ado": "be64d70b47f59571eeed3e06767907515dea5b684ded9e84d12bbde62543530c",
+        "fevc__rust_component_post.ado": "a04d171e2123e4418136047bc7fb23f8074f6b25ec8c7f449a21abcb195fbe02",
+        "fevc__rust_core_ready.ado": "e09f650d76768592b7b4a603b67db4c09f14dacb153645040b71d4a4ba45d774",
+        "fevc__rust_linux.ado": "e57acd40fcb4e6127926d65c023fd4190180b4a2e2c9c530d1df9d451ca6b368",
+        "fevc__rust_macos.ado": "a85eaf5ead0bb2aa8b8421d246119ee316d5cdbb18d9fe16700bb64f256fc0e5",
+        "fevc__rust_numerical.ado": "41f1d1d8d2e95e389ee16defda9cae89b32ab3e40683ecd968f9a490d75ff375",
+        "fevc__rust_plan_receipt.ado": "5e8b6524dd9f9107237e0dae0297a0c426f5fc66cedbe5d6905916fbaceee1fd",
+        "fevc__rust_plugin_call.ado": "67b3aa2a7bbf06aa4852e157a5f4aa12840badbec84ffd94bebefde6b04824c1",
+        "fevc__rust_post_comp_v7.ado": "a99e027cb9727d08bbdb46844b6e06ceb8cafa3bb4dff1cfd551db6683d2f324",
+        "fevc__rust_post_exact_v7.ado": "19a8a6d9d672917ba84b8ece3f95394f7c4a27b97f628c38e26d3fdf6a7fe2fc",
+        "fevc__rust_post_stayer_hybrid.ado": "c6fc1a530478eebfc80dd6b3ba1a5db9fb9381d73fac854f5d3c24f9b6ccca9f",
+        "fevc__rust_public_call.ado": "a128e9e46df863d5649c6bdf66b712d4a1f000b61c970b99a5b9ba6deefeecfe",
+        "fevc__rust_reconcile_comp_v7.ado": "306f8c005a34696812864464bc5af50206306d26ec5a085df8c63b7b888386cf",
+        "fevc__rust_reconcile_exact_v7.ado": "d9ed45b417bcab498db86ff16e3ec8025b5ced7c16cda91d51bd0f2489c0f185",
+        "fevc__rust_solve_v4.ado": "601fde6d24d0f0239f6fca83ddbbbedb95fc3f1bd87b4e4396a740d5f8877d76",
+        "fevc__rust_solve_v5.ado": "397a17b0270888a5e6f7825a39f5a07dcfec747ef3d235df565ec29ecc49f9e4",
+        "fevc__rust_windows.ado": "686fecb89736db99840d05845543fb56e36c1da10ac45ba519806c767bcef99f",
+        "fevc__simulate_data.ado": "bc277879909b543f945ac94e870652692f2efb9bfc4db3406f960671da66eabc",
+        "fevc__stayer_population_post.ado": "4e70d476472b956b423977f505a319d045ad2e6c43078b36f52da10a99924d7a",
+        "fevc__timer.ado": "c4dce56ee8af187e0fa61341cefdf4d0f99f3ea367afaa853ac51591267c66ee",
+        "fevc_cmg.mata": "3572a105f25316fc1ddbfb2697dbb8ad63808c637ef1d2079e6416c14a790c47",
+        "fevc_estat.ado": "426d78dadf7ac54bc9d2ecea792959e91e619a4f0d02184556d7a0c4073d3775",
+        "fevc_graph.mata": "238d10656ca6bb830f51bc42d53b0df9b82423d425d9f3688f53655046daadfb",
+        "fevc_inference.mata": "87eaf8193f5b39d0507a45b8e228feeb37794bf1c07c46098134d06f8dfa6954",
+        "fevc_resource.mata": "cbce6379400199ca7ac8414f2229f6e68f81439ff6a0223544042a5c38b73ca5",
+        "fevc_rng.mata": "bf8b7325667e8f41ddebc09577650103897a8b7e1fa96edec95b45a0ffc22e7f",
+        "fevc_run.ado": "fca93b5751254ef4e441c5760ebb1dd3e8c232a118df0b5df53df11c659830e9",
+        "fevc_rust.ado": "51a5b5a443494a1a33052d311fc3a4107358fd42b1c33cbd2f03ffd08d878993",
+        "fevc_rust_macos_arm64.plugin": "15a09f1e77fe709df7a25ede5a0c6a910da359c11102e8f402747b6dc74d9a71",
+        "fevc_scale.mata": "b03fe48c4cb67731b4097bed39f9a4e74f229a54dc4d7ee6eec7a27aa6d28d12",
+        "fevc_scale_engine.mata": "96e9bf954645d51966065af5440415b216cf4187123fbf1f7c481a5d21fc774a",
+        "fevc_scale_runtime.mata": "ea694457cbb54189c72ee6587ab55ca2cee7e0e92820e9919209e013d47661e5",
+        "fevc_solver.mata": "97a0fd0a8e48f252f7c4ffa6d71ea3393c33967f9dd772fcc6d996acae62c7b9",
+        "fevc_timer.mata": "1209d7d2f21b1bfa365889a009bc5e1a0cda902d7b5b917ce0bf01e5ef6f3d80",
+        "stata.toc": "b3b280c471446369d7869c56d4f6131bf0f19bd333fd3403cccd30011ee8f312"
+      },
+      "scope": "same current portable code with separately identified manually built arm64 candidate; signed profile artifacts have their own hashes"
+    }
+  },
+  "allocation": {
+    "fixture": "q32 generic observation/match, R17, batches3/5, routed diagonal",
+    "baseline_heap_peak": 785248,
+    "enabled_heap_peak": {
+      "observation": 785296,
+      "match": 785560
+    },
+    "reserved_increment": 232440,
+    "scope": "direct module allocations including result retained state; complete-process RSS separate"
+  },
+  "independent_review": {
+    "path": ".local/issue7-20260929/final-independent-review",
+    "outcome": "No remaining concrete defect after compressed literal repair",
+    "stream17_full_rng_sort_data_registry_verified": true,
+    "complete_source_output_hashes_verified": true
+  },
+  "failures": [
+    {
+      "classification": "performance-harness",
+      "finding": "v3 process RSS blocked by sandbox and wrong Stata log basename; v4 strict baseline hybrid-match probeorder unsupported; route validator v1 used lowercase diagonal instead of the documented DIAGONAL return",
+      "action": "preserved failed attempts; v5 development measurement uses existing admissible hybrid tuple, process counter access and actual log discovery; separate route v2 reconciles unchanged measurement sources and exact point/conditional results"
+    },
+    {
+      "classification": "harness",
+      "campaign": "confirmation-native-v2",
+      "outcome": "36 raw generator exits0; 36 audit exits1: unsupported new profile names",
+      "action": "preserve all output; register fresh v3 original profiles with unchanged code/inputs/seeds/policy; rerun all attempts"
+    },
+    {
+      "classification": "implementation",
+      "finding": "compressed literal Auto/CMG new attachment incorrectly selected automatic-batch full-CMG executor",
+      "action": "preserve baseline routing; focused Rust, Stata and independent retests pass"
+    },
+    {
+      "classification": "source-gates",
+      "finding": "new helper count/catalog order/allowlist sorting expectations; transport test syntax/repeated load; native test formatting",
+      "action": "focused repairs and frozen final gates pass"
+    },
+    {
+      "classification": "operational",
+      "finding": "native profile setup needed preexisting empty artifacts directory; sandbox network prevented SPI fetch; formatting refusal; superseded candidate intentionally interrupted",
+      "action": "preserve logs/evidence; final private profile rerun with authenticated SPI"
+    },
+    {
+      "classification": "test-execution",
+      "finding": "one integrated attempt invalidated by editing its runner during Stata execution",
+      "action": "preserve failure and rerun with frozen code/test inputs"
+    },
+    {
+      "classification": "stress",
+      "finding": "earlier registered low-budget non-PSD diagnostics and singular point failures",
+      "action": "remain limitations; no thresholds weakened or failing fixtures removed"
+    },
+    {
+      "classification": "historical-evidence",
+      "finding": "original native v1 as-run Rust source not archived; prior reporting-supplement filename collisions",
+      "action": "v1 stays as-run only; reporting v5 verifies unique paths; fresh native v3 retains every source dependency"
+    }
+  ],
+  "remaining": [
+    "clean exact-commit qualification/candidate promotion and owner binary adoption",
+    "current-source native Linux/Windows/native Intel hardware",
+    "representative scale and broader runtime-specific calibration/near-boundary approximation envelope",
+    "projection/component sampling-inference intersections remain explicitly unsupported",
+    "owner release/license/provenance/exact-artifact decisions"
+  ],
+  "not_performed": [
+    "no commit/push/tag/release/distributed-binary change",
+    "no CI policy change",
+    "no large cluster campaign",
+    "no external issue mutation"
+  ],
+  "tolerances": {
+    "normalized_derivative": 1e-09,
+    "exact_algebra_and_matched_atoms": 1e-11,
+    "scaled_psd": 1e-12,
+    "calibration_relative_equivalence": 0.15,
+    "calibration_se_multiplier": 2.576,
+    "regular_point_failure_count": 0,
+    "minimum_regular_usable_rate": 0.99,
+    "replay_certification": "max(1e-11,10*requested tolerance), original system; unchanged production gate"
+  },
+  "evidence_writer": {
+    "command": "PYTHONPATH=. ./.venv/bin/python .local/issue7-20260929/build-completion-receipt-v2.py",
+    "path": ".local/issue7-20260929/build-completion-receipt-v2.py",
+    "sha256": "3f3f4f829a5ce519fe2d178515b21f98fb63716bf6edcd17f7d7dc651a0c7b18"
+  }
+}

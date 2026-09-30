@@ -588,3 +588,12 @@ at one model firm, while retaining its fixed-offset, mover-only contract.
 Old native runtimes without deletion-unit readiness return
 `RUST_PARALLEL_DELETION_UNSUPPORTED` for strict requests before preparation/RNG.
 Engineering parity tests do not extend historical inference-coverage claims.
+
+## Numerical precision of the main estimates
+
+`mcse(all)` is the default and may accompany any otherwise supported inference
+or projection request. The reported numerical MCSE concerns the four main
+point estimates only. Sampling covariance, intervals, projection coefficients
+and their extra simulations receive no numerical MCSE. Their capability and
+scientific gates are unchanged. Use `mcse(off)` to skip the main all-probe
+diagnostic; numerical covariance is never substituted for `e(V)`.

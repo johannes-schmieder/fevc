@@ -2,10 +2,14 @@
 
 program define fevc__display
     version 18.0
-    syntax [, DECOMPOSITIONonly FULL INFERENCEdiagnosticsonly]
+    syntax [, DECOMPOSITIONonly FULL INFERENCEdiagnosticsonly NUMERICALdiagnosticsonly]
 
     quietly fevc__stayer_population_post
 
+    if "`numericaldiagnosticsonly'"!="" {
+        _fevc_display_numerical
+        exit
+    }
     if "`inferencediagnosticsonly'" != "" {
         _fevc_display_structured
         exit
@@ -89,7 +93,7 @@ program define fevc__display
         di as txt _newline "Projection covariance: " as result  ///
             "e(projection_V)" as txt "; component e(V) is not posted."
     }
-    else if e(numerical_mcse_available) {
+    else if e(numerical_mcse_available) & inlist("`e(mcse_mode)'","","conditional") {
         di as txt _newline "Inference: not requested; e(V) not posted; " ///
             "MCSE is numerical, not sampling."
     }
@@ -130,7 +134,7 @@ program define _fevc_display_decomp
     di as txt "Target-weighted Var(Y): " as result               ///
         %13.7g e(target_outcome_variance)
 
-    if e(numerical_mcse_available) {
+    if e(numerical_mcse_available) & inlist("`e(mcse_mode)'","","conditional") {
         matrix `mcse' = e(numerical_mcse)
         di as txt "JLA numerical MCSE: worker=" as result         ///
             %10.5g `mcse'[1,1] as txt "; firm=" as result        ///
@@ -140,6 +144,8 @@ program define _fevc_display_decomp
             %10.5g `mcse'[1,4]
         di as txt "  Conditional on the leverage sketch; not sampling standard errors."
     }
+    _fevc_display_numerical
+
 end
 
 program define _fevc_display_full
@@ -415,4 +421,25 @@ program define _fevc_display_structured
     di as txt "Qualification: " as result "`e(inference_qualification)'"
     di as txt "No universal spectral cutoff or automatic q selection is imposed; " ///
         "successful computation does not establish the asymptotic condition."
+end
+
+program define _fevc_display_numerical
+    version 18.0
+    tempname mcse
+    if "`e(numerical_mc_status)'"=="unavailable_capability" {
+        di as txt "Approximate numerical MCSE unavailable: installed plugin lacks numerical V2."
+    }
+    if "`e(numerical_mc_method)'"=="crossfit_if_v1" {
+        di as txt "Approximate numerical MCSE (all main point probes)"
+        if e(numerical_mcse_all_available) {
+            matrix `mcse' = e(numerical_mcse_all)
+            di as txt "  worker=" as result %10.5g `mcse'[1,1] ///
+                as txt "; firm=" as result %10.5g `mcse'[1,2] ///
+                as txt "; covariance=" as result %10.5g `mcse'[1,3] ///
+                as txt "; total=" as result %10.5g `mcse'[1,4]
+        }
+        else di as txt "  Unavailable: " as result "`e(numerical_mc_status)'"
+        di as txt "  Main point estimates only; excludes projection/inference calculations."
+        di as txt "  Excludes finite-probe bias, solver/floating-point error and sampling uncertainty."
+    }
 end

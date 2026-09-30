@@ -1,0 +1,176 @@
+{
+  "schema": "FEVC_ALL_PROBE_NATIVE_DEVELOPMENT_V1",
+  "status": "unfinished",
+  "base_source_sha": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+  "reviewed_source_sha": "ecd62544a132906aad1ffa7b8e4a3aa0a03ee9c3",
+  "source_binding": "working-tree inventory; no new source commit or exact-source plugin qualification",
+  "source_files": {
+    "fevc/PLAN.md": "94a170ad8d68a627b65a40e178b9231f14db5ab3f716f2051443809f701c9272",
+    "fevc/docs/ALL_PROBE_MCSE.md": "556c28d23caa6ac864cea3f3c7a0e5b7b1cbf6daf5ee26aa01dfb30d7135b513",
+    "fevc/docs/ALL_PROBE_MCSE_STATUS.md": "f7c0eb7be5d35762949810c2452a6f6f0873eab5d44332ab048e53c8d1f7c43f",
+    "fevc/docs/README.md": "c6676443394e74f8ebea620589eb7e5233f77a9a4e80ee46f4df61514a2fcd7a",
+    "fevc/docs/all_probe_development_20260929.json": "a6df5af8a736f60c8be8ee07e407fc212bc9f4b049d33bcd8eeb6f2166a542de",
+    "fevc/fevc.mata": "1da6d14cebbfab5d24563299546a334fdcc857d3072e17b06df6fcd414681e0e",
+    "fevc/fevc_rng.mata": "bf8b7325667e8f41ddebc09577650103897a8b7e1fa96edec95b45a0ffc22e7f",
+    "fevc/fevc_scale_engine.mata": "4faf693c2c7c88fb2d6ba1b2a41f98af546094f8a425313b2ee40e5e880db26e",
+    "fevc/tests/python/test_all_probe_native.py": "11c60c1f8ef2f0cbef4a962ec99bf024aafb77f892c2b294f81e21f43055594c",
+    "fevc/tests/python/test_all_probe_reference.py": "08c83e5ea9c564c5ab135a7a5890d1dbfd6d8e0e22067673f6c360914f81ed79",
+    "fevc/tests/stata/run_all.do": "c4f84244dec0a887bdeac4392adf3bf840e1d7f0628564b9d5724513d198384e",
+    "fevc/tests/stata/test_all_probe_math.do": "e4becf53f224ad8a1d7b4fa7e543a2dc4ad5b7f51d24839a82091c7bd6de2aff",
+    "fevc/tests/stata/test_all_probe_replay.do": "43d546747b0e2e2ee5593f9f5a1b6e1272ea072f9257b3024b28c631d31b3934",
+    "fevc/tests/stata/test_all_probe_scale.do": "5b7b08775eb08d21085ba8cab449b88d0524d826c81922152c0478c7e9fbbbfb",
+    "fevc/tools/all_probe_cache_oracle.py": "fb432d8d0a3f08d7ddec8f3e91ebc9fc7f12a4a9658cca616e264353fbc5d25b",
+    "fevc/tools/all_probe_calibration.py": "ff4255576ec5f16b329d928d4819d97da311bd2af5b5a178d12c149bdfe0a8e3",
+    "fevc/tools/all_probe_native.py": "84db299bb648591daea5117268ffebf7dca94f5317e297e0645c431e0fc7d217",
+    "fevc/tools/all_probe_nested_audit.py": "e776bb403e179ed363fe5d328a169848cc0d9694208553825421cb096fbb2edd",
+    "fevc/tools/all_probe_reference.py": "970a3fa1d1d445497ca9cc2f86954af40cb87d6d2de27a603b91e44a6818985e",
+    "rust/crates/vckss-core/examples/all_probe_reference.rs": "924f461c94ae27521ca315feeb04fa7d48334be8589be14c787477f7dc1d3a13",
+    "rust/crates/vckss-core/src/engine.rs": "c79b5930b3ee25bfc744691a9426acc1f9196b7fe147b620fd9b2f5f161679fa",
+    "rust/crates/vckss-core/src/engine/numerical.rs": "530c31ee193f96f1812d42d36d41ed35b8682e8455385557fd2dd72a66be05bc",
+    "rust/crates/vckss-core/src/generic_jla.rs": "a222f00ac587589a08013fb145c657b8d209f0c8c7227bc762dc1be67ca01418",
+    "rust/crates/vckss-core/src/generic_jla/numerical.rs": "a2290bf9322757aaa5409ebf3258510d41fdd89a4e129a5df26ce5a39d48fd82",
+    "rust/crates/vckss-core/src/generic_jla/numerical/cache.rs": "506df2e470be5110ab1f4e45b5488c085c00d7c245ee864958b3bd5c0d75fda8",
+    "rust/crates/vckss-core/src/generic_jla/numerical/tests.rs": "5f2277db16620456b75e1c27197c9056a29e0235f53f9c2a049382c16e89ce3a",
+    "rust/crates/vckss-core/src/lib.rs": "366c2d3e99f9e3e8ca5acfb3845d18b18507a73e7bf7d5b9ff89dd003dcf3c8c",
+    "rust/crates/vckss-core/src/numerical_mc.rs": "3bb8582fe3e5c9e1348e75b025cee40834708aa60731395af4ae404741ef0a2e",
+    "rust/crates/vckss-core/tests/generic_jla.rs": "04c096a57b133837e8ad49890c8a6abf936cfc410b5a03cd8a7914aff5bab711",
+    "rust/crates/vckss-core/tests/generic_jla/numerical_attachment.rs": "896dd5bc401e4a61bdf740bec076a7a0b51a14640404a86cce79e005771c9823",
+    "rust/crates/vckss-core/tests/generic_jla_memory.rs": "f3ee83baf949614122ed4bf99d6f167a3f4534a3056da3993e0b867b7b5ae85a",
+    "rust/crates/vckss-core/tests/numerical_mc.rs": "d8e062e48d97ce0e9a3bc752261563f8d7c601b96e86bb58aa8b0a4c6fbe8c04",
+    "rust/crates/vckss-plugin/src/ffi_engine.rs": "24392d7f4f0cbe04026d4f5268d5d6872598133a525caa707cb1ad739daafb2e",
+    "rust/crates/vckss-plugin/src/generic_execution_api.rs": "87056279e89fe1a458416c7419fa5f539df99ffea918ab4163db6537c61302ec",
+    "rust/crates/vckss-plugin/src/numerical_api.rs": "c75b09aa29f29883eb7f03652b33d64f63fda872ebda185424b569f8b0104d87",
+    "rust/crates/vckss-plugin/tests/engine_ffi.rs": "75609528af260d0f22ea18b71b798a21b387ce53ec41a37347496fd510cf0ad3",
+    "rust/crates/vckss-plugin/tests/engine_ffi/numerical.rs": "616453c3818bb7c1ee1043daf43fd57fc4f52ad7f13d1f19bd3c17602ba7ecd6",
+    "rust/stata_backend/README.md": "72fa686410f1f47c1176c6299c566c368c20c444c85632207bc8477abb6eddd8",
+    "rust/stata_backend/include/vckss_rust.h": "9e4289fbaebcc0d56835facd7cc22beedf9edd2cc8abc0cd8a56d14fa5f1567a",
+    "rust/stata_backend/tests/abi_header_compat_test.c": "970afe395ca700c1c90d6a6daabd42fdf3d01a17cdfb30507a9a22e43d36e554"
+  },
+  "working_tree_payload_sha256": "af3ad9e48c63982c6526aaaee62b76cd02b7f47526fbec7834df07127cad5477",
+  "prior_checkpoint": {
+    "path": "fevc/docs/all_probe_development_20260929.json",
+    "sha256": "a6df5af8a736f60c8be8ee07e407fc212bc9f4b049d33bcd8eeb6f2166a542de",
+    "immutable": true
+  },
+  "commands": [
+    {
+      "command": "./.venv/bin/python -m pytest -q --basetemp=.local/issue7-20260929/pytest-final-v8",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-pytest-v8.log",
+      "sha256": "5b0375e6700bd6e706a148faf588c1cf86109754502960965c7c71d06f861385"
+    },
+    {
+      "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-assembly-v4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-rust-v5.log",
+      "sha256": "5eb50298404bff514e298d6dde9e530f1a56f31603b46f0d95d46b6299254952"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml -p vckss-plugin --test engine_ffi numerical_ --locked -- --nocapture",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-native-boundary-v8.log",
+      "sha256": "b126b45562255d4628223d010ba4511531f7fb55b6fae1e722b52f58388d95be"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml -p vckss-core --test generic_jla numerical_attachment --locked -- --nocapture",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-integration-v4.log",
+      "sha256": "ac4afe0c2dd2e96a93742378dd91c299b129a1ee6a31fe30cc5cb68629c9ba96"
+    },
+    {
+      "command": "cargo test --manifest-path rust/Cargo.toml -p vckss-core actual_cached_whole_responses --locked -- --ignored --nocapture",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-cache-v3.log",
+      "sha256": "0e5462a73a70b211047f46086a1784a48cde34cdd60954de316a138c28f77dba"
+    },
+    {
+      "command": "cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-clippy-v7.log",
+      "sha256": "c1d6cb0219a1f611abca693f6ca742e23abc1670a2527d936d9931939ce9eac6"
+    },
+    {
+      "command": "cargo fmt --manifest-path rust/Cargo.toml --all -- --check",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-fmt-v4.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "cc -std=c11 -Wall -Wextra -Werror -fsyntax-only -I rust/stata_backend/include rust/stata_backend/tests/abi_header_compat_test.c",
+      "exit_code": 0,
+      "log": ".local/issue7-20260929/focused-logs/fevc-issue7-c-header-v1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "versions": {
+    "python": "3.13.0",
+    "numpy": "2.5.2",
+    "rustc": "1.85.1 (4eb161250 2025-03-15)",
+    "stata": "MP 19.0.115"
+  },
+  "rust_environment": {
+    "PATH_prefix": "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin"
+  },
+  "abi": {
+    "request_bytes": 328,
+    "result_bytes": 512,
+    "rhs_bytes": 24,
+    "old_layouts": "unchanged",
+    "public_stata_capability": false,
+    "support": "Counter-V1 JLA, no projection/component; diagonal literal/automatic batches; auto/CMG automatic batches",
+    "counts": "certified RHS, completed lower-executor RHS, attempted calls, replay generator evaluations are distinct"
+  },
+  "integration_reuse": {
+    "path": ".local/issue7-20260929/focused-logs/fevc-issue7-run-checks-v3.log",
+    "sha256": "223fb75c2f2e052a3892f670fd6be12da31e4c16d0ad651f7adc17efe5e370a5",
+    "scope": "unchanged Mata/frontend/install sources and private Mata tests; installed plugins have old interfaces; no current native qualification"
+  },
+  "whole_workspace_scope": "workspace ran before final numerical preflight rejection/model-work guard additions; final 2-test native gate and clippy cover those isolated edits; old entrypoints do not select numerical attachment",
+  "repaired_failures": [
+    "static native preflight omitted signed point capability/tolerance/mode checks",
+    "standalone compressed resource forecast took max instead of baseline plus attachment",
+    "generic export phase dropped retained numerical payload and caller destination overlap",
+    "old full-CMG model-work export lacked numerical-generation UnsupportedFeature guard"
+  ],
+  "resource_evidence": {
+    "compressed_independent": {
+      "point_prepared": 138120,
+      "attached_prepared": 293632,
+      "attachment": 155512,
+      "point_peak": 618464,
+      "attached_peak": 773976
+    },
+    "generic_export_independent": {
+      "point": 10006624,
+      "attached": 10013640
+    },
+    "strict": "point-sized strict budget rejects; warn/off preserve points and Counter counts",
+    "rss": "not measured"
+  },
+  "calibration": {
+    "as_run_checkpoint": "fevc/docs/all_probe_development_20260929.json",
+    "reporting_compatibility_sha256": "8d160101c09250830a68cee83e70b944d4c89b2673ee4412c3f58aa7fcd95e84",
+    "exact_binary": ".local/issue7-20260929/frozen-native-v1/all_probe_reference-as-run",
+    "binary_sha256": "e1f27f172b9e5a65e56c66cf59ed2b6b494e43a9c8f1028394eaff42a79c6e3f",
+    "source_reproduction_limitation": "as-run Rust source inventory and exact binary retained; no as-run Rust source tree retained; frozen-native-v1 archives Python harnesses only",
+    "later_source_carry_forward": false,
+    "scope": "original binary/input statistical evidence only; no current-source, frontend, plugin, platform or performance promotion",
+    "inventories_rechecked": 72
+  },
+  "remaining": [
+    "Mata public/runtime route and combined resource admission/reconciliation",
+    "Stata C numerical selector and capability preflight/advertisement",
+    "Ado numericalmcse option, posting/reconciliation, display/help/manifests",
+    "exact/auto-algorithm and full attachment intersection support",
+    "native replay interruption, deliberate replay numeric failures, full caller lifecycle, Rust/Mata injected-probe parity",
+    "complete-command overhead/RSS, newly frozen current-source confirmation and exact-source native/install/platform qualification"
+  ],
+  "external_actions": "none: no push/publish/tag/release staging/binary distribution/CI policy/SCC campaign/issue mutation",
+  "created_at_utc": "2026-09-30T00:58:12.276767+00:00"
+}

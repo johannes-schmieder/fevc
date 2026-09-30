@@ -6,6 +6,7 @@ f LICENSE
 f THIRD_PARTY_NOTICES.txt
 f fevc.ado
 f fevc.mata
+f fevc_numerical.mata
 f fevc_inference.mata
 f fevc_graph.mata
 f fevc_cmg.mata
@@ -54,3 +55,5 @@ f fevc__native_threads.ado
 f fevc__control_failure_post.ado
 f fevc_timer.mata
 f fevc__timer.ado
+f fevc__numerical.ado
+f fevc__rust_numerical.ado

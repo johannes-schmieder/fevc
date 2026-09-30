@@ -55,6 +55,14 @@ file write `rc_stage' "pooled_deletion" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_pooled_deletion.do" `"`rc_plus'/f"'
 file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "mcse_modes" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_mcse_modes.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "mcse_attachments" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_mcse_attachments.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "registry_idle" _n
 file close `rc_stage'
 quietly fevc_rust snapshot

@@ -16,9 +16,11 @@
 
 use core::cmp::Ordering;
 
+mod numerical;
 pub(crate) mod residual_moment_attachment;
 mod spectrum_batches;
 mod statistical_batches;
+pub use numerical::{NumericalMcResult, NumericalReplayRhs, NumericalRhsPhase};
 
 #[path = "generic_component_batches.rs"]
 mod component_batches;
@@ -495,18 +497,21 @@ impl FiveMoments {
                 format!("finite-projection variance is negative at unit {unit}"),
             ));
         }
+        let variance_clipped = variance < 0.0;
         variance = variance.max(0.0);
         Ok(FiniteMoment {
             projection,
             residual,
             bias,
             variance,
+            variance_clipped,
         })
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 struct FiniteMoment {
+    variance_clipped: bool,
     projection: f64,
     residual: f64,
     bias: f64,
@@ -592,6 +597,7 @@ struct RouteMemory {
 
 #[derive(Clone, Copy, Debug)]
 struct MemoryFacts {
+    numerical_export_bytes: u64,
     maximum_deletion_block: u64,
 }
 
@@ -808,6 +814,8 @@ pub fn run_generic_jla_with_direct_solver_interrupt(
         None,
         false,
         ComponentBatchPolicy::Literal,
+        None,
+        None,
         interrupt,
     )
 }
@@ -862,6 +870,8 @@ pub fn run_generic_jla_with_diagonal_queue_attachments_interrupt(
         Some(threads),
         false,
         ComponentBatchPolicy::Literal,
+        None,
+        None,
         interrupt,
     )
 }
@@ -908,6 +918,8 @@ pub fn run_generic_jla_with_resolved_execution_interrupt(
         Some(threads),
         true,
         ComponentBatchPolicy::Literal,
+        None,
+        None,
         interrupt,
     )
 }
@@ -943,6 +955,8 @@ pub fn run_generic_jla_with_direct_attachments_interrupt(
         None,
         true,
         ComponentBatchPolicy::Literal,
+        None,
+        None,
         interrupt,
     )
 }
@@ -985,8 +999,165 @@ pub fn run_generic_jla_with_automatic_component_batches_interrupt(
         if direct { None } else { Some(threads) },
         direct,
         ComponentBatchPolicy::Automatic,
+        None,
+        None,
         interrupt,
     )
+}
+
+/// Internal numerical attachment. No native or public option selects this route.
+/// Existing entrypoints continue with no derivative allocations or replay.
+#[doc(hidden)]
+pub fn run_generic_jla_with_numerical_mc_interrupt(
+    problem: &CompressedProblem,
+    execution: GenericJlaExecutionOptions,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(GenericJlaResult, NumericalMcResult)> {
+    let mut attachment = None;
+    let point = run_generic_jla_with_execution_interrupt(
+        problem,
+        execution,
+        None,
+        None,
+        hybrid,
+        None,
+        None,
+        false,
+        ComponentBatchPolicy::Literal,
+        None,
+        Some(&mut attachment),
+        interrupt,
+    )?;
+    let attachment =
+        attachment.ok_or_else(|| BackendError::invariant("numerical_mc", "missing attachment"))?;
+    Ok((point, attachment))
+}
+
+/// Private small-system reference budgets. Public constructors keep R=T and
+/// the original seed; no native capability or frontend budget selects this.
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug)]
+pub struct ReferenceProbePlan {
+    pub leverage_seed: u64,
+    pub target_seed: u64,
+    pub leverage_probes: u32,
+    pub target_probes: u32,
+}
+
+#[doc(hidden)]
+pub fn run_generic_jla_reference_interrupt(
+    problem: &CompressedProblem,
+    mut execution: GenericJlaExecutionOptions,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    probes: ReferenceProbePlan,
+    all_probe: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(GenericJlaResult, Option<NumericalMcResult>)> {
+    if probes.leverage_probes < 2
+        || probes.target_probes < 2
+        || execution.routing.route != ModelSolverRoute::Diagonal
+    {
+        return Err(invalid(
+            "private reference requires positive budgets and the routed diagonal executor",
+        ));
+    }
+    execution.estimator.seed = probes.leverage_seed;
+    execution.estimator.probes = probes.leverage_probes;
+    let mut attachment = None;
+    let point = run_generic_jla_with_execution_interrupt(
+        problem,
+        execution,
+        None,
+        None,
+        hybrid,
+        None,
+        None,
+        false,
+        ComponentBatchPolicy::Literal,
+        Some(probes),
+        all_probe.then_some(&mut attachment),
+        interrupt,
+    )?;
+    Ok((point, attachment))
+}
+
+/// Internal attachment using the current queued/direct point executors.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_numerical_mc_resolved_interrupt(
+    problem: &CompressedProblem,
+    execution: GenericJlaExecutionOptions,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    threads: usize,
+    cmg: FullCmgPlanOptions,
+    resolved: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(GenericJlaResult, NumericalMcResult)> {
+    if threads == 0 || cmg.threads != threads {
+        return Err(invalid(
+            "numerical attachment executor thread counts disagree",
+        ));
+    }
+    let mut attachment = None;
+    let resolved = resolved && execution.routing.route != ModelSolverRoute::Cmg;
+    let point = run_generic_jla_with_execution_interrupt(
+        problem,
+        execution,
+        None,
+        None,
+        hybrid,
+        (execution.routing.route != ModelSolverRoute::Diagonal).then_some(cmg),
+        resolved.then_some(threads),
+        resolved,
+        ComponentBatchPolicy::Literal,
+        None,
+        Some(&mut attachment),
+        interrupt,
+    )?;
+    let attachment =
+        attachment.ok_or_else(|| BackendError::invariant("numerical_mc", "missing attachment"))?;
+    Ok((point, attachment))
+}
+
+/// Numerical replay of main point probes with the caller's existing executor.
+/// Projection and component draws remain outside the numerical covariance.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_numerical_attachments_interrupt(
+    problem: &CompressedProblem,
+    execution: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    full_cmg: Option<FullCmgPlanOptions>,
+    diagonal_threads: Option<usize>,
+    direct_attachments: bool,
+    automatic_component_batches: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(GenericJlaResult, NumericalMcResult)> {
+    let mut attachment = None;
+    let point = run_generic_jla_with_execution_interrupt(
+        problem,
+        execution,
+        projection,
+        component,
+        hybrid,
+        full_cmg,
+        diagonal_threads,
+        direct_attachments,
+        if automatic_component_batches {
+            ComponentBatchPolicy::Automatic
+        } else {
+            ComponentBatchPolicy::Literal
+        },
+        None,
+        Some(&mut attachment),
+        interrupt,
+    )?;
+    let attachment =
+        attachment.ok_or_else(|| BackendError::invariant("numerical_mc", "missing attachment"))?;
+    Ok((point, attachment))
 }
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
@@ -1000,6 +1171,8 @@ fn run_generic_jla_with_execution_interrupt(
     diagonal_threads: Option<usize>,
     direct_attachments: bool,
     component_policy: ComponentBatchPolicy,
+    probe_plan: Option<ReferenceProbePlan>,
+    mut numerical_output: Option<&mut Option<NumericalMcResult>>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
     crate::progress::stage(crate::progress::SETUP);
@@ -1029,6 +1202,36 @@ fn run_generic_jla_with_execution_interrupt(
     options.solver = routing.solver;
     let mut options = options.validate()?;
     validate_problem(problem)?;
+    let target_probes = probe_plan.map_or(options.probes, |p| p.target_probes);
+    let point_probe_rhs = (options.probes as usize)
+        .checked_add(
+            (target_probes as usize)
+                .checked_mul(2)
+                .ok_or_else(|| resource("target RHS count overflow"))?,
+        )
+        .ok_or_else(|| resource("point probe RHS count overflow"))?;
+    // The private unequal-budget reference uses the existing equal-budget
+    // batch admission plus a conservative retained target-draw/receipt delta.
+    if target_probes > options.probes {
+        options.prepared_persistent_bytes = checked_sum(&[
+            options.prepared_persistent_bytes,
+            checked_product(
+                &[
+                    u64::from(target_probes - options.probes),
+                    (4 * std::mem::size_of::<f64>()
+                        + 2 * std::mem::size_of::<GenericJlaRhsReceipt>())
+                        as u64,
+                ],
+                "private reference target payload",
+            )?,
+        ])?;
+    }
+    if numerical_output.is_some() {
+        options.prepared_persistent_bytes = checked_sum(&[
+            options.prepared_persistent_bytes,
+            numerical::allocation_bound(problem, options.probes)?,
+        ])?;
+    }
     let rows = problem.outcome.len();
     let workers = problem.workers();
     let firms = problem.firms();
@@ -1078,10 +1281,8 @@ fn run_generic_jla_with_execution_interrupt(
     } else {
         fe_parameters
     };
-    let planned_rhs = usize::try_from(options.probes)
-        .map_err(|_| resource("probe count is not addressable for route planning"))?
-        .checked_mul(3)
-        .and_then(|value| value.checked_add(controls))
+    let planned_rhs = point_probe_rhs
+        .checked_add(controls)
         .and_then(|value| value.checked_add(1))
         .and_then(|value| {
             value.checked_add(usize::from(
@@ -1133,7 +1334,9 @@ fn run_generic_jla_with_execution_interrupt(
     } else {
         routing
     };
-    let rhs_receipt_capacity = expected_rhs_receipt_count(options, controls)?;
+    let rhs_receipt_capacity = expected_rhs_receipt_count(options, controls)?
+        - (options.probes as usize) * 3
+        + point_probe_rhs;
     let mut rhs_receipts = Vec::new();
     reserve_exact(
         &mut rhs_receipts,
@@ -1192,7 +1395,12 @@ fn run_generic_jla_with_execution_interrupt(
             execution_options.leverage_batch,
             execution_options.target_batch,
             threads,
-            memory_facts(problem, interrupt)?,
+            numerical_memory_facts(
+                problem,
+                options.probes,
+                numerical_output.is_some(),
+                interrupt,
+            )?,
             interrupt,
         )?;
         component_batch = inference;
@@ -1261,7 +1469,12 @@ fn run_generic_jla_with_execution_interrupt(
                 None
             },
             RouteMemory::default(),
-            memory_facts(problem, interrupt)?,
+            numerical_memory_facts(
+                problem,
+                options.probes,
+                numerical_output.is_some(),
+                interrupt,
+            )?,
             1,
             1,
         )?
@@ -1334,6 +1547,8 @@ fn run_generic_jla_with_execution_interrupt(
                     Some(plan.threads),
                     false,
                     component_policy,
+                    probe_plan,
+                    numerical_output,
                     interrupt,
                 )?;
                 result.receipt.execution.requested_route = ModelSolverRoute::Auto;
@@ -1389,7 +1604,12 @@ fn run_generic_jla_with_execution_interrupt(
         )?;
     }
     let mut route_memory = route_memory_forecast(problem, &full_solver, controls)?;
-    let memory_facts = memory_facts(problem, interrupt)?;
+    let memory_facts = numerical_memory_facts(
+        problem,
+        options.probes,
+        numerical_output.is_some(),
+        interrupt,
+    )?;
     let mut batch = if let Some(batch) = controlled_batch {
         batch
     } else {
@@ -1530,6 +1750,16 @@ fn run_generic_jla_with_execution_interrupt(
         execution_options.wallseconds,
         WallCalibration::Uncalibrated,
     )?;
+    let mut numerical_state = if numerical_output.is_some() {
+        Some(numerical::State::new(
+            problem,
+            options.probes,
+            target_probes,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
     full_solver.reconcile_full_cmg_memory(memory.peak)?;
     let mut execution = GenericJlaExecutionReceipt {
         component_batch,
@@ -1808,7 +2038,7 @@ fn run_generic_jla_with_execution_interrupt(
         interrupt,
     )?;
     let target_counter = plan_counter_phase(
-        options.probes,
+        target_probes,
         &target_plan.physical_count,
         GeneratorEvaluationModel::PackedWords,
     )?;
@@ -1971,6 +2201,8 @@ fn run_generic_jla_with_execution_interrupt(
             rng,
             options,
             &mut rhs_receipts,
+            #[cfg(test)]
+            numerical_state.as_mut(),
             interrupt,
         )?;
         let active_geometry = if options.nuisance == NuisanceMode::Joint {
@@ -1986,6 +2218,7 @@ fn run_generic_jla_with_execution_interrupt(
             active_geometry,
             options,
             false,
+            numerical_state.as_mut(),
             interrupt,
         )?;
         let zero_control_leverage;
@@ -2012,6 +2245,17 @@ fn run_generic_jla_with_execution_interrupt(
             false,
             interrupt,
         )?;
+        if let Some(state) = numerical_state.as_mut() {
+            state.point_clipping(stayer_adjusted.variance_clipped);
+            state.observation(
+                problem,
+                &observation_classes,
+                &observation_moments,
+                &signs,
+                active_leverage,
+                interrupt,
+            )?;
+        }
         let adjusted = combine_hybrid_adjustments(
             &mover_adjusted.values,
             &stayer_adjusted.values,
@@ -2055,6 +2299,8 @@ fn run_generic_jla_with_execution_interrupt(
                     rng,
                     options,
                     &mut rhs_receipts,
+                    #[cfg(test)]
+                    numerical_state.as_mut(),
                     interrupt,
                 )?;
                 let active_geometry = if options.nuisance == NuisanceMode::Joint {
@@ -2070,6 +2316,7 @@ fn run_generic_jla_with_execution_interrupt(
                     active_geometry,
                     options,
                     component_inference.is_some(),
+                    numerical_state.as_mut(),
                     interrupt,
                 )?;
                 if component_inference.is_some() {
@@ -2109,6 +2356,8 @@ fn run_generic_jla_with_execution_interrupt(
                     rng,
                     options,
                     &mut rhs_receipts,
+                    #[cfg(test)]
+                    numerical_state.as_mut(),
                     interrupt,
                 )?;
                 let zero_control_leverage;
@@ -2135,6 +2384,17 @@ fn run_generic_jla_with_execution_interrupt(
                     component_inference.is_some(),
                     interrupt,
                 )?;
+                if let Some(state) = numerical_state.as_mut() {
+                    state.point_clipping(adjusted.variance_clipped);
+                    state.observation(
+                        problem,
+                        &classes,
+                        &moments,
+                        &signs,
+                        active_leverage,
+                        interrupt,
+                    )?;
+                }
                 if component_inference.is_some() {
                     component_geometry = Some((
                         adjusted.inference_leverage.take().ok_or_else(|| {
@@ -2175,12 +2435,30 @@ fn run_generic_jla_with_execution_interrupt(
             .as_ref()
             .map(|plan| plan.rows.as_slice()),
         hybrid.map(|plan| plan.stayer_rows.as_slice()),
-        rng,
-        options,
+        probe_plan.map_or(rng, |p| CounterRng::new(p.target_seed)),
+        GenericJlaOptions {
+            probes: target_probes,
+            ..options
+        },
         component_inference.is_some(),
         &mut rhs_receipts,
+        match_rows_for_target.as_ref(),
+        numerical_state.as_mut(),
+        &residual,
         interrupt,
     )?;
+    let numerical_result = numerical_state
+        .map(|state| {
+            state.replay(
+                problem,
+                &fe_solver,
+                match_rows_for_target.as_ref(),
+                rng,
+                options,
+                interrupt,
+            )
+        })
+        .transpose()?;
     let target_strata = target_plan.cell.len();
     drop(target_plan);
     let mut component_inference_result = match (
@@ -2379,7 +2657,12 @@ fn run_generic_jla_with_execution_interrupt(
             .map_or(0, |fit| fit.projections.len());
         let logical_rhs = rhs_receipts
             .len()
-            .checked_add(component_rhs)
+            .checked_add(
+                numerical_result
+                    .as_ref()
+                    .map_or(0, |r| r.replay_executed_rhs_count),
+            )
+            .and_then(|count| count.checked_add(component_rhs))
             .and_then(|count| count.checked_add(gram_rhs))
             .ok_or_else(|| resource("direct attachment logical RHS count overflow"))?;
         let expected = u64::try_from(logical_rhs)
@@ -2397,9 +2680,7 @@ fn run_generic_jla_with_execution_interrupt(
         execution.direct_attachments = Some(GenericDirectAttachmentReceipt {
             fit_rhs: 1 + usize::from(options.nuisance == NuisanceMode::FixedOffset && controls > 0),
             control_projection_rhs: controls,
-            point_probe_rhs: (options.probes as usize)
-                .checked_mul(3)
-                .ok_or_else(|| resource("direct probe count overflow"))?,
+            point_probe_rhs,
             projection_rhs: projection_columns,
             component_rhs,
             gram_rhs,
@@ -2411,8 +2692,8 @@ fn run_generic_jla_with_execution_interrupt(
         let work = full_solver.diagonal_queue_receipt()?.ok_or_else(|| {
             BackendError::invariant("generic_diagonal_queue", "lost shared queue receipt")
         })?;
-        let expected = (options.probes as usize)
-            .checked_mul(3)
+        let expected = point_probe_rhs
+            .checked_add(numerical_result.as_ref().map_or(0, |r| r.replay_rhs.len()))
             .and_then(|count| count.checked_add(controls))
             .and_then(|count| count.checked_add(options.projection_columns))
             .and_then(|count| {
@@ -2462,6 +2743,9 @@ fn run_generic_jla_with_execution_interrupt(
         execution.counter.leverage.completed(),
         execution.counter.target.completed(),
     )?;
+    if let Some(output) = numerical_output.take() {
+        *output = numerical_result;
+    }
     Ok(GenericJlaResult {
         plugin,
         correction,
@@ -2478,7 +2762,7 @@ fn run_generic_jla_with_execution_interrupt(
             deletion_units,
             target_strata,
             leverage_probes_accepted: options.probes,
-            target_probes_accepted: options.probes,
+            target_probes_accepted: target_probes,
             maximum_leverage,
             full_fit_relres,
             working_fit_relres,
@@ -4418,6 +4702,7 @@ fn match_leverage_moments(
     rng: CounterRng,
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    #[cfg(test)] mut numerical_cache: Option<&mut numerical::State>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<FiveMoments>, f64)> {
     let _profile = ProfileScope::new(ProfilePhase::Leverage);
@@ -4510,6 +4795,21 @@ fn match_leverage_moments(
             ));
             maximum_relres = maximum_relres.max(solution.residual.relative_norm);
         }
+        #[cfg(test)]
+        if let Some(state) = numerical_cache.as_mut() {
+            for (column, solution) in solved.solution.iter().enumerate() {
+                state.cache.leverage(
+                    problem,
+                    &[],
+                    Some(plan),
+                    fe_solver,
+                    solution,
+                    &atoms[column * groups..(column + 1) * groups],
+                    rng,
+                    first + column,
+                )?;
+            }
+        }
         statistical_batches::match_moments(
             fe_solver,
             plan,
@@ -4547,6 +4847,7 @@ fn observation_leverage_moments(
     rng: CounterRng,
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    #[cfg(test)] numerical_cache: Option<&mut numerical::State>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(ObservationMoments, ObservationCorrelations, f64)> {
     let (moments, correlations, match_moments, relres) = observation_and_match_leverage_moments(
@@ -4557,6 +4858,8 @@ fn observation_leverage_moments(
         rng,
         options,
         rhs_receipts,
+        #[cfg(test)]
+        numerical_cache,
         interrupt,
     )?;
     debug_assert!(match_moments.is_none());
@@ -4572,6 +4875,7 @@ fn hybrid_leverage_moments(
     rng: CounterRng,
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    #[cfg(test)] numerical_cache: Option<&mut numerical::State>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(
     Vec<FiveMoments>,
@@ -4587,6 +4891,8 @@ fn hybrid_leverage_moments(
         rng,
         options,
         rhs_receipts,
+        #[cfg(test)]
+        numerical_cache,
         interrupt,
     )?;
     Ok((
@@ -4608,6 +4914,7 @@ fn observation_and_match_leverage_moments(
     rng: CounterRng,
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    #[cfg(test)] mut numerical_cache: Option<&mut numerical::State>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(
     ObservationMoments,
@@ -4823,6 +5130,26 @@ fn observation_and_match_leverage_moments(
             ));
             maximum_relres = maximum_relres.max(solution.residual.relative_norm);
         }
+        #[cfg(test)]
+        if let Some(state) = numerical_cache.as_mut() {
+            for (column, solution) in solved.solution.iter().enumerate() {
+                let atoms = if let Some(plan) = match_plan {
+                    &match_atoms[column * plan.rows.len()..(column + 1) * plan.rows.len()]
+                } else {
+                    &[]
+                };
+                state.cache.leverage(
+                    problem,
+                    classes,
+                    match_plan,
+                    fe_solver,
+                    solution,
+                    atoms,
+                    rng,
+                    first_probe + column,
+                )?;
+            }
+        }
         statistical_batches::observation_moments(
             fe_solver,
             &addresses,
@@ -4907,6 +5234,7 @@ fn observation_and_match_leverage_moments(
 
 #[derive(Clone, Debug)]
 struct DeletedAdjustment {
+    variance_clipped: bool,
     values: Vec<f64>,
     maximum_leverage: f64,
     maximum_relres: f64,
@@ -4953,6 +5281,7 @@ fn observation_deleted_adjustment(
             active[row] = true;
         }
     }
+    let mut variance_clipped = false;
     let mut maximum_leverage = 0.0_f64;
     let mut inference_leverage = retain_inference_geometry.then(|| vec![f64::NAN; rows]);
     let mut inference_maker_inverse = retain_inference_geometry.then(|| vec![f64::NAN; rows]);
@@ -4979,6 +5308,7 @@ fn observation_deleted_adjustment(
                 p_first + p_second - 2.0 * third,
             );
             let finite = raw.finite(probes, options, physical)?;
+            variance_clipped |= finite.variance_clipped;
             let total_residual = finite.residual - control_leverage[row];
             if !total_residual.is_finite() || total_residual <= options.block_tolerance {
                 return Err(BackendError::new(
@@ -5017,6 +5347,7 @@ fn observation_deleted_adjustment(
         }
     }
     Ok(DeletedAdjustment {
+        variance_clipped,
         values,
         maximum_leverage,
         maximum_relres: 0.0,
@@ -5067,6 +5398,7 @@ fn match_deleted_adjustment(
     geometry: Option<&ControlGeometry>,
     options: GenericJlaOptions,
     retain_inference_geometry: bool,
+    mut numerical: Option<&mut numerical::State>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<DeletedAdjustment> {
     let q = geometry.map_or(0, |value| value.controls);
@@ -5079,14 +5411,19 @@ fn match_deleted_adjustment(
         interrupt,
         "generic_jla_match_adjustment_allocate",
     )?;
+    let mut variance_clipped = false;
     let mut maximum_leverage = 0.0_f64;
     let mut maximum_relres = 0.0_f64;
     let mut inference_leverage = retain_inference_geometry.then(|| vec![f64::NAN; plan.rows.len()]);
     let mut inference_maker_inverse =
         retain_inference_geometry.then(|| vec![f64::NAN; plan.rows.len()]);
+    if let Some(state) = numerical.as_mut() {
+        state.prepare_blocks(plan.rows.len(), interrupt)?;
+    }
     for group in 0..plan.rows.len() {
         interrupt.checkpoint("generic_jla_match_adjustment")?;
         let finite = moments[group].finite(probes, options, group)?;
+        variance_clipped |= finite.variance_clipped;
         let rows = &plan.rows[group];
         let width = rows.len();
         let frequency = plan.physical_count[group] as f64;
@@ -5154,6 +5491,22 @@ fn match_deleted_adjustment(
             leverage[group] = finite.projection;
             maker_inverse[group] = effective;
         }
+        if let Some(state) = numerical.as_mut() {
+            #[cfg(test)]
+            state
+                .cache
+                .block_geometry(group, &low_rank, width, rank, &rhs);
+            state.point_clipping(finite.variance_clipped);
+            state.block(
+                group,
+                rows,
+                moments[group],
+                inverse_common,
+                common_transformed,
+                common_inverse,
+                1.0 - action.maximum_leverage,
+            );
+        }
         for (local, &row) in rows.iter().enumerate() {
             values[row] = transformed[local]
                 + finite.bias * inverse_common[local] * common_transformed
@@ -5171,6 +5524,7 @@ fn match_deleted_adjustment(
         }
     }
     Ok(DeletedAdjustment {
+        variance_clipped,
         values,
         maximum_leverage,
         maximum_relres,
@@ -7425,6 +7779,9 @@ fn target_correction(
     options: GenericJlaOptions,
     retain_diagonal: bool,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    match_plan_for_numerical: Option<&MatchPlan>,
+    mut numerical: Option<&mut numerical::State>,
+    residual: &[f64],
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<TargetCorrection> {
     let _profile = ProfileScope::new(ProfilePhase::Target);
@@ -7666,11 +8023,28 @@ fn target_correction(
             },
             interrupt,
         )?;
+        if let Some(state) = numerical.as_mut() {
+            for local in 0..width {
+                state.target(
+                    problem,
+                    solver,
+                    &solved.solution[2 * local..2 * local + 2],
+                    working_y,
+                    residual,
+                    match_plan_for_numerical,
+                    first + local,
+                    interrupt,
+                )?;
+            }
+        }
         if let Some(diagonal) = diagonal_sum.as_mut() {
             statistical_batches::target_diagonal(solver, &solved.solution, diagonal, interrupt)?;
         }
     }
     crate::progress::advance(crate::progress::TARGETS, probes, probes);
+    if let Some(state) = numerical.as_mut() {
+        state.conditional(&draws)?;
+    }
     let mean = component_mean(&draws, interrupt)?;
     let mcse = component_mcse(&draws, mean, interrupt)?;
     Ok(TargetCorrection {
@@ -8206,6 +8580,19 @@ fn stable_sum_indices(
     Ok(sum.finish())
 }
 
+fn numerical_memory_facts(
+    problem: &CompressedProblem,
+    probes: u32,
+    numerical: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<MemoryFacts> {
+    let mut facts = memory_facts(problem, interrupt)?;
+    if numerical {
+        facts.numerical_export_bytes = numerical::export_bound(probes)?;
+    }
+    Ok(facts)
+}
+
 fn memory_facts(
     problem: &CompressedProblem,
     interrupt: &mut dyn InterruptCheck,
@@ -8219,6 +8606,7 @@ fn memory_facts(
         maximum_deletion_block = maximum_deletion_block.max(width);
     }
     Ok(MemoryFacts {
+        numerical_export_bytes: 0,
         maximum_deletion_block,
     })
 }
@@ -8973,6 +9361,7 @@ fn memory_forecast(
     ])?;
     let result_transition = checked_sum(&[prepared, native_result_payload])?;
     let result_export = checked_sum(&[
+        memory_facts.numerical_export_bytes,
         native_result_payload,
         options.retained_mask_bytes,
         options.rhs_export_bytes,

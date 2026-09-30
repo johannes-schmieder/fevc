@@ -170,3 +170,21 @@ void vckss_legacy_header_signatures_compile(void)
     (void)augment_component_v4;
     (void)augment_match_component_v4;
 }
+
+void vckss_numerical_header_signatures_compile(void)
+{
+    uint32_t (*schema)(void) = vckss_rust_numerical_schema_v1;
+    int32_t (*preflight)(const VckssNumericalRequestV1 *) = vckss_rust_engine_numerical_preflight_v1;
+    int32_t (*solve)(uint64_t, const VckssNumericalRequestV1 *) = vckss_rust_engine_solve_numerical_v1;
+    int32_t (*interrupt)(uint64_t, const VckssNumericalRequestV1 *, VckssInterruptPollV1, void *, uint32_t) = vckss_rust_engine_solve_numerical_interrupt_v1;
+    int32_t (*result)(uint64_t, VckssNumericalResultV1 *, uint32_t) = vckss_rust_engine_numerical_result_v1;
+    int32_t (*rhs)(uint64_t, VckssNumericalRhsV1 *, uint64_t, uint64_t *) = vckss_rust_engine_numerical_rhs_v1;
+    (void)schema; (void)preflight; (void)solve; (void)interrupt; (void)result; (void)rhs;
+}
+
+_Static_assert(sizeof(VckssNumericalRequestV2) == 344, "numerical V2 size");
+_Static_assert(offsetof(VckssNumericalRequestV2, v1) == 0, "numerical V2 frozen prefix");
+_Static_assert(offsetof(VckssNumericalRequestV2, execution_mode) == 328, "numerical V2 executor offset");
+_Static_assert(sizeof(VckssGenericExecutionReceiptV2) == 176, "numerical combined work size");
+_Static_assert(offsetof(VckssGenericExecutionReceiptV2, point_work) == 8, "numerical point work offset");
+_Static_assert(offsetof(VckssGenericExecutionReceiptV2, replay_rhs_count) == 168, "numerical replay work offset");

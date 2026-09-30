@@ -1,6 +1,6 @@
 # KSS-STREAMLINE-1 SCC diagnostic bundle allowlist. Every entry is a repository-
-# relative regular file. The builder rejects symlinks, unsafe paths,
 # duplicates, missing installed runtime modules, and unsorted entries.
+# relative regular file. The builder rejects symlinks, unsafe paths,
 CODE_LICENSE.md
 LICENSES/GPL-3.0-only.txt
 fevc/AGENTS.md
@@ -94,6 +94,7 @@ fevc/fevc__hybrid_sample.ado
 fevc/fevc__lifecycle.ado
 fevc/fevc__memory_options.ado
 fevc/fevc__native_threads.ado
+fevc/fevc__numerical.ado
 fevc/fevc__observation_population.ado
 fevc/fevc__progress.ado
 fevc/fevc__rust_capture_stayers.ado
@@ -105,6 +106,7 @@ fevc/fevc__rust_component_post.ado
 fevc/fevc__rust_core_ready.ado
 fevc/fevc__rust_linux.ado
 fevc/fevc__rust_macos.ado
+fevc/fevc__rust_numerical.ado
 fevc/fevc__rust_plan_receipt.ado
 fevc/fevc__rust_plugin_call.ado
 fevc/fevc__rust_post_comp_v7.ado
@@ -123,6 +125,7 @@ fevc/fevc_cmg.mata
 fevc/fevc_estat.ado
 fevc/fevc_graph.mata
 fevc/fevc_inference.mata
+fevc/fevc_numerical.mata
 fevc/fevc_resource.mata
 fevc/fevc_rng.mata
 fevc/fevc_run.ado

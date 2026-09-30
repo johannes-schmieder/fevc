@@ -637,7 +637,15 @@ fn v6_component_direct_gram_and_queue_native_equivalence() {
             };
             for width in [7, 8] {
                 let mut reference: Option<(Vec<f64>, [f64; 4])> = None;
-                for (executor, threads) in [(1, 0), (1, 1), (1, 7), (2, 1), (2, 7)] {
+                for (executor, threads, numerical) in [
+                    (1, 0, false),
+                    (1, 1, false),
+                    (1, 7, false),
+                    (2, 1, false),
+                    (2, 7, false),
+                    (1, 7, true),
+                    (2, 7, true),
+                ] {
                     reset();
                     let generation =
                         prepare_with_controls_memory(&columns, &controls, deletion, 1 << 30);
@@ -645,7 +653,22 @@ fn v6_component_direct_gram_and_queue_native_equivalence() {
                     let mut request = request(deletion, nuisance, q, executor, threads, false);
                     request.v4.v3.v2.v1.probes = 200;
                     request.v4.v3.v2.v1.seed = 8_675_309;
-                    if threads == 0 {
+                    let mut attached = VckssNumericalRequestV2::default();
+                    attached.v1.point = request.v4;
+                    attached.v1.point.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV4>();
+                    attached.v1.threads = threads;
+                    attached.v1.controls_count = q;
+                    attached.v1.component_requested = 1;
+                    attached.execution_mode = executor;
+                    if numerical {
+                        ok(vckss_rust_engine_solve_numerical_interrupt_v2(
+                            generation,
+                            &attached,
+                            None,
+                            ptr::null_mut(),
+                            0,
+                        ));
+                    } else if threads == 0 {
                         ok(vckss_rust_engine_solve_v4(generation, &request.v4));
                     } else {
                         ok(vckss_rust_engine_solve_v6(generation, &request));
@@ -670,6 +693,9 @@ fn v6_component_direct_gram_and_queue_native_equivalence() {
                             assert_eq!(cmg.probe_effective_tolerance, 1e-12);
                             assert_eq!(cmg.rhs_count, work.cmg_rhs_count);
                         }
+                    }
+                    if numerical {
+                        numerical_work(generation, 200);
                     }
                     let (actual, receipt) = inference(generation);
                     assert_eq!(
@@ -885,7 +911,15 @@ fn v6_projection_outputs_and_psd_withholding_match_legacy() {
         for nuisance in [VCKSS_NUISANCE_JOINT, VCKSS_NUISANCE_FIXED_OFFSET] {
             let mut reference: Option<Vec<f64>> = None;
             let mut expected_status = None;
-            for (executor, threads) in [(1, 0), (1, 1), (1, 7), (2, 1), (2, 7)] {
+            for (executor, threads, numerical) in [
+                (1, 0, false),
+                (1, 1, false),
+                (1, 7, false),
+                (2, 1, false),
+                (2, 7, false),
+                (1, 7, true),
+                (2, 7, true),
+            ] {
                 reset();
                 let generation =
                     prepare_with_controls_memory(&columns, &controls, deletion, 1 << 30);
@@ -896,7 +930,22 @@ fn v6_projection_outputs_and_psd_withholding_match_legacy() {
                 ));
                 let mut request = request(deletion, nuisance, 1, executor, threads, false);
                 request.v4.v3.v2.v1.probes = 200;
-                let status = if threads == 0 {
+                let mut attached = VckssNumericalRequestV2::default();
+                attached.v1.point = request.v4;
+                attached.v1.point.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV4>();
+                attached.v1.threads = threads;
+                attached.v1.controls_count = 1;
+                attached.v1.projection_requested = 1;
+                attached.execution_mode = executor;
+                let status = if numerical {
+                    vckss_rust_engine_solve_numerical_interrupt_v2(
+                        generation,
+                        &attached,
+                        None,
+                        ptr::null_mut(),
+                        0,
+                    )
+                } else if threads == 0 {
                     vckss_rust_engine_solve_v4(generation, &request.v4)
                 } else {
                     vckss_rust_engine_solve_v6(generation, &request)
@@ -916,12 +965,15 @@ fn v6_projection_outputs_and_psd_withholding_match_legacy() {
                     continue;
                 }
                 successful_cells += usize::from(threads == 0);
-                if threads > 0 {
+                if threads > 0 && !numerical {
                     assert_eq!(work(generation).projection_rhs_count, 2);
                 }
                 let mut beta = [0.; 2];
                 let mut covariance = [0.; 4];
                 let mut naive = [0.; 4];
+                if numerical {
+                    numerical_work(generation, 200);
+                }
                 let mut receipt = VckssProjectionResultReceiptV1::default();
                 ok(vckss_rust_engine_projection_result_v1(
                     generation,
@@ -1059,4 +1111,35 @@ fn v6_native_memory_policy_explicit_boundary_and_omitted_budget() {
         }
         ok(vckss_rust_engine_release_v1(generation));
     }
+}
+
+fn numerical_work(generation: u64, probes: u64) {
+    let mut work = VckssGenericExecutionReceiptV2::default();
+    ok(vckss_rust_engine_generic_execution_receipt_v2(
+        generation,
+        &mut work,
+        bytes::<VckssGenericExecutionReceiptV2>(),
+    ));
+    assert_eq!((work.struct_size, work.schema_version), (176, 2));
+    assert_eq!(work.replay_rhs_count, probes);
+    assert_eq!(work.point_work.point_probe_rhs_count, 3 * probes);
+    let mut diagnostic = VckssNumericalResultV1::default();
+    ok(vckss_rust_engine_numerical_result_v1(
+        generation,
+        &mut diagnostic,
+        bytes::<VckssNumericalResultV1>(),
+    ));
+    assert_eq!(diagnostic.executed_replay_rhs, probes);
+    assert_eq!(
+        vckss_rust_engine_generic_execution_receipt_v1(
+            generation,
+            &mut VckssGenericExecutionReceiptV1::default(),
+            160
+        ),
+        ErrorCode::UnsupportedFeature as i32
+    );
+    assert_eq!(
+        vckss_rust_engine_generic_execution_receipt_v2(generation, &mut work, 175),
+        ErrorCode::AbiMismatch as i32
+    );
 }

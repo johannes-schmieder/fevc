@@ -137,6 +137,8 @@ mod exact_execution;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 #[path = "engine_ffi/generic_execution.rs"]
 mod generic_execution;
+#[path = "engine_ffi/numerical.rs"]
+mod numerical;
 
 #[derive(Debug)]
 #[repr(C)]

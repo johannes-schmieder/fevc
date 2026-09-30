@@ -39,7 +39,7 @@ foreach deletion in match observation {
             quietly fevc y `fw', worker(worker) firm(firm) deletion(`deletion') ///
                 backend(rust) rng(counter_v1) algorithm(jla) engine(`engine') ///
                 preconditioner(cmg) batch(1) probes(9) seed(81227) ///
-                tolerance(1e-10) `extra' nodisplay
+                tolerance(1e-10) `extra' mcse(conditional) nodisplay
             matrix reference = e(kss)
             local family `"`e(engine_selected)'"'
             local retained = e(N_retained)
@@ -48,7 +48,7 @@ foreach deletion in match observation {
                 fevc y `fw', worker(worker) firm(firm) deletion(`deletion') ///
                     backend(rust) rng(counter_v1) algorithm(jla) engine(`engine') ///
                     preconditioner(`route') batch(auto) probes(9) seed(81227) ///
-                    tolerance(1e-10) `extra' nodisplay
+                    tolerance(1e-10) `extra' mcse(conditional) nodisplay
                 assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
                 assert `"`e(preconditioner_requested)'"'=="`route'"
                 assert `"`e(preconditioner_selected)'"'=="CMG"
@@ -74,7 +74,7 @@ foreach deletion in match observation {
             quietly fevc y `fw', worker(worker) firm(firm) deletion(`deletion') ///
                 backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///
                 preconditioner(diagonal) batch(auto) probes(9) seed(81227) ///
-                tolerance(1e-10) `extra' nodisplay
+                tolerance(1e-10) `extra' mcse(conditional) nodisplay
             assert `"`e(cmg_backend)'"'==""
             assert `"`e(preconditioner_requested)'"'=="diagonal"
             drop reference_sample
@@ -86,7 +86,7 @@ foreach deletion in match observation {
 quietly fevc y [fw=copies], worker(worker) firm(firm) deletion(observation) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///
     preconditioner(cmg) batch(auto) probes(33) seed(81227) ///
-    targetweight(mass) nodisplay
+    targetweight(mass) mcse(conditional) nodisplay
 assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
 assert e(full_cmg_receipt)[1,18]==1e-10
 assert e(full_cmg_receipt)[1,19]==1e-6
@@ -98,7 +98,7 @@ assert r(state)==0 & r(handle)==0
 // Supplied flags describe provenance, not permission to use an already
 // supported effective point tuple. Omitted defaults must not lose threading.
 quietly fevc y [fw=copies], worker(worker) firm(firm) deletion(observation) ///
-    backend(rust) engine(generic) probes(33) seed(81227) targetweight(mass) nodisplay
+    backend(rust) engine(generic) probes(33) seed(81227) targetweight(mass) mcse(conditional) nodisplay
 assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
 assert `"`e(rng_requested)'"'=="auto"
 assert `"`e(rng_selected)'"'=="counter_v1"

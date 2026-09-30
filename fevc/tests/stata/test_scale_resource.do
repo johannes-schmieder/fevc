@@ -32,7 +32,7 @@ void test_scale_resource()
         "vckss-resource-api12-control-scratch")
     assert(vckss_solver__api_level() == 27)
     assert(vckss_solver__build_id() ==
-        "vckss-solver-api27-memory-policy-timers1")
+        "vckss-solver-api27-memory-policy-nmc4-timers1")
     // Compatibility defaults are not package-wide ceilings.
     assert(vckss_resource__hard_mem_bytes() == 56*1024^3)
     assert(vckss_resource__hard_wall_secs() == 12*60*60)

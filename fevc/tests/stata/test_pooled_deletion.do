@@ -267,7 +267,7 @@ if `native_units' {
                     deletionid(match) targetweight(target) stayers(`population') ///
                     nuisance(`nuisance') algorithm(jla) engine(generic) ///
                     probes(4096) seed(9252026) backend(rust) rng(counter_v1) ///
-                    preconditioner(`solver') nodisplay
+                    preconditioner(`solver') mcse(conditional) nodisplay
                 assert e(sample)==wanted_`population'
                 matrix jla=e(kss)
                 matrix mcse=e(numerical_mcse)
@@ -358,7 +358,7 @@ if `native_units' {
         quietly fevc y [fw=frequency] if wanted_movers, worker(worker) firm(firm) ///
             deletionid(match) targetweight(target) stayers(movers) ///
             algorithm(jla) engine(`engine') probes(8192) seed(9252026) ///
-            backend(rust) rng(counter_v1) preconditioner(diagonal) nodisplay
+            backend(rust) rng(counter_v1) preconditioner(diagonal) mcse(conditional) nodisplay
         assert e(sample)==wanted_movers
         assert e(deletion_units)==20
         matrix jla=e(kss)

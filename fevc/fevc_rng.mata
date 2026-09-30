@@ -3,6 +3,12 @@
 
 version 18.0
 
+// The main Mata module now also consumes the registered snapshot types.
+// Reusing an already matching module avoids redeclaring those structures.
+capture mata: assert(vckss_rng__api_level() == 4 & ///
+    vckss_rng__build_id() == "vckss-rng-numeric-ranks-v4")
+if !_rc exit
+
 mata:
 mata set matastrict on
 mata set matalnum off

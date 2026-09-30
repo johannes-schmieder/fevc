@@ -3,6 +3,8 @@
 //! End-to-end no-control, match-deletion improved-JLA engine.
 
 use core::mem::size_of;
+mod numerical;
+pub use numerical::{CompressedNumericalMcResult, CompressedNumericalReplayRhs};
 
 use crate::batch_plan::{
     plan_batches_with_forecasts, BatchPlanReceipt, BatchPlannerCaps, BatchRequest,
@@ -379,7 +381,7 @@ pub fn run_jla_no_controls_with_interrupt(
     let options = options.validate()?;
     validate_problem_features(problem)?;
     let plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
-    run_jla_no_controls_with_validated_plan(problem, &plan, options, interrupt)
+    run_jla_no_controls_with_validated_plan(problem, &plan, options, None, interrupt)
 }
 
 /// Run with the authoritative preparation-time semantic plan so the complete
@@ -402,7 +404,33 @@ pub fn run_jla_no_controls_with_plan_and_interrupt(
     interrupt.checkpoint("jla_solve_entry")?;
     let options = options.validate()?;
     validate_problem_features(problem)?;
-    run_jla_no_controls_with_validated_plan(problem, plan, options, interrupt)
+    run_jla_no_controls_with_validated_plan(problem, plan, options, None, interrupt)
+}
+
+/// Attach numerical replay to the frozen explicit-batch point executor.
+#[doc(hidden)]
+pub fn run_jla_no_controls_legacy_numerical_interrupt(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(JlaEngineResult, CompressedNumericalMcResult)> {
+    interrupt.checkpoint("jla_solve_entry")?;
+    let options = options.validate()?;
+    validate_problem_features(problem)?;
+    let mut attachment = None;
+    let point = run_jla_no_controls_with_validated_plan(
+        problem,
+        plan,
+        options,
+        Some(&mut attachment),
+        interrupt,
+    )?;
+    Ok((
+        point,
+        attachment
+            .ok_or_else(|| BackendError::invariant("compressed_numerical", "missing attachment"))?,
+    ))
 }
 
 pub fn run_jla_no_controls_planned(
@@ -417,7 +445,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     options: PlannedJlaEngineOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PlannedJlaEngineResult> {
-    run_jla_no_controls_planned_impl(problem, None, options, interrupt)
+    run_jla_no_controls_planned_impl(problem, None, options, None, interrupt)
 }
 
 /// Reuse the semantic plan already retained by native preparation. The plan is
@@ -431,18 +459,55 @@ pub fn run_jla_no_controls_planned_with_plan_and_interrupt(
     options: PlannedJlaEngineOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PlannedJlaEngineResult> {
-    run_jla_no_controls_planned_impl(problem, Some(plan), options, interrupt)
+    run_jla_no_controls_planned_impl(problem, Some(plan), options, None, interrupt)
+}
+
+/// Internal numerical attachment; compressed point execution is preserved.
+#[doc(hidden)]
+pub fn run_jla_no_controls_with_numerical_mc_interrupt(
+    problem: &CompressedProblem,
+    options: PlannedJlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(PlannedJlaEngineResult, CompressedNumericalMcResult)> {
+    let mut attachment = None;
+    let point =
+        run_jla_no_controls_planned_impl(problem, None, options, Some(&mut attachment), interrupt)?;
+    let attachment = attachment
+        .ok_or_else(|| BackendError::invariant("compressed_numerical", "missing attachment"))?;
+    Ok((point, attachment))
+}
+
+/// Preserve the native preparation's already validated semantic plan.
+#[doc(hidden)]
+pub fn run_jla_no_controls_with_plan_and_numerical_mc_interrupt(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: PlannedJlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(PlannedJlaEngineResult, CompressedNumericalMcResult)> {
+    let mut attachment = None;
+    let point = run_jla_no_controls_planned_impl(
+        problem,
+        Some(plan),
+        options,
+        Some(&mut attachment),
+        interrupt,
+    )?;
+    let attachment = attachment
+        .ok_or_else(|| BackendError::invariant("compressed_numerical", "missing attachment"))?;
+    Ok((point, attachment))
 }
 
 fn run_jla_no_controls_planned_impl(
     problem: &CompressedProblem,
     retained_plan: Option<&JlaPlan>,
     options: PlannedJlaEngineOptions,
+    numerical_output: Option<&mut Option<CompressedNumericalMcResult>>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PlannedJlaEngineResult> {
     interrupt.checkpoint("jla_planned_entry")?;
     let _profile = crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::Command);
-    let estimator = options.estimator.validate()?;
+    let mut estimator = options.estimator.validate()?;
     if options.full_cmg.is_some()
         && (options.leverage_batch != BatchRequest::Auto
             || options.target_batch != BatchRequest::Auto)
@@ -471,6 +536,17 @@ fn run_jla_no_controls_planned_impl(
     preflight_trial_words("leverage", &plan.deletion.physical_count)?;
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, plan)?;
+    let numerical_reserve = if numerical_output.is_some() {
+        numerical::allocation_bound(plan.deletion_units(), estimator.probes)?
+    } else {
+        0
+    };
+    if numerical_reserve != 0 {
+        estimator.prepared_persistent_bytes = checked_memory_add(
+            estimator.prepared_persistent_bytes.max(prepared),
+            numerical_reserve,
+        )?;
+    }
     crate::progress::stage(crate::progress::SETUP);
     interrupt.checkpoint("jla_solver_setup")?;
     let full_cmg_plan = if let Some(mut full_cmg) = options.full_cmg {
@@ -560,7 +636,7 @@ fn run_jla_no_controls_planned_impl(
         forecast_selected.full_cmg_setup = solver.full_cmg_receipt()?.map(|receipt| receipt.setup);
         refresh_frozen_batch_forecasts(problem, plan, forecast_selected, prepared, &mut batch)?;
     }
-    let memory = admit_jla_memory(problem, plan, forecast_selected, prepared)?;
+    let mut memory = admit_jla_memory(problem, plan, forecast_selected, prepared)?;
     if memory.solve_peak_forecast_bytes > preallocation_memory.solve_peak_forecast_bytes {
         return Err(BackendError::invariant(
             "jla_plan",
@@ -593,8 +669,17 @@ fn run_jla_no_controls_planned_impl(
             GeneratorEvaluationModel::PackedWords,
         )?,
     )?;
+    // The reserve belongs to command scratch, not immutable prepared inputs.
+    // Forecasts include it; the prepared identity remains the original one.
+    memory.prepared_persistent_bytes -= numerical_reserve;
     let estimator_result = run_jla_no_controls_with_prepared_solver(
-        problem, plan, selected, memory, &solver, interrupt,
+        problem,
+        plan,
+        selected,
+        memory,
+        &solver,
+        numerical_output,
+        interrupt,
     )?;
     let full_cmg = solver.full_cmg_receipt()?;
     let counter = combine_counter_phases(
@@ -909,7 +994,8 @@ fn validate_problem_features(problem: &CompressedProblem) -> Result<()> {
 fn run_jla_no_controls_with_validated_plan(
     problem: &CompressedProblem,
     plan: &JlaPlan,
-    options: JlaEngineOptions,
+    mut options: JlaEngineOptions,
+    numerical_output: Option<&mut Option<CompressedNumericalMcResult>>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<JlaEngineResult> {
     // All unsupported features, tuning, semantic plans, scatter identities,
@@ -921,6 +1007,17 @@ fn run_jla_no_controls_with_validated_plan(
     preflight_trial_words("leverage", &plan.deletion.physical_count)?;
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, plan)?;
+    let numerical_reserve = if numerical_output.is_some() {
+        numerical::allocation_bound(plan.deletion_units(), options.probes)?
+    } else {
+        0
+    };
+    if numerical_reserve != 0 {
+        options.prepared_persistent_bytes = checked_memory_add(
+            options.prepared_persistent_bytes.max(prepared),
+            numerical_reserve,
+        )?;
+    }
     let legacy_memory = if options.memory_budget == crate::memory::MemoryBudget::Legacy {
         Some(admit_jla_memory(problem, plan, options, prepared)?)
     } else {
@@ -929,7 +1026,7 @@ fn run_jla_no_controls_with_validated_plan(
     crate::progress::stage(crate::progress::SETUP);
     interrupt.checkpoint("jla_solver_setup")?;
     let solver = PreparedTwoWaySolver::prepare_with_interrupt(problem, options.solver, interrupt)?;
-    let memory = if let Some(memory) = legacy_memory {
+    let mut memory = if let Some(memory) = legacy_memory {
         memory
     } else {
         let mut refined = options;
@@ -938,7 +1035,16 @@ fn run_jla_no_controls_with_validated_plan(
         admit_jla_memory(problem, plan, refined, prepared)?
     };
 
-    run_jla_no_controls_with_prepared_solver(problem, plan, options, memory, &solver, interrupt)
+    memory.prepared_persistent_bytes -= numerical_reserve;
+    run_jla_no_controls_with_prepared_solver(
+        problem,
+        plan,
+        options,
+        memory,
+        &solver,
+        numerical_output,
+        interrupt,
+    )
 }
 
 fn run_jla_no_controls_with_prepared_solver<'a>(
@@ -947,6 +1053,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
     options: JlaEngineOptions,
     memory: JlaMemoryReceipt,
     solver: &PreparedTwoWaySolver<'a>,
+    numerical_output: Option<&mut Option<CompressedNumericalMcResult>>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<JlaEngineResult> {
     crate::progress::stage(crate::progress::FIT);
@@ -1120,6 +1227,17 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         options,
         interrupt,
     )?;
+    let mut numerical_state = if numerical_output.is_some() {
+        Some(numerical::State::new(
+            plan,
+            options,
+            &moments,
+            adjustment.variance_clipped,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
     drop(moments);
     let mut target_draws = statistical_buffer(
         options.probes as usize,
@@ -1209,6 +1327,21 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             },
             interrupt,
         )?;
+        if let Some(state) = numerical_state.as_mut() {
+            for column in 0..width {
+                let worker = &solved.solution[2 * column];
+                let firm = &solved.solution[2 * column + 1];
+                state.target(
+                    problem,
+                    plan,
+                    &adjustment,
+                    (&worker.worker, &worker.firm),
+                    (&firm.worker, &firm.firm),
+                    first + column,
+                    interrupt,
+                )?;
+            }
+        }
     }
     crate::progress::advance(
         crate::progress::TARGETS,
@@ -1261,6 +1394,9 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         topology_checksum: problem.topology_checksum,
         memory,
     };
+    if let (Some(output), Some(state)) = (numerical_output, numerical_state) {
+        *output = Some(state.replay(problem, plan, solver, rng, &target_draws, interrupt)?);
+    }
     Ok(JlaEngineResult {
         plugin,
         correction,
@@ -1951,6 +2087,7 @@ fn full_fit_weighted_rss_with_interrupt(
 
 #[derive(Debug)]
 struct LeverageAdjustment {
+    variance_clipped: bool,
     projection_share: Vec<f64>,
     residual_share: Vec<f64>,
     finite_bias: Vec<f64>,
@@ -1978,6 +2115,7 @@ fn leverage_adjustment_with_interrupt(
     let mut residual_mass = Vec::with_capacity(groups);
     let mut deleted_mass = Vec::with_capacity(groups);
     let mut cell_weight = vec![StableSum::default(); problem.cells()];
+    let mut variance_clipped = false;
     let mut max_reciprocal_residual = 0.0_f64;
     for group in 0..groups {
         checkpoint_chunk(interrupt, group, "jla_leverage_adjustment")?;
@@ -2021,6 +2159,7 @@ fn leverage_adjustment_with_interrupt(
                 format!("finite-projection variance is negative at unit {group}, side joint"),
             ));
         }
+        variance_clipped |= variance < 0.0;
         variance = variance.max(0.0);
         let maker_residual = 1.0 - projection;
         if maker_residual <= options.block_tolerance {
@@ -2078,6 +2217,7 @@ fn leverage_adjustment_with_interrupt(
         ));
     }
     Ok(LeverageAdjustment {
+        variance_clipped,
         projection_share,
         residual_share,
         finite_bias,

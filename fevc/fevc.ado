@@ -126,8 +126,19 @@ program define _fevc_command, eclass
     local stage_validation_timer = r(validation_timer)
     global VCKSS_STAGE_SELECTION_TIMER `stage_selection_timer'
     global VCKSS_STAGE_VALIDATION_TIMER `stage_validation_timer'
+    tempname nmc_cond nmc_lev nmc_raw nmc_all nmc_se nmc_meta nmc_rhs
+    quietly fevc__numerical init `nmc_cond' `nmc_lev' `nmc_raw' `nmc_all' ///
+        `nmc_se' `nmc_meta' `nmc_rhs'
     capture noisily _vckss_impl `0'
     local command_rc = _rc
+    if !`command_rc' {
+        capture noisily fevc__numerical post
+        local command_rc = _rc
+    }
+    if `command_rc' & "$VCKSS_NMC_ERR"!="" {
+        quietly _vckss_post_failure "$VCKSS_NMC_ERR" `"$VCKSS_NMC_DETAIL"'
+    }
+    quietly fevc__numerical clear
     if !`command_rc' quietly fevc__stayer_population_post
     if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
         if real("$VCKSS_MEMORY_FORECAST") > 0 & real("$VCKSS_MEMORY_FORECAST") < . {
@@ -497,12 +508,20 @@ program define _fevc_rust_generic, eclass sortpreserve
         capabilityschema(2) capabilityprofile(3)                    ///
         frequencyused(`frequency_code')                             ///
         signaturehi(`cap_request_signature_hi')                     ///
-        signaturelo(`cap_request_signature_lo')
+        signaturelo(`cap_request_signature_lo') numericalall(`="$VCKSS_NMC_MODE"=="all"')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(solve)
         exit _rc
+    }
+    if "$VCKSS_NMC_MODE"=="all" {
+        capture noisily fevc__numerical fetch `handle' `probes'
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_export)
+            exit _rc
+        }
     }
     capture noisily fevc__rust_public_call result `handle'
     if _rc {
@@ -1224,6 +1243,7 @@ program define _fevc_rust_generic, eclass sortpreserve
     ereturn local rust_capability_profile "JLA_GENERIC_COUNTER_V1"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    quietly fevc__numerical post
     if "`nodisplay'" == "" fevc__display
 end
 
@@ -1325,6 +1345,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
         local generic_execution = 3
     }
+    local numerical_all = ("$VCKSS_NMC_MODE"=="all" & "`algorithm_requested'"!="exact")
     local component_batch_auto = (`component_requested' & inlist(`generic_execution',1,2) & ///
         "`batchrequested'"=="auto")
     tempvar native_input_order
@@ -1571,6 +1592,30 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         ereturn scalar rust_core_ready_flags = `rustcoreflags'
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
+    }
+
+    if `numerical_all' {
+        capture noisily fevc_rust numericalpreflight 0, algorithm(`algorithm_requested') ///
+            deletion(`deletionmode') nuisance(`nuisance') route(`preconditioner_requested') ///
+            seed(`seed') probes(`probes') leveragebatch(`solve_batch') targetbatch(`solve_batch') ///
+            tolerance(`tolerance') maxiter(`maxiter') exactlimit(`exactlimit') ///
+            blocksizelimit(`blocksizelimit') ranktolerance(`ranktol') blocktolerance(`blocktol') ///
+            engine(`engine_requested') batchmode(`phase_batch_mode') ///
+            leveragebatchmode(`phase_batch_mode') targetbatchmode(`phase_batch_mode') ///
+            stayers(`native_stayers') targetweightmode(`target_mode') deletionsource(`deletion_source') ///
+            probeordersupplied(`probeorder_supplied_code') wallsecondssupplied(`wallseconds_supplied_code') ///
+            physicallimit(`physicallimit') capabilityschema(3) capabilityprofile(4) ///
+            frequencyused(`frequency_code') signaturehi(`cap_request_signature_hi') ///
+            signaturelo(`cap_request_signature_lo') fallback(`fallback_allowed') ///
+            wallseconds(`wallseconds_value') threads(`native_threads') ///
+            tolerancesupplied(`tolerancesupplied') numericalcontrols(`control_count') ///
+            execution(`generic_execution') componentbatchauto(`component_batch_auto') ///
+            fullcmg(`fullcmg') numericalprojection(`projection_requested') numericalcomponent(`component_requested')
+        if _rc {
+            local failure_rc = _rc
+            quietly _vckss_post_failure "UNSUPPORTED_NUMERICAL_TUPLE"
+            exit `failure_rc'
+        }
     }
 
     tempvar rust_keep
@@ -2036,6 +2081,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local exact_execution = cond("`algorithm_requested'"=="exact",1,2)
         local generic_execution = 0
         local fullcmg = 0
+        local numerical_all = 0
     }
     if (`result_physical' > `physicallimit') &                    ///
         !(`exact_selected_pre_rng') {
@@ -2163,7 +2209,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         componentbatchauto(`component_batch_auto')                 ///
         fullcmg(`fullcmg') threads(`native_threads')                 ///
         exactexecution(`exact_execution')                          ///
-        tolerancesupplied(`tolerancesupplied')
+        tolerancesupplied(`tolerancesupplied') numericalall(`numerical_all') ///
+        numericalcontrols(`control_count') numericalprojection(`projection_requested') numericalcomponent(`component_requested')
     if _rc {
         local failure_rc = _rc
         local solve_failure_phase = cond(`exact_selected_pre_rng', ///
@@ -2171,6 +2218,17 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(`solve_failure_phase')
         exit _rc
+    }
+
+    local numerical_executed = 0
+    if `numerical_all' {
+        capture noisily fevc__numerical fetch `handle' `probes'
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_result)
+            exit _rc
+        }
+        local numerical_executed = real("$VCKSS_NMC_EXECUTED")
     }
 
     tempname generic_work generic_max_complete
@@ -2212,6 +2270,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
 
     local native_result_engine = r(selected_engine_code)
+    local native_result_route = r(selected_route)
     tempname exact_work_ctx
     if `exact_execution' {
         matrix `exact_work_ctx' = r(exact_execution_receipt)
@@ -2332,6 +2391,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
 
     local full_cmg_active = (`fullcmg' == 1 | `generic_execution'==2)
+    if `numerical_all' & `phase_batch_code'==0 & `native_result_route'==3 local full_cmg_active = 1
     local full_cmg_pre_reconciled = 0
     if `full_cmg_active' & `native_result_engine'==1 {
         if `native_result_engine'!=1 | `native_result_rhs_schema'!=1 {
@@ -2424,7 +2484,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `generic_execution'==2,`tolerance',1e-6)
         if `generic_execution'==0 {
             capture noisily fevc__rust_cmg_model `handle' `control_count' ///
-                `nuisance_code' `probes' `cmg_rhs_count'
+                `nuisance_code' `probes' `cmg_rhs_count' `numerical_all' `numerical_executed'
             if _rc {
                 local failure_rc = _rc
                 capture noisily _fevc_rust_abort, rc(`failure_rc') ///
@@ -2828,7 +2888,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             if `full_cmg_active' {
                 ereturn matrix full_cmg_receipt = `full_cmg_receipt'
                 ereturn matrix full_cmg_model_receipt = `full_cmg_model_receipt'
-                ereturn local full_cmg_model_schema "CMG-FULL-MODEL-V1"
+                ereturn local full_cmg_model_schema = cond(`numerical_all',"CMG-FULL-NUMERICAL-MODEL-V1","CMG-FULL-MODEL-V1")
                 ereturn scalar resource_peak_bytes = `cmg_pre_rng_forecast'
                 ereturn scalar memory_forecast_bytes = `cmg_pre_rng_forecast'
                 ereturn local cmg_backend "`cmg_backend'"
@@ -3256,11 +3316,11 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_wall_requested_value'==`wallseconds_value'
     local expected_generic_base_peak = max(`r_canon_peak',`r_fit_peak', ///
         `r_geometry_peak',`r_generic_lev_peak',`r_generic_tgt_peak',    ///
-        `r_proj_peak',`r_maker_peak',`r_generic_result',cond(`full_cmg_active' | `generic_execution',`r_setup_peak',0))
+        `r_proj_peak',`r_maker_peak',`r_generic_result',cond(`full_cmg_active' | `generic_execution' | `numerical_all',`r_setup_peak',0))
     local memory_result_ok =                                     ///
         `r_result_bytes'==`r_generic_result' &                   ///
         `r_result_bytes'>=`r_rhs_v2_copy' &                      ///
-        `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak',cond(`full_cmg_active' | `generic_execution',`r_setup_peak',0)) & ///
+        `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak',cond(`full_cmg_active' | `generic_execution' | `numerical_all',`r_setup_peak',0)) & ///
         `r_generic_peak'==`expected_generic_base_peak'+          ///
             `component_requested'*`ci_result_peak' &             ///
         `r_solve_peak'==`r_generic_peak' &                       ///
@@ -3318,7 +3378,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             if `generic_execution'==2 local execution_ok = `execution_ok' & ///
                 `generic_work'[1,7]==0 & `generic_work'[1,19]==0 & ///
                 `generic_work'[1,18]+`generic_work'[1,21]==`generic_work'[1,20] & ///
-                `generic_work'[1,20]==`cmg_rhs_count' & ///
+                `generic_work'[1,20]+`numerical_executed'==`cmg_rhs_count' & ///
                 `generic_work'[1,8]==`cmg_max_concurrency' & `generic_work'[1,9]==`cmg_max_batch_rhs'
         }
         if !`execution_ok' local results_ok = 0
@@ -3761,7 +3821,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         ereturn matrix full_cmg_receipt = `full_cmg_receipt'
         if `generic_execution'==0 {
             ereturn matrix full_cmg_model_receipt = `full_cmg_model_receipt'
-            ereturn local full_cmg_model_schema "CMG-FULL-MODEL-V1"
+            ereturn local full_cmg_model_schema = cond(`numerical_all',"CMG-FULL-NUMERICAL-MODEL-V1","CMG-FULL-MODEL-V1")
         }
         ereturn local cmg_backend "`cmg_backend'"
         ereturn local cmg_source_commit "`cmg_source_commit'"
@@ -4124,6 +4184,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_unit_receipt' `deletionmode'
         ereturn scalar inference_joint_posted = `component_joint_posted'
     }
+    quietly fevc__numerical post
     if "`nodisplay'" == "" fevc__display
 end
 
@@ -4226,7 +4287,7 @@ program define _vckss_impl, eclass sortpreserve
         PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(string)                        ///
         ENGINE(string) BACKEND(string) RNG(string) WALLSeconds(string) ///
-        NATIVEThreads(string)                                    ///
+        NATIVEThreads(string) MCSE(string) NUMERICALMCSE(string)                ///
         PREConditioner(string) MEMory_gib(string) MEMorycheck(string)                ///
         SEED(integer 8675309) TOLerance(string)                  ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
@@ -4249,6 +4310,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
+    fevc__numerical request `"`mcse'"' `"`inference'"' `"`project'"' `"`numericalmcse'"'
     _fevc_native_threads `"`nativethreads'"'
     global VCKSS_REPORT_LEVEL 0
     if "$VCKSS_REPORT_ALLOWED" == "1" & "`nodisplay'`nolog'" == "" {
@@ -4939,6 +5001,7 @@ program define _vckss_impl, eclass sortpreserve
     // preparation is meaningful only while the qualified Rust cell remains
     // selected; every fallback must re-enter the ordinary Mata preparation.
     local implicit_match = `rust_public' & `implicit_match'
+    fevc__numerical native `rust_public' `algorithm'
 
     // Keep this program below Stata's compiled-program size limit.
     foreach field in mark_validate_seconds initial_group_seconds ///
@@ -5410,7 +5473,7 @@ program define _vckss_impl, eclass sortpreserve
         `prep_mark_validate_seconds'
     quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
 
-    local expected_mata_build "vckss-api25-control-posterior-timers1"
+    local expected_mata_build "vckss-api25-control-posterior-nmc4-timers1"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 24 &                 ///
@@ -6082,6 +6145,8 @@ program define _vckss_impl, eclass sortpreserve
             exit 498
         }
         local resource_row = cond("`engine_selected'" == "compressed",1,2)
+        fevc__numerical reserve `resource_components' `resource_row' ///
+            `retained_physical' `N_retained' `probes' `resource_units' `resource_cells'
         if `resource_row' == 1 {
             local resource_status `compressed_resource_status'
             local resource_message `"`compressed_resource_message'"'
@@ -6394,7 +6459,7 @@ program define _vckss_impl, eclass sortpreserve
         capture mata: assert(vckss_solver__api_level() == 27 &     ///
             vckss_solver__route_api() == 1 &                      ///
             vckss_solver__build_id() ==                           ///
-            "vckss-solver-api27-memory-policy-timers1")
+            "vckss-solver-api27-memory-policy-nmc4-timers1")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SOLVER_RUNTIME"
@@ -6411,20 +6476,21 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(vckss_solver__api_level() == 27 & ///
                 vckss_solver__route_api() == 1 &                  ///
                 vckss_solver__build_id() ==                       ///
-                "vckss-solver-api27-memory-policy-timers1")
+                "vckss-solver-api27-memory-policy-nmc4-timers1")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"
                 exit 498
             }
         }
+        fevc__numerical runtime solver
         if "`engine_selected'" == "compressed" {
             capture mata: vckss_scale_engine__api_level()
             local scale_engine_loaded = (_rc == 0)
             capture mata: assert(                                 ///
                 vckss_scale_engine__api_level() == 4 &            ///
                 vckss_scale_engine__build_id() ==                 ///
-                "vckss-scale-engine-api4-fe-buf1-buffered-timers1")
+                "vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_ENGINE"
@@ -6441,7 +6507,7 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: assert(                             ///
                     vckss_scale_engine__api_level() == 4 &        ///
                     vckss_scale_engine__build_id() ==             ///
-                    "vckss-scale-engine-api4-fe-buf1-buffered-timers1")
+                    "vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -6454,7 +6520,7 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(                                 ///
                 vckss_scale_runtime__api_level() == 3 &           ///
                 vckss_scale_runtime__build_id() ==                ///
-                "vckss-scale-runtime-api3-fe-buf1-buffered")
+                "vckss-scale-runtime-api3-fe-buf1-nmc4")
             if _rc {
                 if `scale_bridge_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_BRIDGE"
@@ -6471,13 +6537,15 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: assert(                             ///
                     vckss_scale_runtime__api_level() == 3 &       ///
                     vckss_scale_runtime__build_id() ==            ///
-                    "vckss-scale-runtime-api3-fe-buf1-buffered")
+                    "vckss-scale-runtime-api3-fe-buf1-nmc4")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_BRIDGE"
                     di as error "the compressed lifecycle bridge is incompatible with this command"
                     exit 498
                 }
             }
+
+            fevc__numerical runtime compressed
 
             quietly _fevc_lifecycle_timer_ids
             local transition_timer = r(transition_timer)
@@ -7802,6 +7870,7 @@ program define _vckss_impl, eclass sortpreserve
     ereturn scalar sample_selection_seconds = `sample_selection_seconds'
     ereturn scalar validation_seconds = `validation_seconds'
 
+    quietly fevc__numerical post
     if "`nodisplay'" == "" fevc__display
 end
 
@@ -8769,6 +8838,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn local numerical_error "deterministic dense numerical backend"
     ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    quietly fevc__numerical post
     if "`nodisplay'" == "" fevc__display
 end
 
@@ -8940,7 +9010,8 @@ program define _fevc_rust_public, eclass sortpreserve
 
     capture noisily fevc__rust_public_call solve `handle', seed(`seed') ///
         probes(`probes') leveragebatch(`batch') targetbatch(`batch') ///
-        route(diagonal) tolerance(`tolerance') maxiter(`maxiter')
+        route(diagonal) tolerance(`tolerance') maxiter(`maxiter') ///
+        numericalall(`="$VCKSS_NMC_MODE"=="all"')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
@@ -8948,6 +9019,14 @@ program define _fevc_rust_public, eclass sortpreserve
         exit _rc
     }
 
+    if "$VCKSS_NMC_MODE"=="all" {
+        capture noisily fevc__numerical fetch `handle' `probes'
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_export)
+            exit _rc
+        }
+    }
     capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
@@ -9521,6 +9600,7 @@ program define _fevc_rust_public, eclass sortpreserve
     ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
     ereturn local route_api "VCKSS-NATIVE-ROUTE-V1"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+    quietly fevc__numerical post
     if "`nodisplay'" == "" fevc__display
 end
 

@@ -8,6 +8,12 @@ mata:
 mata set matastrict on
 mata set matalnum off
 
+real scalar vckss_solver__numerical_schema()
+{
+    return(1)
+}
+
+
 real scalar vckss_solver__api_level()
 {
     return(27)
@@ -15,7 +21,7 @@ real scalar vckss_solver__api_level()
 
 string scalar vckss_solver__build_id()
 {
-    return("vckss-solver-api27-memory-policy-timers1")
+    return("vckss-solver-api27-memory-policy-nmc4-timers1")
 }
 
 real scalar vckss_solver__route_api()
@@ -1547,7 +1553,8 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
     real colvector semantic_rank,
     real scalar semantic_atom_mode,
     pointer scalar prepared_base,
-    real colvector stayer_mask)
+    real colvector stayer_mask,
+    pointer(struct vckss_nmc__attachment scalar) scalar numerical)
 {
     struct vckss_route_result scalar out
     struct vckss_fe_design scalar base
@@ -1800,6 +1807,14 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
         out.estimator = (*estimator_callback)(
             estimator_context,base,backend,setup_seconds)
     }
+    else if (args() >= 26 & numerical != NULL) {
+        out.estimator = vckss__jla_backend(
+            y,worker,firm,controls,frequency,target_weight,deletion_id,
+            deletion,nuisance,probes,batch,seed,tolerance,maxiter,
+            rank_tolerance,block_tolerance,blocksize_limit,
+            base,backend,setup_seconds,semantic_rank,semantic_atom_mode,
+            stayer_mask,numerical)
+    }
     else if (args() >= 25) {
         out.estimator = vckss__jla_backend(
             y,worker,firm,controls,frequency,target_weight,deletion_id,
@@ -1870,7 +1885,11 @@ void vckss__stata_jla_routed(
     real colvector y, worker, firm, frequency, target, deletion_id
     real colvector semantic_rank, stayer_mask
     real matrix controls, results, diagnostics
+    struct vckss_nmc__attachment scalar attachment
+    pointer(struct vckss_nmc__attachment scalar) scalar numerical
 
+    numerical = NULL
+    if (st_global("VCKSS_NMC_MODE") == "all") numerical = &attachment
     y = st_data(.,y_name,sample_name)
     worker = st_data(.,worker_name,sample_name)
     firm = st_data(.,firm_name,sample_name)
@@ -1887,15 +1906,18 @@ void vckss__stata_jla_routed(
             deletion,nuisance,probes,batch,seed,tolerance,maxiter,
             rank_tolerance,block_tolerance,blocksize_limit,
             requested_route,memory_envelope_bytes,NULL,NULL,
-            semantic_rank,semantic_atom_mode,NULL,stayer_mask)
+            semantic_rank,semantic_atom_mode,NULL,stayer_mask,numerical)
     }
     else routed = vckss_solver__jla_routed(
         y,worker,firm,controls,frequency,target,deletion_id,
         deletion,nuisance,probes,batch,seed,tolerance,maxiter,
         rank_tolerance,block_tolerance,blocksize_limit,
         requested_route,memory_envelope_bytes,NULL,NULL,
-        semantic_rank,semantic_atom_mode)
+        semantic_rank,semantic_atom_mode,NULL,J(0,1,.),numerical)
     out = routed.estimator
+    if (numerical != NULL & out.status == "CONVERGED") {
+        vckss_nmc__stata_export(attachment)
+    }
     results = out.plugin \ out.correction \ out.corrected \
         out.numerical_mcse
     diagnostics = (out.n_stored,out.n_physical,out.worker_levels,

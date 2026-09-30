@@ -88,6 +88,9 @@ use vckss_core::ABI_VERSION;
 #[path = "generic_execution_api.rs"]
 mod generic_execution_api;
 pub use generic_execution_api::*;
+#[path = "numerical_api.rs"]
+mod numerical_api;
+pub use numerical_api::*;
 #[path = "exact_execution_api.rs"]
 mod exact_execution_api;
 pub use exact_execution_api::*;
@@ -2340,6 +2343,7 @@ struct EngineSolved {
     stayer_augmentation: Option<EngineStayerAugmentationReceipt>,
     stayer_hybrid: Option<ExactStayerHybridResult>,
     exact_execution: Option<VckssExactExecutionReceiptV1>,
+    numerical: Option<numerical_api::Attachment>,
     performance: NativePhaseTimings,
 }
 
@@ -4585,6 +4589,25 @@ fn solve_engine_v4_with_generic_execution(
     generic_execution: Option<GenericExecutionPlan>,
     execution: V4SolveExecution<'_>,
 ) -> Result<()> {
+    solve_engine_v4_with_numerical_attachment(
+        generation,
+        request,
+        full_cmg,
+        generic_execution,
+        false,
+        execution,
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+fn solve_engine_v4_with_numerical_attachment(
+    generation: u64,
+    request: VckssEngineSolveRequestV4,
+    full_cmg: Option<FullCmgPlanOptions>,
+    generic_execution: Option<GenericExecutionPlan>,
+    numerical_attachment: bool,
+    execution: V4SolveExecution<'_>,
+) -> Result<()> {
     if request.v3.v2.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV4>()? {
         return Err(abi_error("V4 solve request reports a short structure size"));
     }
@@ -4765,6 +4788,21 @@ fn solve_engine_v4_with_generic_execution(
                 "resolved exact selector requires a frozen exact plan",
             ));
         }
+        let numerical_enabled = numerical_attachment
+            || matches!(
+                generic_execution,
+                Some(GenericExecutionPlan::NumericalResolved { .. })
+            );
+        if !numerical_attachment
+            && numerical_enabled
+            && (prepared.projection.is_some() || prepared.component_inference.is_some())
+        {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "numerical_preflight",
+                "numerical V1 does not support projection or component-inference intersections",
+            ));
+        }
         if (prepared.projection.is_some() || prepared.component_inference.is_some())
             && estimator_plan.engine.selected != SelectedEngine::Generic
         {
@@ -4823,6 +4861,7 @@ fn solve_engine_v4_with_generic_execution(
         )?;
         let solve_start = Instant::now();
         let mut exact_execution = None;
+        let mut numerical = None;
         let (result, execution_plan, leverage_active, target_active, stayer_hybrid, full_cmg) =
             match estimator_plan.engine.selected {
                 SelectedEngine::NotApplicable => {
@@ -4849,43 +4888,47 @@ fn solve_engine_v4_with_generic_execution(
                         memory_limit_bytes,
                         prepared_persistent_bytes,
                     };
-                    let (planned, stayer_hybrid) =
-                        if let Some(GenericExecutionPlan::ExactParallel(threads)) =
-                            generic_execution
-                        {
-                            let (planned, hybrid, receipt) = exact_execution_api::execute(
-                                generation,
-                                &prepared.problem,
-                                stayer_augmentation
-                                    .map(|value| (&value.core.problem, &value.core.plan)),
-                                exact_options,
+                    let (planned, stayer_hybrid) = if let Some(
+                        GenericExecutionPlan::ExactParallel(threads)
+                        | GenericExecutionPlan::NumericalResolved { threads, .. },
+                    ) = generic_execution
+                    {
+                        let (planned, hybrid, receipt) = exact_execution_api::execute(
+                            generation,
+                            &prepared.problem,
+                            stayer_augmentation
+                                .map(|value| (&value.core.problem, &value.core.plan)),
+                            exact_options,
+                            wallseconds,
+                            threads,
+                            interrupt,
+                        )?;
+                        exact_execution = Some(receipt);
+                        (planned, hybrid)
+                    } else {
+                        let planned = run_exact_estimator_planned_with_interrupt(
+                            &prepared.problem,
+                            PlannedExactEstimatorOptions {
+                                estimator: exact_options,
                                 wallseconds,
-                                threads,
-                                interrupt,
-                            )?;
-                            exact_execution = Some(receipt);
-                            (planned, hybrid)
-                        } else {
-                            let planned = run_exact_estimator_planned_with_interrupt(
-                                &prepared.problem,
-                                PlannedExactEstimatorOptions {
-                                    estimator: exact_options,
-                                    wallseconds,
-                                },
-                                interrupt,
-                            )?;
-                            let stayer_hybrid = stayer_augmentation
-                                .map(|augmentation| {
-                                    run_exact_stayer_hybrid_with_interrupt(
-                                        &augmentation.core.problem,
-                                        &augmentation.core.plan,
-                                        exact_options,
-                                        interrupt,
-                                    )
-                                })
-                                .transpose()?;
-                            (planned, stayer_hybrid)
-                        };
+                            },
+                            interrupt,
+                        )?;
+                        let stayer_hybrid = stayer_augmentation
+                            .map(|augmentation| {
+                                run_exact_stayer_hybrid_with_interrupt(
+                                    &augmentation.core.problem,
+                                    &augmentation.core.plan,
+                                    exact_options,
+                                    interrupt,
+                                )
+                            })
+                            .transpose()?;
+                        (planned, stayer_hybrid)
+                    };
+                    if numerical_enabled {
+                        numerical = Some(numerical_api::Attachment::Exact);
+                    }
                     let plan = execution_plan_exact(
                         generation,
                         request.v3.request_signature,
@@ -4919,23 +4962,32 @@ fn solve_engine_v4_with_generic_execution(
                         prepared_persistent_bytes,
                         full_cmg.is_some(),
                     );
-                    let planned = run_jla_no_controls_planned_with_plan_and_interrupt(
-                        &prepared.problem,
-                        prepared.plan.as_ref().ok_or_else(|| {
-                            BackendError::invariant(
-                                "engine_solve",
-                                "compressed preparation lacks its semantic plan",
-                            )
-                        })?,
-                        PlannedJlaEngineOptions {
-                            estimator,
-                            leverage_batch,
-                            target_batch,
-                            wallseconds,
-                            full_cmg,
-                        },
-                        interrupt,
-                    )?;
+                    let plan = prepared.plan.as_ref().ok_or_else(|| {
+                        BackendError::invariant(
+                            "engine_solve",
+                            "compressed preparation lacks its semantic plan",
+                        )
+                    })?;
+                    let options = PlannedJlaEngineOptions {
+                        estimator,
+                        leverage_batch,
+                        target_batch,
+                        wallseconds,
+                        full_cmg,
+                    };
+                    let planned = if numerical_enabled {
+                        let (point, attachment) = vckss_core::engine::run_jla_no_controls_with_plan_and_numerical_mc_interrupt(
+                            &prepared.problem, plan, options, interrupt)?;
+                        numerical = Some(numerical_api::Attachment::Compressed(attachment));
+                        point
+                    } else {
+                        run_jla_no_controls_planned_with_plan_and_interrupt(
+                            &prepared.problem,
+                            plan,
+                            options,
+                            interrupt,
+                        )?
+                    };
                     let leverage_active = to_u32(
                         planned.execution.batch.leverage_active_width,
                         "compressed leverage batch width",
@@ -5002,15 +5054,61 @@ fn solve_engine_v4_with_generic_execution(
                     let projection = projection.map(|value| &value.core);
                     let component = component_inference.map(|value| &value.core);
                     let hybrid = stayer_augmentation.map(|value| &value.core.plan);
-                    let result = match generic_execution {
-                        Some(GenericExecutionPlan::ExactParallel(_)) => {
-                            return Err(BackendError::invariant(
-                                "exact_execution",
-                                "exact-only executor resolved to JLA",
-                            ))
-                        }
-                        Some(GenericExecutionPlan::AutomaticComponentDiagonalQueue(threads)) => {
-                            run_generic_jla_with_automatic_component_batches_interrupt(
+                    let result = if numerical_attachment {
+                        let (queue, direct, automatic) = match generic_execution {
+                            Some(GenericExecutionPlan::DiagonalQueue(t)) => (Some(t), false, false),
+                            Some(GenericExecutionPlan::AutomaticComponentDiagonalQueue(t)) => {
+                                (Some(t), false, true)
+                            }
+                            Some(GenericExecutionPlan::DirectAttachments) => (None, true, false),
+                            Some(GenericExecutionPlan::AutomaticComponentDirectAttachments(_)) => {
+                                (None, true, true)
+                            }
+                            Some(GenericExecutionPlan::ResolvedExecution { threads, .. }) => {
+                                (Some(threads), true, false)
+                            }
+                            None => (None, false, false),
+                            _ => {
+                                return Err(BackendError::invariant(
+                                    "numerical_mc",
+                                    "invalid V2 executor",
+                                ))
+                            }
+                        };
+                        let (point, attachment) = vckss_core::generic_jla::run_generic_jla_with_numerical_attachments_interrupt(
+                            plan_problem, options, projection, component, hybrid,
+                            full_cmg, queue, direct, automatic, interrupt,
+                        )?;
+                        numerical = Some(numerical_api::Attachment::Generic(attachment));
+                        Ok(point)
+                    } else {
+                        match generic_execution {
+                            Some(GenericExecutionPlan::NumericalResolved { threads, full_cmg }) => {
+                                let (point, attachment) = if routing.route
+                                    != ModelSolverRoute::Diagonal
+                                    && (request.leverage_batch_mode != VCKSS_BATCH_MODE_AUTO
+                                        || request.target_batch_mode != VCKSS_BATCH_MODE_AUTO)
+                                {
+                                    vckss_core::generic_jla::run_generic_jla_with_numerical_mc_interrupt(
+                                    plan_problem, options, hybrid, interrupt)?
+                                } else {
+                                    vckss_core::generic_jla::run_generic_jla_with_numerical_mc_resolved_interrupt(
+                                    plan_problem, options, hybrid, threads,
+                                    full_cmg.with_prepared_memory(prepared.receipt.memory.preparation_peak_forecast_bytes, prepared_persistent_bytes),
+                                    request.v3.v2.algorithm == VCKSS_ALGORITHM_AUTO || routing.route == ModelSolverRoute::Diagonal, interrupt)?
+                                };
+                                numerical = Some(numerical_api::Attachment::Generic(attachment));
+                                Ok(point)
+                            }
+                            Some(GenericExecutionPlan::ExactParallel(_)) => {
+                                return Err(BackendError::invariant(
+                                    "exact_execution",
+                                    "exact-only executor resolved to JLA",
+                                ))
+                            }
+                            Some(GenericExecutionPlan::AutomaticComponentDiagonalQueue(
+                                threads,
+                            )) => run_generic_jla_with_automatic_component_batches_interrupt(
                                 plan_problem,
                                 options,
                                 &component_inference
@@ -5024,73 +5122,73 @@ fn solve_engine_v4_with_generic_execution(
                                 threads,
                                 None,
                                 interrupt,
-                            )
-                        }
-                        Some(GenericExecutionPlan::AutomaticComponentDirectAttachments(
-                            threads,
-                        )) => run_generic_jla_with_automatic_component_batches_interrupt(
-                            plan_problem,
-                            options,
-                            &component_inference
-                                .ok_or_else(|| {
-                                    BackendError::invalid(
-                                        "generic_execution",
-                                        "V7 requires component inference attachment",
-                                    )
-                                })?
-                                .core,
-                            threads,
-                            full_cmg,
-                            interrupt,
-                        ),
-                        Some(GenericExecutionPlan::DiagonalQueue(threads)) => {
-                            run_generic_jla_with_diagonal_queue_attachments_interrupt(
-                                plan_problem,
-                                options,
-                                projection,
-                                component,
-                                hybrid,
+                            ),
+                            Some(GenericExecutionPlan::AutomaticComponentDirectAttachments(
                                 threads,
-                                interrupt,
-                            )
-                        }
-                        Some(GenericExecutionPlan::ResolvedExecution { threads, full_cmg }) => {
-                            run_generic_jla_with_resolved_execution_interrupt(
+                            )) => run_generic_jla_with_automatic_component_batches_interrupt(
                                 plan_problem,
                                 options,
-                                projection,
-                                component,
-                                hybrid,
+                                &component_inference
+                                    .ok_or_else(|| {
+                                        BackendError::invalid(
+                                            "generic_execution",
+                                            "V7 requires component inference attachment",
+                                        )
+                                    })?
+                                    .core,
                                 threads,
                                 full_cmg,
                                 interrupt,
-                            )
-                        }
-                        Some(GenericExecutionPlan::DirectAttachments) => {
-                            run_generic_jla_with_direct_attachments_interrupt(
+                            ),
+                            Some(GenericExecutionPlan::DiagonalQueue(threads)) => {
+                                run_generic_jla_with_diagonal_queue_attachments_interrupt(
+                                    plan_problem,
+                                    options,
+                                    projection,
+                                    component,
+                                    hybrid,
+                                    threads,
+                                    interrupt,
+                                )
+                            }
+                            Some(GenericExecutionPlan::ResolvedExecution { threads, full_cmg }) => {
+                                run_generic_jla_with_resolved_execution_interrupt(
+                                    plan_problem,
+                                    options,
+                                    projection,
+                                    component,
+                                    hybrid,
+                                    threads,
+                                    full_cmg,
+                                    interrupt,
+                                )
+                            }
+                            Some(GenericExecutionPlan::DirectAttachments) => {
+                                run_generic_jla_with_direct_attachments_interrupt(
+                                    plan_problem,
+                                    options,
+                                    projection,
+                                    component,
+                                    hybrid,
+                                    full_cmg.ok_or_else(|| {
+                                        BackendError::invariant(
+                                            "generic_execution",
+                                            "missing direct attachment plan",
+                                        )
+                                    })?,
+                                    interrupt,
+                                )
+                            }
+                            None => run_generic_jla_with_direct_solver_interrupt(
                                 plan_problem,
                                 options,
                                 projection,
                                 component,
                                 hybrid,
-                                full_cmg.ok_or_else(|| {
-                                    BackendError::invariant(
-                                        "generic_execution",
-                                        "missing direct attachment plan",
-                                    )
-                                })?,
+                                full_cmg,
                                 interrupt,
-                            )
+                            ),
                         }
-                        None => run_generic_jla_with_direct_solver_interrupt(
-                            plan_problem,
-                            options,
-                            projection,
-                            component,
-                            hybrid,
-                            full_cmg,
-                            interrupt,
-                        ),
                     }?;
                     let leverage_active = to_u32(
                         result.receipt.execution.batch.leverage_active_width,
@@ -5166,6 +5264,7 @@ fn solve_engine_v4_with_generic_execution(
             }),
             stayer_hybrid,
             exact_execution,
+            numerical,
             performance,
         })
     };
@@ -5188,6 +5287,15 @@ fn solve_engine_v4_with_generic_execution(
 fn solve_engine_v3(
     generation: u64,
     request: VckssEngineSolveRequestV3,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    solve_engine_v3_numerical(generation, request, false, interrupt)
+}
+
+fn solve_engine_v3_numerical(
+    generation: u64,
+    request: VckssEngineSolveRequestV3,
+    numerical_enabled: bool,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     if request.v2.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV3>()? {
@@ -5302,9 +5410,7 @@ fn solve_engine_v3(
             "retained-mask capacity",
         )?;
         let solve_start = Instant::now();
-        let result = run_generic_jla_with_interrupt(
-            &prepared.problem,
-            GenericJlaOptions {
+        let options = GenericJlaOptions {
             memory_budget: prepared.receipt.memory.budget,
                 seed: request.v2.v1.seed,
                 probes: request.v2.v1.probes,
@@ -5334,9 +5440,27 @@ fn solve_engine_v3(
                     },
                     rank_tolerance: request.v2.v1.rank_tolerance,
                 },
-            },
-            interrupt,
-        )?;
+            };
+        let (result, numerical) = if numerical_enabled {
+            let (point, attachment) = vckss_core::generic_jla::run_generic_jla_with_numerical_mc_interrupt(
+                &prepared.problem,
+                GenericJlaExecutionOptions {
+                    estimator: options,
+                    routing: ModelRoutingOptions {
+                        route: ModelSolverRoute::Diagonal,
+                        allow_automatic_cmg_setup_fallback: false,
+                        solver: options.solver,
+                        ..ModelRoutingOptions::default()
+                    },
+                    leverage_batch: BatchRequest::Explicit(options.leverage_batch_width),
+                    target_batch: BatchRequest::Explicit(options.target_batch_width),
+                    wallseconds: None,
+                }, None, interrupt,
+            )?;
+            (point, Some(numerical_api::Attachment::Generic(attachment)))
+        } else {
+            (run_generic_jla_with_interrupt(&prepared.problem, options, interrupt)?, None)
+        };
         let mut performance = prepared.performance;
         performance.solve_ns = duration_ns(solve_start.elapsed());
         Ok(EngineSolved {
@@ -5371,6 +5495,7 @@ fn solve_engine_v3(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            numerical,
             exact_execution: None,
             performance,
         })
@@ -5386,6 +5511,7 @@ fn solve_engine_v2(
         generation,
         request,
         None,
+        false,
         V4SolveExecution::Caller(interrupt),
     )
 }
@@ -5394,6 +5520,7 @@ fn solve_engine_v2_execution(
     generation: u64,
     request: VckssEngineSolveRequestV2,
     exact_threads: Option<usize>,
+    numerical_enabled: bool,
     execution: V4SolveExecution<'_>,
 ) -> Result<()> {
     if request.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV2>()? {
@@ -5466,6 +5593,7 @@ fn solve_engine_v2_execution(
         };
         let solve_start = Instant::now();
         let mut exact_execution = None;
+        let mut numerical = None;
         let result = if algorithm == VCKSS_ALGORITHM_EXACT {
             if full_parameters > exact_limit {
                 return Err(BackendError::new(
@@ -5518,6 +5646,9 @@ fn solve_engine_v2_execution(
             } else {
                 run_exact_estimator_with_interrupt(&prepared.problem, options, interrupt)?
             };
+            if numerical_enabled {
+                numerical = Some(numerical_api::Attachment::Exact);
+            }
             EngineEstimate::Exact(exact)
         } else {
             if nuisance != NuisanceMode::Joint {
@@ -5542,12 +5673,25 @@ fn solve_engine_v2_execution(
                     "the current Rust JLA path requires a prepared no-control match plan",
                 )
             })?;
-            EngineEstimate::Jla(run_jla_no_controls_with_plan_and_interrupt(
-                &prepared.problem,
-                plan,
-                options,
-                interrupt,
-            )?)
+            let point = if numerical_enabled {
+                let (point, attachment) =
+                    vckss_core::engine::run_jla_no_controls_legacy_numerical_interrupt(
+                        &prepared.problem,
+                        plan,
+                        options,
+                        interrupt,
+                    )?;
+                numerical = Some(numerical_api::Attachment::Compressed(attachment));
+                point
+            } else {
+                run_jla_no_controls_with_plan_and_interrupt(
+                    &prepared.problem,
+                    plan,
+                    options,
+                    interrupt,
+                )?
+            };
+            EngineEstimate::Jla(point)
         };
         let mut performance = prepared.performance;
         performance.solve_ns = duration_ns(solve_start.elapsed());
@@ -5588,6 +5732,7 @@ fn solve_engine_v2_execution(
             stayer_augmentation: None,
             stayer_hybrid: None,
             exact_execution,
+            numerical,
             performance,
         })
     };
@@ -5694,6 +5839,7 @@ fn solve_engine(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            numerical: None,
             exact_execution: None,
             performance,
         })
@@ -6123,6 +6269,13 @@ pub extern "C" fn vckss_rust_engine_full_cmg_model_receipt_v1(
         let handle = ContextHandle::from_generation(generation)?;
         let state = lock_engine("engine_full_cmg_model_receipt")?;
         let solved = state.registry.result(handle)?;
+        if solved.numerical.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_full_cmg_model_receipt",
+                "numerical replay requires its separate V1 work receipt",
+            ));
+        }
         let receipt = solved.full_cmg.as_ref().ok_or_else(|| {
             BackendError::new(
                 ErrorCode::UnsupportedFeature,

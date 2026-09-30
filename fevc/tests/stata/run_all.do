@@ -24,8 +24,15 @@ if _rc {
 else local pkgroot `"`c(pwd)'/fevc"'
 
 adopath ++ `"`pkgroot'"'
+do `"`pkgroot'/tests/stata/test_all_probe_preflight.do"'
 do `"`pkgroot'/tests/stata/test_simulate_data.do"'
 do `"`pkgroot'/tests/stata/test_load.do"'
+do `"`pkgroot'/tests/stata/test_all_probe_reductions.do"'
+do `"`pkgroot'/tests/stata/test_all_probe_math.do"'
+do `"`pkgroot'/tests/stata/test_all_probe_replay.do"'
+do `"`pkgroot'/tests/stata/test_all_probe_frontend.do"'
+do `"`pkgroot'/tests/stata/test_all_probe_transport.do"'
+do `"`pkgroot'/tests/stata/test_mcse_modes.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_timer_ownership.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
 do `"`pkgroot'/tests/stata/test_stayers_hybrid.do"'
@@ -33,6 +40,12 @@ do `"`pkgroot'/tests/stata/test_subsample_equivalence.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_backend_routing.do"' `"`pkgroot'"'
 capture quietly fevc_rust probe
 if !_rc {
+    if r(numerical_api)==2 {
+        do `"`pkgroot'/tests/stata/test_all_probe_native_frontend.do"' `"`pkgroot'"'
+        do `"`pkgroot'/tests/stata/test_mcse_attachments.do"' `"`pkgroot'"'
+        do `"`pkgroot'/tests/stata/test_all_probe_shared_atoms.do"' `"`pkgroot'"'
+    }
+    quietly fevc_rust probe
     if r(progress_api)==2 do `"`pkgroot'/tests/stata/test_rust_progress.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_memory_policy.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_exact_controls.do"' `"`pkgroot'"'
@@ -84,6 +97,7 @@ do `"`pkgroot'/tests/stata/test_scale_fixtures.do"'
 do `"`pkgroot'/tests/stata/test_scale_scc_driver.do"'
 do `"`pkgroot'/tests/stata/test_scale_route_diagnostics.do"'
 do `"`pkgroot'/tests/stata/test_scale_engine.do"'
+do `"`pkgroot'/tests/stata/test_all_probe_scale.do"'
 do `"`pkgroot'/tests/stata/test_scale_engine_reductions.do"'
 do `"`pkgroot'/tests/stata/test_scale_command.do"'
 

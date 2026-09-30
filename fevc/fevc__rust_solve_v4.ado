@@ -7,13 +7,18 @@ program define fevc__rust_solve_v4, rclass
         targetweightmode deletionsource probeordersupplied wallsecondssupplied   ///
         physical_arg capabilityschema capabilityprofile frequencyused           ///
         signature_hi_arg signature_lo_arg leveragebatchmode targetbatchmode      ///
-        fallback wallseconds_arg execution threads componentbatchauto tolerancesupplied exactexecution
+        fallback wallseconds_arg execution threads componentbatchauto tolerancesupplied exactexecution numericalall numericalcontrols fullcmg numericalprojection numericalcomponent
 
     // Optional additive executor; all existing calls retain the V4 selector.
     if "`execution'"=="" local execution = 0
     if "`componentbatchauto'"=="" local componentbatchauto = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
     if "`exactexecution'"=="" local exactexecution = 0
+    if "`numericalall'"=="" local numericalall = 0
+    if "`numericalcontrols'"=="" local numericalcontrols = 0
+    foreach flag in fullcmg numericalprojection numericalcomponent {
+        if "``flag''"=="" local `flag' = 0
+    }
     local solve_selector solve
     local execution_args
     if !inlist(`exactexecution',0,1,2) | (`exactexecution' & ///
@@ -128,6 +133,12 @@ program define fevc__rust_solve_v4, rclass
         real("`signature_lo_arg'") > 4294967295 {
         di as err "planned Rust physical limit or signature half is out of range"
         exit 198
+    }
+
+    if `numericalall' {
+        if `execution' local fullcmg = 0
+        local solve_selector = cond(`numericalall'==2,"numericalpreflightv2","solvenumericalv2")
+        local execution_args `threads' `tolerancesupplied' `numericalcontrols' `execution' `componentbatchauto' `fullcmg' `numericalprojection' `numericalcomponent'
     }
 
     fevc__rust_plugin_call `plugin', `solve_selector' `handle' `seed' `probes' ///

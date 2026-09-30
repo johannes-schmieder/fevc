@@ -12,7 +12,7 @@ assert _rc == 0
 quietly do `"`r(fn)'"'
 mata: assert(vckss__version() == "0.5.0-rc.1")
 mata: assert(vckss__api_level() == 24)
-mata: assert(vckss__build_id() == "vckss-api25-control-posterior-timers1")
+mata: assert(vckss__build_id() == "vckss-api25-control-posterior-nmc4-timers1")
 mata: assert(vckss__rounding_gamma(0) == 0)
 mata: assert(vckss__inverse_forward_error(1e-14,1e-4,16) > vckss__inverse_forward_error(1e-14,1e-4,1))
 mata: assert(missing(vckss__inverse_forward_error(1e-4,1e-4,2)))

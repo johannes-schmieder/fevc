@@ -20,6 +20,7 @@ quietly net install fevc, from(`"`source_dir'"') replace
 local installed_dir `"`install_root'/f"'
 local installed_plugin_dir `"`install_root'/f"'
 foreach required in fevc.ado fevc_rust.ado ///
+    fevc__numerical.ado fevc__rust_numerical.ado ///
     fevc__rust_plugin_call.ado fevc__rust_solve_v4.ado ///
     fevc__rust_solve_v5.ado ///
     fevc__rust_cmg_model.ado ///
@@ -81,6 +82,12 @@ if `"`install_mode'"' == "qualified" {
         test_rust_match_component_inference.do test_rust_individual_inference.do {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'
+    }
+
+    quietly fevc_rust probe
+    if r(numerical_api)==1 {
+        do `"`test_root'/test_all_probe_native_frontend.do"' `"`installed_dir'"'
+        do `"`test_root'/test_all_probe_shared_atoms.do"' `"`installed_dir'"'
     }
 
     // Exercise the intended public tuple once more from the isolated net

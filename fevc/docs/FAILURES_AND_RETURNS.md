@@ -18,6 +18,53 @@ The new explicit Rust structured candidate posts `e(V)` only for
 target check passes. Its q1 route posts no Gaussian `e(V)`. The independent
 exact Mata family's posting contract is unchanged.
 
+## All-point-probe numerical diagnostics
+
+`mcse(all)` is the default and posts three-by-three primitive matrices
+`e(numerical_mccov_cond)`, `e(numerical_mccov_leverage)`,
+`e(numerical_mccov_all_raw)` and `e(numerical_mccov_all)`, ordered worker
+variance, firm variance, worker–firm covariance. `e(numerical_mcse_all)` uses
+the same four target columns, including the exact `(1,1,2)` total contraction.
+These matrices are numerical diagnostics; they do not create `e(V)`.
+
+Method `crossfit_if_v1` reports statuses `exact_zero`, `ok_local`,
+`ok_local_psd_adjusted`, `unstable_nonpsd`, `nonsmooth_adjustment`,
+`nonfinite_derivative` or `replay_failed`. Only the first three provide usable
+all-probe MCSEs. A tolerance-level PSD cleanup is scaled to conditional plus
+leverage covariance norm and receipted; material negative eigenvalues preserve
+raw covariance and withhold usable covariance. Derivative/replay unavailability
+retains an accepted point and conditional MCSE. Allocation, corruption,
+invariant failure and cancellation remain command failures.
+
+`e(mc_*)` returns include stage/fold counts, certified/attempted/executed replay
+work, generator re-evaluations, allocation bound, PSD adjustment, residual and
+sensitivity/maker margins, replay time and failed zero-based probe.
+`e(numerical_replay_rhs)` stores certified phase/probe/complete-residual rows.
+The status, matrix dimensions, conditional contraction, every count and
+residual gate are reconciled before posting. Exact returns zeros and performs
+no probe/replay work. Supported projection/sampling-inference requests retain
+this diagnostic for the main point estimates; no MCSE is attached to those
+additional results. Their estimates, covariance, intervals, simulations and
+scientific gates retain their existing contracts.
+
+`e(mcse_mode)` is `all`, `off` or the developer-only `conditional`.
+`mcse(off)` skips additional derivative/fold/replay work, sets
+`e(numerical_mcse)` to missing and both availability flags to zero, and posts
+status `off`. It creates no all-probe covariance or replay returns. The legacy
+conditional row of `e(results)` remains an internal point-result receipt;
+public numerical diagnostic availability is governed by the mode and flags.
+The developer mode preserves `e(numerical_mcse)` and status `conditional`.
+`numericalmcse()` is an accepted compatibility alias; using both option names
+fails before RNG.
+
+An omitted option with an older plugin preserves the selected point backend
+and posts `unavailable_capability`, with no conditional substitution. Explicit
+`mcse(all)` fails with `STALE_NUMERICAL_RUNTIME` before preparation/RNG.
+Automatic backend fallback retains its existing structural pre-RNG rules;
+MCSE does not choose a different estimator route. See the
+[original derivation](ALL_PROBE_MCSE.md) and
+[current default/interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md).
+
 ## Opt-in inference matrices
 
 When the joint matrix is admissible, component inference posts `e(V_primitive)` for

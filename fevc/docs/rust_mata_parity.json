@@ -145,6 +145,14 @@
       "rust": "qualified",
       "alpha_required": false,
       "evidence": "Hosted build at d6f5571d passes Rust/unit/PE checks; exact artifact passes private Stata/MP 19 isolated installation, lifecycle, component/match q0/q1, deletion-unit and positive projection checks. Aggregate source-bound receipt, no raw project logs. Existing unsupported Windows routes remain. native/deletion-unit-movers-20260926/evidence/windows-qualification.json."
+    },
+    {
+      "id": "all-point-probe-numerical-mcse",
+      "surface": "Default all-point-probe numerical covariance and MCSE",
+      "mata": "implemented",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "Public mcse(all|off), default all; conditional is a developer option and numericalmcse() a compatibility alias. Numerical V2 preserves point executors with supported projection/component attachments; no MCSE for their outputs. Frozen V1/result/RHS/work meanings remain. Existing Windows point routes enabled in source. Fresh 239,616-attempt prescribed calibration and full local native Stata/Mac thin/universal arm64/Rosetta checks pass as dirty-tree development evidence. All 300 complete-command timings preserve recorded numeric outputs; generic Mata percentage parity remains unmet. Linux job 7803612 full/native/install and scheduler checks pass; four exact Mac/Linux binaries adopted locally. Windows qualification/fifth binary pending source-publication approval. Historical evidence remains source-bound. MCSE_DEFAULT_INTERFACE_2026-09-30.md; MCSE_DEFAULT_VALIDATION_2026-09-30.md."
     }
   ]
 }

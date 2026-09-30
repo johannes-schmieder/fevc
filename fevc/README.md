@@ -51,8 +51,21 @@ fevc log_wage, worker(worker_id) firm(firm_id) probes(500) seed(12345)
 
 Automatic backend selection prefers an available, compatible native backend.
 Use `backend(mata)` to select the portable implementation explicitly.
-Numerical Monte Carlo error describes approximation precision; it is not an
-econometric standard error.
+The default `mcse(all)` reports approximate numerical MCSE for the four main
+point estimates, including local leverage- and target-probe uncertainty. Use
+`mcse(off)` to skip its extra work and display. This diagnostic excludes
+finite-probe bias and sampling uncertainty; it is not an econometric standard
+error. It can accompany supported projection or sampling-inference requests,
+but those additional results receive no MCSE.
+
+```stata
+fevc log_wage, worker(worker_id) firm(firm_id) mcse(off)
+```
+
+The results are displayed below the decomposition and stored in
+`e(numerical_mcse_all)`; `estat diagnostics` reports availability. A withheld
+numerical diagnostic retains valid point estimates. See the
+[returned-results contract](docs/FAILURES_AND_RETURNS.md).
 
 An optional `memory_gib()` budget guides automatic planning and warns by
 default. Add `memorycheck(error)` to enforce forecast admission. The budget

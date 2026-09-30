@@ -23,6 +23,7 @@ INVENTORY = {
         "THIRD_PARTY_NOTICES.txt",
         "fevc.ado",
         "fevc.mata",
+        "fevc_numerical.mata",
         "fevc_inference.mata",
         "fevc_graph.mata",
         "fevc_cmg.mata",
@@ -103,6 +104,8 @@ def test_help_preserves_all_runnable_example_names():
 def test_catalog_preserves_match_install_inventory():
     manifest = (ROOT / "fevc/fevc.pkg").read_text()
     additive_helpers = {
+        "f fevc__numerical.ado",
+        "f fevc__rust_numerical.ado",
         "f fevc__simulate_data.ado",
         "f fevc__progress.ado",
         "f fevc__memory_options.ado",

@@ -29,6 +29,8 @@ pub mod krylov;
 pub mod memory;
 pub mod model_operator;
 pub mod model_solver;
+/// Internal opt-in point-probe diagnostic; native capability remains withheld.
+pub mod numerical_mc;
 pub mod operator;
 mod ordered_work;
 pub mod parallel;

@@ -38,7 +38,7 @@ quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(auto)  ///
     preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
-    maxiter(10000) memory_gib(1) nodisplay
+    maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
 
 assert `"`e(cmd)'"' == "fevc"
 assert `"`e(version)'"' == "0.5.0-rc.1"
@@ -102,7 +102,7 @@ quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(auto) ///
     preconditioner(auto) batch(auto) probes(65) seed(81227) ///
-    maxiter(10000) nodisplay
+    maxiter(10000) mcse(conditional) nodisplay
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
 assert e(memory_budget_supplied) == 0
 assert e(leverage_batch) == min(65,max(32,8*e(cmg_threads_used)))
@@ -124,7 +124,7 @@ quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(auto)  ///
     preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
-    tolerance(1e-8) maxiter(10000) memory_gib(1) nodisplay
+    tolerance(1e-8) maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
 assert e(full_cmg_receipt)[1,18] == 1e-8
 assert e(full_cmg_receipt)[1,19] == 1e-8
@@ -141,7 +141,7 @@ quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(auto) rng(auto) algorithm(jla) engine(auto)        ///
     preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
-    maxiter(10000) memory_gib(1) nodisplay
+    maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(backend_requested)'"' == "auto"
 assert `"`e(rng_requested)'"' == "auto"
@@ -159,7 +159,7 @@ assert `"`c(rngstate)'"' == `"`caller_state'"'
 quietly fevc outcome, worker(worker) firm(firm)            ///
     stayers(movers)                                        ///
     probeorder(observation_key) probes(4) seed(81227)       ///
-    maxiter(10000) memory_gib(1) nodisplay
+    maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
 assert `"`e(backend_requested)'"' == "auto"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_requested)'"' == "auto"
@@ -181,7 +181,7 @@ assert `"`c(rngstate)'"' == `"`caller_state'"'
 capture quietly fevc outcome, worker(worker) firm(firm)    ///
     stayers(movers)                                        ///
     probeorder(observation_key) probes(4) seed(81227)       ///
-    maxiter(10000) memory_gib(.000001) memorycheck(error) nodisplay
+    maxiter(10000) memory_gib(.000001) memorycheck(error) mcse(conditional) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',"RESOURCE_LIMIT", ///
     "ALLOCATION_FAILED")
@@ -199,7 +199,7 @@ assert `"`c(rngstate)'"' == `"`caller_state'"'
 quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) backend(rust) rng(counter_v1) ///
     algorithm(jla) engine(auto) preconditioner(auto) batch(auto) ///
-    probes(4) seed(81227) maxiter(10000) memory_gib(1) nodisplay
+    probes(4) seed(81227) maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
 assert e(rust_probeorder_supplied) == 0
@@ -214,7 +214,7 @@ quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(mata) rng(stata) algorithm(jla) engine(auto)       ///
     preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
-    maxiter(10000) memory_gib(1) nodisplay
+    maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
 assert `"`e(backend_requested)'"' == "mata"
 assert `"`e(backend_selected)'"' == "mata"
 assert `"`e(rng_selected)'"' == "stata"

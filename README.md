@@ -11,6 +11,11 @@ approximation for larger datasets, with a native Rust backend for supported
 requests. Point estimation is the default; inference is available for
 [supported models](fevc/docs/INFERENCE.md).
 
+The default `mcse(all)` reports approximate numerical MCSE for the four main
+point estimates. Use `mcse(off)` to skip its additional calculation and display.
+MCSE can accompany supported projection and sampling-inference requests; it
+does not describe those additional outputs. See [usage](fevc/README.md).
+
 ## Requirements
 
 - Stata 18 or 19.

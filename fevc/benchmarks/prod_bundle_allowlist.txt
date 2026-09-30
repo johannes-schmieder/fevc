@@ -29,8 +29,11 @@ fevc/fevc.mata
 fevc/fevc.pkg
 fevc/fevc.sthlp
 fevc/fevc__display.ado
+fevc/fevc__numerical.ado
+fevc/fevc__rust_numerical.ado
 fevc/fevc_cmg.mata
 fevc/fevc_graph.mata
+fevc/fevc_numerical.mata
 fevc/fevc_run.ado
 fevc/fevc_solver.mata
 fevc/stata.toc
