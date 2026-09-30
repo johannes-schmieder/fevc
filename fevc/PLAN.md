@@ -26,8 +26,13 @@ projection/inference attachments and installed-hash checks. The instance is
 stopped; transient objects and the shared lock are removed. The earlier
 development receipts retain their original source and qualification scope;
 the [native adoption and compatibility record](../native/mcse-default-20260930/manifest.json)
-binds their reuse. Public installer checks follow publication of the fifth
-artifact and are recorded separately.
+binds their reuse. At payload commit `4ca6864e`, fresh and replacement public
+`net install` and `github install` pass in isolated Mac Stata/MP 19 directories:
+all four cases verify every one of 60 installed files, including all five
+plugins. Windows isolated installation is qualified separately on the exact
+DLL. The [publication receipt](../native/mcse-default-20260930/publication.json)
+and [installation report](docs/MCSE_NATIVE_INSTALL_2026-09-30.md) preserve the
+source, failed first hosted attempt, compatibility and qualification limits.
 The [interface decision](docs/MCSE_DEFAULT_INTERFACE_2026-09-30.md) and
 [development report](docs/MCSE_DEFAULT_VALIDATION_2026-09-30.md) record current
 claims, source identities, retained failures and remaining qualification.

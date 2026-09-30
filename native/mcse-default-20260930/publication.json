@@ -1,0 +1,97 @@
+{
+  "schema": "FEVC-MCSE-PUBLICATION-VALIDATION-V1",
+  "status": "PASS_WITH_RETAINED_SCOPE_LIMITS",
+  "payload_commit": "4ca6864ed00ae81a29dc160925a0b19c03b57807",
+  "build_commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+  "initial_source_commit": "048cc20ffd89d23378330918a94990526e58aa67",
+  "adoption_manifest_sha256": "77d6f183d2c9a5403c4ad98585fc2532594d9997b42e0a0e9bcb680257eb16f6",
+  "windows_qualification_sha256": "be9094a4fad91276570d5d0eebbb5d3186df879fee367780c4d2ca74d0b46ef7",
+  "public_installation_receipt_sha256": "33197d47ea171c68a413fc7bf00ea2cc31c61197bb46ecacf0319059cd965062",
+  "public_installation": {
+    "platform": "Darwin",
+    "architecture": "arm64",
+    "cases": 4,
+    "files_per_case": 60,
+    "methods": [
+      "net",
+      "github"
+    ],
+    "fresh_and_replacement": "PASS",
+    "runtime_and_caller_checks": "PASS",
+    "all_five_binary_hashes": "PASS"
+  },
+  "windows_installation": "PASS_PRIVATE_ISOLATED_NET_INSTALL",
+  "source_ci_payload_run_id": "36773589269",
+  "commands": [
+    "git commit and git push origin main",
+    "gh workflow run windows-test-package.yml --ref main --repo johannes-schmieder/fevc",
+    "/Users/johannes/.codex/skills/windows/scripts/windows_ci.sh inspect",
+    "/Users/johannes/.codex/skills/windows/scripts/windows_ci.sh run --project fevc --profile stata-do --dirty",
+    "./.venv/bin/python -m pytest -q",
+    "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+    "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked",
+    "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml -p vckss-core actual_cached_whole_responses_match_independent_dense_complex_step -- --ignored",
+    "./.venv/bin/python fevc/tools/verify_native_installers.py --catalog . --test-root . --output .local/mcse-windows-20260930/public-install-macos --public",
+    "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo fmt --all --manifest-path rust/Cargo.toml -- --check",
+    "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked -- -D warnings",
+    "PATH=/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin:$PATH cargo test --manifest-path rust/Cargo.toml -p vckss-core replay_batch_width_and_packed_word_boundaries_preserve_covariance",
+    "./.venv/bin/python -m pytest -q fevc/tests/python/test_windows_ci.py fevc/tests/python/test_package_layout.py fevc/tests/python/test_fevc_public_identity.py fevc/tests/python/test_match_documentation.py"
+  ],
+  "retained_attempts": [
+    {
+      "source": "048cc20ffd89d23378330918a94990526e58aa67",
+      "rust_run_id": "36770767638",
+      "conclusion": "failure",
+      "failed_jobs": [
+        "ubuntu-latest / Rust stable",
+        "windows-latest / Rust stable",
+        "macos-latest / Rust stable",
+        "macos-latest / Rust 1.85.1",
+        "ubuntu-latest / Rust 1.85.1",
+        "windows-latest / Rust 1.85.1"
+      ],
+      "classification": "Test harness dependency, no estimator/scientific failure",
+      "failure": "Ordinary core replay-width regression invoked a Python oracle requiring the absent repository venv.",
+      "repair_commit": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+      "resolution": "Thread-local test-only guard confines capture/oracle to explicit ignored Python gate; ordinary regression remains enabled. Full local workspace and all six hosted platform/toolchain jobs pass; explicit Python gate independently passes."
+    },
+    {
+      "build_run_id": "36770798975",
+      "status": "BUILD_PASS_SUPERSEDED_SOURCE_NOT_ADOPTED"
+    }
+  ],
+  "remaining": [
+    "Windows public HTTP/github installation is not separately claimed: Windows used exact-artifact private isolated installation; both public routes and all five downloaded bytes were verified on Mac.",
+    "Original Mac/Linux dirty qualification and supplemental-input Windows source classifications are retained.",
+    "Generic Mata overhead parity, native Intel hardware, representative scale, broader Mata RNG calibration and statistical coverage remain open.",
+    "No MCSE is supplied for projection/inference extra outputs."
+  ],
+  "release_or_tag": false,
+  "ci_policy_changed": false,
+  "large_cluster_campaign": false,
+  "aws_cleanup": {
+    "instance_stopped": true,
+    "transient_objects_deleted": true,
+    "lock_released": true
+  },
+  "versions": {
+    "local_python": "3.13.0",
+    "rust_msrv": "1.85.1",
+    "licensed_stata": "MP 19",
+    "public_install_platform": "Mac Apple Silicon",
+    "windows_compile_platform": "windows-2022 hosted MSVC x86-64 static CRT",
+    "windows_runtime_profile": "Private Windows Server 2022, two processors"
+  },
+  "fixture_and_tolerance_binding": {
+    "mcse_modes_seed": 2026092911,
+    "point_and_covariance_relative_tolerance": 1e-11,
+    "fixture_source": "Frozen windows-ci.do and called Stata tests at build commit eee457b3; literal public installer verifier at payload commit 4ca6864e.",
+    "scientific_gates": "Unchanged; development calibration/probe counts/semantic keys/thresholds retain their original receipt.",
+    "no_large_campaign_or_sampling_coverage_gate": "Not run or claimed in this publication task."
+  },
+  "final_documentation_check": {
+    "tests": 49,
+    "status": "PASS",
+    "log_sha256": "668c7f93e4c63f2ec660af3de9dd9c0992b86f5b0eac021d47648c069831bc9d"
+  }
+}

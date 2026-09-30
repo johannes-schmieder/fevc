@@ -1,0 +1,51 @@
+{
+  "schema": "FEVC-MCSE-QUALIFICATION-TO-INSTALL-COMPATIBILITY-V1",
+  "qualified_build_source": "eee457b3dfa0a57439aee7a8ba5a85874d30cc0b",
+  "published_payload_commit": "4ca6864ed00ae81a29dc160925a0b19c03b57807",
+  "changed_paths": [
+    ".gitattributes",
+    "INSTALLATION.md",
+    "fevc/CHANGELOG.md",
+    "fevc/PLAN.md",
+    "fevc/fevc_rust_windows_x64.plugin",
+    "native/README.md",
+    "native/mcse-default-20260930/evidence/calibration-source.json",
+    "native/mcse-default-20260930/evidence/compatibility.json",
+    "native/mcse-default-20260930/evidence/hosted-rust-run.json",
+    "native/mcse-default-20260930/evidence/hosted-source-run.json",
+    "native/mcse-default-20260930/evidence/hosted-windows-build-run.json",
+    "native/mcse-default-20260930/evidence/linux-source.sha256",
+    "native/mcse-default-20260930/evidence/macos-source.sha256",
+    "native/mcse-default-20260930/evidence/windows-artifact-verification.json",
+    "native/mcse-default-20260930/evidence/windows-private-receipt.json",
+    "native/mcse-default-20260930/evidence/windows-qualification.json",
+    "native/mcse-default-20260930/manifest.json"
+  ],
+  "unchanged_source_file_count": 1304,
+  "unchanged_source_manifest_sha256": "e15e8cd8e2ebb84819b5c5fc16c410dded90552ac67b1c0bfd5537af14b87f09",
+  "affected_surface": "Qualified Windows DLL adoption, receipt newline preservation, native provenance and current installation/status documentation.",
+  "unchanged_identities": [
+    "Production source and build recipes",
+    "Package manifests and installed source",
+    "All four qualified Mac/Linux artifact bytes",
+    "Windows adopted bytes equal the exact private-tested hosted artifact",
+    "Scientific inputs, seeds, tolerances and acceptance thresholds"
+  ],
+  "checks": [
+    "Every unchanged source member matches the frozen clean build source",
+    "All five installed payload hashes match adoption manifest",
+    "49 focused documentation/package/Windows-source regressions pass",
+    "git diff --check passes"
+  ],
+  "claims_reused": [
+    "Hosted source and six Rust platform/toolchain checks",
+    "Windows static CRT compile/unit/PE qualification",
+    "Private Windows isolated install/runtime and clean shutdown",
+    "Mac/Linux, calibration/performance scopes through earlier compatibility review"
+  ],
+  "limitations": [
+    "Public command installation must pass separately at the published payload commit.",
+    "Original dirty Mac/Linux and bounded supplemental-input Windows classifications remain unchanged.",
+    "No broader scientific coverage, scale, native Intel, or release claim."
+  ]
+}

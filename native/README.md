@@ -12,6 +12,13 @@ MCSE mode, projection/inference attachment and installed-hash checks; the
 [Windows receipt](mcse-default-20260930/evidence/windows-qualification.json)
 records cleanup and the stopped machine.
 
+At payload commit `4ca6864e`, fresh and replacement public `net install` and
+`github install` pass on Mac Stata/MP 19. Each of the four cases verifies all
+60 installed-file hashes, including all five plugins, and installed runtime,
+help/example, decomposition, inference/deletion and caller-state regressions.
+The [publication receipt](mcse-default-20260930/publication.json) separates
+these public command checks from the exact-artifact Windows isolated install.
+
 Source `eee457b3` passes all six hosted Rust platform/toolchain jobs. A first
 hosted attempt exposed a test-only cache oracle invoking a local Python venv
 from an ordinary Rust regression. The narrow fix retains that regression and
