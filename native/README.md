@@ -15,9 +15,12 @@ behavior-preserving MSVC identifier repair is published as `c14fbcb6`. Current
 source checks, all seven Rust matrix jobs and the Windows hosted build pass.
 The exact Windows candidate fails full private runtime qualification and a
 single focused centering diagnostic. The fixed collector reports only a driver
-failure, with no failing assertion or individual test results. It is not
-adopted: Windows retains its earlier bytes without centering API 1. Both runs
-clean up and leave the guarded machine stopped. The
+failure, with no failing assertion or individual test results. The owner then
+explicitly requests adoption of this exact build for manual testing. The
+Windows plugin now provides centering API 1; its runtime qualification remains
+pending. The [manual-test adoption record](centering-windows-manual-20261007.json)
+binds the new bytes and authorization. Both automated runs clean up and leave
+the guarded machine stopped. The
 [October 7 record](centering-20261007/manifest.json) binds publication, source
 compatibility and failed attempts. The October 6 record preserves its original
 local checkpoint; historical evidence is unchanged.
@@ -32,8 +35,9 @@ The records below retain their exact tested artifacts and sources. They
 qualify the earlier None/ordinary estimator and MCSE routes, not the new
 centering feature.
 
-The default `mcse(all)` interface is qualified on all five repository plugin
-payloads. The [September 30 adoption manifest](mcse-default-20260930/manifest.json)
+The September 30 default `mcse(all)` qualification covers its five recorded
+payloads, including the earlier Windows binary. It does not qualify the newly
+adopted Windows candidate. The [September 30 adoption manifest](mcse-default-20260930/manifest.json)
 binds the exact artifacts and the source compatibility review. Mac thin and
 universal plugins pass under arm64 and Rosetta; SCC Linux job `7803612` passes
 the full suite and isolated install. Windows build

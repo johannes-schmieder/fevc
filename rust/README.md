@@ -26,9 +26,9 @@ increment fixed. Centering API 1 configures a prepared generation before
 solve independently of numerical API 2 and without changing old ABI layouts.
 
 The repository Mac arm64, Rosetta x86-64, universal and Linux x86-64 plugins pass
-full platform and explicit Rust centering checks. Windows remains unchanged
-and lacks active centering: the new hosted build passes but private runtime
-checks fail. See
+full platform and explicit Rust centering checks. The Windows centering build
+is included for owner manual testing. Its hosted build passes, but automated
+runtime checks failed; manual qualification is pending. See
 [the centering contract](../fevc/docs/CENTERING.md) and
 [the Stata boundary](stata_backend/README.md) for lifecycle and restrictions.
 

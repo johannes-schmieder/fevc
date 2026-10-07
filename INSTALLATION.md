@@ -3,8 +3,10 @@
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
 for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
 compiler, Rust installation, or separate plugin download is needed. All five
-plugins pass source-bound build and Stata runtime checks. Intel Mac execution
-was tested through Rosetta; see [native provenance](native/README.md).
+plugins have source-bound build evidence. Mac/Linux plugins pass Stata runtime
+checks; the updated Windows plugin is provided for owner manual testing after
+automated runtime failures. Intel Mac execution was tested through Rosetta;
+see [native provenance](native/README.md).
 
 ## Installation
 
@@ -43,6 +45,7 @@ Install with either command above, then restart Stata and run:
 ```stata
 fevc_rust probe
 assert r(progress_api) == 2
+assert r(centering_api) == 1
 fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 fevc_run jla_controls using fevc.sthlp
@@ -51,14 +54,15 @@ matrix list e(mcse)
 estat diagnostics
 ```
 
-The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/36771390189)
-also provides a standalone ZIP with a local installer, test do-file, and build
-receipt. It uses the same Windows binary as the repository installer. The ZIP
-is available as a GitHub Actions artifact for 14 days. This exact binary also
-passed isolated installation and licensed Stata/MP 19 tests on the private
-Windows test machine, including the current MCSE modes and projection/inference
-attachments; [the qualification record](native/mcse-default-20260930/evidence/windows-qualification.json)
-binds the hosted build, runtime harness, and artifact hash.
+The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/37571812326)
+provides a standalone ZIP with a local installer, test do-file, and build
+receipt. It uses the same Windows binary as the repository installer and is
+available as a GitHub Actions artifact for 14 days. The hosted build and binary
+audit pass, but two automated private runtime attempts failed. The owner
+requested this exact binary for manual testing; runtime qualification remains
+pending. The [manual-test adoption record](native/centering-windows-manual-20261007.json)
+binds its source and hash; earlier passing Windows records apply to earlier
+binary bytes.
 
 ## Local source installation
 
@@ -80,12 +84,13 @@ restart Stata or run `discard` to clear cached programs and Mata definitions.
 The current repository source implements `centering(none|mean|corrected)` in
 Mata and matching Rust builds. This repository contains qualified Mac
 arm64, Rosetta x86-64, universal and Linux x86-64 centering plugins. The
-Windows plugin is unchanged and lacks active centering. Its new hosted build
-passes, but full runtime qualification and a focused diagnostic fail; see the
-[October 7 attempt record](native/centering-20261007/manifest.json).
+Windows plugin now includes centering API 1 and is shipped for owner manual
+testing. Its hosted build passes, but automated runtime checks failed; manual
+qualification is pending. See the [adoption record](native/centering-windows-manual-20261007.json)
+and preserved [attempt record](native/centering-20261007/manifest.json).
 
 A current source installation can use `backend(mata)` on every platform.
-For Rust, update to the matching qualified repository plugin, restart Stata,
+For Rust, update to the matching repository plugin, restart Stata,
 and inspect its capability:
 
 ```stata
@@ -104,7 +109,8 @@ capability is absent, subject to strict native-consent rules.
 The [centering adoption record](native/centering-20261006/manifest.json) binds
 the four updated plugins to full platform and explicit Rust centering
 checks. The owner authorized source publication on October 7. The Windows hosted
-build passes, but its candidate remains unqualified after two private failures.
+build passes; the owner subsequently authorized its adoption for manual
+testing while runtime qualification remains pending.
 Earlier binary records retain their original tested artifacts. See [centering](fevc/docs/CENTERING.md) and
 [native provenance](native/README.md).
 

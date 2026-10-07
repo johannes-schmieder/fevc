@@ -42,6 +42,8 @@ their original scope. The subsequent native refresh qualifies and adopts four
 Mac/Linux plugins, now committed and pushed with the reviewed source/docs.
 The Windows hosted build and current-source CI pass, but full private runtime
 qualification and one focused diagnostic fail without a reported assertion.
-Windows work stops here; its candidate is not adopted and prior payload remains. See [native provenance](../native/README.md).
+The owner subsequently requests adoption of that exact Windows candidate for
+manual testing and commit/push. The plugin is updated; runtime qualification
+remains pending the owner's test. No further private-machine run is requested. See [native provenance](../native/README.md).
 
 Routine validation follows [development_acceptance_v1.json](docs/development_acceptance_v1.json).

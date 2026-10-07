@@ -1,0 +1,23 @@
+{
+  "schema": "FEVC-WINDOWS-MANUAL-TEST-ADOPTION-V1",
+  "status": "ADOPTED_FOR_OWNER_MANUAL_TEST_RUNTIME_UNQUALIFIED",
+  "owner_authorization": "2026-10-07: Update the windows runtime as well. I will test it manually. Commit and push.",
+  "path": "fevc/fevc_rust_windows_x64.plugin",
+  "sha256": "cff60c15ba4ca8dca2e3b343588dbf566c34e5fb07dd8d2f7ef092d8f7bd5397",
+  "bytes": 5617664,
+  "replaces_sha256": "1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b",
+  "build_source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+  "build_run": "https://github.com/johannes-schmieder/fevc/actions/runs/37571812326",
+  "target": "x86_64-pc-windows-msvc",
+  "crt": "static",
+  "centering_api": 1,
+  "numerical_api": 2,
+  "build_and_export_audit": "PASS",
+  "automated_private_runtime": "FAIL_BOTH_RECORDED_ATTEMPTS",
+  "owner_manual_runtime_test": "PENDING",
+  "prior_failure_record": "centering-20261007/manifest.json",
+  "prior_failure_record_sha256": "c6261f4d7fc058104fdc53af729ebeb0a14a73a9ada4b997386a2c648756c513",
+  "compatibility": "Exact c14 hosted candidate; no rebuild or estimator/ABI/harness changes. Current package production Ado/Mata/Rust/C source unchanged from the build. Mac/Linux payloads unchanged.",
+  "qualification_claim": "No Windows runtime qualification or individual private test success claimed; earlier passing Windows records apply to prior binary bytes.",
+  "scope": "Repository development runtime for manual testing; no tag/release/global install or further private machine run"
+}

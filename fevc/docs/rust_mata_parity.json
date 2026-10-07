@@ -2,7 +2,7 @@
   "schema_version": 1,
   "updated": "2026-10-07",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Deletion-unit mover semantics pass Mata/Rust regression and exact-artifact qualification for all five shipped plugins: Mac arm64, Rosetta x86-64 and universal, Linux x86-64, and Windows x86-64. Build sources d6f5571d (Mac/Windows) and 31cf2ea7 (Linux), package source c3ab9e52, and explicit compatibility reviews are recorded in native/deletion-unit-movers-20260926. See DELETION_UNIT_MOVERS_2026-09-26.md for final public installer status. Qualification covers supported runtime routes and engineering checks; it does not extend statistical coverage, representative scale, native Intel hardware, or unsupported Windows routes. Earlier scientific confirmation failures and deferred features remain unchanged. The retained alpha_required field describes prior alpha gates, not authorization for a release tag. October 6 outcome centering is implemented in Mata/Rust. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks and are adopted with centering API 1; Windows retains its earlier payload without that capability. The owner-authorized source/docs and four payloads are committed and pushed on October 7. The Windows hosted build and current-source CI pass, but full private runtime qualification and one focused diagnostic fail; its candidate is not adopted and the shipped plugin remains unchanged. native/centering-20261007/manifest.json records the failures and cleanup. native/centering-20261006/manifest.json binds the new dirty-source evidence. Historical payload records keep their original scope. See CENTERING.md for scope, MCSE assumptions and local evidence.",
+  "qualification_scope": "Earlier deletion-unit mover semantics passed Mata/Rust regression and exact-artifact qualification for five recorded plugins: Mac arm64, Rosetta x86-64 and universal, Linux x86-64, and Windows x86-64. Build sources d6f5571d (Mac/Windows) and 31cf2ea7 (Linux), package source c3ab9e52, and explicit compatibility reviews are recorded in native/deletion-unit-movers-20260926. See DELETION_UNIT_MOVERS_2026-09-26.md for final public installer status. Qualification covers supported runtime routes and engineering checks; it does not extend statistical coverage, representative scale, native Intel hardware, or unsupported Windows routes. Earlier scientific confirmation failures and deferred features remain unchanged. The retained alpha_required field describes prior alpha gates, not authorization for a release tag. October 6 outcome centering is implemented in Mata/Rust. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks and are adopted with centering API 1; The updated Windows payload provides centering API 1 for owner manual testing; runtime qualification remains pending. The owner-authorized source/docs and four payloads are committed and pushed on October 7. The Windows hosted build and current-source CI pass, but full private runtime qualification and one focused diagnostic fail; the owner now explicitly adopts the exact Windows build for manual testing, with runtime qualification pending. native/centering-20261007/manifest.json records the failures and cleanup. native/centering-20261006/manifest.json binds the new dirty-source evidence. Historical payload records keep their original scope. See CENTERING.md for scope, MCSE assumptions and local evidence. Windows manual-test adoption: native/centering-windows-manual-20261007.json; historical passing Windows evidence applies to prior bytes.",
   "statuses": [
     "qualified",
     "implemented",
@@ -16,7 +16,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. CENTERING.md. Four local Mac/Linux native payloads pass explicit centering checks; Windows candidate fails private qualification and is not adopted. native/centering-20261006/manifest.json."
+      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. CENTERING.md. Four local Mac/Linux native payloads pass explicit centering checks; Windows centering build is adopted for owner manual testing after failed automated runtime checks; runtime qualification is pending. native/centering-20261006/manifest.json."
     },
     {
       "id": "exact-corrected-centering",
@@ -24,7 +24,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows candidate fails private qualification and is not adopted. native/centering-20261006/manifest.json. CENTERING.md."
+      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows centering build is adopted for owner manual testing after failed automated runtime checks; runtime qualification is pending. native/centering-20261006/manifest.json. CENTERING.md."
     },
     {
       "id": "jla-corrected-centering",
@@ -32,7 +32,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows candidate fails private qualification and is not adopted. native/centering-20261006/manifest.json. CENTERING.md."
+      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows centering build is adopted for owner manual testing after failed automated runtime checks; runtime qualification is pending. native/centering-20261006/manifest.json. CENTERING.md."
     },
     {
       "id": "parallel-deletion-blocks",
@@ -165,10 +165,10 @@
     {
       "id": "windows",
       "surface": "Windows qualification",
-      "mata": "qualified",
-      "rust": "qualified",
+      "mata": "implemented",
+      "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Hosted build at d6f5571d passes Rust/unit/PE checks; exact artifact passes private Stata/MP 19 isolated installation, lifecycle, component/match q0/q1, deletion-unit and positive projection checks. Aggregate source-bound receipt, no raw project logs. Existing unsupported Windows routes remain. native/deletion-unit-movers-20260926/evidence/windows-qualification.json."
+      "evidence": "Current Windows centering binary is the exact c14fbcb6 hosted build (Rust tests/static CRT/144-export PE audit PASS), adopted at owner request for manual testing. Two automated private runtime attempts fail; manual runtime qualification is pending. Earlier passing Windows receipts qualify their original bytes only. native/centering-windows-manual-20261007.json; native/centering-20261007/manifest.json. Existing unsupported Windows routes remain."
     },
     {
       "id": "all-point-probe-numerical-mcse",
@@ -176,7 +176,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Public mcse(all|off), default all; conditional is a developer option and numericalmcse() a compatibility alias. Numerical V2 preserves point executors with supported projection/component attachments; no MCSE for their outputs. Frozen V1/result/RHS/work meanings remain. Existing Windows point routes enabled in source. Fresh 239,616-attempt prescribed calibration and full local native Stata/Mac thin/universal arm64/Rosetta checks pass as dirty-tree development evidence. All 300 complete-command timings preserve recorded numeric outputs; generic Mata percentage parity remains unmet. Linux job 7803612 full/native/install and scheduler checks pass; four exact Mac/Linux binaries adopted locally. Source publication is approved and complete; the new Windows hosted build passes, but two private runtime attempts fail. The fifth binary remains unchanged and the new candidate is not adopted. native/centering-20261007/manifest.json. Historical evidence remains source-bound. MCSE_DEFAULT_INTERFACE_2026-09-30.md; MCSE_DEFAULT_VALIDATION_2026-09-30.md."
+      "evidence": "Public mcse(all|off), default all; conditional is a developer option and numericalmcse() a compatibility alias. Numerical V2 preserves point executors with supported projection/component attachments; no MCSE for their outputs. Frozen V1/result/RHS/work meanings remain. Existing Windows point routes enabled in source. Fresh 239,616-attempt prescribed calibration and full local native Stata/Mac thin/universal arm64/Rosetta checks pass as dirty-tree development evidence. All 300 complete-command timings preserve recorded numeric outputs; generic Mata percentage parity remains unmet. Linux job 7803612 full/native/install and scheduler checks pass; four exact Mac/Linux binaries adopted locally. Source publication is approved and complete; the new Windows hosted build passes, but two private runtime attempts fail. The exact fifth binary is now adopted at owner request for manual testing; runtime qualification remains pending. native/centering-windows-manual-20261007.json. native/centering-20261007/manifest.json. Historical evidence remains source-bound. MCSE_DEFAULT_INTERFACE_2026-09-30.md; MCSE_DEFAULT_VALIDATION_2026-09-30.md."
     }
   ]
 }

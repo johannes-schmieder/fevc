@@ -97,8 +97,10 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   does not support active centering.
 - The repository includes qualified Mac arm64, Rosetta x86-64,
   universal and Linux x86-64 centering plugins, with full platform and
-  explicit Rust centering checks. Windows remains on its earlier plugin
-  without centering API 1. Native Intel hardware is not claimed.
+  explicit Rust centering checks. The Windows plugin now includes centering
+  API 1 for owner manual testing. Its hosted build passes, but automated runtime
+  checks failed and manual qualification is pending. Native Intel hardware is
+  not claimed.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit
   Counter-V1 requests require the matching native capability and fail
@@ -109,9 +111,11 @@ See [installation](../../INSTALLATION.md), [memory](MEMORY.md) and
 `0.5.0-rc.1`; repository publication does not imply a release. The [native adoption record](../../native/centering-20261006/manifest.json)
 binds the four updated payloads. The owner authorized source publication on
 October 7. The Windows hosted build passes, but full qualification and a
-focused centering diagnostic fail. The shipped Windows plugin is unchanged;
-the [October 7 record](../../native/centering-20261007/manifest.json) preserves
-the aggregate failures and confirmed cleanup. No failing assertion is available.
+focused centering diagnostic fail. The owner subsequently requested adoption
+of that exact candidate for manual testing; see the [manual-test record](../../native/centering-windows-manual-20261007.json).
+The [October 7 attempt record](../../native/centering-20261007/manifest.json)
+preserves the aggregate failures and cleanup. Runtime qualification remains
+pending; no failing assertion is available from the private collector.
 
 ## Stored results
 

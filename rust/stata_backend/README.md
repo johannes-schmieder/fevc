@@ -73,8 +73,8 @@ MCSE/covariance. Active inference/projection is rejected by the frontend.
 
 Numerical API 2 and centering API 1 are separate capabilities. The four repository
 Mac/Linux plugins pass full platform and explicit centering checks. Windows
-remains unchanged and lacks centering: the new hosted build passes but private
-runtime checks fail. The candidate is not adopted. See
+now ships centering API 1 for owner manual testing. The hosted build passes,
+but automated runtime checks failed; manual qualification is pending. See
 [the centering contract](../../fevc/docs/CENTERING.md) and
 [native provenance](../../native/README.md).
 

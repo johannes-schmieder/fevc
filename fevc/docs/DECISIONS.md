@@ -18,8 +18,9 @@ and separate from numerical API 2. Source checks and exact-artifact Mac/Linux
 qualification are complete, and the four matching local plugins are updated.
 The owner authorized source commit/push on October 7. The Windows hosted
 build passes, but full private qualification and a focused diagnostic fail.
-Its candidate is not adopted; no release or representative-scale/statistical
-claim follows. [CENTERING.md](CENTERING.md)
+The owner subsequently authorizes adoption of the exact candidate for manual
+testing, with runtime qualification pending. No release or representative-scale/
+statistical claim follows. [CENTERING.md](CENTERING.md)
 records the method, assumptions, local timings and evidence.
 
 ## Inference

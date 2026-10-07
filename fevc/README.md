@@ -125,8 +125,9 @@ Corrected JLA returns exactly Mean's MCSE/covariance for the same call,
 excluding numerical uncertainty in the extra increment. Active centering
 cannot accompany `inference()` or `project()`. Both modes work in Mata
 and a matching native build. The repository Mac and Linux plugins expose
-centering API 1. The Windows candidate builds but failed private runtime
-qualification; its shipped plugin remains unchanged.
+centering API 1. The Windows centering plugin is now included for owner manual
+testing; its build passes, but automated runtime checks failed and manual
+qualification is pending.
 Automatic routing may use Mata when the capability is absent, while strict
 Rust/Counter-V1 requires the matching plugin. See [the centering guide](docs/CENTERING.md)
 for restrictions, stored assumptions, formulas and measured local costs.

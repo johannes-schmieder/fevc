@@ -292,11 +292,12 @@ Mata supports active centering with the current source. Rust additionally
 requires centering API 1, shown by {cmd:fevc_rust probe} as
 {cmd:r(centering_api)}. Numerical API 2 for MCSE is a separate capability.
 The repository includes qualified Mac arm64, Rosetta x86-64, universal
-and Linux x86-64 centering plugins. Windows awaits refresh. An older plugin may lead
+and Linux x86-64 centering plugins. The Windows centering build is included
+for owner manual testing. An older plugin may lead
 {cmd:backend(auto)} to Mata before preparation/RNG under the ordinary consent
 rules. Strict {cmd:backend(rust)} or explicit {cmd:rng(counter_v1)} requires a
-matching plugin. The new Windows build passes, but private runtime checks
-fail; its shipped plugin remains unchanged without centering API 1.
+matching plugin. The Windows build provides centering API 1; its hosted build
+passes, but automated runtime checks failed and manual qualification is pending.
 Repository publication does not imply a release.
 
 {pstd}

@@ -186,8 +186,10 @@ recorded in [CENTERING.md](../fevc/docs/CENTERING.md). The new
 payloads; Windows, native Intel hardware and representative-scale evidence
 remain outside that record. The [October 7 record](../native/centering-20261007/manifest.json)
 preserves passing hosted Windows/source/Rust gates and two failed private
-runtime attempts; its Windows candidate is not adopted. Earlier payload
-qualifications retain their scope.
+runtime attempts. The owner subsequently requested adoption for manual
+testing, recorded in [the manual-test record](../native/centering-windows-manual-20261007.json).
+Windows runtime qualification remains pending. Earlier payload qualifications
+retain their scope.
 
 ## Plugin qualification
 
