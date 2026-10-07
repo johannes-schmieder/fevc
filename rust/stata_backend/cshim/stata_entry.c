@@ -4166,10 +4166,10 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
         return vckss_request_capability(argc, argv);
     }
     if (strcmp(argv[0], "centeringv1") == 0) {
-        uint64_t generation; uint32_t mode;
-        if (argc!=3 || vckss_parse_u64(argv[1],&generation)!=0 || vckss_parse_u32(argv[2],&mode)!=0 || mode>2)
+        uint64_t centering_generation; uint32_t mode;
+        if (argc!=3 || vckss_parse_u64(argv[1],&centering_generation)!=0 || vckss_parse_u32(argv[2],&mode)!=0 || mode>2)
             return vckss_usage("invalid centering request");
-        int rc=vckss_rust_engine_centering_v1(generation,mode);
+        int rc=vckss_rust_engine_centering_v1(centering_generation,mode);
         return rc==0 ? 0 : vckss_rust_failure(rc);
     }
     if (strcmp(argv[0], "prepare") == 0) {
