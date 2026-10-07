@@ -41,6 +41,43 @@ selects `CMG_FULL_V2` through explicit Rust or qualified macOS/Linux automatic
 routing. Current qualification and release boundaries are recorded in
 [`../../fevc/PLAN.md`](../../fevc/PLAN.md).
 
+## Additive outcome-centering API 1
+
+The existing C ABI structures and flag meanings are unchanged. The header
+exports these additive functions inside its `extern "C"` block:
+
+```c
+uint32_t vckss_rust_centering_schema_v1(void);
+int32_t vckss_rust_engine_centering_v1(uint64_t generation, uint32_t mode);
+```
+
+The schema function returns 1. Modes are 0=None, 1=Mean and 2=Corrected.
+A newly prepared generation defaults to None. Configuration is tied to that
+generation, occurs before solve/RNG, rejects conflicts with active attachments,
+and is rechecked during V4 solve. Stale generations and invalid configurations
+fail through the existing typed-error path.
+
+The shim exposes `centeringv1 generation mode` for the internal wrapper and
+reports `centering_api` in its probe. `fevc_rust probe` returns
+`r(centering_api)`. Active native centering requires 1; absent/zero capability
+is a structural preflight failure. `backend(auto)` may select Mata before
+preparation/RNG under existing consent rules; strict Rust or explicit
+Counter-V1 requests fail with `RUST_BACKEND_UNAVAILABLE`. No centering failure
+permits fallback after stochastic work.
+
+Exact, generic/compressed JLA and existing hybrid point executors receive
+the configured mode. Corrected JLA requires even probes of at least four
+and uses the existing full/two-half leverage pools. Mean MCSE fixes the
+observed mean; Corrected fixes the added increment too and returns Mean's
+MCSE/covariance. Active inference/projection is rejected by the frontend.
+
+Numerical API 2 and centering API 1 are separate capabilities. The four repository
+Mac/Linux plugins pass full platform and explicit centering checks. Windows
+remains unchanged and lacks centering while its build/private qualification
+are pending. See
+[the centering contract](../../fevc/docs/CENTERING.md) and
+[native provenance](../../native/README.md).
+
 ## All-probe numerical attachment
 
 The frontend defaults to `mcse(all)`; `mcse(off)` omits additional derivative,

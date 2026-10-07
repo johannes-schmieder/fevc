@@ -1,7 +1,32 @@
 # Native package provenance
 
+## Current centering payloads
+
+The October 6 source adds outcome centering API 1 independently of
+numerical API 2. Four qualified repository payloads are adopted: Mac arm64, Mac
+x86-64 under Rosetta, universal Mac, and Linux x86-64. The
+[adoption manifest](centering-20261006/manifest.json) binds their exact bytes
+to a frozen dirty source snapshot, full platform/isolated-install gates and
+five explicit Rust centering checks per candidate/architecture (25 checks).
+Linux baseline job `7910950` and focused job `7911312` finish successfully.
+
+Windows retains its earlier bytes and lacks centering API 1. The owner
+authorized source commit/push on October 7 for the hosted artifact build;
+its private exact-artifact qualification is pending. The October 6 adoption
+record preserves the original local checkpoint and does not assert publication.
+No tag or release is authorized. Native Intel hardware and representative
+scale are not claimed.
+See [CENTERING.md](../fevc/docs/CENTERING.md) and
+[installation](../INSTALLATION.md) for source use, probing and fallback.
+
+## Earlier distributed payload qualification
+
+The records below retain their exact tested artifacts and sources. They
+qualify the earlier None/ordinary estimator and MCSE routes, not the new
+centering feature.
+
 The default `mcse(all)` interface is qualified on all five repository plugin
-payloads. The [current adoption manifest](mcse-default-20260930/manifest.json)
+payloads. The [September 30 adoption manifest](mcse-default-20260930/manifest.json)
 binds the exact artifacts and the source compatibility review. Mac thin and
 universal plugins pass under arm64 and Rosetta; SCC Linux job `7803612` passes
 the full suite and isolated install. Windows build

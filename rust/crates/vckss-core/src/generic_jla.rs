@@ -16,6 +16,7 @@
 
 use core::cmp::Ordering;
 
+mod centering;
 mod numerical;
 pub(crate) mod residual_moment_attachment;
 mod spectrum_batches;
@@ -226,6 +227,7 @@ pub struct GenericJlaBatchExecutionReceipt {
 
 #[derive(Clone, Copy, Debug)]
 pub struct GenericJlaOptions {
+    pub centering: crate::types::Centering,
     pub seed: u64,
     pub probes: u32,
     pub leverage_batch_width: usize,
@@ -259,6 +261,7 @@ pub struct GenericJlaOptions {
 impl Default for GenericJlaOptions {
     fn default() -> Self {
         Self {
+            centering: crate::types::Centering::None,
             seed: 0,
             probes: 200,
             leverage_batch_width: 8,
@@ -1990,6 +1993,13 @@ fn run_generic_jla_with_execution_interrupt(
         rss.add(weights[row] * residual[row] * residual[row]);
     }
     let weighted_rss = rss.finish();
+    crate::centering::subtract(
+        options.centering,
+        &mut working_y,
+        &problem.frequency,
+        problem.physical_total,
+        interrupt,
+    )?;
     drop(fitted);
     if !weighted_rss.is_finite() {
         return Err(nonfinite("weighted residual sum of squares is nonfinite"));
@@ -2174,6 +2184,52 @@ fn run_generic_jla_with_execution_interrupt(
         Some(_) => unreachable!("component inference unit is exhaustive"),
     };
     execution.counter = combine_counter_phases(leverage_counter, target_counter)?;
+    if options.centering == crate::types::Centering::Corrected
+        && (options.probes < 4 || options.probes % 2 != 0)
+    {
+        return Err(invalid(
+            "Corrected JLA requires an even probes() budget of at least four",
+        ));
+    }
+    let mut center_pools = if options.centering == crate::types::Centering::Corrected {
+        Some(centering::Pools::new(
+            prepared_match_plan.as_ref().map_or(0, |p| p.rows.len()),
+            if prepared_observation_classes.is_some() {
+                problem.physical_total as usize
+            } else {
+                0
+            },
+            interrupt,
+        )?)
+    } else {
+        None
+    };
+    let center_data = CanonicalModelData {
+        workers: problem.workers(),
+        firms: problem.firms(),
+        row_worker: &problem.row_worker,
+        row_firm: &problem.row_firm,
+        weight: &weights,
+        controls: if options.nuisance == NuisanceMode::Joint {
+            &canonical.columns
+        } else {
+            &[]
+        },
+    };
+    let center_routing = ModelRoutingOptions {
+        route: working_solver.receipt().selected,
+        allow_automatic_cmg_setup_fallback: false,
+        ..routed_prepare
+    };
+    let center_original = if center_pools.is_some() {
+        Some(PreparedModelSolver::prepare_routed_with_interrupt(
+            center_data,
+            center_routing,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
     let rng = CounterRng::new(options.seed);
     // Match row order remains live through the target contractions. Observation
     // contractions use the global canonical row order directly.
@@ -2203,6 +2259,7 @@ fn run_generic_jla_with_execution_interrupt(
             &mut rhs_receipts,
             #[cfg(test)]
             numerical_state.as_mut(),
+            center_pools.as_mut(),
             interrupt,
         )?;
         let active_geometry = if options.nuisance == NuisanceMode::Joint {
@@ -2210,6 +2267,17 @@ fn run_generic_jla_with_execution_interrupt(
         } else {
             None
         };
+        if let Some(pools) = center_pools.as_mut() {
+            pools.build_match(
+                problem,
+                &match_plan,
+                &working_y,
+                &residual,
+                active_geometry,
+                options,
+                interrupt,
+            )?;
+        }
         let mover_adjusted = match_deleted_adjustment(
             problem,
             &match_plan,
@@ -2233,6 +2301,17 @@ fn run_generic_jla_with_execution_interrupt(
             )?;
             &zero_control_leverage
         };
+        if let Some(pools) = center_pools.as_mut() {
+            pools.build_obs(
+                problem,
+                &observation_classes,
+                &working_y,
+                &residual,
+                active_leverage,
+                options,
+                interrupt,
+            )?;
+        }
         let stayer_adjusted = observation_deleted_adjustment(
             problem,
             &observation_classes,
@@ -2301,6 +2380,7 @@ fn run_generic_jla_with_execution_interrupt(
                     &mut rhs_receipts,
                     #[cfg(test)]
                     numerical_state.as_mut(),
+                    center_pools.as_mut(),
                     interrupt,
                 )?;
                 let active_geometry = if options.nuisance == NuisanceMode::Joint {
@@ -2308,6 +2388,17 @@ fn run_generic_jla_with_execution_interrupt(
                 } else {
                     None
                 };
+                if let Some(pools) = center_pools.as_mut() {
+                    pools.build_match(
+                        problem,
+                        &plan,
+                        &working_y,
+                        &residual,
+                        active_geometry,
+                        options,
+                        interrupt,
+                    )?;
+                }
                 let mut adjusted = match_deleted_adjustment(
                     problem,
                     &plan,
@@ -2358,6 +2449,7 @@ fn run_generic_jla_with_execution_interrupt(
                     &mut rhs_receipts,
                     #[cfg(test)]
                     numerical_state.as_mut(),
+                    center_pools.as_mut(),
                     interrupt,
                 )?;
                 let zero_control_leverage;
@@ -2372,6 +2464,17 @@ fn run_generic_jla_with_execution_interrupt(
                     )?;
                     &zero_control_leverage
                 };
+                if let Some(pools) = center_pools.as_mut() {
+                    pools.build_obs(
+                        problem,
+                        &classes,
+                        &working_y,
+                        &residual,
+                        active_leverage,
+                        options,
+                        interrupt,
+                    )?;
+                }
                 let mut adjusted = observation_deleted_adjustment(
                     problem,
                     &classes,
@@ -2424,6 +2527,16 @@ fn run_generic_jla_with_execution_interrupt(
     drop(geometry);
     drop(row_rank);
 
+    let center_map = center_pools
+        .map(|pools| {
+            pools.finish(
+                center_data,
+                center_original.as_ref().expect("centering original solver"),
+                center_routing,
+                interrupt,
+            )
+        })
+        .transpose()?;
     let target = target_correction(
         problem,
         &target_plan,
@@ -2445,6 +2558,7 @@ fn run_generic_jla_with_execution_interrupt(
         match_rows_for_target.as_ref(),
         numerical_state.as_mut(),
         &residual,
+        center_map.as_ref(),
         interrupt,
     )?;
     let numerical_result = numerical_state
@@ -4703,6 +4817,7 @@ fn match_leverage_moments(
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     #[cfg(test)] mut numerical_cache: Option<&mut numerical::State>,
+    mut center_pools: Option<&mut centering::Pools>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<FiveMoments>, f64)> {
     let _profile = ProfileScope::new(ProfilePhase::Leverage);
@@ -4810,6 +4925,17 @@ fn match_leverage_moments(
                 )?;
             }
         }
+        if let Some(pools) = center_pools.as_mut() {
+            pools.record_match(
+                plan,
+                fe_solver,
+                &solved.solution,
+                &atoms,
+                first,
+                options.probes as usize,
+                interrupt,
+            )?;
+        }
         statistical_batches::match_moments(
             fe_solver,
             plan,
@@ -4848,6 +4974,7 @@ fn observation_leverage_moments(
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     #[cfg(test)] numerical_cache: Option<&mut numerical::State>,
+    center_pools: Option<&mut centering::Pools>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(ObservationMoments, ObservationCorrelations, f64)> {
     let (moments, correlations, match_moments, relres) = observation_and_match_leverage_moments(
@@ -4860,6 +4987,7 @@ fn observation_leverage_moments(
         rhs_receipts,
         #[cfg(test)]
         numerical_cache,
+        center_pools,
         interrupt,
     )?;
     debug_assert!(match_moments.is_none());
@@ -4876,6 +5004,7 @@ fn hybrid_leverage_moments(
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     #[cfg(test)] numerical_cache: Option<&mut numerical::State>,
+    center_pools: Option<&mut centering::Pools>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(
     Vec<FiveMoments>,
@@ -4893,6 +5022,7 @@ fn hybrid_leverage_moments(
         rhs_receipts,
         #[cfg(test)]
         numerical_cache,
+        center_pools,
         interrupt,
     )?;
     Ok((
@@ -4915,6 +5045,7 @@ fn observation_and_match_leverage_moments(
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     #[cfg(test)] mut numerical_cache: Option<&mut numerical::State>,
+    mut center_pools: Option<&mut centering::Pools>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(
     ObservationMoments,
@@ -5150,6 +5281,19 @@ fn observation_and_match_leverage_moments(
                 )?;
             }
         }
+        if let Some(pools) = center_pools.as_mut() {
+            if let Some(plan) = match_plan {
+                pools.record_match(
+                    plan,
+                    fe_solver,
+                    &solved.solution,
+                    &match_atoms,
+                    first_probe,
+                    options.probes as usize,
+                    interrupt,
+                )?;
+            }
+        }
         statistical_batches::observation_moments(
             fe_solver,
             &addresses,
@@ -5171,6 +5315,8 @@ fn observation_and_match_leverage_moments(
             &mut third_correlation,
             &mut first_correction,
             &mut third_correction,
+            center_pools.as_mut().map(|p| p.observation.as_mut_slice()),
+            options.probes as usize,
             interrupt,
         )?;
         if let (Some(plan), Some(moments)) = (match_plan, match_moments.as_mut()) {
@@ -7782,6 +7928,7 @@ fn target_correction(
     match_plan_for_numerical: Option<&MatchPlan>,
     mut numerical: Option<&mut numerical::State>,
     residual: &[f64],
+    center_map: Option<&crate::centering::jla::Map>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<TargetCorrection> {
     let _profile = ProfileScope::new(ProfilePhase::Target);
@@ -7796,6 +7943,17 @@ fn target_correction(
         interrupt,
         "generic_jla_target_allocate",
     )?;
+    let mut increments = if center_map.is_some() {
+        Some(repeated(
+            probes,
+            VarianceComponents::default(),
+            "centering target increments",
+            interrupt,
+            "centering_allocate",
+        )?)
+    } else {
+        None
+    };
     let mut maximum_solve_relres = 0.0_f64;
     let mut diagonal_sum = if retain_diagonal {
         let mut allocate = || {
@@ -8023,6 +8181,39 @@ fn target_correction(
             },
             interrupt,
         )?;
+        if let (Some(map), Some(increments)) = (center_map, increments.as_mut()) {
+            for local in 0..width {
+                let mut w = zeroed_f64_with_interrupt(
+                    problem.outcome.len(),
+                    "centering worker prediction",
+                    interrupt,
+                    "centering_allocate",
+                )?;
+                let mut f = zeroed_f64_with_interrupt(
+                    problem.outcome.len(),
+                    "centering firm prediction",
+                    interrupt,
+                    "centering_allocate",
+                )?;
+                let wc = &solved.solution[2 * local].coefficients;
+                let fc = &solved.solution[2 * local + 1].coefficients;
+                solver.operator().predict_into_with_interrupt(
+                    &wc.worker,
+                    &wc.firm,
+                    &wc.control,
+                    &mut w,
+                    interrupt,
+                )?;
+                solver.operator().predict_into_with_interrupt(
+                    &fc.worker,
+                    &fc.firm,
+                    &fc.control,
+                    &mut f,
+                    interrupt,
+                )?;
+                increments[first + local] = map.contract(&w, &f, interrupt)?;
+            }
+        }
         if let Some(state) = numerical.as_mut() {
             for local in 0..width {
                 state.target(
@@ -8045,8 +8236,15 @@ fn target_correction(
     if let Some(state) = numerical.as_mut() {
         state.conditional(&draws)?;
     }
-    let mean = component_mean(&draws, interrupt)?;
+    let mut mean = component_mean(&draws, interrupt)?;
     let mcse = component_mcse(&draws, mean, interrupt)?;
+    if let Some(increments) = increments {
+        let increment = component_mean(&increments, interrupt)?;
+        mean.worker += increment.worker;
+        mean.firm += increment.firm;
+        mean.covariance += increment.covariance;
+        mean.total += increment.total;
+    }
     Ok(TargetCorrection {
         mean,
         mcse,
@@ -9049,6 +9247,27 @@ fn memory_forecast(
     let vec_bytes = u64::try_from(core::mem::size_of::<Vec<f64>>())
         .map_err(|_| resource("vector-header byte size is not representable"))?;
     let prepared = options.prepared_persistent_bytes;
+    let centering_reserve = if options.centering == crate::types::Centering::Corrected {
+        checked_product(
+            &[
+                checked_sum(&[
+                    rows,
+                    if options.deletion == DeletionMode::Observation || hybrid {
+                        problem.physical_total
+                    } else {
+                        0
+                    },
+                    workers,
+                    firms,
+                    deletion_units,
+                ])?,
+                2048 + 256 * controls,
+            ],
+            "centering workspace",
+        )?
+    } else {
+        0
+    };
     let nq = checked_product(&[rows, controls, f64_bytes], "N by Q matrix")?;
     let cq = checked_product(&[cells, controls, f64_bytes], "C by Q matrix")?;
     let q2 = checked_product(&[controls, controls, f64_bytes], "Q-square matrix")?;
@@ -9368,6 +9587,9 @@ fn memory_forecast(
         options.projection_export_bytes,
     ])?;
     let result = result_transition.max(result_export);
+    let leverage = checked_sum(&[leverage, centering_reserve])?;
+    let target = checked_sum(&[target, centering_reserve])?;
+    let maker = checked_sum(&[maker, centering_reserve])?;
     let phases = [
         (
             GenericJlaMemoryPeakPhase::Canonicalization,

@@ -1,5 +1,10 @@
 # Point-estimator contract
 
+The ordinary formulas below describe the default `centering(none)`.
+The active outcome-centering modes change only the bias-correction outcome
+factor and its estimated-mean adjustment; they retain the model, plug-in
+targets, retained sample, weighting and deletion contract.
+
 ## Model, quotient, and target
 
 On the retained sample, write the linear model as
@@ -157,6 +162,27 @@ invertible change `Z -> ZT` therefore generates the same canonical
 right-hand sides within the registered control-forward, solve, and roundoff
 gates.
 
+## Outcome centering
+
+`centering(mean)` replaces the working outcome in bias-correction terms by
+`z = u - ubar`. The observed mean is weighted by retained frequency mass,
+independent of `targetweight()`. Here `u=y` for joint nuisance estimation;
+fixedoffset first forms `u=y-Z gammahat`. The original fit and residuals,
+plug-in targets, sample and deletion units are retained.
+
+`centering(corrected)` adds an estimated-mean bias adjustment. Exact uses
+one shared coefficient-space system with the existing inverse and deletion
+work. JLA uses the existing full leverage pool and its two equal halves;
+only Corrected JLA requires an even probe budget of at least four.
+The [centering contract](CENTERING.md) specifies the signed increment and
+block-local correction-system right-hand side.
+
+Mean's numerical MCSE treats the observed mean as fixed. Corrected uses
+exactly Mean's numerical MCSE/covariance, also treating its added increment
+as fixed. Enabled exact MCSE is zero; off is unavailable. Neither mode
+supports active `inference()` or `project()`. None retains the inference
+and projection support described below.
+
 ## Sample and dependence contract
 
 Match mode freezes mover eligibility on the complete-case input: a worker
@@ -240,8 +266,9 @@ selection is explicit in `e(stayers)` and `e(stayer_option_schema)`.
 
 ## Scope of the result
 
-These formulas define the point estimates and remain the default command
-contract. Component `inference(highrank|q1)` defaults to the observation-only
+These formulas define the ordinary point estimates and remain the default
+command contract. The inference and projection routes in this section require
+`centering(none)`. Component `inference(highrank|q1)` defaults to the observation-only
 exact Mata target-specific variance approximation; supported
 explicit `inferencemodel(structured_common|structured_leverage)` attaches
 matrix-free covariance inference to the unchanged generic-JLA point result.

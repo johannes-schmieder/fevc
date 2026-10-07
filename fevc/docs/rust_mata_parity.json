@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-26",
+  "updated": "2026-10-07",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Deletion-unit mover semantics pass Mata/Rust regression and exact-artifact qualification for all five shipped plugins: Mac arm64, Rosetta x86-64 and universal, Linux x86-64, and Windows x86-64. Build sources d6f5571d (Mac/Windows) and 31cf2ea7 (Linux), package source c3ab9e52, and explicit compatibility reviews are recorded in native/deletion-unit-movers-20260926. See DELETION_UNIT_MOVERS_2026-09-26.md for final public installer status. Qualification covers supported runtime routes and engineering checks; it does not extend statistical coverage, representative scale, native Intel hardware, or unsupported Windows routes. Earlier scientific confirmation failures and deferred features remain unchanged. The retained alpha_required field describes prior alpha gates, not authorization for a release tag.",
+  "qualification_scope": "Deletion-unit mover semantics pass Mata/Rust regression and exact-artifact qualification for all five shipped plugins: Mac arm64, Rosetta x86-64 and universal, Linux x86-64, and Windows x86-64. Build sources d6f5571d (Mac/Windows) and 31cf2ea7 (Linux), package source c3ab9e52, and explicit compatibility reviews are recorded in native/deletion-unit-movers-20260926. See DELETION_UNIT_MOVERS_2026-09-26.md for final public installer status. Qualification covers supported runtime routes and engineering checks; it does not extend statistical coverage, representative scale, native Intel hardware, or unsupported Windows routes. Earlier scientific confirmation failures and deferred features remain unchanged. The retained alpha_required field describes prior alpha gates, not authorization for a release tag. October 6 outcome centering is implemented in Mata/Rust. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks and are adopted with centering API 1; Windows retains its earlier payload without that capability. The owner authorized source commit/push on October 7; Windows build/private qualification remain pending. native/centering-20261006/manifest.json binds the new dirty-source evidence. Historical payload records keep their original scope. See CENTERING.md for scope, MCSE assumptions and local evidence.",
   "statuses": [
     "qualified",
     "implemented",
@@ -10,6 +10,30 @@
     "deferred"
   ],
   "rows": [
+    {
+      "id": "mean-centering",
+      "surface": "Outcome Mean centering, exact/JLA",
+      "mata": "implemented",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. CENTERING.md. Four local Mac/Linux native payloads pass explicit centering checks; Windows awaits refresh. native/centering-20261006/manifest.json."
+    },
+    {
+      "id": "exact-corrected-centering",
+      "surface": "Outcome Corrected centering, exact",
+      "mata": "implemented",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows awaits refresh. native/centering-20261006/manifest.json. CENTERING.md."
+    },
+    {
+      "id": "jla-corrected-centering",
+      "surface": "Outcome Corrected centering, JLA",
+      "mata": "implemented",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows awaits refresh. native/centering-20261006/manifest.json. CENTERING.md."
+    },
     {
       "id": "parallel-deletion-blocks",
       "surface": "Parallel declared match blocks at one coefficient cell",

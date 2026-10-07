@@ -62,6 +62,7 @@ pub const COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Copy, Debug)]
 pub struct JlaEngineOptions {
+    pub centering: crate::types::Centering,
     pub seed: u64,
     pub probes: u32,
     pub leverage_batch_width: usize,
@@ -82,6 +83,7 @@ pub struct JlaEngineOptions {
 impl Default for JlaEngineOptions {
     fn default() -> Self {
         Self {
+            centering: crate::types::Centering::None,
             seed: 8_675_309,
             probes: 200,
             leverage_batch_width: 8,
@@ -114,6 +116,14 @@ impl JlaEngineOptions {
                 ErrorCode::UnsupportedFeature,
                 "jla_validate",
                 "the Rust JLA engine supports VCKSS-COUNTER-V1 only",
+            ));
+        }
+        if self.centering == crate::types::Centering::Corrected
+            && (self.probes < 4 || self.probes % 2 != 0)
+        {
+            return Err(BackendError::invalid(
+                "centering",
+                "Corrected JLA requires an even probes() budget of at least four",
             ));
         }
         if self.probes < 2 {
@@ -1126,6 +1136,11 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
     let rng = CounterRng::new(options.seed);
     let groups = plan.deletion_units();
     let mut moments = statistical_buffer(groups, FiveMoments::default(), interrupt)?;
+    let mut center_halves = if options.centering == crate::types::Centering::Corrected {
+        Some(statistical_buffer(groups, [[0.0; 2]; 2], interrupt)?)
+    } else {
+        None
+    };
     let mut leverage_receipts = Vec::new();
     reserve_exact(
         &mut leverage_receipts,
@@ -1211,6 +1226,23 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             },
             interrupt,
         )?;
+        if let Some(halves) = center_halves.as_mut() {
+            for column in 0..width {
+                let pool = usize::from(first + column >= options.probes as usize / 2);
+                let solution = &solved.solution[column];
+                for (group, h) in halves.iter_mut().enumerate() {
+                    checkpoint_chunk(interrupt, group, "centering_compressed_halves")?;
+                    let cell = plan.deletion.cell[group] as usize;
+                    let root = (plan.deletion.physical_count[group] as f64).sqrt();
+                    let p = root
+                        * (solution.worker[problem.cell_worker[cell] as usize]
+                            + solution.firm[problem.cell_firm[cell] as usize]);
+                    let m = atoms[column * groups + group] as f64 / root - p;
+                    h[pool][0] += p * p;
+                    h[pool][1] += m * m;
+                }
+            }
+        }
     }
     crate::progress::advance(
         crate::progress::LEVERAGE,
@@ -1238,12 +1270,98 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
     } else {
         None
     };
+    if let Some(state) = numerical_state.as_mut() {
+        state.outcome_mean = adjustment.outcome_mean;
+    }
+    let center_map = if let Some(halves) = center_halves {
+        use crate::centering::jla::{Map, Unit};
+        use crate::model_operator::CanonicalModelData;
+        use crate::model_solver::{
+            ModelRoutingOptions, ModelSolverOptions, ModelSolverRoute, PreparedModelSolver,
+        };
+        let weights: Vec<_> = problem.frequency.iter().map(|&f| f as f64).collect();
+        let data = CanonicalModelData {
+            workers: problem.workers(),
+            firms: problem.firms(),
+            row_worker: &problem.row_worker,
+            row_firm: &problem.row_firm,
+            weight: &weights,
+            controls: &[],
+        };
+        let routing = ModelRoutingOptions {
+            route: match options.solver.route {
+                LinearSolverRoute::CmgPcg => ModelSolverRoute::Cmg,
+                _ => ModelSolverRoute::Diagonal,
+            },
+            allow_automatic_cmg_setup_fallback: false,
+            solver: ModelSolverOptions {
+                pcg: options.solver.pcg,
+                rank_tolerance: options.rank_tolerance,
+            },
+            cmg: options.solver.cmg,
+            ..ModelRoutingOptions::default()
+        };
+        let original =
+            PreparedModelSolver::prepare_routed_with_interrupt(data, routing, interrupt)?;
+        let mut representative = vec![0; problem.cells()];
+        for (row, &cell) in problem.row_cell.iter().enumerate() {
+            representative[cell as usize] = row;
+        }
+        let mut maps = Vec::new();
+        for pool in 0..3 {
+            let mut units = Vec::new();
+            reserve_exact(&mut units, groups, "centering compressed units")?;
+            for group in 0..groups {
+                let cell = plan.deletion.cell[group] as usize;
+                let mass = plan.deletion.physical_count[group] as f64;
+                let p = if pool == 0 {
+                    adjustment.projection_share[group]
+                } else {
+                    let h = halves[group][pool - 1];
+                    h[0] / (h[0] + h[1])
+                };
+                let maker = 1.0 - p;
+                if !maker.is_finite() || maker <= options.block_tolerance {
+                    return Err(BackendError::new(
+                        ErrorCode::JlaConstraintFailed,
+                        "centering",
+                        "half-pool maker is nonpositive",
+                    ));
+                }
+                let z = plan.deletion.outcome_sum[group] / mass - adjustment.outcome_mean;
+                let e = plan.deletion.outcome_sum[group] / mass - fitted_cell[cell];
+                units.push(Unit::new(
+                    vec![representative[cell]],
+                    vec![mass],
+                    &[z],
+                    &[e / maker],
+                    &[maker],
+                    problem.physical_total as f64,
+                )?);
+            }
+            maps.push(Map::solve(data, &original, units, routing, interrupt)?);
+        }
+        let second = maps.pop().unwrap();
+        let first = maps.pop().unwrap();
+        Some(Map::jackknife(maps.pop().unwrap(), first, second)?)
+    } else {
+        None
+    };
     drop(moments);
     let mut target_draws = statistical_buffer(
         options.probes as usize,
         VarianceComponents::default(),
         interrupt,
     )?;
+    let mut center_draws = if center_map.is_some() {
+        Some(statistical_buffer(
+            options.probes as usize,
+            VarianceComponents::default(),
+            interrupt,
+        )?)
+    } else {
+        None
+    };
     let mut target_receipts = Vec::new();
     reserve_exact(
         &mut target_receipts,
@@ -1327,6 +1445,27 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             },
             interrupt,
         )?;
+        if let (Some(map), Some(draws)) = (center_map.as_ref(), center_draws.as_mut()) {
+            for column in 0..width {
+                let w = &solved.solution[2 * column];
+                let f = &solved.solution[2 * column + 1];
+                let mut wp = Vec::new();
+                let mut fp = Vec::new();
+                reserve_exact(&mut wp, problem.outcome.len(), "centering predictions")?;
+                reserve_exact(&mut fp, problem.outcome.len(), "centering predictions")?;
+                for row in 0..problem.outcome.len() {
+                    wp.push(
+                        w.worker[problem.row_worker[row] as usize]
+                            + w.firm[problem.row_firm[row] as usize],
+                    );
+                    fp.push(
+                        f.worker[problem.row_worker[row] as usize]
+                            + f.firm[problem.row_firm[row] as usize],
+                    );
+                }
+                draws[first + column] = map.contract(&wp, &fp, interrupt)?;
+            }
+        }
         if let Some(state) = numerical_state.as_mut() {
             for column in 0..width {
                 let worker = &solved.solution[2 * column];
@@ -1351,7 +1490,14 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
 
     crate::progress::stage(crate::progress::VALIDATION);
     interrupt.checkpoint("jla_finalize")?;
-    let correction = mean_components_with_interrupt(&target_draws, interrupt)?;
+    let mut correction = mean_components_with_interrupt(&target_draws, interrupt)?;
+    if let Some(draws) = center_draws {
+        let increment = mean_components_with_interrupt(&draws, interrupt)?;
+        correction.worker += increment.worker;
+        correction.firm += increment.firm;
+        correction.covariance += increment.covariance;
+        correction.total += increment.total;
+    }
     let corrected = subtract_components(plugin, correction)?;
     let numerical_mcse = component_mcse_with_interrupt(&target_draws, interrupt)?;
     let accounting_residual = accounting_residuals_with_interrupt(
@@ -1518,6 +1664,23 @@ fn forecast_jla_memory(
 ) -> Result<JlaMemoryReceipt> {
     let prepared_persistent_bytes =
         prepared_persistent_bytes.max(options.prepared_persistent_bytes);
+    let centering_reserve = if options.centering == crate::types::Centering::Corrected {
+        memory_product(
+            &[
+                to_u64_memory(
+                    problem.outcome.len()
+                        + plan.deletion_units()
+                        + problem.workers()
+                        + problem.firms(),
+                    "centering workspace",
+                )?,
+                2048,
+            ],
+            "centering workspace",
+        )?
+    } else {
+        0
+    };
     let workers = to_u64_memory(problem.workers(), "workers")?;
     let firms = to_u64_memory(problem.firms(), "firms")?;
     let cells = to_u64_memory(problem.cells(), "cells")?;
@@ -1751,6 +1914,10 @@ fn forecast_jla_memory(
         ])?;
         expected_largest_phase = Some(full_fit_phase.max(ordinary_leverage).max(ordinary_target));
     }
+    leverage_phase_forecast_bytes =
+        checked_memory_add(leverage_phase_forecast_bytes, centering_reserve)?;
+    target_phase_forecast_bytes =
+        checked_memory_add(target_phase_forecast_bytes, centering_reserve)?;
     let largest_phase = full_fit_phase
         .max(leverage_phase_forecast_bytes)
         .max(target_phase_forecast_bytes);
@@ -1770,7 +1937,7 @@ fn forecast_jla_memory(
         prepared_persistent_bytes,
         solver_setup_forecast_bytes,
         result_forecast_bytes,
-        expected_largest_phase.unwrap_or(largest_phase),
+        expected_largest_phase.map_or(largest_phase, |v| v.max(largest_phase)),
     ])?;
     Ok(JlaMemoryReceipt {
         expected_peak_forecast_bytes,
@@ -2087,6 +2254,7 @@ fn full_fit_weighted_rss_with_interrupt(
 
 #[derive(Debug)]
 struct LeverageAdjustment {
+    outcome_mean: f64,
     variance_clipped: bool,
     projection_share: Vec<f64>,
     residual_share: Vec<f64>,
@@ -2106,6 +2274,13 @@ fn leverage_adjustment_with_interrupt(
     options: JlaEngineOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<LeverageAdjustment> {
+    let outcome_mean = crate::centering::mean(
+        options.centering,
+        &problem.outcome,
+        &problem.frequency,
+        problem.physical_total,
+        interrupt,
+    )?;
     let probes = f64::from(options.probes);
     let groups = plan.deletion_units();
     let mut projection_share = Vec::with_capacity(groups);
@@ -2193,7 +2368,11 @@ fn leverage_adjustment_with_interrupt(
                 format!("match correction is nonfinite at unit {group}, side joint"),
             ));
         }
-        cell_weight[cell].add(plan.deletion.outcome_sum[group] * deleted);
+        cell_weight[cell].add(
+            (plan.deletion.outcome_sum[group]
+                - outcome_mean * plan.deletion.physical_count[group] as f64)
+                * deleted,
+        );
         projection_share.push(projection);
         residual_share.push(residual);
         finite_bias.push(bias);
@@ -2217,6 +2396,7 @@ fn leverage_adjustment_with_interrupt(
         ));
     }
     Ok(LeverageAdjustment {
+        outcome_mean,
         variance_clipped,
         projection_share,
         residual_share,

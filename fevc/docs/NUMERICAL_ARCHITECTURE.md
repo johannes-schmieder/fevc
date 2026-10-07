@@ -306,6 +306,36 @@ attachment uses the same point and attachment executor selected with MCSE off.
 See the [default/interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md), [the derivation and interface](ALL_PROBE_MCSE.md) and
 [implementation evidence and limits](ALL_PROBE_MCSE_STATUS.md).
 
+## Outcome-centering execution
+
+`centering(none)` preserves the ordinary executors. Mean calculates the
+frequency-weighted retained working-outcome mean and subtracts it only in
+the correction factor; fixedoffset first subtracts the fitted nuisance index.
+It adds no fit, target/leverage directions, or inverse-action solves. The
+ordinary numerical attachment consumes that factor and holds its mean fixed.
+
+Corrected exact reuses the ordinary fit, inverse and deletion calculations.
+One shared coefficient-space correction system supplies all target
+contractions; a bounded exceptional-unit Schur system handles small
+denominators. The original system residual and copy-contrast guards remain
+admission conditions. Production does not expand an observation-square
+projection matrix or refit each target.
+
+Corrected JLA retains the existing full and two-half leverage moments and
+uses three corresponding correction maps. The signed target increment is
+`2 Delta_full - (Delta_half1 + Delta_half2)/2`. No new random directions or
+target solves are added. Its MCSE/covariance is the ordinary Mean calculation
+with this increment held fixed; there are no increment derivatives or replay.
+
+Mean and Corrected support existing exact, generic, compressed and hybrid
+point routes. Active inference/projection is rejected before RNG.
+Correction scratch is forecast and admitted before stochastic work.
+Extra-system failures are typed errors and cannot trigger post-RNG fallback.
+The additive native centering API configures a prepared generation before
+solve without altering the established ABI structures; numerical API 2
+remains independent. See [CENTERING.md](CENTERING.md), [MEMORY.md](MEMORY.md)
+and [the native boundary](../../rust/stata_backend/README.md).
+
 ## Memory and runtime boundary
 
 The JLA path does not form an observation-by-parameter design, a parameter

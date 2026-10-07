@@ -1,5 +1,12 @@
 # Improved-JLA finite-projection correction
 
+This derivation concerns finite-projection leverage correction. Outcome
+`centering(none|mean|corrected)` is a separate choice in the bias correction.
+Mean uses the fixed observed mean; Corrected adds a full/two-half increment
+using these same existing leverage pools and their own pool sizes.
+Corrected's numerical MCSE treats that increment as fixed and excludes its
+uncertainty. See [CENTERING.md](CENTERING.md).
+
 Let one indexed random projection produce a squared projection statistic `U`
 and its paired squared residual statistic `V`. For an uncollapsed coordinate,
 `U=(Pq)_i^2` and `V=(Mq)_i^2`. With `R` independent directions,

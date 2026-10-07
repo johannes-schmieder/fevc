@@ -40,6 +40,7 @@ def test_package_manifest_is_complete() -> None:
         "fevc_scale_runtime.mata",
         "fevc__display.ado",
         "fevc__numerical.ado",
+        "fevc__centering.ado",
         "fevc__rust_numerical.ado",
         "fevc__progress.ado",
         "fevc__lifecycle.ado",
@@ -165,7 +166,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "vckss-api25-control-posterior-nmc4-timers1"
+    build_id = "vckss-api25-control-posterior-nmc4-timers1-centering1"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata

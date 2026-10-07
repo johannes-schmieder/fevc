@@ -135,17 +135,26 @@ pub(super) fn observation_correlations(
     third: &mut [f64],
     first_correction: &mut [f64],
     third_correction: &mut [f64],
+    center: Option<&mut [[centering::Power; 3]]>,
+    probes: usize,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     let chunk = chunk_width(first.len(), solver, solved.len())?;
+    let mut center_chunks: Vec<_> = center
+        .into_iter()
+        .flat_map(|c| c.chunks_mut(chunk))
+        .map(Some)
+        .collect();
+    center_chunks.resize_with(first.len().div_ceil(chunk), || None);
     solver.statistical_work(
         first
             .chunks_mut(chunk)
             .zip(third.chunks_mut(chunk))
             .zip(first_correction.chunks_mut(chunk))
-            .zip(third_correction.chunks_mut(chunk)),
+            .zip(third_correction.chunks_mut(chunk))
+            .zip(center_chunks),
         "generic_jla_observation_correlations",
-        |job, (((first, third), first_correction), third_correction), interrupt| {
+        |job, ((((first, third), first_correction), third_correction), mut center), interrupt| {
             let start = job * chunk;
             let mut row = row_offset
                 .partition_point(|&offset| offset <= start)
@@ -180,6 +189,11 @@ pub(super) fn observation_correlations(
                         address.entity,
                         copy,
                     ));
+                    if let Some(center) = center.as_mut() {
+                        let pool = 1 + usize::from(first_probe + column >= probes / 2);
+                        center[local][0].add(prediction, sign - prediction);
+                        center[local][pool].add(prediction, sign - prediction);
+                    }
                     stable_add_index(first, first_correction, local, sign * prediction);
                     stable_add_index(third, third_correction, local, sign * prediction.powi(3));
                 }

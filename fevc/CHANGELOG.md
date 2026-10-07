@@ -1,5 +1,24 @@
 # Pending changes
 
+## October 6, 2026 — small outcome-centering implementation
+
+- Add `centering(none|mean|corrected)` to exact/JLA point estimation in Mata
+  and matching Rust builds. None remains the default. Mean changes only the
+  bias-correction outcome factor using the retained frequency-weighted mean.
+- Corrected exact reuses fit/inverse/deletion work and adds one shared system.
+  Corrected JLA reuses the full leverage pool and two equal halves, requiring
+  even probes of at least four. No additional random pool or target solves.
+- Mean MCSE treats the observed mean as fixed. Corrected returns Mean's
+  MCSE/covariance and excludes uncertainty in the added increment. Off is
+  unavailable/missing; enabled exact MCSE is zero.
+- Record `e(centering)` and `e(mcse_centering)`. Reject active centering with
+  inference/projection before RNG; correction failures do not change modes.
+- Add centering API 1 without changing existing ABI structures. Refresh the
+  four Mac/Linux plugins after full platform and explicit Rust centering
+  qualification. The owner authorized commit/push on October 7; the Windows
+  hosted build/private qualification are pending. No release is implied. See
+  [the centering guide](docs/CENTERING.md) and [native provenance](../native/README.md).
+
 ## September 30, 2026 — consistent MCSE stored results
 
 - Make `e(mcse)` the selected numerical diagnostic, all-probe by default,

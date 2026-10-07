@@ -167,6 +167,25 @@ The integrated package command is:
 ./.venv/bin/python fevc/tools/run_checks.py
 ```
 
+## Outcome-centering evidence
+
+The new core unit test compares the full/two-half JLA correction map to an
+independent dense construction. Exact centering and fixed-mean/increment MCSE
+are checked by public Stata oracles. Existing core/plugin lifecycle, resource
+and ABI suites also pass; no new centering-specific unit coverage of every
+mode, memory boundary or generation configuration is claimed.
+The public Stata checks in [the package testing guide](../fevc/TESTING.md)
+cover both deletion modes/populations, controls/fixedoffset, literal frequency
+and target weights, independent dense oracles and pre-RNG option guards.
+
+The completed local scope includes the full Rust workspace, strict fmt/clippy,
+integrated package checks, full Mac/Linux platform gates and five explicit
+Rust centering checks per candidate/architecture. The small timing grid is
+recorded in [CENTERING.md](../fevc/docs/CENTERING.md). The new
+[adoption record](../native/centering-20261006/manifest.json) covers four local
+payloads; Windows, native Intel hardware and representative-scale evidence
+remain outside that record. Earlier payload qualifications retain their scope.
+
 ## Plugin qualification
 
 A meaningful change to Rust estimator code, the plugin ABI, the Ado native

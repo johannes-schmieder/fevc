@@ -1,0 +1,44 @@
+{
+  "schema": "FEVC-CENTERING-CANDIDATE-CHECKS-V1",
+  "status": "PASS",
+  "label": "mac-arm64",
+  "arch": "arm64",
+  "plugin_sha256": "d497f387c45354d55749f1489ff4fe822a953b402869dc24b3bdbf7f25cefb04",
+  "tests": [
+    {
+      "test": "test_centering_capability.do",
+      "marker": "CENTERING_CAPABILITY_PASS",
+      "passed": true,
+      "returncode": 0,
+      "log_sha256": "44c33c812ba151008e3e916816b3b10ca6f924894c51c2639d4f14eec75c79bf"
+    },
+    {
+      "test": "test_centering_mean.do",
+      "marker": "SIMPLE_MEAN_PASS",
+      "passed": true,
+      "returncode": 0,
+      "log_sha256": "d433fb94abeebecd97a486303bac1b6f754a2d9ff9b4fdaa422a0d2d99dafc0a"
+    },
+    {
+      "test": "test_centering_exact.do",
+      "marker": "SIMPLE_EXACT_ORACLE_PASS",
+      "passed": true,
+      "returncode": 0,
+      "log_sha256": "5dc2d8971132b7a955aa5d7b54e3022bcaf3430063d62ceae07788bc58544dcb"
+    },
+    {
+      "test": "test_centering_jla.do",
+      "marker": "SIMPLE_CORRECTED_MCSE_PASS",
+      "passed": true,
+      "returncode": 0,
+      "log_sha256": "2e5f0176ae6cbc34fb1da5d7c9c624d6b6e534c175bb94147ff507db3d5ff4d8"
+    },
+    {
+      "test": "test_centering_options.do",
+      "marker": "SIMPLE_CENTERING_OPTIONS_PASS",
+      "passed": true,
+      "returncode": 0,
+      "log_sha256": "043cdb4d6b6cee22c5325caaa3aafb2ab98f804afd60ad46181b1f3e74f440be"
+    }
+  ]
+}

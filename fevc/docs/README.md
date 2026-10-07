@@ -7,6 +7,8 @@ and the installed `help fevc`.
 
 - [Estimator and sample](ESTIMATOR_CONTRACT.md): targets, controls, weighting,
   deletion, and retained population.
+- [Outcome centering](CENTERING.md): None/Mean/Corrected, exact/JLA,
+  fixed-mean MCSE, native availability and local timing evidence.
 - [Inference](INFERENCE.md): supported requests, assumptions, and limitations.
 - [Memory](MEMORY.md): optional budgets, forecasts, and returned diagnostics.
 - [Failures and returned results](FAILURES_AND_RETURNS.md).
@@ -16,7 +18,9 @@ and the installed `help fevc`.
 
 - [Numerical architecture](NUMERICAL_ARCHITECTURE.md).
 - [Finite-projection JLA](JLA_FINITE_PROJECTION.md).
-- [Canonical MCSE stored results](MCSE_RETURNS_2026-09-30.md).
+- [Canonical MCSE stored results](MCSE_RETURNS_2026-09-30.md), the dated
+  baseline record; [current returns](FAILURES_AND_RETURNS.md) include
+  centering metadata and [centering assumptions](CENTERING.md).
 - [Default MCSE interface](MCSE_DEFAULT_INTERFACE_2026-09-30.md),
   [all-point-probe MCSE derivation](ALL_PROBE_MCSE.md) and
   [implementation status](ALL_PROBE_MCSE_STATUS.md).
@@ -26,6 +30,10 @@ and the installed `help fevc`.
   [individual inference interface](INDIVIDUAL_INFERENCE_INTERFACE.md).
 - [Backend capabilities](RUST_MATA_PARITY.md).
 - [Design decisions](DECISIONS.md).
+
+The dated validation, installation and qualification reports below retain
+their original tested sources and payloads. They do not qualify the new
+centering capability; its current local scope is in [CENTERING.md](CENTERING.md).
 
 ## Development
 

@@ -1,0 +1,157 @@
+. do /private/tmp/fevc-centering-plugin-refresh-20261006/checks/mac-universal-a
+> rm64/test_centering_mean/driver.do 
+
+. version 18
+
+. set processors 2
+    The maximum number of processors or cores being used is changed from 8 to
+    2.  It can be set to any number between 1 and 8
+
+. do "/private/tmp/fevc-centering-plugin-refresh-20261006/source-v2/fevc/tests/
+> stata/test_centering_mean.do" "/private/tmp/fevc-centering-plugin-refresh-202
+> 61006/checks/mac-universal-arm64/package" rust
+
+. version 18
+
+. clear all
+
+. set more off
+
+. args pkgroot backend
+
+. if `"`pkgroot'"'=="" local pkgroot `"`c(pwd)'/fevc"'
+
+. if "`backend'"=="" local backend mata
+
+. adopath ++ `"`pkgroot'"'
+  [1]              "/private/tmp/fevc-centering-plugin-refresh-20261006/checks/
+> mac-universal-arm64/package"
+  [2]  (BASE)      "/Applications/Stata/ado/base/"
+  [3]  (SITE)      "/Applications/Stata/ado/site/"
+  [4]              "."
+  [5]  (PERSONAL)  "/Users/johannes/Library/Application Support/Stata/ado/perso
+> nal/"
+  [6]  (PLUS)      "/Users/johannes/Library/Application Support/Stata/ado/plus/
+> "
+  [7]  (OLDPLACE)  "~/ado/"
+
+. set obs 120
+Number of observations (_N) was 0, now 120.
+
+. gen long w=ceil(_n/6)
+
+. gen long f=1+mod(floor((_n-1)/3),3)
+
+. replace f=1 if w>=19
+(6 real changes made)
+
+. gen double x=sin(_n*.27)+cos(_n*.81)
+
+. gen double y=5+sin(w*.5)+f*.2+.4*x+sin(_n*.93)
+
+. gen int copies=1+mod(_n,3)
+
+. gen double mass=copies*(1+.1*mod(_n,4))
+
+. gen double shifted=y
+
+. local cells=0
+
+. foreach algorithm in exact jla {
+  2.  foreach deletion in match observation {
+  3.   foreach stay in movers both {
+  4.    foreach controls in no joint fixedoffset {
+  5.     local covars
+  6.     local nuisance joint
+  7.     if "`controls'"!="no" local covars x
+  8.     if "`controls'"=="fixedoffset" local nuisance fixedoffset
+  9.     local common worker(w) firm(f) algorithm(`algorithm') backend(`backend
+> ') deletion(`deletion') stayers(`stay') nuisance(`nuisance') probes(32) seed(
+> 12345) targetweight(mass) preconditioner(auto) tolerance(1e-12) rank_toleranc
+> e(1e-12) nodisplay
+ 10.     di "CELL `algorithm' `deletion' `stay' `controls'"
+ 11.     quietly fevc y `covars'  [fw=copies], `common' centering(mean) mcse(al
+> l)
+ 12.     matrix point=e(kss)
+ 13.     matrix se=e(mcse)
+ 14.     matrix cov=e(mcse_cov)
+ 15.     gen byte keep=e(sample)
+ 16.     quietly sum y [fw=copies] if keep, meanonly
+ 17.     local center=r(mean)
+ 18.     if "`controls'"=="fixedoffset" {
+ 19.         quietly regress y x i.w i.f [fw=copies] if keep
+ 20.         local gamma=_b[x]
+ 21.         quietly sum x [fw=copies] if keep, meanonly
+ 22.         local center=`center'-`gamma'*r(mean)
+ 23.     }
+ 24.     quietly replace shifted=y-`center' 
+ 25.     quietly fevc shifted `covars' [fw=copies], `common' centering(none) mc
+> se(all)
+ 26.     di "DIFF point " mreldif(point,e(kss)) " se " mreldif(se,e(mcse)) " co
+> v " mreldif(cov,e(mcse_cov))
+ 27.     assert mreldif(point,e(kss))<1e-8
+ 28.     assert mreldif(se,e(mcse))<1e-8
+ 29.     assert mreldif(cov,e(mcse_cov))<1e-8
+ 30.     drop keep
+ 31.     local ++cells
+ 32.    }
+ 33.   }
+ 34.  }
+ 35. }
+CELL exact match movers no
+DIFF point 9.637e-16 se 0 cov 0
+CELL exact match movers joint
+DIFF point 1.379e-15 se 0 cov 0
+CELL exact match movers fixedoffset
+DIFF point 2.895e-16 se 0 cov 0
+CELL exact match both no
+DIFF point 7.828e-16 se 0 cov 0
+CELL exact match both joint
+DIFF point 6.326e-16 se 0 cov 0
+CELL exact match both fixedoffset
+DIFF point 2.178e-15 se 0 cov 0
+CELL exact observation movers no
+DIFF point 4.359e-16 se 0 cov 0
+CELL exact observation movers joint
+DIFF point 8.242e-16 se 0 cov 0
+CELL exact observation movers fixedoffset
+DIFF point 1.872e-16 se 0 cov 0
+CELL exact observation both no
+DIFF point 1.038e-15 se 0 cov 0
+CELL exact observation both joint
+DIFF point 5.426e-16 se 0 cov 0
+CELL exact observation both fixedoffset
+DIFF point 1.431e-15 se 0 cov 0
+CELL jla match movers no
+DIFF point 5.609e-16 se 6.653e-18 cov 6.493e-19
+CELL jla match movers joint
+DIFF point 4.425e-16 se 1.341e-17 cov 1.299e-18
+CELL jla match movers fixedoffset
+DIFF point 5.300e-16 se 2.688e-17 cov 1.733e-18
+CELL jla match both no
+DIFF point 3.942e-16 se 2.006e-17 cov 1.731e-18
+CELL jla match both joint
+DIFF point 4.317e-16 se 2.359e-17 cov 1.408e-18
+CELL jla match both fixedoffset
+DIFF point 1.922e-16 se 3.044e-17 cov 1.517e-18
+CELL jla observation movers no
+DIFF point 9.476e-17 se 4.323e-19 cov 1.694e-21
+CELL jla observation movers joint
+DIFF point 1.905e-16 se 1.297e-18 cov 8.470e-21
+CELL jla observation movers fixedoffset
+DIFF point 2.249e-16 se 2.163e-18 cov 1.186e-20
+CELL jla observation both no
+DIFF point 1.458e-16 se 1.296e-18 cov 3.388e-21
+CELL jla observation both joint
+DIFF point 2.644e-16 se 1.730e-18 cov 8.470e-21
+CELL jla observation both fixedoffset
+DIFF point 7.756e-17 se 2.596e-18 cov 1.355e-20
+
+. di "SIMPLE_MEAN_PASS cells=`cells' backend=`backend'"
+SIMPLE_MEAN_PASS cells=24 backend=rust
+
+. 
+end of do-file
+
+. 
+end of do-file

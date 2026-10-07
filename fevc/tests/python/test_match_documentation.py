@@ -105,6 +105,7 @@ def test_catalog_preserves_match_install_inventory():
     manifest = (ROOT / "fevc/fevc.pkg").read_text()
     additive_helpers = {
         "f fevc__numerical.ado",
+        "f fevc__centering.ado",
         "f fevc__rust_numerical.ado",
         "f fevc__simulate_data.ado",
         "f fevc__progress.ado",

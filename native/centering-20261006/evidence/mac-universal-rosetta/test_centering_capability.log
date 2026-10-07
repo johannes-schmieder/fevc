@@ -1,0 +1,46 @@
+. do /private/tmp/fevc-centering-plugin-refresh-20261006/checks/mac-universal-r
+> osetta/test_centering_capability/driver.do 
+
+. version 18
+
+. set processors 2
+    The maximum number of processors or cores being used is changed from 8 to
+    2.  It can be set to any number between 1 and 8
+
+. do "/private/tmp/fevc-centering-plugin-refresh-20261006/checks/mac-universal-
+> rosetta/test_centering_capability.do" "/private/tmp/fevc-centering-plugin-ref
+> resh-20261006/checks/mac-universal-rosetta/package" rust
+
+. version 18
+
+. clear all
+
+. set more off
+
+. adopath ++ "/private/tmp/fevc-centering-plugin-refresh-20261006/checks/mac-un
+> iversal-rosetta/package"
+  [1]              "/private/tmp/fevc-centering-plugin-refresh-20261006/checks/
+> mac-universal-rosetta/package"
+  [2]  (BASE)      "/Applications/Stata/ado/base/"
+  [3]  (SITE)      "/Applications/Stata/ado/site/"
+  [4]              "."
+  [5]  (PERSONAL)  "/Users/johannes/Library/Application Support/Stata/ado/perso
+> nal/"
+  [6]  (PLUS)      "/Users/johannes/Library/Application Support/Stata/ado/plus/
+> "
+  [7]  (OLDPLACE)  "~/ado/"
+
+. quietly fevc_rust probe
+
+. assert r(centering_api)==1
+
+. assert r(numerical_api)==2
+
+. di "CENTERING_CAPABILITY_PASS"
+CENTERING_CAPABILITY_PASS
+
+. 
+end of do-file
+
+. 
+end of do-file

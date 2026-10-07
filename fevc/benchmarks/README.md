@@ -33,6 +33,15 @@ covariance columns are `mcse_cov_raw_ij`, with one-based indices in the four
 main-target order. Historical protocols and archived receipts retain their
 original definitions; review their MCSE assumptions before any new campaign.
 
+Record `e(centering)` and `e(mcse_centering)` in any new centering comparison
+as well. Existing exporters are not assumed to include these new macros.
+Mean MCSE fixes the observed mean; Corrected also fixes its extra increment.
+Keep baseline None results distinct from centered estimates, and do not
+interpret Corrected JLA MCSE as uncertainty for the entire increment.
+The small local centering timing protocol and limits are in
+[the centering guide](../docs/CENTERING.md); they do not replace the original
+comparative benchmark protocols or qualify representative-scale costs.
+
 Write new results under ignored `.local/` or `output/`, with exact source,
 input, seed, command, and environment identities. Keep restricted data and
 licensed comparator source outside this repository. Do not commit raw logs,

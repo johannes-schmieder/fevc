@@ -1,0 +1,223 @@
+# Outcome centering
+
+`centering(none|mean|corrected)` selects the outcome factor in the leave-out
+bias correction. The default is `none`. All three modes work in exact and JLA
+point estimation in Mata and in a matching Rust build.
+
+Centering leaves the fitted coefficients, full-sample residuals, plug-in
+components, retained sample, target weights and deletion units unchanged.
+The `corrected` row of `e(results)` always means the final leave-out point
+estimate; it does not imply that `centering(corrected)` was requested.
+
+## The three modes
+
+| Mode | Bias-correction outcome factor | Additional point work |
+| --- | --- | --- |
+| `none` | Original retained working outcome `u`. | Ordinary estimator. |
+| `mean` | `z = u - ubar`. | One weighted mean and subtraction; no additional solves or random directions. |
+| `corrected` | The Mean correction plus an adjustment for estimating `ubar`. | Exact: one shared correction system. JLA: correction systems using the existing full leverage pool and its two halves. |
+
+The observed mean is
+\[
+\bar u=\frac{\sum_i f_i u_i}{\sum_i f_i},
+\]
+where `f_i` is the positive integer frequency weight on retained row `i`.
+It is the mean over literal observation copies. `targetweight()` defines
+the variance-component population and does not weight this mean.
+
+Under `nuisance(joint)`, `u` is the retained outcome. Under
+`nuisance(fixedoffset)`, first subtract the full fitted nuisance index,
+`u = y - Z gammahat`, then calculate its mean. The fixedoffset convention
+still holds the fitted nuisance index fixed.
+
+Centering supports the existing point-estimation combinations of controls,
+frequency and target weights, match or observation deletion, and
+`stayers(movers|both)`. Match deletion with `stayers(both)` retains its hybrid
+correction: mover match blocks and separate stayer observation copies.
+
+## MCSE and choosing a mode
+
+| Request | Numerical diagnostic |
+| --- | --- |
+| Exact, any centering, `mcse(all)` or developer `mcse(conditional)` | Zero MCSE: there is no JLA approximation. |
+| Exact or JLA, any centering, `mcse(off)` | MCSE and covariance unavailable/missing; additional MCSE work is skipped. |
+| JLA, None, `mcse(all)` | Ordinary local all-point-probe MCSE. |
+| JLA, Mean, `mcse(all)` | Ordinary calculation with the observed mean held fixed. |
+| JLA, Corrected, `mcse(all)` | Exactly Mean's MCSE and covariance for the same call and probes; the added centering increment is also held fixed. |
+
+The developer conditional diagnostic follows the same centering assumptions
+but remains conditional on the realized leverage sketch. No diagnostic here
+includes sampling uncertainty, finite-probe bias, or solver/roundoff error.
+
+**Corrected JLA's reported MCSE excludes numerical uncertainty in its added
+centering increment.** It is not the complete numerical standard error of the
+Corrected point estimate. Its calculation does not differentiate or replay
+the increment. `mcse(off)` skips diagnostic work, but still calculates the
+requested Corrected point estimate.
+
+For small exact problems, `centering(corrected)` is a practical choice when
+an adjustment for estimated-mean bias is wanted. For JLA, `centering(mean)`
+with the default `mcse(all)` gives the inexpensive centered estimate and a
+diagnostic under the fixed observed mean convention. Corrected JLA is also
+available when its additional point adjustment is wanted. The package does
+not choose between these conventions automatically, and small fixtures do
+not establish that the Corrected increment is negligible in every large sample.
+
+With worker–firm data already loaded:
+
+```stata
+* Small exact problem: estimated-mean adjustment, no numerical MCSE needed
+fevc log_wage i.year, worker(worker_id) firm(firm_id) ///
+    algorithm(exact) centering(corrected) mcse(off) backend(mata)
+
+* JLA: ordinary MCSE with observed mean held fixed
+fevc log_wage i.year, worker(worker_id) firm(firm_id) ///
+    algorithm(jla) centering(mean) probes(200) seed(12345) backend(mata)
+
+* JLA estimated-mean adjustment; MCSE still holds its increment fixed
+fevc log_wage, worker(worker_id) firm(firm_id) ///
+    algorithm(jla) centering(corrected) probes(200) seed(12345) backend(mata)
+```
+
+## Restrictions, availability and failure
+
+- Only Corrected JLA requires an even `probes()` budget of at least four.
+  Mean and None keep the ordinary probe rules. Exact Corrected does not
+  require an even budget; probes are not used by exact estimation.
+- Active centering (`mean` or `corrected`) cannot accompany `inference()`
+  or `project()`. The command rejects these combinations before estimator
+  RNG with `CENTERING_INFERENCE_UNSUPPORTED` (return code 498).
+  None retains the existing inference and projection support.
+- An unknown mode returns `INVALID_CENTERING` (return code 198).
+  Additional correction-system failures return a typed error; the command
+  does not substitute None or Mean or fall back after RNG.
+- Mata needs the current source. Rust active centering additionally needs
+  centering API 1. Native numerical API 2 is a separate capability.
+  `fevc_rust probe` exposes `r(centering_api)`; a missing/zero capability
+  does not support active centering.
+- The repository includes qualified Mac arm64, Rosetta x86-64,
+  universal and Linux x86-64 centering plugins, with full platform and
+  explicit Rust centering checks. Windows remains on its earlier plugin
+  without centering API 1. Native Intel hardware is not claimed.
+  An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
+  subject to the ordinary strict-consent rules. `backend(rust)` and explicit
+  Counter-V1 requests require the matching native capability and fail
+  preflight with `RUST_BACKEND_UNAVAILABLE` if it is absent.
+
+See [installation](../../INSTALLATION.md), [memory](MEMORY.md) and
+[native provenance](../../native/README.md). The package version remains
+`0.5.0-rc.1`; repository publication does not imply a release. The [native adoption record](../../native/centering-20261006/manifest.json)
+binds the four updated payloads. The owner authorized source publication on
+October 7 for the Windows hosted build; its private runtime checks are pending.
+
+## Stored results
+
+| Return | Value |
+| --- | --- |
+| `e(centering)` | `none`, `mean` or `corrected`. |
+| `e(mcse_centering)` for None | `uncentered` |
+| `e(mcse_centering)` for Mean | `fixed observed mean` |
+| `e(mcse_centering)` for Corrected | `fixed observed mean and fixed centering increment` |
+
+Both macros are recorded even in exact mode and with MCSE off.
+`e(mcse_centering)` describes the convention if a diagnostic is calculated;
+availability is determined separately by `e(mcse_available)` and status.
+`e(plugin)` is unchanged. `e(correction)` contains the selected correction,
+and `e(kss) = e(plugin) - e(correction)`. No separate covariance for the
+centering increment is returned. Record both macros with exported MCSE
+mode, method, status, availability, SEs and raw covariance; see
+[the return contract](FAILURES_AND_RETURNS.md).
+
+## Exact adjustment and its implementation
+
+The following notation expands frequency weights into `n` literal copies
+for the derivation only. Production keeps the collapsed representation.
+Let `X` be the active working design, `S = X'X`, `A` its inverse on the
+identified quotient, `H = X A X'`, `M = I - H` and `e = M u`.
+For deletion unit `g`, let `m_g` be its literal-copy count and let `1_g`
+be a vector of ones. Define
+\[
+r_g=M_{gg}^{-1}e_g,\qquad
+t_g=z_g(1_g'r_g),\qquad
+\xi_g=\frac{z_g(1_g'r_g)-r_g(1_g'z_g)}{m_g},\qquad
+a_g=\frac{1_g'M_{gg}1_g}{m_g}.
+\]
+Let `Z_d` be the deletion-unit indicator matrix and concatenate `t_g`
+into `t`. Solve
+\[
+K\kappa=b,\qquad K=n\,\mathrm{diag}(a)-Z_d'MZ_d,\qquad
+b_g=1_g'(Mt)_g-n\,1_g'M_{gg}\xi_g.
+\]
+The second term in `b_g` is block-local: it uses `M_gg xi_g`, not a
+global residual projection of all units' `xi`. Set
+\[
+\widehat c_g=\xi_g+\frac{\kappa_g}{m_g}1_g,\qquad
+B_{Q,g}=X_g A Q A X_g'.
+\]
+For the unchanged plug-in quadratic target `beta_hat' Q beta_hat`,
+\[
+\widehat\theta_Q^{\mathrm{mean}}
+=\widehat\theta_Q^{\mathrm{plugin}}-\sum_g z_g'B_{Q,g}r_g,\qquad
+\Delta_Q=-\sum_g1_g'B_{Q,g}\widehat c_g,\qquad
+\widehat\theta_Q^{\mathrm{corrected}}
+=\widehat\theta_Q^{\mathrm{mean}}+\Delta_Q.
+\]
+`Q` uses the requested target population; it does not change `ubar`.
+
+The implementation reuses the ordinary fit, inverse and deletion work.
+With `F_g=X_g'1_g` and `delta_g=n a_g-m_g`,
+`K = diag(delta) + F' A F`. It solves the corresponding coefficient
+system using the existing model geometry, with a bounded small Schur system
+for exceptional units and guards for literal-copy contrasts. It checks the
+original correction-system residual. There are no per-target refits and no
+production observation-square matrix. See
+[the numerical architecture](NUMERICAL_ARCHITECTURE.md).
+
+## Corrected JLA
+
+The correction map uses the ordinary deletion-maker inputs from the existing
+full leverage pool and from each of its two equal halves, retaining the exact
+low-dimensional control geometry. If `Delta_full`, `Delta_half1` and
+`Delta_half2` are the signed added target increments from these maps, it adds
+\[
+\Delta_{\mathrm{JLA}}
+=2\Delta_{\mathrm{full}}
+-\frac{\Delta_{\mathrm{half1}}+\Delta_{\mathrm{half2}}}{2}
+\]
+to the Mean point estimate. Each map uses the constrained projection/residual shares from its own
+pool and the exact low-dimensional control geometry. The increment does not
+reuse the ordinary finite-projection bias/variance formulas. No new leverage
+directions or target solves are drawn. This estimated-mean adjustment is distinct from the ordinary
+[finite-projection JLA correction](JLA_FINITE_PROJECTION.md).
+
+## Measured cost and validation scope
+
+The October 6 local timing check ran full `fevc` commands on two small
+weighted fixtures, both backends, exact/JLA(64)/JLA(256), MCSE off/all and
+all three centering modes. Each cell had one warmup and three rotated
+measured repetitions with the same data and seeds (288 commands).
+Data generation and Stata process startup were excluded.
+
+| Added median command time over None | Rust | Mata |
+| --- | --- | --- |
+| Mean, all 12 backend-specific cells | At most 1 ms | At most 1 ms |
+| Corrected exact, MCSE off/all, both fixtures | At most 1.9% | At most 6 ms |
+| Corrected JLA, MCSE off/all, both budgets/fixtures | At most 2 ms | 4–51 ms |
+
+The fixtures had 120 and 600 stored rows, frequency weights 1–3 and unequal
+target mass; the larger fixture had one joint control and observation
+deletion with stayers. All 24 Mean gates and eight Corrected exact gates
+passed the unchanged timing thresholds in the quiet repeat. The first run
+with background scientific work passed 23/24 Mean gates and is preserved.
+These are small local checks, not universal speed guarantees or evidence
+about representative-scale performance.
+
+Independent dense exact and three-pool JLA oracles, fixed-mean point/MCSE
+checks, both-backend option guards, explicit-CMG checks, the full Rust
+workspace, Python (879 tests), and integrated Stata/install checks passed.
+Astra/high reviewed each milestone and final source/timing evidence.
+The [testing guide](../TESTING.md) lists focused tests. The immutable local
+implementation checkpoint, logs, native build, source manifest, original
+timings and quiet repeat are under
+`~/research/Variance_Components/fevc-centering-simple-2026-10-06/final-local/`.
+These checks do not extend platform qualification or statistical coverage.

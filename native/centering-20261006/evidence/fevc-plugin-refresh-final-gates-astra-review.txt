@@ -1,0 +1,29 @@
+Final native refresh gates — read-only Astra review
+
+Disposition: ACCEPT the collected Linux focused centering results and the revised preparation/adoption guards. Both prior review holds are resolved in code. Authoritative retry accounting now independently verifies jobnumber 7911312, failed=0 and exit_status=0. All reviewed adoption prerequisites are satisfied; no actionable blocker remains. This accepts the bounded plan and completed evidence, not execution that has not occurred.
+
+Linux focused evidence independently verified
+
+linux/centering-native-v2/receipt.json is PASS, arch linux, and binds candidate 880f29d527d4cd0002e7ec76d4a3a5bf5f13fad89e306b1ca688ec120f574e62. The collected candidate has this exact digest. All five sanitized logs match receipt hashes and contain actual non-prompt terminal output:
+CENTERING_CAPABILITY_PASS
+SIMPLE_MEAN_PASS cells=24 backend=rust
+SIMPLE_EXACT_ORACLE_PASS cells=12 backend=rust
+SIMPLE_CORRECTED_MCSE_PASS cells=12 backend=rust
+SIMPLE_CENTERING_OPTIONS_PASS backend=rust
+All five recorded returncodes are zero and passed fields are true. These supplement the already accepted Linux full qualification and full/focused Mac evidence; total explicit native checks are now 25 across five execution scopes and four payloads.
+
+The repaired runner digest is bcae9a70c0588493783c0b56729facdc9a1de85a23326c9f6e606172160e11d3, matching the repair receipt. Its only logic change is owner-write on the temporary copied fevc.pkg before append. First attempt 7910976 is correctly retained as setup failure; its accounting records failed=0 but exit_status=1, illustrating why both fields must be checked.
+
+Revised guards and manifest
+
+prepare_native_record.py validates exact five-test name/marker mapping, count, true booleans, returncode zero, architecture, candidate digest, each sanitized-log digest and actual output marker for all five execution scopes. It requires matching jobnumber plus failed=0 and exit_status=0 for 7910950 and 7911312. Missing, empty or qacct-not-yet-found output fails before creating the adoption record or changing binaries. The earlier lagging output correctly withheld adoption; the subsequently collected authoritative record now satisfies all three required fields.
+
+The preparation step now creates the referenced native/centering-20261006/manifest.json before availability documentation changes, with status QUALIFIED_FOR_LOCAL_ADOPTION. It retains source-manifest hashes, baseline receipts, focused logs/receipts, both accepted job accounting records, failed-attempt evidence, runner/repair provenance, candidate and Windows digests, and explicit local/unpublished scope. The corrected Mac source-manifest path exists and was verified in the preceding review.
+
+adopt_plugins_and_docs.py invokes that strict preparation before copying payloads, copies only the four independently accepted hashes, preserves prior bytes, verifies destinations and unchanged Windows, regenerates parity with --write, and changes record status to LOCAL_ADOPTED_FOUR_PAYLOADS_WINDOWS_PENDING only at the successful end. No commit/push/release/global installation is invoked. Availability wording remains accurate for four local Mac/Linux payloads, with Windows and remote publication pending.
+
+Closeout
+
+Authoritative retry accounting now supplies jobnumber 7911312, failed=0 and exit_status=0. The script can proceed within the reviewed local adoption scope without a new scientific test campaign. Recheck cheap replacement contexts immediately before mutation as already planned. Preserve this final acceptance report alongside the earlier HOLD report so the retained review history clearly states that its narrow issues were resolved. After execution, verify final manifest status and all four destination hashes plus unchanged Windows; execution success has not been asserted by this review.
+
+Mac x86-64 scope is Rosetta rather than native Intel; no representative-scale cost or new statistical uncertainty claim is made. Windows artifact supply still requires explicit owner-authorized source publication and later exact-artifact private qualification. No Mac runtime/build work, tests, source edits or remote operations were performed during the reserved measurement window.

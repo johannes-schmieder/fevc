@@ -57,3 +57,4 @@ f fevc_timer.mata
 f fevc__timer.ado
 f fevc__numerical.ado
 f fevc__rust_numerical.ado
+f fevc__centering.ado

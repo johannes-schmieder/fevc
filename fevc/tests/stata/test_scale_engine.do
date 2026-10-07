@@ -116,7 +116,7 @@ void ksse_oracle__run()
         worker,firm,deletion,frequency,outcome,target,1e-12)
     assert(vckss_scale_engine__api_level() == 4)
     assert(vckss_scale_engine__build_id() ==
-        "vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
+        "vckss-scale-engine-api4-fe-buf1-nmc4-timers1-centering1")
     assert(design.status == "CONVERGED")
     assert(design.coefficient_cells == 6)
     assert(design.deletion_units == 8)

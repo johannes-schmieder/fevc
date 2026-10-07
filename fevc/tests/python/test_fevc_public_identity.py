@@ -68,7 +68,7 @@ def test_private_vckss_build_ids_cannot_be_rebranded() -> None:
     ):
         assert MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)
     for value in (
-        "vckss-api25-control-posterior-nmc4-timers1",
+        "vckss-api25-control-posterior-nmc4-timers1-centering1",
         "vckss-inference-api1-block-projection",
     ):
         assert not MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)

@@ -75,6 +75,38 @@ binaries. Rust-only features require a matching native build. See the
 Restart Stata after replacing a loaded native plugin. After a source update,
 restart Stata or run `discard` to clear cached programs and Mata definitions.
 
+## Outcome centering capability
+
+The current repository source implements `centering(none|mean|corrected)` in
+Mata and matching Rust builds. This repository contains qualified Mac
+arm64, Rosetta x86-64, universal and Linux x86-64 centering plugins. The
+Windows plugin is unchanged and lacks active centering while its hosted
+build and private qualification are pending.
+
+A current source installation can use `backend(mata)` on every platform.
+For Rust, update to the matching qualified repository plugin, restart Stata,
+and inspect its capability:
+
+```stata
+fevc_rust probe
+return list
+* Active native centering requires r(centering_api) == 1
+```
+
+A missing or zero `r(centering_api)` means the plugin does not support active
+centering. Numerical API 2 for all-probe MCSE is independent of centering
+API 1: a plugin supporting MCSE can still lack centering.
+`backend(auto)` may use Mata before preparation/RNG if the centering
+capability is absent, subject to strict native-consent rules.
+`backend(rust)` or explicit `rng(counter_v1)` requires the matching build.
+
+The [centering adoption record](native/centering-20261006/manifest.json) binds
+the four updated plugins to full platform and explicit Rust centering
+checks. The owner authorized source publication on October 7 for the Windows
+hosted build; its exact-artifact runtime qualification remains pending.
+Earlier binary records retain their original tested artifacts. See [centering](fevc/docs/CENTERING.md) and
+[native provenance](native/README.md).
+
 ## Upgrading an older development installation
 
 The September 18 prerelease cleanup renamed the 28 `_fevc*.ado` helper files
@@ -100,4 +132,7 @@ additional work. Native all-MCSE requires the numerical V2 interface. With an
 older plugin, an implicit default preserves point estimation and reports MCSE
 unavailable; an explicit `mcse(all)` requires a matching plugin. Restart Stata
 when replacing loaded Mata/native runtimes. Platform qualification and binary
-adoption are recorded in [the current checkpoint](fevc/PLAN.md).
+adoption are recorded in [native provenance](native/README.md).
+Mean's MCSE holds the observed mean fixed; Corrected's also holds its extra
+centering increment fixed. Exact enabled MCSE is zero; off is unavailable.
+See [the centering contract](fevc/docs/CENTERING.md).

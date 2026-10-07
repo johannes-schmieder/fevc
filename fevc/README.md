@@ -52,11 +52,15 @@ fevc log_wage, worker(worker_id) firm(firm_id) probes(500) seed(12345)
 Automatic backend selection prefers an available, compatible native backend.
 Use `backend(mata)` to select the portable implementation explicitly.
 The default `mcse(all)` reports approximate numerical MCSE for the four main
-point estimates, including local leverage- and target-probe uncertainty. Use
-`mcse(off)` to skip its extra work and display. This diagnostic excludes
+point estimates, including local leverage- and target-probe uncertainty under
+the chosen [centering convention](docs/CENTERING.md). Mean holds the observed
+mean fixed; Corrected also holds its added increment fixed. Use `mcse(off)`
+to skip the diagnostic's extra work and display. This diagnostic excludes
 finite-probe bias and sampling uncertainty; it is not an econometric standard
-error. It can accompany supported projection or sampling-inference requests,
-but those additional results receive no MCSE.
+error. With `centering(none)`, it can accompany supported projection or
+sampling-inference requests, but those additional results receive no MCSE.
+Exact MCSE is zero when enabled; `mcse(off)` returns missing diagnostics,
+including in exact mode.
 
 ```stata
 fevc log_wage, worker(worker_id) firm(firm_id)
@@ -71,7 +75,8 @@ The results are displayed below the decomposition and stored in
 `e(mcse_cov_raw)` and `e(mcse_cov)` contain the raw and usable 4 by 4
 numerical covariances in the same target order. Save `e(mcse_mode)`,
 `e(mcse_method)`, `e(mcse_status)` and `e(mcse_available)` with exported MCSEs
-and raw covariance. The `mcse` row of `e(results)` matches `e(mcse)`. A withheld
+and raw covariance, together with `e(centering)` and `e(mcse_centering)`.
+The `mcse` row of `e(results)` matches `e(mcse)`. A withheld
 numerical diagnostic retains valid point estimates. See the
 [returned-results contract](docs/FAILURES_AND_RETURNS.md).
 
@@ -88,6 +93,42 @@ Add `nolog` to retain only final results, or
 runtime and final output; `quietly` also suppresses progress. These options do
 not change estimation. Live progress requires a reporting-capable native build;
 Mata retains its current output.
+
+## Outcome centering
+
+Choose explicitly; the default remains `centering(none)`.
+
+| Option | Point estimate | MCSE convention |
+| --- | --- | --- |
+| `centering(none)` | Ordinary leave-out correction. | Ordinary numerical calculation. |
+| `centering(mean)` | Subtract the retained working-outcome mean only in the bias correction. | Treat that observed mean as fixed. |
+| `centering(corrected)` | Mean plus an adjustment for estimating the mean. | Treat both mean and additional increment as fixed. |
+
+The mean uses frequency weights, not `targetweight()`. With
+`nuisance(fixedoffset)`, subtract the fitted controls before taking the mean.
+The fit, plug-in components and retained sample are unchanged. Mean adds no
+solves or probes. Corrected exact adds one shared correction system;
+Corrected JLA uses the existing full leverage pool and its two halves and
+requires even `probes()` of at least four.
+
+```stata
+* Small exact problem
+fevc log_wage, worker(worker_id) firm(firm_id) ///
+    algorithm(exact) centering(corrected) mcse(off) backend(mata)
+
+* JLA with inexpensive Mean centering and fixed-mean numerical MCSE
+fevc log_wage, worker(worker_id) firm(firm_id) ///
+    algorithm(jla) centering(mean) seed(12345) backend(mata)
+```
+
+Corrected JLA returns exactly Mean's MCSE/covariance for the same call,
+excluding numerical uncertainty in the extra increment. Active centering
+cannot accompany `inference()` or `project()`. Both modes work in Mata
+and a matching native build. The repository Mac and Linux plugins expose
+centering API 1; the Windows build and private qualification remain pending.
+Automatic routing may use Mata when the capability is absent, while strict
+Rust/Counter-V1 requires the matching plugin. See [the centering guide](docs/CENTERING.md)
+for restrictions, stored assumptions, formulas and measured local costs.
 
 ## Results and inference
 

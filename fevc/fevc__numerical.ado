@@ -126,7 +126,7 @@ program define fevc__numerical, eclass
             quietly do `"`r(fn)'"'
         }
         capture mata: assert(vckss_nmc__module_api()==4 & ///
-            vckss_nmc__build_id()=="vckss-numerical-api4-vector-replay8" & vckss_nmc__schema()==1)
+            vckss_nmc__build_id()=="vckss-numerical-api4-vector-replay8-centering1" & vckss_nmc__schema()==1)
         if _rc {
             quietly _fevc_numerical_failure "STALE_NUMERICAL_RUNTIME"
             di as error "the loaded numerical runtime is stale; restart Stata or discard"

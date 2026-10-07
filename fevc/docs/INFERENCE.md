@@ -1,5 +1,11 @@
 # Inference
 
+All component-inference and fixed-effect-projection routes in this guide
+require `centering(none)`, the default. `centering(mean|corrected)` with
+active `inference()` or `project()` is rejected before estimator RNG.
+The centered point estimator's numerical MCSE is a separate diagnostic,
+with the fixed-mean/increment conventions in [CENTERING.md](CENTERING.md).
+
 ## Scope
 
 FEVC provides opt-in econometric component inference through two

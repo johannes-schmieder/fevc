@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "scope": "temporary copied package manifest only",
+  "original_runner_sha256": "3bb09e69794918af64888392a7d86c290306d48a645ceaee17b35db34807f623",
+  "repaired_runner_sha256": "bcae9a70c0588493783c0b56729facdc9a1de85a23326c9f6e606172160e11d3",
+  "read_only_copy_check": "PASS",
+  "syntax": "PASS",
+  "estimator_and_candidate_unchanged": true
+}

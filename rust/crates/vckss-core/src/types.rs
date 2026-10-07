@@ -424,3 +424,12 @@ mod tests {
         assert_eq!(budget.committed(), 60);
     }
 }
+
+/// Outcome factor used by the leave-out covariance proxy.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Centering {
+    #[default]
+    None,
+    Mean,
+    Corrected,
+}

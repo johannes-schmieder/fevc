@@ -8,6 +8,7 @@
 
 pub mod batch;
 pub mod batch_plan;
+mod centering;
 pub mod cmg;
 pub mod component_inference;
 pub mod control_basis;

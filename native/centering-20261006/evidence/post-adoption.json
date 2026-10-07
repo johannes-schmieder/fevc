@@ -1,0 +1,30 @@
+{
+  "schema": "FEVC-CENTERING-POST-ADOPTION-CHECKS-V1",
+  "status": "PASS",
+  "snapshot_sha256": "2e1e23062afc4b945a99e4b0b7fc43bd227badcfe35ef0bb35aa1f41099f9c60",
+  "compiled_source_unchanged": true,
+  "mata_ado_runtime_unchanged": true,
+  "changed_after_freeze": [
+    "INSTALLATION.md",
+    "README.md",
+    "fevc/CHANGELOG.md",
+    "fevc/PLAN.md",
+    "fevc/README.md",
+    "fevc/benchmarks/README.md",
+    "fevc/docs/CENTERING.md",
+    "fevc/docs/DECISIONS.md",
+    "fevc/docs/RC_BINARY_PAYLOAD.md",
+    "fevc/docs/RUST_MATA_PARITY.md",
+    "fevc/docs/rust_mata_parity.json",
+    "fevc/fevc.sthlp",
+    "native/README.md",
+    "rust/README.md",
+    "rust/TEST_PLAN.md",
+    "rust/stata_backend/README.md",
+    "rust/stata_backend/write_windows_checks.ps1",
+    "windows-ci.do"
+  ],
+  "adopted_manifest_sha256": "c01f106c0661485d4d285d17e4bcacb034f6d12e2276a56db574e4d9b20146ab",
+  "windows_unchanged": true,
+  "markdown_links_help_anchors": "PASS"
+}

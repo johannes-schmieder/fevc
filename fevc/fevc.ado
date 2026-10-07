@@ -66,6 +66,7 @@ program define _fevc_command, eclass
     // any runtime work so an interrupted earlier command cannot leak into a
     // later typed failure.
     quietly _vckss_route_context_clear
+    global VCKSS_CENTERING none
     foreach key in ACTIVE PRESENT CHECK MODE ADVISORY BYTES FORECAST {
         capture macro drop VCKSS_MEMORY_`key'
     }
@@ -138,6 +139,8 @@ program define _fevc_command, eclass
     if `command_rc' & "$VCKSS_NMC_ERR"!="" {
         quietly _vckss_post_failure "$VCKSS_NMC_ERR" `"$VCKSS_NMC_DETAIL"'
     }
+    if !`command_rc' fevc__centering post
+    capture macro drop VCKSS_CENTERING
     quietly fevc__numerical clear
     if !`command_rc' quietly fevc__stayer_population_post
     if !`command_rc' & "$VCKSS_MEMORY_ACTIVE" == "1" {
@@ -4287,7 +4290,7 @@ program define _vckss_impl, eclass sortpreserve
         PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(string)                        ///
         ENGINE(string) BACKEND(string) RNG(string) WALLSeconds(string) ///
-        NATIVEThreads(string) MCSE(string) NUMERICALMCSE(string)                ///
+        NATIVEThreads(string) MCSE(string) NUMERICALMCSE(string) CENTERING(string)                ///
         PREConditioner(string) MEMory_gib(string) MEMorycheck(string)                ///
         SEED(integer 8675309) TOLerance(string)                  ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
@@ -4310,6 +4313,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
+    _vckss_centering request `"`centering'"' `"`inference'"' `"`project'"'
     fevc__numerical request `"`mcse'"' `"`inference'"' `"`project'"' `"`numericalmcse'"'
     _fevc_native_threads `"`nativethreads'"'
     global VCKSS_REPORT_LEVEL 0
@@ -4635,56 +4639,8 @@ program define _vckss_impl, eclass sortpreserve
     }
     local active_processors = c(processors)
 
-    if `probes' < 2 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "probes() must be at least two"
-        exit 198
-    }
-    if `batch' < 1 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "batch() must be positive"
-        exit 198
-    }
-    if `seed' < 0 | `seed' > 2147483646 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "seed() must be between zero and 2,147,483,646"
-        exit 198
-    }
-    if `tolerance' < 1e-15 | `tolerance' > 1e-4 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "tolerance() must lie in [1e-15,1e-4]"
-        exit 198
-    }
-    if `maxiter' < 1 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "maxiter() must be positive"
-        exit 198
-    }
-    if `exact_limit' < 2 | `exact_limit' > 2000 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "exact_limit() must be between 2 and 2,000"
-        exit 198
-    }
-    if `rank_tolerance' < 1e-14 | `rank_tolerance' >= 0.1 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "rank_tolerance() must lie in [1e-14,0.1)"
-        exit 198
-    }
-    if `block_tolerance' < 1e-14 | `block_tolerance' >= 1 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "block_tolerance() must lie in [1e-14,1)"
-        exit 198
-    }
-    if `blocksize_limit' < 1 | `blocksize_limit' > 1000000 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "blocksize_limit() must be between 1 and 1,000,000"
-        exit 198
-    }
-    if `physical_limit' < 1 | `physical_limit' > 1000000000 {
-        quietly _vckss_post_failure "INVALID_TUNING"
-        di as error "physical_limit() must be between 1 and 1,000,000,000"
-        exit 198
-    }
+    _vckss_centering tuning `probes' `batch' `seed' `tolerance' `maxiter' `exact_limit' `rank_tolerance' `block_tolerance' `blocksize_limit' `physical_limit'
+
 
     // Preflight the qualified CMG cell before sample transformation.
     local rust_full_cmg_platform =                         ///
@@ -4887,6 +4843,9 @@ program define _vckss_impl, eclass sortpreserve
         }
         capture quietly fevc_rust probe
         local rust_probe_rc = _rc
+        if !`rust_probe_rc' & "$VCKSS_CENTERING"!="none" {
+            if r(centering_api)!=1 local rust_probe_rc=498
+        }
         if !`rust_probe_rc' & `rust_full_cmg_platform' & inlist("`algorithm'","auto","exact") {
             if r(exact_api)!=1 | ("`algorithm'"=="auto" & r(exact_resolved_api)!=2) | ///
                 ("`algorithm'"=="exact" & r(exact_legacy_api)!=1) ///
@@ -5473,7 +5432,7 @@ program define _vckss_impl, eclass sortpreserve
         `prep_mark_validate_seconds'
     quietly mata: vckss_timer__on($VCKSS_STAGE_SELECTION_TIMER)
 
-    local expected_mata_build "vckss-api25-control-posterior-nmc4-timers1"
+    local expected_mata_build "vckss-api25-control-posterior-nmc4-timers1-centering1"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 24 &                 ///
@@ -6490,7 +6449,7 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(                                 ///
                 vckss_scale_engine__api_level() == 4 &            ///
                 vckss_scale_engine__build_id() ==                 ///
-                "vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
+                "vckss-scale-engine-api4-fe-buf1-nmc4-timers1-centering1")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_ENGINE"
@@ -6507,7 +6466,7 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: assert(                             ///
                     vckss_scale_engine__api_level() == 4 &        ///
                     vckss_scale_engine__build_id() ==             ///
-                    "vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
+                    "vckss-scale-engine-api4-fe-buf1-nmc4-timers1-centering1")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -9713,4 +9672,14 @@ program define _vckss_stage_timer_ids, rclass
     version 18.0
     return scalar selection_timer = 31
     return scalar validation_timer = 32
+end
+
+program define _vckss_centering, eclass
+    version 18
+    capture macro drop VCKSS_CENTER_ERROR
+    capture noisily fevc__centering `0'
+    local rc=_rc
+    if `rc' quietly _vckss_post_failure "$VCKSS_CENTER_ERROR"
+    capture macro drop VCKSS_CENTER_ERROR
+    exit `rc'
 end

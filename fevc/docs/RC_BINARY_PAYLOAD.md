@@ -6,6 +6,28 @@ x86_64. This authorizes local candidate preparation and private platform
 tests, not publication or tagging. No current platform success is implied
 by this preparation document.
 
+## October 6 centering refresh
+
+The owner requested updated plugins for the smaller None/Mean/Corrected
+implementation. Local macOS and private Linux/Windows candidate preparation
+and tests are in scope. The October 7 instruction authorizes committing and
+pushing the reviewed implementation, documentation and qualified payloads,
+providing the source for the hosted Windows build. Its private qualification
+is still pending; no tag or release is authorized. The four local Mac/Linux payloads have now passed full
+platform and explicit Rust centering checks and are adopted in the local
+checkout. [The adoption record](../../native/centering-20261006/manifest.json)
+binds tested bytes and source identity. Windows remains unchanged.
+Historical payload records below keep their original scope.
+
+Active native centering requires additive centering API 1 independently of
+numerical API 2. In addition to ordinary platform gates, run the four
+`test_centering_mean.do`, `test_centering_exact.do`,
+`test_centering_jla.do` and `test_centering_options.do` files with explicit
+`rust` against each exact candidate/architecture. The ordinary Stata suite
+invokes centering in Mata and does not establish native centering by itself.
+The independent three-pool map unit test remains a separate Rust gate.
+See [CENTERING.md](CENTERING.md) for methods and MCSE assumptions.
+
 ## Current distribution scope
 
 On September 26 the owner authorized deletion-unit mover integration, all five

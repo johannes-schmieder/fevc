@@ -51,6 +51,7 @@ pub(super) struct State {
     offsets: Vec<f64>,
     folds: Vec<[Sum; 6]>,
     r: u32,
+    pub(super) outcome_mean: f64,
     batch: usize,
     status: Status,
     minimum_constrained: f64,
@@ -73,6 +74,7 @@ impl State {
             offsets: statistical_buffer(n, 0.0, interrupt)?,
             folds: statistical_buffer(n, [Sum::default(); 6], interrupt)?,
             r: options.probes,
+            outcome_mean: 0.0,
             batch: options.leverage_batch_width.clamp(1, 4),
             status: if clipped {
                 Status::NonsmoothAdjustment
@@ -143,7 +145,10 @@ impl State {
             let f = problem.cell_firm[cell] as usize;
             let sw = worker_side.0[w] + worker_side.1[f];
             let sf = firm_side.0[w] + firm_side.1[f];
-            let mass = plan.deletion.outcome_sum[g] * adjustment.residual_mass[g] / count;
+            let mass = (plan.deletion.outcome_sum[g]
+                - self.outcome_mean * plan.deletion.physical_count[g] as f64)
+                * adjustment.residual_mass[g]
+                / count;
             for (j, kappa) in [sw * sw, sf * sf, sw * sf].into_iter().enumerate() {
                 self.folds[g][fold * 3 + j].add(mass * kappa)
             }

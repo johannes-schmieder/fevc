@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-rc.1 22sep2026}{...}
+{* *! version 0.5.0-rc.1 06oct2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -21,6 +21,7 @@ For methodological details, see the {help fevc##reference:companion fevc paper}.
 {pstd}
 {help fevc##quickstart:Example} | {help fevc##syntax:Syntax} |
 {help fevc##options:Main options} | {help fevc##sample:Leave-out sample} |
+{help fevc##centering:Outcome centering} |
 {help fevc##advanced:Advanced options} | {help fevc##examples:More examples}
 
 {marker quickstart}
@@ -77,6 +78,7 @@ Only frequency weights ({cmd:[fw=}{it:frequency}{cmd:]}) are supported.
     {cmd:deletionid(}{it:varname}{cmd:)}{col 40}optional match identifier
     {cmd:stayers(both|movers)}{col 40}include eligible stayers or movers only
     {cmd:probes(}{it:#}{cmd:)}{col 40}approximation precision; default 200
+    {cmd:centering(none|mean|corrected)}{col 40}outcome centering; default none
     {cmd:mcse(all|off)}{col 40}numerical MCSE; default all
     {cmd:seed(}{it:#}{cmd:)}{col 40}estimation seed; default 8675309
     {cmd:nolog}{col 40}suppress progress messages
@@ -136,10 +138,15 @@ of both leverage and target probes.
 
 {phang}
 {cmd:mcse(all)}, the default, reports approximate numerical MCSE for the four
-main point estimates when both point probe stages are redrawn. It uses two
+main point estimates when both point probe stages are redrawn, holding the
+observed mean fixed under {cmd:centering(mean)} and also the added increment
+fixed under {cmd:centering(corrected)}. Corrected MCSE excludes numerical
+uncertainty in that increment; see {help fevc##centering:Outcome centering}.
+It uses two
 target folds and deterministic replay of the original leverage directions.
 It excludes finite-probe bias, solver and floating-point error, and sampling
-uncertainty. Exact estimation returns zero numerical covariance without replay.
+uncertainty. Exact estimation with MCSE enabled returns zero numerical
+covariance without replay.
 A substantive negative eigenvalue or nonsmooth/failed replay withholds the
 all-probe diagnostic while retaining a valid point estimate. Raw signed
 covariance remains available when computed.
@@ -152,8 +159,8 @@ an error. The developer-only {cmd:mcse(conditional)} retains the earlier MCSE
 conditional on the realized leverage sketch and performs no leverage replay.
 
 {phang}
-MCSE may accompany any otherwise supported {cmd:project()} or sampling-inference
-request. It describes the main point estimates only. No MCSE is computed for
+With {cmd:centering(none)}, MCSE may accompany any otherwise supported
+{cmd:project()} or sampling-inference request. It describes the main point estimates only. No MCSE is computed for
 projection coefficients, their covariance, sampling covariance, confidence
 intervals or their additional simulations. Numerical covariance is never
 posted as econometric {cmd:e(V)}. The main display and {cmd:estat diagnostics}
@@ -227,6 +234,76 @@ With controls, this total concerns the two fixed effects; it is not a
 bias-corrected decomposition of the controls or the full model's R-squared.
 Point estimation remains the default. Standard errors and confidence
 intervals require an explicit {help fevc##inference:inference request}.
+
+{marker centering}
+{title:Outcome centering}
+
+{pstd}
+Use {cmd:centering(none|mean|corrected)} in exact or JLA point estimation.
+The default is {cmd:none}. The modes change only the bias-correction outcome
+factor and, for Corrected, its estimated-mean adjustment. Fitted coefficients,
+full-sample residuals, plug-in components, sample, target weights and deletion
+units are unchanged. The {cmd:corrected} result row always means the final
+leave-out estimate, whichever centering mode is selected.
+
+{phang}
+{cmd:centering(none)} preserves the ordinary estimator and its MCSE calculation.
+
+{phang}
+{cmd:centering(mean)} subtracts the frequency-weighted mean of the retained
+working outcome in bias-correction terms. This mean uses literal-copy frequency
+mass, {bf:not} {cmd:targetweight()}. Under {cmd:nuisance(fixedoffset)}, first
+subtract the full fitted nuisance index, then take its mean. Mean adds only
+a mean calculation and subtraction; it adds no solves or random directions.
+Its numerical MCSE holds that observed mean fixed.
+
+{phang}
+{cmd:centering(corrected)} adds an adjustment for the bias induced by estimating
+the mean. Exact reuses the fit, inverse and deletion calculations and adds one
+shared coefficient-space correction system. JLA uses the existing full
+leverage pool and its two equal halves, requiring an even {cmd:probes()} budget
+of at least four. Exact Corrected does not require an even budget; exact
+estimation does not use probes. No additional JLA directions or target solves
+are added.
+
+{pstd}
+Corrected JLA reports exactly Mean's numerical MCSE and covariance for the same
+call and probes, treating the added centering increment as fixed.
+{bf:Its MCSE excludes numerical uncertainty in that increment.}
+The developer conditional diagnostic follows the same fixed-mean/increment
+convention. Exact MCSE is zero when enabled. With {cmd:mcse(off)}, diagnostics
+are unavailable/missing even in exact mode; Corrected point work is still done.
+
+{pstd}
+For a small exact problem, use {cmd:algorithm(exact) centering(corrected)}
+when the estimated-mean adjustment is wanted. For JLA, {cmd:centering(mean)}
+with the default {cmd:mcse(all)} gives inexpensive centering and a numerical
+diagnostic with the observed mean fixed. These are explicit choices; the
+command does not automatically select a centering mode.
+
+{pstd}
+Active centering ({cmd:mean} or {cmd:corrected}) cannot accompany
+{cmd:inference()} or {cmd:project()}. The command rejects these combinations
+before estimator RNG. A failed correction solve returns a typed error.
+It does not substitute an uncentered or Mean result.
+
+{pstd}
+Mata supports active centering with the current source. Rust additionally
+requires centering API 1, shown by {cmd:fevc_rust probe} as
+{cmd:r(centering_api)}. Numerical API 2 for MCSE is a separate capability.
+The repository includes qualified Mac arm64, Rosetta x86-64, universal
+and Linux x86-64 centering plugins. Windows awaits refresh. An older plugin may lead
+{cmd:backend(auto)} to Mata before preparation/RNG under the ordinary consent
+rules. Strict {cmd:backend(rust)} or explicit {cmd:rng(counter_v1)} requires a
+matching plugin. Windows build and private qualification remain pending.
+Repository publication does not imply a release.
+
+{pstd}
+The choice and MCSE assumptions are recorded in {cmd:e(centering)} and
+{cmd:e(mcse_centering)}. For the formulas, local timing evidence and complete
+restrictions, see the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/CENTERING.md":centering guide}
+({cmd:fevc/docs/CENTERING.md} in the matching source checkout).
 
 {marker postestimation}
 {title:Postestimation display}
@@ -535,6 +612,14 @@ zero MCSE, {cmd:conditional_target_v1} for the developer diagnostic, or
 {cmd:none} when off. Use {cmd:matrix list e(mcse)} or {cmd:estat diagnostics}.
 
 {pstd}
+{cmd:e(centering)} records {cmd:none}, {cmd:mean} or {cmd:corrected}.
+{cmd:e(mcse_centering)} is {cmd:uncentered}, {cmd:fixed observed mean}, or
+{cmd:fixed observed mean and fixed centering increment}, respectively.
+These macros are recorded in exact mode and with MCSE off; availability
+remains a separate diagnostic. Centering leaves {cmd:e(plugin)} unchanged
+and changes {cmd:e(correction)}; {cmd:e(kss)} is their difference.
+
+{pstd}
 {cmd:e(mcse_cov_raw)} and {cmd:e(mcse_cov)} are raw and usable 4 by 4 numerical
 covariances in the same target order. The total target is the exact linear
 combination worker variance + firm variance + 2 x covariance. Material negative
@@ -554,7 +639,8 @@ Compatibility returns {cmd:e(numerical_mcse)} and
 vector is {cmd:e(mcse_conditional)}, with
 {cmd:e(mcse_conditional_available)}, when all or conditional mode is selected.
 Exporters should save {cmd:e(mcse)}, mode, method, status, availability and
-{cmd:e(mcse_cov_raw)} rather than treating a withheld MCSE as zero.
+{cmd:e(mcse_cov_raw)}, together with {cmd:e(centering)} and
+{cmd:e(mcse_centering)}, rather than treating a withheld MCSE as zero.
 
 {pstd}
 {cmd:e(mc_replay_rhs)}, {cmd:e(mc_replay_attempted_rhs)},

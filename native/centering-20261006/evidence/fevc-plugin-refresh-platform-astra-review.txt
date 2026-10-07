@@ -1,0 +1,31 @@
+Native platform milestone — read-only Astra review
+
+Disposition: ACCEPT full macOS qualification plus its previously accepted focused centering evidence, and ACCEPT the collected Linux baseline qualification. No actionable blocker in those completed gates. Linux explicit native centering remains pending; Windows source publication/artifact build/private qualification remains pending. No all-five-platform adoption or publication acceptance is implied.
+
+macOS
+
+macos-qualification.txt records terminal LOCAL_CHECKPOINT_DIRTY_TREE completion, arm64 PASS_NATIVE, Rosetta AVAILABLE/x86_64 PASS_ROSETTA, successful Rust fmt/clippy/tests and C shim/ABI gates, signed thin/universal audits, platform routes and clean installations. checks/macos-qualifier.log ends with successful receipt/staging completion. All 116 non-environment substantive sanitized Stata transcripts contain actual non-prompt PASS output; two additional environment transcripts identify the tested runtimes. Console copies are not used as success evidence.
+
+All three binaries are byte-identical across macos-artifacts/candidates, macos-candidates, source-v2 staging, full receipt and the four accepted focused-check receipts:
+arm64 d497f387c45354d55749f1489ff4fe822a953b402869dc24b3bdbf7f25cefb04
+x86_64 9c41461a654dddff83c3a4124888773143bd0be17a62dccc8257757f96cb68c6
+universal a6baf32b6a5c8ea7f26521d1f736a53b09322076fa925e438c7b16e0a8a4a7e3
+
+The 264-entry qualifier source manifest hashes to c1fb8772e0843544e50bedb7aa25821ee7a0e0b8b4236d8b729ddd68177df9e1, exactly the receipt value. Every entry matches both source-v2 and snapshot-v2; the qualifier script digest also matches. This includes the new helper and focused source tests, with recursive Rust compile inputs. The previously verified full 1,333-file snapshot and compatibility receipt bind the wider runtime/package tree. Later docs and Windows driver changes are explicitly distinguished from compiled/installed estimator inputs.
+
+Scope is native Apple Silicon plus Rosetta compatibility, including universal execution under both aliases. It is not native Intel evidence, representative-scale performance qualification, Linux evidence or Windows evidence. These exact Mac candidate bytes satisfy the reviewed prerequisites for later local adoption.
+
+Linux baseline
+
+Locally collected linux/receipts/wrapper.txt records PASS for job 7910950 and source bundle fe9b99370714e6ad8da9b86e3ef9fc0a719d0d3d6dc1e30f570b0d93fe12a340. linux/qacct-7910950.txt agrees on job identity and records failed=0, exit_status=0. linux-qualification.txt records DIRTY_WORKTREE_SNAPSHOT_V1, the same source commit/bundle, successful native/Rust/C/ABI gates, full Stata suite and clean installation on Linux x86-64/Stata MP19.
+
+The collected ELF candidate hashes to 880f29d527d4cd0002e7ec76d4a3a5bf5f13fad89e306b1ca688ec120f574e62, exactly its qualification receipt. This is the candidate digest, not the receipt digest. The collected qualification-source.sha256 hashes to the receipt value 5548d6c37d9ca48a4d767b2068ae8eb99534c9c2908858f09b5b623ec6fd076a. Its 1,335 entries match every one of the 1,333 frozen snapshot entries, with only SOURCE_COMMIT.txt and SOURCE_SNAPSHOT_KIND.txt added. There are no snapshot-content mismatches. Actual sanitized logs contain the lifecycle, diagnostic, shared-atom, public-route, control-panel, full-suite and clean-install PASS markers. Collection permission-attribute warnings do not invalidate these verified content hashes.
+
+Pending prerequisites
+
+1. Require dependent Linux focused job 7910976 to finish successfully, collect its actual explicit Rust capability/mean/exact/JLA/options markers and source/harness bindings, and verify its tested digest is the same ELF candidate. Baseline full-suite centering is Mata and cannot replace this step.
+2. Preserve the exact Mac/Linux bytes; no rebuild, re-signing or other mutation between qualification and adoption. Record new per-platform manifests and hashes; retain earlier failed attempts and old dated receipts unchanged.
+3. Windows still needs owner-authorized source commit/push/hosted dispatch and exact downloaded-artifact private runtime qualification. None of these receipts imply Windows success or authorize publication/release/global installation.
+4. After the remaining gates, stage only the exact accepted bytes and verify target-path hashes; update active capabilities with actual per-platform scope. Keep dirty-source identities, Rosetta limits and local timing limits explicit.
+
+No source edits, builds, Stata executions or remote operations were performed for this review. This report accepts completed evidence, not pending jobs.

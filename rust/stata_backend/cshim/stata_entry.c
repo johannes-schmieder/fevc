@@ -912,6 +912,7 @@ static int vckss_probe(void)
          * Identify the Stata selectors independently, without reusing ABI bits. */
         (status = vckss_save_u64("__vckss_rust_progress_api", 2u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_execution_api", 3u)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_centering_api", vckss_rust_centering_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_numerical_api", vckss_rust_numerical_schema_v2())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_api", vckss_rust_exact_execution_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_resolved_api", vckss_rust_exact_resolved_execution_schema_v2())) != 0 ||
@@ -4163,6 +4164,13 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
     }
     if (strcmp(argv[0], "requestcapability") == 0) {
         return vckss_request_capability(argc, argv);
+    }
+    if (strcmp(argv[0], "centeringv1") == 0) {
+        uint64_t generation; uint32_t mode;
+        if (argc!=3 || vckss_parse_u64(argv[1],&generation)!=0 || vckss_parse_u32(argv[2],&mode)!=0 || mode>2)
+            return vckss_usage("invalid centering request");
+        int rc=vckss_rust_engine_centering_v1(generation,mode);
+        return rc==0 ? 0 : vckss_rust_failure(rc);
     }
     if (strcmp(argv[0], "prepare") == 0) {
         return vckss_prepare(argc, argv);

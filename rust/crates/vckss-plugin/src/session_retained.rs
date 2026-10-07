@@ -119,6 +119,7 @@ pub(crate) fn duration_ns(duration: Duration) -> u64 {
 
 #[derive(Clone, Debug)]
 pub struct PreparedProblemWithMask {
+    pub centering: vckss_core::types::Centering,
     pub problem: CompressedProblem,
     pub plan: Option<JlaPlan>,
     pub deletion: DeletionMode,
@@ -425,6 +426,7 @@ impl PreparedProblemWithMask {
         };
         interrupt.checkpoint("session_prepare_final")?;
         Ok(Self {
+            centering: vckss_core::types::Centering::None,
             problem,
             plan,
             deletion,

@@ -1,0 +1,14 @@
+centering-linux.sge: OK
+run_centering_candidate.py: OK
+Traceback (most recent call last):
+  File "/projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plugins/submissions/run_centering_candidate.py", line 19, in <module>
+    (package/'fevc.pkg').write_text(manifest+'f '+target+'\n')
+  File "/usr/lib64/python3.6/pathlib.py", line 1149, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors) as f:
+  File "/usr/lib64/python3.6/pathlib.py", line 1117, in open
+    opener=self._opener)
+  File "/usr/lib64/python3.6/pathlib.py", line 961, in _opener
+    return self._accessor.open(self, flags, mode)
+  File "/usr/lib64/python3.6/pathlib.py", line 310, in wrapped
+    return strfunc(str(pathobj), *args)
+PermissionError: [Errno 13] Permission denied: '/projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plugins/centering-native/package/fevc.pkg'

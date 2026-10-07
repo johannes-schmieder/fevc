@@ -1,0 +1,44 @@
+. do /projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plugins/centering-
+> native-v2/test_centering_capability/driver.do 
+
+. version 18
+
+. set processors 2
+    The maximum number of processors or cores being used is changed from 4 to
+    2.  It can be set to any number between 1 and 4
+
+. do "/projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plugins/centering
+> -native-v2/test_centering_capability.do" "/projectnb/welfgr/vckss/runs/202610
+> 07T023500Z-centering-plugins/centering-native-v2/package" rust
+
+. version 18
+
+. clear all
+
+. set more off
+
+. adopath ++ "/projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plugins/c
+> entering-native-v2/package"
+  [1]              "/projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plu
+> gins/centering-native-v2/package"
+  [2]  (BASE)      "/share/pkg.8/stata-mp/19/install/bin/ado/base/"
+  [3]  (SITE)      "/share/pkg.8/stata-mp/19/install/ado/"
+  [4]              "."
+  [5]  (PERSONAL)  "~/ado/personal/"
+  [6]  (PLUS)      "~/ado/plus/"
+  [7]  (OLDPLACE)  "~/ado/"
+
+. quietly fevc_rust probe
+
+. assert r(centering_api)==1
+
+. assert r(numerical_api)==2
+
+. di "CENTERING_CAPABILITY_PASS"
+CENTERING_CAPABILITY_PASS
+
+. 
+end of do-file
+
+. 
+end of do-file

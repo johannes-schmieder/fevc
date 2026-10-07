@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-tb4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      centering-linux.sge 
+jobnumber    7910976             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Oct  6 22:28:50 2026
+start_time   Tue Oct  6 22:50:56 2026
+end_time     Tue Oct  6 22:50:57 2026
+granted_pe   omp                 
+slots        2                   
+failed       0    
+exit_status  1                   
+ru_wallclock 1            
+ru_utime     0.654        
+ru_stime     0.275        
+ru_maxrss    20432               
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    23872               
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   21832               
+ru_oublock   15848               
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     2094                
+ru_nivcsw    65                  
+cpu          0.929        
+mem          0.001             
+io           0.007             
+iow          0.000             
+maxvmem      48.590M
+arid         undefined

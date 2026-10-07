@@ -85,6 +85,7 @@ fevc/fevc.ado
 fevc/fevc.mata
 fevc/fevc.pkg
 fevc/fevc.sthlp
+fevc/fevc__centering.ado
 fevc/fevc__component_model_route.ado
 fevc/fevc__control_failure_post.ado
 fevc/fevc__display.ado

@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-gr4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      centering-v2        
+jobnumber    7911312             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Oct  6 22:53:00 2026
+start_time   Tue Oct  6 22:55:01 2026
+end_time     Tue Oct  6 22:55:14 2026
+granted_pe   omp                 
+slots        2                   
+failed       0    
+exit_status  0                   
+ru_wallclock 13           
+ru_utime     12.236       
+ru_stime     1.906        
+ru_maxrss    50232               
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    53671               
+ru_majflt    16                  
+ru_nswap     0                   
+ru_inblock   23728               
+ru_oublock   16464               
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     32154               
+ru_nivcsw    1025                
+cpu          14.142       
+mem          5.141             
+io           7.712             
+iow          0.000             
+maxvmem      617.262M
+arid         undefined

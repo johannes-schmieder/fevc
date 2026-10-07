@@ -63,6 +63,7 @@ program define fevc_rust, rclass
         capture scalar drop __vckss_rust_progress_api
         capture scalar drop __vckss_rust_execution_api
         capture scalar drop __vckss_rust_numerical_api
+        capture scalar drop __vckss_rust_centering_api
         capture scalar drop __vckss_rust_exact_api
         capture scalar drop __vckss_rust_exact_resolved_api
         capture scalar drop __vckss_rust_exact_legacy_api
@@ -76,7 +77,7 @@ program define fevc_rust, rclass
         local execution_api = 0
         capture confirm scalar __vckss_rust_execution_api
         if !_rc local execution_api = scalar(__vckss_rust_execution_api)
-        foreach name in numerical_api exact_api exact_resolved_api exact_legacy_api {
+        foreach name in centering_api numerical_api exact_api exact_resolved_api exact_legacy_api {
             local `name' = 0
             capture confirm scalar __vckss_rust_`name'
             if !_rc local `name' = scalar(__vckss_rust_`name')
@@ -88,10 +89,11 @@ program define fevc_rust, rclass
         return scalar deterministic_parallelism = scalar(__vckss_rust_deterministic)
         return scalar execution_api = `execution_api'
         return scalar numerical_api = `numerical_api'
+        return scalar centering_api = `centering_api'
         return scalar exact_api = `exact_api'
         return scalar exact_resolved_api = `exact_resolved_api'
         return scalar exact_legacy_api = `exact_legacy_api'
-        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api numerical_api exact_api exact_resolved_api exact_legacy_api {
+        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api centering_api numerical_api exact_api exact_resolved_api exact_legacy_api {
             capture scalar drop __vckss_rust_`name'
         }
         return local backend "rust"
@@ -1835,6 +1837,10 @@ program define fevc_rust, rclass
         local rank_tolerance_arg = strtrim(strofreal(`ranktolerance', "%21.17f"))
         local block_tolerance_arg = strtrim(strofreal(`blocktolerance', "%21.17f"))
         local engine = lower(strtrim("`engine'"))
+        if "`subcommand'"=="solve" & "$VCKSS_CENTERING"!="" & "$VCKSS_CENTERING"!="none" {
+            local center_mode=cond("$VCKSS_CENTERING"=="mean",1,2)
+            fevc__rust_plugin_call `plugin', centeringv1 `handle' `center_mode'
+        }
         local planned_solve = (`capabilityschema' == 3 | `capabilityprofile' == 4)
         if `planned_solve' {
             if `capabilityschema' != 3 | `capabilityprofile' != 4 {

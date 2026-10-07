@@ -2368,6 +2368,40 @@ impl EngineState {
 
 static ENGINE: OnceLock<Mutex<EngineState>> = OnceLock::new();
 
+#[no_mangle]
+pub extern "C" fn vckss_rust_centering_schema_v1() -> u32 {
+    1
+}
+
+/// Configure only a prepared generation, before any estimator randomness.
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_centering_v1(generation: u64, mode: u32) -> i32 {
+    ffi_status(|| {
+        let mode = match mode {
+            0 => vckss_core::types::Centering::None,
+            1 => vckss_core::types::Centering::Mean,
+            2 => vckss_core::types::Centering::Corrected,
+            _ => return Err(BackendError::invalid("centering", "invalid mode")),
+        };
+        let mut state = lock_engine("centering")?;
+        state
+            .registry
+            .augment_prepared(ContextHandle::from_generation(generation)?, |prepared| {
+                if mode != vckss_core::types::Centering::None
+                    && (prepared.projection.is_some() || prepared.component_inference.is_some())
+                {
+                    return Err(BackendError::new(
+                        ErrorCode::UnsupportedFeature,
+                        "centering",
+                        "active centering with inference is unsupported",
+                    ));
+                }
+                prepared.centering = mode;
+                Ok(())
+            })
+    })
+}
+
 thread_local! {
     static ENGINE_LAST_ERROR: RefCell<CString> =
         RefCell::new(CString::new("OK").expect("literal CString"));
@@ -4653,6 +4687,15 @@ fn solve_engine_v4_with_numerical_attachment(
     let operation = move |prepared: &PreparedProblemWithMask,
                           interrupt: &mut dyn InterruptCheck|
           -> Result<EngineSolved> {
+        if prepared.centering != vckss_core::types::Centering::None
+            && (prepared.projection.is_some() || prepared.component_inference.is_some())
+        {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "centering",
+                "active centering with inference is unsupported",
+            ));
+        }
         vckss_core::progress::report(
             vckss_core::progress::MEMORY_FLOOR,
             [
@@ -4877,6 +4920,7 @@ fn solve_engine_v4_with_numerical_attachment(
                         ));
                     }
                     let exact_options = ExactEstimatorOptions {
+                        centering: prepared.centering,
                         memory_budget: prepared.receipt.memory.budget,
                         deletion,
                         nuisance,
@@ -4955,6 +4999,7 @@ fn solve_engine_v4_with_numerical_attachment(
                         estimator_request.target_batch_width = 1;
                     }
                     let mut estimator = options_from_request(estimator_request)?;
+                    estimator.centering = prepared.centering;
                     estimator.memory_budget = prepared.receipt.memory.budget;
                     apply_prepared_memory_admission(
                         &mut estimator,
@@ -5027,6 +5072,7 @@ fn solve_engine_v4_with_numerical_attachment(
                     let routing = model_routing_from_request(request.v3.v2.v1)?;
                     let options = GenericJlaExecutionOptions {
                         estimator: GenericJlaOptions {
+                            centering: prepared.centering,
                             memory_budget: prepared.receipt.memory.budget,
                             seed: request.v3.v2.v1.seed,
                             probes: request.v3.v2.v1.probes,
@@ -5411,6 +5457,7 @@ fn solve_engine_v3_numerical(
         )?;
         let solve_start = Instant::now();
         let options = GenericJlaOptions {
+            centering: prepared.centering,
             memory_budget: prepared.receipt.memory.budget,
                 seed: request.v2.v1.seed,
                 probes: request.v2.v1.probes,
@@ -5614,6 +5661,7 @@ fn solve_engine_v2_execution(
                 ));
             }
             let options = ExactEstimatorOptions {
+                centering: prepared.centering,
                 memory_budget: prepared.receipt.memory.budget,
                 deletion: prepared.deletion,
                 nuisance,
@@ -5659,6 +5707,7 @@ fn solve_engine_v2_execution(
                 ));
             }
             let mut options = options_from_request(request.v1)?;
+            options.centering = prepared.centering;
             options.memory_budget = prepared.receipt.memory.budget;
             if prepared.receipt.memory.budget != MemoryBudget::Legacy
                 || prepared.receipt.memory.hard_limit_bytes != 0
@@ -5760,6 +5809,10 @@ fn solve_engine(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_solve")?;
     state.registry.solve_preserving(handle, |prepared| {
+        let options = JlaEngineOptions {
+            centering: prepared.centering,
+            ..options
+        };
         if prepared.projection.is_some() || prepared.component_inference.is_some() {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -7095,6 +7148,7 @@ fn options_from_request(request: VckssEngineSolveRequestV1) -> Result<JlaEngineO
         full_residual_tolerance: (10.0 * request.pcg_tolerance).max(1.0e-11),
     };
     Ok(JlaEngineOptions {
+        centering: vckss_core::types::Centering::None,
         embedded_cmg_memory: None,
         full_cmg_setup: None,
         memory_budget: vckss_core::memory::MemoryBudget::Legacy,

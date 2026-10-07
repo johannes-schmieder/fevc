@@ -1,0 +1,20 @@
+Post-adoption native/documentation review — Astra, read-only
+
+Disposition: ACCEPT the completed four-payload local adoption and current availability documentation. No actionable correctness, provenance or compatibility blocker found. Windows remains deliberately pending; this is not acceptance of an all-five centering refresh or remote publication.
+
+Independent post-adoption checks
+
+- native/centering-20261006/manifest.json has status LOCAL_ADOPTED_FOUR_PAYLOADS_WINDOWS_PENDING. All four actual fevc/*.plugin files match their manifest SHA-256 and byte lengths. Their copied qualification receipts also match the manifest qualification hashes. These are the same exact Mac/Linux candidate digests accepted before adoption.
+- All 46 retained evidence files exist and match the manifest evidence hashes, including the full platform receipts/source manifests, five focused execution scopes, authoritative Linux accounting, failed setup attempt and final ACCEPT review alongside the earlier HOLD review.
+- Windows bytes match 1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b, the earlier qualified payload; the manifest labels it PENDING_CENTERING_REFRESH with no centering API. It was not replaced.
+- The final adoption manifest digest matches checks/post-adoption.json. An independent comparison of live files against the 1,333-file frozen snapshot yields exactly that receipt's 18 documented later changes: availability docs/parity plus Windows test driver/receipt code. Compiled estimator sources and installed Mata/ado runtime sources are unchanged.
+
+Documentation review
+
+Root/package READMEs, INSTALLATION, installed help, CENTERING, DECISIONS, Rust/backend READMEs, testing guidance, parity JSON/rendered ledger, PLAN, CHANGELOG and native README consistently describe four qualified local Mac/Linux payloads and unchanged Windows, with remote publication pending. The new adoption links resolve to the actual manifest. Historical payload sections retain dated scope instead of attributing centering to the old receipts. Rosetta remains distinct from native Intel; small-fixture timings and Corrected fixed-increment MCSE retain their limits. The count of 25 native focused checks is correct: five checks on each of four Mac execution scopes and one Linux scope.
+
+The post-adoption receipt records links/help-anchor validation, and parent reports successful diff/parity/license/portable-artifact checks. This reviewer performed independent read-only hash/source/document checks rather than rerunning those checks or any runtime/build campaign. No Stata/build work disturbed the reserved Mac measurement window.
+
+Remaining scope
+
+The four local plugin updates and their documentation are complete and accepted. Windows needs explicit owner source-publication authorization, the existing hosted artifact build, and exact-artifact private runtime qualification before its payload can be refreshed. No commit, push, tag, release or global installation is claimed or authorized by this review. Future publication must preserve these exact accepted bytes and make the appropriate dirty-source-to-commit binding explicit.

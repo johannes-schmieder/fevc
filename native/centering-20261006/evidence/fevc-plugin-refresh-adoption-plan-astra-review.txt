@@ -1,0 +1,23 @@
+Native adoption plan — read-only Astra review
+
+Disposition: ACCEPT the runner permission repair and proposed availability wording. HOLD execution of the adoption script for two narrow evidence-preflight adjustments below, plus the already pending Linux retry completion. No builds, tests, Stata sessions, remote operations or source edits were performed.
+
+Accepted repair
+
+run_centering_candidate_v2.py differs from the reviewed runner by exactly one statement: after copying the candidate, add owner-write to the temporary copied package/fevc.pkg before appending its candidate entry. This addresses copy2 preserving the source manifest's read-only mode. It does not change source files, candidate bytes, scientific commands, success-marker logic or cleanup scope. Preserve job 7910976 as a setup failure before Stata and job 7911312 as the distinct retry; do not overwrite the first result or claim it was a statistical failure. The permission/syntax receipt is harness evidence only, not qualification.
+
+Execution prerequisites needing completion
+
+1. The script writes many links and claims about native/centering-20261006/manifest.json, but that file is currently absent and the script neither creates nor requires it. Create/review the adoption manifest and retained evidence as part of the concrete adoption operation, and require their presence/identity before the documentation mutations. It should bind frozen dirty snapshot, three Mac and one Linux candidate digests, completed baseline and focused evidence, prior Windows digest and unchanged status, and actual platform limits. This can remain a separate preparation step; the script need not become a general packaging framework.
+
+2. The new Linux receipt gate accepts any five truthy passed fields and qacct text with zero statuses. Tighten its preflight to the exact five expected test names/markers, boolean true, returncode zero, arch linux, matching candidate digest, and collected sanitized-log hashes plus actual terminal markers. Verify qacct jobnumber matches its expected 7910950/7911312 filename before accepting failed=0 and exit_status=0. This is particularly relevant after the distinct failed first attempt and pending retry. A final independent read-only check plus explicit bound receipt hashes is an equally bounded solution; no rerun or broad certification campaign is requested.
+
+Already accepted prerequisites remain valid: full Mac qualifier, full Linux baseline, Mac focused checks and all candidate/source bindings. The script's hard-coded four hashes match those independently reviewed candidate bytes. It verifies inputs before copying, preserves old payloads, verifies each destination hash, and hashes Windows before/after without writing it. It uses local files and documentation rendering only; no commit, push, release or global installation is invoked.
+
+For a clean failure boundary, perform the documented replacement-context checks and all evidence/manifest/source compatibility checks before copying payloads. The current replace assertions occur after binary writes, so a stale text context could otherwise leave a partial documentation update. Parent reports all contexts already pass; repeat that cheap preflight immediately before execution, not a scientific test. Preserve the existing recovery directory rather than overwriting it if a partial run needs recovery.
+
+Wording review
+
+The proposed text consistently states four qualified local Mac/Linux payloads, remote publication pending, unchanged Windows without centering API 1, and Windows source-push approval outstanding. It distinguishes Rosetta from native Intel and excludes representative-scale claims. Five explicit checks per candidate/architecture correctly totals 25 for four Mac execution scopes plus Linux once the retry passes. Historical records retain their original scope, API 1 centering remains separate from numerical API 2, package version stays unchanged, and local staging is not called a release.
+
+No material wording blocker found. The claims about Linux focused job 7911312 and four-payload adoption become true only after the terminal evidence and exact-byte copy; do not apply them while queued. Source-only publication to obtain Windows bytes remains an independent owner-approval boundary.

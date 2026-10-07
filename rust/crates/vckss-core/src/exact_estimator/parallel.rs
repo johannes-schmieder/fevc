@@ -345,6 +345,7 @@ impl Default for Contribution {
 
 pub(super) struct CorrectionContext<'a, 'p> {
     pub problem: &'a CompressedProblem,
+    pub centering: Option<&'a centering::State>,
     pub design: &'a [f64],
     pub design_inverse: &'a [f64],
     pub inverse: &'a DenseInverse,
@@ -408,6 +409,29 @@ impl CorrectionContext<'_, '_> {
                 "exact_observation_deleted_information",
             )?;
         }
+        if let Some(center) = self.centering {
+            let source = usize::from(self.options.deletion == DeletionMode::Match);
+            let index = if source == 1 {
+                self.problem.deletion_units() + row
+            } else {
+                row
+            };
+            center.observation(
+                index,
+                row,
+                source,
+                self.design,
+                self.design_inverse,
+                self.embedding,
+                self.problem.frequency[row],
+                self.outcome[row],
+                self.residual[row],
+                maker,
+                self.problem.physical_total,
+                self.target,
+                interrupt,
+            )?;
+        }
         Ok(Contribution {
             value: self.target.bilinear(
                 z,
@@ -453,6 +477,19 @@ impl CorrectionContext<'_, '_> {
             self.control_forward,
             interrupt,
         )?;
+        if let Some(center) = self.centering {
+            center.block(
+                group,
+                &indices,
+                self.design,
+                self.embedding,
+                &self.problem.frequency,
+                &block,
+                self.problem.physical_total,
+                self.target,
+                interrupt,
+            )?;
+        }
         let left = transpose_matvec(
             &block.block_inverse,
             indices.len(),

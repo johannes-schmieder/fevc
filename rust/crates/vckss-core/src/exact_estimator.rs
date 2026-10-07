@@ -31,11 +31,13 @@ use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkRec
 
 pub const EXACT_EXECUTION_SCHEMA_VERSION: u32 = 1;
 
+mod centering;
 #[doc(hidden)]
 pub mod parallel;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ExactEstimatorOptions {
+    pub centering: crate::types::Centering,
     pub deletion: DeletionMode,
     pub nuisance: NuisanceMode,
     pub rank_tolerance: f64,
@@ -53,6 +55,7 @@ pub struct ExactEstimatorOptions {
 impl Default for ExactEstimatorOptions {
     fn default() -> Self {
         Self {
+            centering: crate::types::Centering::None,
             deletion: DeletionMode::Match,
             nuisance: NuisanceMode::Joint,
             rank_tolerance: 1.0e-10,
@@ -646,91 +649,97 @@ fn run_exact_estimator_internal(
     let full_inverse_relres = full_inverse.relres;
     let full_inverse_original_relres = full_inverse.original_relres;
     let fixedoffset = options.nuisance == NuisanceMode::FixedOffset && controls > 0;
-    let (design, information, working_outcome, working_inverse, mut beta, parameters, embedding) =
-        if fixedoffset {
-            let mut working = copy_f64_with_interrupt(
+    let (
+        design,
+        information,
+        mut working_outcome,
+        working_inverse,
+        mut beta,
+        parameters,
+        embedding,
+    ) = if fixedoffset {
+        let mut working = copy_f64_with_interrupt(
+            &problem.outcome,
+            "exact working outcome",
+            interrupt,
+            "exact_fixedoffset_outcome",
+        )?;
+        for row in 0..rows {
+            checkpoint_chunk(interrupt, row, "exact_fixedoffset_outcome")?;
+            let mut offset = 0.0;
+            for control in 0..controls {
+                offset += canonical.columns[control][row] * full_beta[workers + firms + control];
+            }
+            working[row] -= offset;
+        }
+        drop(full_rhs);
+        drop(full_beta);
+        drop(full_inverse);
+        drop(full_information);
+        drop(full_design);
+        let design = build_design(problem, None, interrupt)?;
+        let information = execution_crossproduct(
+            parallel,
+            &design,
+            rows,
+            working_embedding,
+            &problem.frequency,
+            interrupt,
+            "exact_working_information",
+        )?;
+        let inverse_profile =
+            crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactInverse);
+        let inverse = invert_scaled_zero_sum_quotient(
+            &information,
+            working_embedding,
+            workers..(workers + firms),
+            options.rank_tolerance,
+            interrupt,
+            "exact_working_inverse",
+        )?;
+        drop(inverse_profile);
+        let rhs = weighted_transpose_vector(
+            &design,
+            rows,
+            working_embedding,
+            &problem.frequency,
+            &working,
+            interrupt,
+            "exact_working_rhs",
+        )?;
+        let beta = matvec(
+            &inverse.inverse,
+            working_embedding,
+            &rhs,
+            interrupt,
+            "exact_working_beta_matvec",
+        )?;
+        (
+            design,
+            information,
+            working,
+            inverse,
+            beta,
+            fe_parameters,
+            working_embedding,
+        )
+    } else {
+        drop(full_rhs);
+        (
+            full_design,
+            full_information,
+            copy_f64_with_interrupt(
                 &problem.outcome,
                 "exact working outcome",
                 interrupt,
-                "exact_fixedoffset_outcome",
-            )?;
-            for row in 0..rows {
-                checkpoint_chunk(interrupt, row, "exact_fixedoffset_outcome")?;
-                let mut offset = 0.0;
-                for control in 0..controls {
-                    offset +=
-                        canonical.columns[control][row] * full_beta[workers + firms + control];
-                }
-                working[row] -= offset;
-            }
-            drop(full_rhs);
-            drop(full_beta);
-            drop(full_inverse);
-            drop(full_information);
-            drop(full_design);
-            let design = build_design(problem, None, interrupt)?;
-            let information = execution_crossproduct(
-                parallel,
-                &design,
-                rows,
-                working_embedding,
-                &problem.frequency,
-                interrupt,
-                "exact_working_information",
-            )?;
-            let inverse_profile =
-                crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactInverse);
-            let inverse = invert_scaled_zero_sum_quotient(
-                &information,
-                working_embedding,
-                workers..(workers + firms),
-                options.rank_tolerance,
-                interrupt,
-                "exact_working_inverse",
-            )?;
-            drop(inverse_profile);
-            let rhs = weighted_transpose_vector(
-                &design,
-                rows,
-                working_embedding,
-                &problem.frequency,
-                &working,
-                interrupt,
-                "exact_working_rhs",
-            )?;
-            let beta = matvec(
-                &inverse.inverse,
-                working_embedding,
-                &rhs,
-                interrupt,
-                "exact_working_beta_matvec",
-            )?;
-            (
-                design,
-                information,
-                working,
-                inverse,
-                beta,
-                fe_parameters,
-                working_embedding,
-            )
-        } else {
-            drop(full_rhs);
-            (
-                full_design,
-                full_information,
-                copy_f64_with_interrupt(
-                    &problem.outcome,
-                    "exact working outcome",
-                    interrupt,
-                    "exact_working_outcome",
-                )?,
-                full_inverse,
-                full_beta,
-                full_parameters,
-                full_embedding,
-            )
-        };
+                "exact_working_outcome",
+            )?,
+            full_inverse,
+            full_beta,
+            full_parameters,
+            full_embedding,
+        )
+    };
     center_firm_coordinates(&mut beta, workers, firms)?;
     let mut residual = Vec::new();
     reserve_exact(&mut residual, rows, "exact working residual")?;
@@ -779,6 +788,13 @@ fn run_exact_estimator_internal(
     };
     enforce_fit_residual(working_fit, fit_tolerance, "working weighted fit")?;
     drop(canonical);
+    crate::centering::subtract(
+        options.centering,
+        &mut working_outcome,
+        &problem.frequency,
+        problem.physical_total,
+        interrupt,
+    )?;
 
     let firm_effect = &beta[workers..workers + firms];
     let plugin =
@@ -840,11 +856,27 @@ fn run_exact_estimator_internal(
         (None, 0.0)
     };
 
+    let centering = if options.centering == crate::types::Centering::Corrected {
+        Some(centering::State::new(
+            problem.deletion_units() + rows,
+            hybrid.map_or(
+                if options.deletion == DeletionMode::Observation {
+                    rows
+                } else {
+                    problem.deletion_units()
+                },
+                |plan| plan.mover_deletion_units + plan.stayer_rows.iter().filter(|v| **v).count(),
+            ),
+        )?)
+    } else {
+        None
+    };
     let correction_profile =
         crate::pipeline_profile::Scope::new(crate::pipeline_profile::Phase::ExactCorrection);
-    let (deletion_units, correction_sources) = if let Some(runtime) = parallel {
+    let (deletion_units, mut correction_sources) = if let Some(runtime) = parallel {
         let result = parallel::CorrectionContext {
             problem,
+            centering: centering.as_ref(),
             design: &design,
             design_inverse: &design_inverse,
             inverse: &working_inverse,
@@ -910,6 +942,23 @@ fn run_exact_estimator_internal(
                             "exact_observation_deleted_information",
                         )?;
                     }
+                    if let Some(center) = centering.as_ref() {
+                        center.observation(
+                            row,
+                            row,
+                            0,
+                            &design,
+                            &design_inverse,
+                            embedding,
+                            problem.frequency[row],
+                            working_outcome[row],
+                            residual[row],
+                            maker,
+                            problem.physical_total,
+                            &target,
+                            interrupt,
+                        )?;
+                    }
                     max_leverage = max_leverage.max(leverage);
                     let scale =
                         u64_to_f64(problem.frequency[row])? * working_outcome[row] * residual[row]
@@ -967,6 +1016,19 @@ fn run_exact_estimator_internal(
                     max_leverage = max_leverage.max(block.max_leverage);
                     maker_relres = maker_relres.max(block.relres);
                     deletion_rank_gap = deletion_rank_gap.min(1.0 - block.max_leverage);
+                    if let Some(center) = centering.as_ref() {
+                        center.block(
+                            group,
+                            &indices,
+                            &design,
+                            embedding,
+                            &problem.frequency,
+                            &block,
+                            problem.physical_total,
+                            &target,
+                            interrupt,
+                        )?;
+                    }
                     let left = transpose_matvec(
                         &block.block_inverse,
                         indices.len(),
@@ -1052,6 +1114,23 @@ fn run_exact_estimator_internal(
                         "exact_stayer_deleted_information",
                     )?;
                 }
+                if let Some(center) = centering.as_ref() {
+                    center.observation(
+                        problem.deletion_units() + row,
+                        row,
+                        1,
+                        &design,
+                        &design_inverse,
+                        embedding,
+                        problem.frequency[row],
+                        working_outcome[row],
+                        residual[row],
+                        maker,
+                        problem.physical_total,
+                        &target,
+                        interrupt,
+                    )?;
+                }
                 max_leverage = max_leverage.max(leverage);
                 let frequency = problem.frequency[row];
                 stayer_physical_units = stayer_physical_units
@@ -1086,6 +1165,21 @@ fn run_exact_estimator_internal(
         };
         (deletion_units, correction_sources)
     };
+    if let Some(center) = centering {
+        let increment = center.finish(
+            &information,
+            &working_inverse,
+            embedding,
+            workers..workers + firms,
+            options,
+            interrupt,
+        )?;
+        correction = add_components(correction, add_components(increment[0], increment[1])?)?;
+        if let Some((sources, _)) = correction_sources.as_mut() {
+            sources[0] = add_components(sources[0], increment[0])?;
+            sources[1] = add_components(sources[1], increment[1])?;
+        }
+    }
     drop(correction_profile);
     let deletion_units = correction_sources
         .as_ref()
@@ -1271,7 +1365,32 @@ fn exact_peak_forecast(
     let block_index_work = maximum_block
         .checked_mul(core::mem::size_of::<usize>() as u64)
         .ok_or_else(|| resource_error("maker index forecast overflow"))?;
+    let centering_work = if options.centering == crate::types::Centering::Corrected {
+        let units = exact_wall_sum(
+            &[
+                rows,
+                exact_wall_u64(problem.deletion_units(), "centering unit slots")?,
+            ],
+            "centering slots",
+        )?;
+        checked_add_many(&[
+            checked_scale(
+                units,
+                (core::mem::size_of::<centering::Unit>() as u64) * 2,
+                "centering records",
+            )?,
+            checked_scale(row_parameter, 4, "centering unit vectors")?,
+            checked_scale(square, 8, "centering coefficient factors")?,
+            f64_bytes(
+                128 * working + 6 * 64 * 64 + 40 * rows,
+                "centering exceptional work",
+            )?,
+        ])?
+    } else {
+        0
+    };
     let correction_peak = checked_add_many(&[
+        centering_work,
         options.prepared_persistent_bytes,
         row_work,
         square_work,

@@ -1,0 +1,28 @@
+#!/bin/bash -l
+set -euo pipefail
+task_run_dir=/projectnb/welfgr/vckss/runs/20261007T023500Z-centering-plugins
+test -f "$task_run_dir/receipts/wrapper.txt"
+grep -Fqx 'status=PASS' "$task_run_dir/receipts/wrapper.txt"
+grep -Fqx 'linux_full_suite=FEVC TEST SUITE PASS: full' "$task_run_dir/receipts/linux-qualification.txt"
+test "$(cat "$task_run_dir/bundle.sha256")" = fe9b99370714e6ad8da9b86e3ef9fc0a719d0d3d6dc1e30f570b0d93fe12a340
+module purge
+module load stata-mp/19
+export OMP_NUM_THREADS=2
+export OPENBLAS_NUM_THREADS=1
+export STATATMP="$TMPDIR/fevc-centering-native-v2"
+mkdir -p "$STATATMP"
+cd "$task_run_dir/submissions"
+sha256sum -c centering-inputs-v2.sha256
+python3 "$task_run_dir/submissions/run_centering_candidate_v2.py" \
+  --source "$task_run_dir/source" \
+  --plugin "$task_run_dir/artifacts/candidate/fevc_rust_linux_x64.plugin" \
+  --output "$task_run_dir/centering-native-v2" \
+  --stata "$SCC_STATA_MP_BIN/stata-mp" \
+  --arch linux --processors 2 --label linux-x86_64
+python3 - "$task_run_dir/centering-native-v2/receipt.json" <<'PY'
+import json,sys
+r=json.load(open(sys.argv[1]))
+assert r['status']=='PASS' and len(r['tests'])==5
+assert all(t['passed'] for t in r['tests'])
+print('LINUX_CENTERING_FOCUSED_PASS')
+PY

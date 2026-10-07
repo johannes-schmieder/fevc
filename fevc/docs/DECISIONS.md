@@ -1,5 +1,26 @@
 # Current decisions
 
+## October 6, 2026: small outcome-centering scope
+
+Expose only `centering(none|mean|corrected)`, with None as the default.
+Mean changes the correction factor with a retained frequency-weighted mean,
+adds no solves/probes and uses ordinary MCSE with that observed mean fixed.
+Corrected exact shares the existing inverse/deletion work and one correction
+system. Corrected JLA uses the existing full/two-half leverage pools, requiring
+even probes of at least four. Its MCSE is Mean's with the increment also fixed;
+full numerical uncertainty for the increment is outside this implementation.
+
+Active centering with inference/projection is unsupported and rejected before
+RNG. Failures do not silently substitute a mode. There are no comparison
+options, extra random pools, derivative/adjoint/replay machinery for the
+increment, or automatic centering choices. Native centering API 1 is additive
+and separate from numerical API 2. Source checks and exact-artifact Mac/Linux
+qualification are complete, and the four matching local plugins are updated.
+The owner authorized source commit/push on October 7. Windows build and
+private qualification are pending; no release or representative-scale/
+statistical claim follows. [CENTERING.md](CENTERING.md)
+records the method, assumptions, local timings and evidence.
+
 ## Inference
 
 - Version `0.5.0-alpha.1` adds inference only by explicit request. Point-only

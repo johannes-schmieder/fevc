@@ -63,6 +63,22 @@ file write `rc_stage' "mcse_attachments" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_mcse_attachments.do" `"`rc_plus'/f"'
 file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_mean" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_mean.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_exact" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_exact.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_jla" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_jla.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_options" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_options.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "registry_idle" _n
 file close `rc_stage'
 quietly fevc_rust snapshot

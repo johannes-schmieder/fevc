@@ -21,6 +21,7 @@ int32_t vckss_rust_report_call_v1(const VckssProgressOptionsV1 *options,
     return operation(context);
 }
 
+uint32_t vckss_rust_centering_schema_v1(void) { return 1u; }
 uint32_t vckss_rust_numerical_schema_v1(void) { return 1u; }
 uint32_t vckss_rust_numerical_schema_v2(void) { return 2u; }
 int32_t vckss_rust_engine_numerical_preflight_v2(const VckssNumericalRequestV2 *r) { (void)r; return 11; }
@@ -80,6 +81,7 @@ static int fail_plan_scalar;
 static int fail_execution_api_scalar;
 static double saved_execution_api;
 static double saved_progress_api;
+static double saved_centering_api;
 static int fail_matrix;
 static int error_calls;
 static int release_calls;
@@ -793,6 +795,7 @@ static ST_int mock_scalar_save(char *name, ST_double value)
         saved_execution_api = value;
     }
     if (strcmp(name, "__vckss_rust_progress_api") == 0) saved_progress_api = value;
+    if (strcmp(name, "__vckss_rust_centering_api") == 0) saved_centering_api = value;
     if (strcmp(name, "__vckss_rust_error_code") == 0) saved_error_code = value;
     if (fail_plan_scalar && strcmp(name, "__vckss_plan_struct") == 0) return 1;
     return fail_scalar;
@@ -861,6 +864,7 @@ static void reset_transport(void)
     fail_execution_api_scalar = 0;
     saved_execution_api = -1;
     saved_progress_api = -1;
+    saved_centering_api = -1;
     fail_matrix = 0;
     error_calls = 0;
     release_calls = 0;
@@ -1116,7 +1120,8 @@ int main(void)
 
     reset_transport();
     assert(vckss_probe() == 0);
-    assert(saved_execution_api == 3 && saved_progress_api == 2 && scalar_calls == 11);
+    assert(saved_execution_api == 3 && saved_progress_api == 2 &&
+        saved_centering_api == 1 && scalar_calls == 12);
     reset_transport();
     fail_execution_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);

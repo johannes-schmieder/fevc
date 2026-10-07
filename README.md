@@ -13,8 +13,22 @@ requests. Point estimation is the default; inference is available for
 
 The default `mcse(all)` reports approximate numerical MCSE for the four main
 point estimates. Use `mcse(off)` to skip its additional calculation and display.
-MCSE can accompany supported projection and sampling-inference requests; it
+With `centering(none)`, MCSE can accompany supported projection and
+sampling-inference requests; it
 does not describe those additional outputs. See [usage](fevc/README.md).
+
+Outcome centering is available in the current repository source through
+`centering(none|mean|corrected)`, with None as the default. Mean adds only a
+frequency-weighted mean and subtraction. Corrected adjusts for estimating
+that mean, using a shared exact system or the existing JLA full/two-half
+leverage pools. MCSE holds the mean fixed and, for Corrected, also holds its
+extra increment fixed. Active centering cannot accompany inference or
+projection. See [the centering guide](fevc/docs/CENTERING.md).
+
+Mata supports these source options. Native active centering needs a matching
+centering API 1 build. This repository includes qualified Mac arm64,
+Rosetta x86-64, universal and Linux x86-64 plugins with this capability.
+The Windows plugin awaits refresh; see [native provenance](native/README.md).
 
 ## Requirements
 
@@ -75,6 +89,7 @@ options, and more examples, or read the [usage guide](fevc/README.md).
 ## Documentation
 
 - [Usage guide](fevc/README.md)
+- [Outcome centering](fevc/docs/CENTERING.md)
 - [Installation](INSTALLATION.md)
 - [Changelog](fevc/CHANGELOG.md)
 - [Detailed documentation](fevc/docs/README.md)

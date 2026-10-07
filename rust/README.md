@@ -16,6 +16,21 @@ binary distribution will not need Rust or a compiler. For installation, see
 Private internal identifiers retain their established names and ABI meanings.
 `fevc` is the public package and command.
 
+## Outcome centering
+
+The core supports None, Mean and Corrected in exact and JLA point execution.
+Mean changes only the retained working-outcome correction factor. Corrected
+exact shares one coefficient-space system; Corrected JLA uses the existing
+full/two-half leverage pools. Its numerical covariance is Mean's with the
+increment fixed. Centering API 1 configures a prepared generation before
+solve independently of numerical API 2 and without changing old ABI layouts.
+
+The repository Mac arm64, Rosetta x86-64, universal and Linux x86-64 plugins pass
+full platform and explicit Rust centering checks. Windows remains unchanged
+and lacks active centering while its build/private qualification are pending. See
+[the centering contract](../fevc/docs/CENTERING.md) and
+[the Stata boundary](stata_backend/README.md) for lifecycle and restrictions.
+
 ## Development
 
 Use the pinned toolchain and locked dependencies. See [TEST_PLAN.md](TEST_PLAN.md)

@@ -41,7 +41,7 @@ real scalar vckss_scale_engine__api_level()
 
 string scalar vckss_scale_engine__build_id()
 {
-    return("vckss-scale-engine-api4-fe-buf1-nmc4-timers1")
+    return("vckss-scale-engine-api4-fe-buf1-nmc4-timers1-centering1")
 }
 
 struct vckss_scale_engine_atom_batch
@@ -1180,6 +1180,11 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     real scalar block_tolerance,
     | pointer(struct vckss_nmc__attachment scalar) scalar numerical)
 {
+    struct vckss_center_jla__map scalar center_map
+    struct vckss_joint_design scalar center_original
+    real scalar center_active,center_half,center_g,center_pool
+    real matrix center_moments,center_draws
+    real colvector center_maker,center_z,center_e
     struct vckss_scale_engine_result scalar out
     pointer scalar registered_leverage, registered_target, matrix_leverage, matrix_target
     struct vckss_scale_atom_provider scalar replay_provider
@@ -1189,7 +1194,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     real scalar replay_first, replay_width, replay_column, replay_batch
     real matrix replay_atoms, replay_receipts
     real colvector replay_root
-    real scalar all_probe, group, probe, column, fold, fold_count
+    real scalar all_probe, group, probe, column, fold, fold_count, outcome_mean
     real matrix gradients, folds, compensation, values, scores
     real rowvector u, beta
     string scalar diagnostic_status
@@ -1215,6 +1220,8 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     real rowvector target_reference_scale
 
     out = vckss_scale_eng__empty_result()
+    center_active=st_global("VCKSS_CENTERING")=="corrected"
+    if(center_active & (probes<4 | mod(probes,2))) {out.status="INVALID_CENTERING_PROBES";out.message="Corrected JLA requires even probes() of at least four";return(out);}
     out.rng_contract = provider.contract
     out.solver_route = backend.route
     out.residual_gate = max((1e-11,10*tolerance))
@@ -1445,6 +1452,10 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
        merges retain logical probe order.  A different solve width may alter
        floating-point grouping, but it cannot alter the supplied atoms. */
     vckss_timer__on(92)
+    if(center_active) {
+        if(!vckss_center_jla__memory_check(base.n,groups,0)){out.status="RESOURCE_LIMIT";out.message="centering allocation exceeds memory_gib()";return(out);}
+        center_moments=J(groups,4,0)
+    }
     moment_subtotal = J(groups,5,0)
     moment_compensation = J(groups,5,0)
     for (batch_start=1; batch_start<=probes;
@@ -1488,6 +1499,11 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
             projected[design.unit_cell,.]
         unit_random_scaled = unit_atoms:/sqrt(design.unit_frequency)
         unit_random_residual = unit_random_scaled-unit_projection
+        if(center_active)for(column=1;column<=batch_columns;column++) {
+            center_half=1+2*(batch_start+column-1>probes/2)
+            center_moments[.,center_half]=center_moments[.,center_half]+unit_projection[.,column]:^2
+            center_moments[.,center_half+1]=center_moments[.,center_half+1]+unit_random_residual[.,column]:^2
+        }
         vckss_scale_eng__moment_add(
             &moment_subtotal,&moment_compensation,
             unit_projection,unit_random_residual)
@@ -1588,8 +1604,9 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     out.max_reciprocal_residual = max((
         out.max_reciprocal_residual,
         unit_adjustments.max_reciprocal_residual))
+    outcome_mean = vckss_nmc__center_mean(design.cell_outcome_mean,design.cell_frequency)
     out.cell_correction_weight = vckss_scale_eng__scatter_planned(
-        design.unit_outcome_sum:*out.unit_d,unit_plan)
+        (design.unit_outcome_sum:-outcome_mean:*design.unit_frequency):*out.unit_d,unit_plan)
     if (hasmissing(out.unit_d) |
         hasmissing(out.cell_correction_weight)) {
         vckss_timer__off(99)
@@ -1609,6 +1626,26 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     cell_atoms = leverage_rhs = projected = unit_atoms = J(0,0,.)
     unit_projection = unit_random_scaled = unit_random_residual = J(0,1,.)
     p_first = m_first = p_second = m_second = mixed_second = J(0,1,.)
+    if(center_active) {
+        center_original=vckss__joint_prepare(vckss__fe_prepare(design.cell_worker,design.cell_firm,design.cell_frequency,rank_tolerance),J(base.n,0,.),tolerance,maxiter,rank_tolerance,backend)
+        center_map.status="CONVERGED";center_map.message=""
+        center_map.row=design.unit_cell;center_map.weight=design.unit_frequency
+        center_map.mass=design.unit_frequency;center_map.panel=((1..groups)',(1..groups)')
+        center_map.delta=center_map.q=center_map.t=center_map.xi=J(groups,3,0)
+        center_z=design.unit_outcome_sum:/design.unit_frequency:-outcome_mean
+        center_e=design.unit_outcome_sum:/design.unit_frequency-out.fitted_cell[design.unit_cell]
+        for(center_pool=1;center_pool<=3;center_pool++) {
+            if(center_pool==1)center_maker=1:-out.unit_projection_share
+            else {center_half=2*center_pool-3;center_maker=1:-center_moments[.,center_half]:/(center_moments[.,center_half]+center_moments[.,center_half+1]);}
+            if(hasmissing(center_maker) | min(center_maker)<=block_tolerance){out.status="NONESTIMABLE_DELETION";out.message="centering half-pool maker is nonpositive";return(out);}
+            center_map.delta[.,center_pool]=design.n_physical:*center_maker-design.unit_frequency
+            center_map.t[.,center_pool]=center_z:*design.unit_frequency:*center_e:/center_maker
+            center_map.q[.,center_pool]=design.unit_frequency:*center_map.t[.,center_pool]
+        }
+        vckss_center_jla__finish(center_map,center_original,tolerance,maxiter,rank_tolerance)
+        if(center_map.status!="CONVERGED"){out.status=center_map.status;out.message=center_map.message;return(out);}
+        center_draws=J(probes,4,0)
+    }
     batch_moments = moment_subtotal = moment_compensation = J(0,0,.)
     finite_bias = finite_variance = J(0,1,.)
     residual_mass = J(0,1,.)
@@ -1695,12 +1732,13 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         out = vckss_scale_eng__record(out,solved,5,batch_start)
         vckss_timer__on(99)
         target_prediction = solved.prediction
+        if(center_active)center_draws[batch_start..batch_finish,.]=vckss_center_jla__contract(center_map,target_prediction[.,2:*(1..batch_columns):-1],target_prediction[.,2:*(1..batch_columns)])
         if (all_probe & diagnostic_status == "ok_local") {
             for (column=1; column<=batch_columns; column++) {
                 probe = batch_start+column-1
                 fold = mod(probe,2) ? 1 : 4
                 fold_count = mod(probe,2) ? ceil(probes/2) : floor(probes/2)
-                values = design.unit_outcome_sum:*out.unit_residual_mass:*
+                values = (design.unit_outcome_sum:-outcome_mean:*design.unit_frequency):*out.unit_residual_mass:*
                     (target_prediction[design.unit_cell,2*column-1]:^2,
                      target_prediction[design.unit_cell,2*column]:^2,
                      target_prediction[design.unit_cell,2*column-1]:*
@@ -1725,6 +1763,7 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
     }
     vckss_timer__on(99)
     correction = vckss_scale_engine__column_sum(out.target_draws):/probes
+    if(center_active)correction=correction+colsum(center_draws)/probes
     corrected = plugin-correction
     out.plugin = plugin
     out.correction = correction

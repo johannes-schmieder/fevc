@@ -127,6 +127,40 @@ movers, missing excluded inputs, eligible stayers, and graph exclusions. It
 also preserves the typed failure for missing inputs inside requested matches.
 The test runs in both source profiles and qualified installed-package checks.
 
+## Focused outcome-centering checks
+
+The small implementation is covered by `test_centering_mean.do` (fixed-mean
+point/MCSE/covariance oracle), `test_centering_exact.do` (independent dense
+estimated-mean oracle), `test_centering_jla.do` (Corrected/Mean MCSE
+agreement), `test_centering_jla_map.do` (independent three-pool map) and
+`test_centering_options.do` (modes, restrictions, RNG/caller-state guards).
+The map oracle is Mata-specific; the other files accept package root and
+backend arguments. They are part of the ordinary Stata runner.
+
+For focused checks, pass the absolute source package path and `mata` or
+`rust` to the applicable file, for example:
+
+```bash
+/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do \
+  fevc/tests/stata/test_centering_mean.do /absolute/path/to/fevc/fevc mata
+```
+
+Strict Rust tests require the matching local centering API 1 plugin, not
+the unchanged distributed binaries. The new Rust unit test checks the three-pool correction map against an
+independent dense construction. Shared exact systems and public mode/MCSE
+behavior are checked by the Stata oracles above. Existing native lifecycle,
+resource and ABI regression suites remain part of the completion checks;
+they are not new centering-specific unit coverage.
+
+The local completion record includes both-backend focused tests, dense
+oracles, explicit-CMG cases, the full Rust workspace and integrated source/
+Stata/install checks. Small complete-command timings compare all three
+centering modes for exact/JLA and MCSE off/all. Preserve the first run and
+quiet repeat; do not reinterpret them as platform or representative-scale
+qualification. [CENTERING.md](docs/CENTERING.md) records the exact scope.
+Documentation-only updates reuse these scientific/runtime results with
+focused source and documentation checks under the evidence rules above.
+
 ## Manual referee checks
 
 The self-contained Stata entry points under [`tests/manual/`](tests/manual/)

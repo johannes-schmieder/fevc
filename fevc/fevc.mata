@@ -16,7 +16,7 @@ if _rc {
     quietly findfile fevc_numerical.mata
     quietly do `"`r(fn)'"'
 }
-mata: assert(vckss_nmc__module_api()==4 & vckss_nmc__build_id()=="vckss-numerical-api4-vector-replay8")
+mata: assert(vckss_nmc__module_api()==4 & vckss_nmc__build_id()=="vckss-numerical-api4-vector-replay8-centering1")
 
 mata:
 mata set matastrict on
@@ -34,7 +34,7 @@ real scalar vckss__api_level()
 
 string scalar vckss__build_id()
 {
-    return("vckss-api25-control-posterior-nmc4-timers1")
+    return("vckss-api25-control-posterior-nmc4-timers1-centering1")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -1028,11 +1028,132 @@ real scalar vckss__exact_memory_check(real scalar n, real scalar p,
 
     forecast = 8*(3*n*p + 14*p^2 + 3*block*p + 6*min((block,p))^2 +
         n*(24+4*q) + 16*p)
+    if(st_global("VCKSS_CENTERING")=="corrected")
+        forecast=forecast+8*(4*n*p+8*p^2+128*p+6*64^2+40*n)
     if (st_global("VCKSS_MEMORY_ACTIVE")!="1") return(1)
     previous = strtoreal(st_global("VCKSS_MEMORY_FORECAST"))
     st_global("VCKSS_MEMORY_FORECAST",strofreal(max((previous,forecast)),"%21.0f"))
     limit = strtoreal(st_global("VCKSS_MEMORY_BYTES"))
     return(st_global("VCKSS_MEMORY_ADVISORY")=="1" | forecast <= limit)
+}
+
+/* One common strong-system map. Observation representatives retain literal
+   per-copy makers; sqrt(multiplicity) symmetrizes their collapsed equations. */
+struct vckss_center__map {
+    real matrix F
+    real colvector q, delta, mass, multiple, source, score
+    real matrix local_increment
+    real scalar used
+    string scalar status, message
+}
+struct vckss_center__map scalar vckss_center__new(real scalar units,real scalar p)
+{
+    struct vckss_center__map scalar out
+    out.F=J(units,p,0);out.q=out.delta=out.mass=out.multiple=out.source=J(units,1,0)
+    out.score=J(p,1,0);out.local_increment=J(2,3,0);out.used=0
+    out.status="CONVERGED";out.message=""
+    return(out)
+}
+void vckss_center__observation(struct vckss_center__map scalar map,
+    real rowvector x,real rowvector xa,real scalar z,real scalar e,
+    real scalar maker,real scalar frequency,real scalar n,
+    struct vckss_target_matrices scalar targets,real scalar source)
+{
+    real scalar g
+    if(frequency>1 & n*maker-1<=1e-12*max((abs(n*maker),1))) {
+        map.status="CENTERING_SINGULAR"
+        map.message="nonpositive omitted physical-copy contrast mode"
+        return
+    }
+    g=++map.used
+    map.F[g,.]=sqrt(frequency)*x
+    map.q[g]=sqrt(frequency)*z*e/maker
+    map.delta[g]=n*maker-1;map.mass[g]=1;map.multiple[g]=sqrt(frequency)
+    map.source[g]=source
+    map.score=map.score+frequency*x'*z*e/maker
+}
+void vckss_center__block(struct vckss_center__map scalar map,
+    real matrix X,real matrix XA,real colvector c,real colvector z,
+    real colvector deleted,real scalar n,
+    struct vckss_target_matrices scalar targets,real scalar source)
+{
+    real colvector t,xi,direction,w,h,F
+    real scalar g,m,a
+    m=quadcross(c,c);t=z*quadcross(c,deleted)
+    xi=(t-deleted*quadcross(c,z))/m
+    F=X'*c;direction=c-X*(XA'*c);a=quadcross(c,direction)/m
+    g=++map.used;map.F[g,.]=F';map.mass[g]=m;map.multiple[g]=1;map.source[g]=source
+    map.q[g]=quadcross(c,t)-n*quadcross(direction,xi)
+    map.delta[g]=n*a-m;map.score=map.score+X'*t
+    w=XA'*c;h=XA'*xi
+    map.local_increment[source,.]=map.local_increment[source,.]+
+        ((w'*targets.worker*h)[1],(w'*targets.firm*h)[1],(w'*targets.covariance*h)[1])
+}
+real matrix vckss_center__finish(struct vckss_center__map scalar map,
+    real matrix S,real matrix A,struct vckss_target_matrices scalar targets,
+    real scalar tolerance,real scalar rank_tolerance)
+{
+    struct vckss_inverse_result scalar factor,exception
+    real colvector good,bad,b,kappa,gamma,rhs,check,weights,index
+    real matrix F,J,E,W,out
+    real scalar i,source,residual
+    if(map.status!="CONVERGED")return(J(2,4,.))
+    if(map.used!=rows(map.F)) {
+        map.status="CENTERING_INCOMPLETE";map.message="unit map is incomplete"
+        return(J(2,4,.))
+    }
+    F=map.F;b=map.q-F*A*map.score
+    good=selectindex(map.delta:>0.1:*(map.delta+map.mass))
+    bad=selectindex(map.delta:<=0.1:*(map.delta+map.mass))
+    if(rows(bad)>64){
+        map.status="RESOURCE_LIMIT";map.message="centering has more than 64 exceptional representatives"
+        return(J(2,4,.))
+    }
+    J=S
+    if(rows(good))J=J+quadcross(F[good,.],1:/map.delta[good],F[good,.])
+    factor=vckss__inverse(J,rank_tolerance)
+    if(factor.status!="CONVERGED"){
+        map.status="CENTERING_SINGULAR";map.message="auxiliary coefficient system failed"
+        return(J(2,4,.))
+    }
+    gamma=J(cols(S),1,0)
+    if(rows(good))gamma=factor.inverse*(F[good,.]'*(b[good]:/map.delta[good]))
+    kappa=J(rows(F),1,0)
+    if(rows(bad)) {
+        E=diag(map.delta[bad])+F[bad,.]*factor.inverse*F[bad,.]'
+        exception=vckss__inverse(E,rank_tolerance)
+        if(exception.status!="CONVERGED"){
+        map.status="CENTERING_SINGULAR";map.message="exceptional Schur system failed"
+        return(J(2,4,.))
+    }
+        kappa[bad]=exception.inverse*(b[bad]-F[bad,.]*gamma)
+        gamma=gamma+factor.inverse*F[bad,.]'*kappa[bad]
+    }
+    if(rows(good))kappa[good]=(b[good]-F[good,.]*gamma):/map.delta[good]
+    check=map.delta:*kappa+F*A*(F'*kappa)-b
+    residual=max(abs(b))
+    if(residual==0)residual=max(abs(check))
+    else residual=vckss__norm2(check/residual)/vckss__norm2(b/residual)
+    if(hasmissing(kappa) | missing(residual) | residual>max((1e-11,10*tolerance))) {
+        map.status="INVERSE_RESIDUAL_FAILED";map.message="complete centering correction equation failed"
+        return(J(2,4,.))
+    }
+    W=F*A;out=(map.local_increment,J(2,1,0))
+    for(source=1;source<=2;source++) {
+        index=selectindex(map.source:==source)
+        if(rows(index)) {
+            weights=kappa[index]:/(map.mass[index]:*map.multiple[index])
+            out[source,1]=out[source,1]+quadcross(weights,vckss__target_diagonal(W[index,.],targets.worker))
+            out[source,2]=out[source,2]+quadcross(weights,vckss__target_diagonal(W[index,.],targets.firm))
+            out[source,3]=out[source,3]+quadcross(weights,vckss__target_diagonal(W[index,.],targets.covariance))
+        }
+        out[source,4]=out[source,1]+out[source,2]+2*out[source,3]
+    }
+    if(hasmissing(out)){
+        map.status="NONFINITE_CORRECTION";map.message="centering correction increment is nonfinite"
+        return(J(2,4,.))
+    }
+    return(out)
 }
 
 struct vckss_result scalar vckss__exact(
@@ -1051,6 +1172,9 @@ struct vckss_result scalar vckss__exact(
     real scalar blocksize_limit)
 {
     struct vckss_result scalar out
+    struct vckss_center__map scalar center
+    real scalar center_active
+    real matrix center_increment
     struct vckss_inverse_result scalar full_inverse, working_inverse
     struct vckss_inverse_result scalar deleted_information_inverse
     struct vckss_maker_result scalar reduced_maker
@@ -1219,6 +1343,8 @@ struct vckss_result scalar vckss__exact(
         10*inverse_forward_bound))
     beta = A * (design' * (frequency :* working_y))
     residual = working_y - design * beta
+    if(st_global("VCKSS_CENTERING")!="none" & st_global("VCKSS_CENTERING")!="")
+        working_y = working_y :- vckss_nmc__center_mean(working_y,frequency)
     if (hasmissing(beta) | hasmissing(residual)) {
         return(vckss__failure("NONFINITE_FIT", "working least-squares fit is nonfinite"))
     }
@@ -1230,6 +1356,8 @@ struct vckss_result scalar vckss__exact(
     plugin[2] = vckss__quadratic(beta,targets.firm)
     plugin[3] = vckss__quadratic(beta,targets.covariance)
     plugin[4] = plugin[1] + plugin[2] + 2 * plugin[3]
+    center_active=st_global("VCKSS_CENTERING")=="corrected"
+    if(center_active)center=vckss_center__new(deletion=="match" ? groups : n,parameters)
     correction = J(1,4,0)
     max_leverage = 0
     block_solver_residual = 0
@@ -1275,6 +1403,9 @@ struct vckss_result scalar vckss__exact(
                 }
             }
         }
+        if(center_active)for(row=1;row<=n;row++)vckss_center__observation(center,
+            design[row,.],design_inverse[row,.],working_y[row],residual[row],
+            1-leverage_diagonal[row],frequency[row],sum(frequency),targets,1)
         max_leverage = max(leverage_diagonal)
         correction[1] = sum(frequency :* working_y :* residual :*
             vckss__target_diagonal(design_inverse,targets.worker) :/
@@ -1335,6 +1466,8 @@ struct vckss_result scalar vckss__exact(
             transformed_y = block_frequency :* working_y[index]
             transformed_residual = block_frequency :* residual[index]
             deleted_residual = reduced_maker.actions
+            if(center_active)vckss_center__block(center,block_design,block_inverse,
+                block_frequency,transformed_y,deleted_residual,sum(frequency),targets,1)
             target_left = block_inverse'*transformed_y
             target_right = block_inverse'*deleted_residual
             correction[1] = correction[1] +
@@ -1344,6 +1477,15 @@ struct vckss_result scalar vckss__exact(
             correction[3] = correction[3] +
                 (target_left' * targets.covariance * target_right)[1,1]
         }
+    }
+    if(center_active) {
+        if(center.status!="CONVERGED")return(vckss__failure(center.status,center.message))
+        center.F=center.F[1..center.used,.];center.q=center.q[1..center.used]
+        center.delta=center.delta[1..center.used];center.mass=center.mass[1..center.used]
+        center.multiple=center.multiple[1..center.used];center.source=center.source[1..center.used]
+        center_increment=vckss_center__finish(center,information,A,targets,block_tolerance,rank_tolerance)
+        if(center.status!="CONVERGED")return(vckss__failure(center.status,center.message))
+        correction=correction+center_increment[1,.]
     }
     correction[4] = correction[1] + correction[2] + 2 * correction[3]
     vckss_timer__off(92)
@@ -1423,6 +1565,9 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
     real scalar blocksize_limit)
 {
     struct vckss_result scalar out
+    struct vckss_center__map scalar center
+    real scalar center_active
+    real matrix center_increment
     struct vckss_inverse_result scalar full_inverse, working_inverse
     struct vckss_inverse_result scalar deleted_information_inverse
     struct vckss_maker_result scalar reduced_maker
@@ -1596,6 +1741,8 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
         10*inverse_forward_bound))
     beta = A * (design' * (frequency :* working_y))
     residual = working_y - design * beta
+    if(st_global("VCKSS_CENTERING")!="none" & st_global("VCKSS_CENTERING")!="")
+        working_y = working_y :- vckss_nmc__center_mean(working_y,frequency)
     if (hasmissing(beta) | hasmissing(residual)) {
         return(vckss__failure("NONFINITE_FIT", "combined working fit is nonfinite"))
     }
@@ -1607,6 +1754,8 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
     plugin[2] = vckss__quadratic(beta,targets.firm)
     plugin[3] = vckss__quadratic(beta,targets.covariance)
     plugin[4] = plugin[1] + plugin[2] + 2*plugin[3]
+    center_active=st_global("VCKSS_CENTERING")=="corrected"
+    if(center_active)center=vckss_center__new(mover_groups+rows(stayer_index),parameters)
     mover_correction = J(1,4,0)
     stayer_correction = J(1,4,0)
     max_leverage = 0
@@ -1664,6 +1813,8 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
         transformed_y = block_frequency :* working_y[index]
         transformed_residual = block_frequency :* residual[index]
         deleted_residual = reduced_maker.actions
+            if(center_active)vckss_center__block(center,block_design,block_inverse,
+                block_frequency,transformed_y,deleted_residual,sum(frequency),targets,1)
         target_left = block_inverse'*transformed_y
         target_right = block_inverse'*deleted_residual
         mover_correction[1] = mover_correction[1] +
@@ -1713,6 +1864,9 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
                     return(vckss__failure("NONESTIMABLE_DELETION", "a direct deleted-information factorization rejects a stayer physical-observation deletion"))
                 }
             }
+            if(center_active)vckss_center__observation(center,design[index,.],
+                design_inverse[index,.],working_y[index],residual[index],minimum_maker,
+                frequency[index],sum(frequency),targets,2)
             max_leverage = max((max_leverage,leverage_diagonal[index]))
         }
         stayer_correction[1] = sum(frequency[stayer_index] :*
@@ -1731,6 +1885,16 @@ struct vckss_result scalar vckss__exact_stayer_hybrid(
             stayer_correction[2] + 2*stayer_correction[3]
     }
 
+    if(center_active) {
+        if(center.status!="CONVERGED")return(vckss__failure(center.status,center.message))
+        center.F=center.F[1..center.used,.];center.q=center.q[1..center.used]
+        center.delta=center.delta[1..center.used];center.mass=center.mass[1..center.used]
+        center.multiple=center.multiple[1..center.used];center.source=center.source[1..center.used]
+        center_increment=vckss_center__finish(center,information,A,targets,block_tolerance,rank_tolerance)
+        if(center.status!="CONVERGED")return(vckss__failure(center.status,center.message))
+        mover_correction=mover_correction+center_increment[1,.]
+        stayer_correction=stayer_correction+center_increment[2,.]
+    }
     correction = mover_correction+stayer_correction
     correction[4] = correction[1]+correction[2]+2*correction[3]
     vckss_timer__off(92)
@@ -4025,6 +4189,172 @@ struct vckss_rank_certificate scalar vckss__joint_rank_certificate(
     return(out)
 }
 
+real scalar vckss_center_jla__memory_check(real scalar n,real scalar units,real scalar q)
+{
+    real scalar forecast,limit
+    if(st_global("VCKSS_MEMORY_ACTIVE")!="1")return(1)
+    forecast=strtoreal(st_global("VCKSS_MEMORY_FORECAST"))+2048*(n+units)*(1+q/8)+6*64^2*8
+    st_global("VCKSS_MEMORY_FORECAST",strofreal(forecast,"%21.0f"))
+    limit=strtoreal(st_global("VCKSS_MEMORY_BYTES"))
+    return(st_global("VCKSS_MEMORY_ADVISORY")=="1" | forecast<=limit)
+}
+
+/* Corrected JLA point map. Packed unit rows and three leverage pools; no N^2. */
+struct vckss_center_jla__map {
+    real colvector row, weight, mass
+    real matrix panel, delta, q, t, xi, chat
+    string scalar status, message
+}
+real matrix vckss_center_jla__sum(struct vckss_center_jla__map scalar map,real matrix value)
+{
+    return(panelsum(map.weight:*value[map.row,.],map.panel))
+}
+real matrix vckss_center_jla__scatter(struct vckss_center_jla__map scalar map,real matrix value,real scalar n)
+{
+    real matrix out
+    real scalar i
+    out=J(n,cols(value),0)
+    for(i=1;i<=rows(map.row);i++)out[map.row[i],.]=out[map.row[i],.]+value[i,.]
+    return(out)
+}
+void vckss_center_jla__finish(struct vckss_center_jla__map scalar map,
+    struct vckss_joint_design scalar original,real scalar tolerance,real scalar maxiter,
+    real scalar rank_tolerance)
+{
+    struct vckss_fe_design scalar base
+    struct vckss_solver_backend scalar auxiliary_backend
+    struct vckss_joint_design scalar auxiliary
+    struct vckss_solve_result scalar solved
+    struct vckss_inverse_result scalar exception
+    real matrix controls, actions, E, gamma, chat
+    real colvector good,bad,b,kappa,score,worker,firm,weight,index,rep,check,rhs
+    real scalar pool,g,j,n,scale,residual
+    n=original.base.n;map.chat=J(rows(map.row),3,.)
+    rep=map.row[map.panel[.,1]]
+    for(pool=1;pool<=3;pool++) {
+        score=vckss_center_jla__scatter(map,map.weight:*map.t[.,pool],n)
+        solved=vckss__joint_solve(original,vckss__joint_transpose_full(original,score),tolerance,maxiter)
+        if(solved.status!="CONVERGED"){map.status=solved.status;map.message=solved.message;return;}
+        b=map.q[.,pool]-vckss_center_jla__sum(map,solved.prediction)
+        good=selectindex(map.delta[.,pool]:>0.1:*(map.delta[.,pool]+map.mass))
+        bad=selectindex(map.delta[.,pool]:<=0.1:*(map.delta[.,pool]+map.mass))
+        if(rows(bad)>64){map.status="RESOURCE_LIMIT";map.message="centering has more than 64 exceptional units";return;}
+        worker=original.base.worker;firm=original.base.firm;weight=original.base.frequency
+        controls=original.controls
+        if(rows(good)) {
+        worker=worker\original.base.worker[rep[good]]
+            firm=firm\original.base.firm[rep[good]]
+            weight=weight\(map.mass[good]:^2:/map.delta[good,pool])
+            if(cols(controls))controls=controls\(vckss_center_jla__sum(map,original.controls)[good,.]:/map.mass[good])
+            else controls=J(rows(weight),0,.)
+        }
+        base=vckss__fe_prepare(worker,firm,weight,rank_tolerance)
+        auxiliary_backend=original.backend
+        auxiliary_backend.exact_inverse=0
+        auxiliary=vckss__joint_prepare(base,controls,tolerance,maxiter,rank_tolerance,auxiliary_backend)
+        if(auxiliary.status!="CONVERGED"){map.status=auxiliary.status;map.message=auxiliary.message;return;}
+        rhs=J(rows(map.mass),1,0)
+        if(rows(good))rhs[good]=b[good]:/map.delta[good,pool]
+        /* Expand unit scalars onto packed rows, rather than indexing by panel starts. */
+        score=J(n,1,0)
+        for(g=1;g<=rows(map.mass);g++) {
+            index=(map.panel[g,1]..map.panel[g,2])'
+            for(j=1;j<=rows(index);j++)score[map.row[index[j]]]=score[map.row[index[j]]]+map.weight[index[j]]*rhs[g]
+        }
+        solved=vckss__joint_solve(auxiliary,vckss__joint_transpose_full(original,score),tolerance,maxiter)
+        if(solved.status!="CONVERGED"){map.status=solved.status;map.message=solved.message;return;}
+        gamma=solved.coefficient;kappa=J(rows(map.mass),1,0)
+        if(rows(bad)) {
+            actions=J(rows(gamma),rows(bad),.)
+            for(j=1;j<=rows(bad);j++) {
+                g=bad[j];score=J(n,1,0);index=(map.panel[g,1]..map.panel[g,2])'
+                for(scale=1;scale<=rows(index);scale++)score[map.row[index[scale]]]=score[map.row[index[scale]]]+map.weight[index[scale]]
+        solved=vckss__joint_solve(auxiliary,vckss__joint_transpose_full(original,score),tolerance,maxiter)
+                if(solved.status!="CONVERGED"){map.status=solved.status;map.message=solved.message;return;}
+                actions[.,j]=solved.coefficient
+            }
+            E=diag(map.delta[bad,pool])+vckss_center_jla__sum(map,vckss__joint_predict(original,actions))[bad,.]
+            exception=vckss__inverse(E,rank_tolerance)
+            if(exception.status!="CONVERGED"){map.status="CENTERING_SINGULAR";map.message="exceptional centering Schur system failed";return;}
+            kappa[bad]=exception.inverse*(b[bad]-vckss_center_jla__sum(map,vckss__joint_predict(original,gamma))[bad,.])
+        gamma=gamma+actions*kappa[bad]
+        }
+        if(rows(good))kappa[good]=(b[good]-vckss_center_jla__sum(map,vckss__joint_predict(original,gamma))[good,.]):/map.delta[good,pool]
+        score=J(n,1,0)
+        for(g=1;g<=rows(map.mass);g++) {
+            index=(map.panel[g,1]..map.panel[g,2])'
+            for(j=1;j<=rows(index);j++)score[map.row[index[j]]]=score[map.row[index[j]]]+map.weight[index[j]]*kappa[g]
+        }
+        solved=vckss__joint_solve(original,vckss__joint_transpose_full(original,score),tolerance,maxiter)
+        if(solved.status!="CONVERGED"){map.status=solved.status;map.message=solved.message;return;}
+        check=map.delta[.,pool]:*kappa+vckss_center_jla__sum(map,solved.prediction)-b
+        scale=max(abs(b));residual=scale==0 ? max(abs(check)) : vckss__norm2(check/scale)/vckss__norm2(b/scale)
+        if(hasmissing(kappa) | missing(residual) | residual>max((1e-11,10*tolerance))){map.status="INVERSE_RESIDUAL_FAILED";map.message="complete centering correction equation failed";return;}
+        for(g=1;g<=rows(map.mass);g++) {
+            index=(map.panel[g,1]..map.panel[g,2])'
+            map.chat[index,pool]=map.xi[index,pool]:+kappa[g]/map.mass[g]
+        }
+    }
+    map.chat=2*map.chat[.,1]-(map.chat[.,2]+map.chat[.,3])/2
+    if(hasmissing(map.chat)){map.status="NONFINITE_CORRECTION";map.message="centering map is nonfinite";return;}
+    map.status="CONVERGED";map.message="shared centering point map accepted"
+}
+real matrix vckss_center_jla__contract(struct vckss_center_jla__map scalar map,real matrix wp,real matrix fp)
+{
+    real matrix sw,sf,cw,cf,out
+    sw=vckss_center_jla__sum(map,wp);sf=vckss_center_jla__sum(map,fp)
+    cw=panelsum((map.weight:*map.chat):*wp[map.row,.],map.panel)
+    cf=panelsum((map.weight:*map.chat):*fp[map.row,.],map.panel)
+    out=(colsum(sw:*cw)',colsum(sf:*cf)',(colsum(sw:*cf)+colsum(sf:*cw))'/2)
+    return((out,out[.,1]+out[.,2]+2*out[.,3]))
+}
+struct vckss_center_jla__map scalar vckss_center_jla__prepare(
+    struct vckss_joint_design scalar original,real colvector order,real matrix panel,
+    real colvector copies,real colvector frequency,real colvector z,real colvector e,
+    real matrix matched_p,real matrix observation_p,real matrix control_factor,
+    real scalar tolerance,real scalar maxiter,real scalar rank_tolerance,real scalar block_tolerance)
+{
+    struct vckss_center_jla__map scalar map
+    struct vckss_maker_result scalar maker
+    real colvector index,c,r,direction,t,xi,zz,ee
+    real matrix low
+    real scalar g,pool,start,width,m,sr,sz,a,n,matched
+    matched=rows(panel);n=sum(frequency)
+    map.status="CONVERGED";map.message="";map.row=order\copies
+    map.weight=frequency[order]\J(rows(copies),1,1)
+    map.panel=panel
+    start=rows(order)
+    for(g=1;g<=rows(copies);g++)map.panel=map.panel\(start+g,start+g)
+    map.mass=panelsum(map.weight,map.panel)
+    map.delta=map.q=J(rows(map.mass),3,0);map.t=map.xi=J(rows(map.row),3,0)
+    for(g=1;g<=rows(map.mass);g++) {
+        index=(map.panel[g,1]..map.panel[g,2])';width=rows(index);m=map.mass[g]
+        c=sqrt(map.weight[index]);zz=z[map.row[index]];ee=e[map.row[index]]
+        for(pool=1;pool<=3;pool++) {
+            if(g<=matched) {
+                low=sqrt(matched_p[g,pool])*c/sqrt(m)
+                if(cols(original.controls))low=(low,c:*original.residualized_controls[map.row[index],.]*control_factor)
+                maker=vckss__low_rank_maker(low,c:*ee,rank_tolerance,block_tolerance)
+                if(maker.status!="CONVERGED"){map.status=maker.status;map.message=maker.message;return(map);}
+                r=maker.actions:/c;direction=(c-low*(low'*c)):/c
+            }
+            else {
+                a=1-observation_p[g-matched,pool]
+                if(cols(original.controls))a=a-rowsum((original.residualized_controls[map.row[index],.]*control_factor):^2)[1]
+                if(missing(a) | a<=block_tolerance){map.status="NONESTIMABLE_DELETION";map.message="centering half-pool maker is nonpositive";return(map);}
+                r=ee/a;direction=J(width,1,a)
+            }
+            sr=quadcross(map.weight[index],r);sz=quadcross(map.weight[index],zz)
+            t=zz*sr;xi=(t-r*sz)/m;a=quadcross(map.weight[index],direction)/m
+            map.delta[g,pool]=n*a-m
+            map.q[g,pool]=quadcross(map.weight[index],t)-n*quadcross(map.weight[index]:*direction,xi)
+            map.t[index,pool]=t;map.xi[index,pool]=xi
+        }
+    }
+    vckss_center_jla__finish(map,original,tolerance,maxiter,rank_tolerance)
+    return(map)
+}
+
 struct vckss_result scalar vckss__jla_backend(
     real colvector y,
     real colvector worker,
@@ -4051,6 +4381,11 @@ struct vckss_result scalar vckss__jla_backend(
     real colvector stayer_mask,
     pointer(struct vckss_nmc__attachment scalar) scalar numerical)
 {
+    struct vckss_center_jla__map scalar center_map
+    real scalar center_active,center_half
+    real matrix center_match,center_obs,center_match_p,center_obs_p,center_draws
+    real colvector center_copies,center_order
+    real matrix center_panel
     struct vckss_result scalar out
     struct vckss_nmc__state scalar numerical_state
     struct vckss_rng__stream_snapshot scalar replay_start, replay_post
@@ -4122,6 +4457,8 @@ struct vckss_result scalar vckss__jla_backend(
     real rowvector target_reference_scale
 
     out = vckss__empty_result()
+    center_active=st_global("VCKSS_CENTERING")=="corrected"
+    if(center_active & (probes<4 | mod(probes,2)))return(vckss__failure("INVALID_CENTERING_PROBES","Corrected JLA requires even probes() of at least four"))
     deletion_rank_gap = .
     use_semantic_atoms = 0
     hybrid = (args() >= 23 && rows(stayer_mask) > 0)
@@ -4409,6 +4746,8 @@ struct vckss_result scalar vckss__jla_backend(
     coefficient = solved.coefficient
     fitted = solved.prediction
     residual = working_y - fitted
+    if(st_global("VCKSS_CENTERING")!="none" & st_global("VCKSS_CENTERING")!="")
+        working_y = working_y :- vckss_nmc__center_mean(working_y,frequency)
     plugin = vckss__effect_plugin(
         coefficient[1..base_parameters],base,target_weight)
     vckss_timer__off(91)
@@ -4471,6 +4810,11 @@ struct vckss_result scalar vckss__jla_backend(
         }
     }
 
+    if(center_active) {
+        center_match=J(deletion=="match" ? groups : 0,6,0)
+        center_obs=J(deletion=="observation" ? physical_count : (hybrid ? stayer_physical_count : 0),6,0)
+        if(!vckss_center_jla__memory_check(n,rows(center_obs)+groups,cols(working_joint.controls)))return(vckss__failure("RESOURCE_LIMIT","centering allocation exceeds memory_gib()"))
+    }
     for (batch_start=1; batch_start<=probes; batch_start=batch_start+batch) {
         batch_finish = min((probes,batch_start+batch-1))
         batch_columns = batch_finish-batch_start+1
@@ -4564,6 +4908,31 @@ struct vckss_result scalar vckss__jla_backend(
                 deletion_random_batch-deletion_projected_batch
         }
         for (batch_column=1; batch_column<=batch_columns; batch_column++) {
+            if(center_active) {
+                center_half=3+2*(batch_start+batch_column-1>probes/2)
+                if(deletion=="observation") {
+                    physical_projected=projected_batch[physical_row,batch_column]
+                    physical_random=physical_random_batch[.,batch_column]-physical_projected
+                    center_obs[.,1]=center_obs[.,1]+physical_projected:^2
+                    center_obs[.,2]=center_obs[.,2]+physical_random:^2
+                    center_obs[.,center_half]=center_obs[.,center_half]+physical_projected:^2
+                    center_obs[.,center_half+1]=center_obs[.,center_half+1]+physical_random:^2
+                }
+                else {
+                    center_match[.,1]=center_match[.,1]+deletion_projected_batch[.,batch_column]:^2
+                    center_match[.,2]=center_match[.,2]+deletion_random_batch[.,batch_column]:^2
+                    center_match[.,center_half]=center_match[.,center_half]+deletion_projected_batch[.,batch_column]:^2
+                    center_match[.,center_half+1]=center_match[.,center_half+1]+deletion_random_batch[.,batch_column]:^2
+                    if(hybrid) {
+                        physical_projected=projected_batch[stayer_physical_row,batch_column]
+                        physical_random=stayer_physical_random_batch[.,batch_column]-physical_projected
+                        center_obs[.,1]=center_obs[.,1]+physical_projected:^2
+                        center_obs[.,2]=center_obs[.,2]+physical_random:^2
+                        center_obs[.,center_half]=center_obs[.,center_half]+physical_projected:^2
+                        center_obs[.,center_half+1]=center_obs[.,center_half+1]+physical_random:^2
+                    }
+                }
+            }
             projected = projected_batch[.,batch_column]
             rademacher_sum = rademacher_batch[.,batch_column]
             if (deletion == "observation") {
@@ -4789,6 +5158,16 @@ struct vckss_result scalar vckss__jla_backend(
         }
     }
 
+    if(center_active) {
+        center_match_p=center_match[.,(1,3,5)]:/(center_match[.,(1,3,5)]+center_match[.,(2,4,6)])
+        center_obs_p=center_obs[.,(1,3,5)]:/(center_obs[.,(1,3,5)]+center_obs[.,(2,4,6)])
+        center_order=deletion=="match" ? row_order : J(0,1,.)
+        center_panel=deletion=="match" ? deletion_panel : J(0,2,.)
+        center_copies=deletion=="observation" ? physical_row : (hybrid ? stayer_physical_row : J(0,1,.))
+        center_map=vckss_center_jla__prepare(working_joint,center_order,center_panel,center_copies,frequency,working_y,residual,center_match_p,center_obs_p,control_factor,tolerance,maxiter,rank_tolerance,block_tolerance)
+        if(center_map.status!="CONVERGED")return(vckss__failure(center_map.status,center_map.message))
+        center_draws=J(probes,4,0)
+    }
     if (all_probe & numerical_state.status == "ok_local") {
         vckss_nmc__target_prepare(numerical_state,working_y,residual,
             frequency,row_order,deletion_panel)
@@ -4907,6 +5286,7 @@ struct vckss_result scalar vckss__jla_backend(
             target_prediction_batch[.,2:*(1..batch_columns)]
         total_projection_batch =
             worker_projection_batch+firm_projection_batch
+        if(center_active)center_draws[batch_start..batch_finish,.]=vckss_center_jla__contract(center_map,worker_projection_batch,firm_projection_batch)
         if (all_probe & numerical_state.status == "ok_local") {
             for (batch_column=1; batch_column<=batch_columns; batch_column++) {
                 vckss_nmc__target(numerical_state,batch_start+batch_column-1,
@@ -4971,6 +5351,7 @@ struct vckss_result scalar vckss__jla_backend(
     }
     correction = colsum(target_draws) :/ probes
     numerical_mcse = vckss__mcse(target_draws)
+    if(center_active)correction=correction+colsum(center_draws)/probes
     vckss_timer__off(93)
     if (hasmissing(plugin) | hasmissing(correction) |
         hasmissing(numerical_mcse)) {

@@ -18,6 +18,22 @@ The new explicit Rust structured candidate posts `e(V)` only for
 target check passes. Its q1 route posts no Gaussian `e(V)`. The independent
 exact Mata family's posting contract is unchanged.
 
+## Outcome-centering metadata
+
+`e(centering)` records `none`, `mean` or `corrected`. `e(mcse_centering)` is
+`uncentered`, `fixed observed mean`, or
+`fixed observed mean and fixed centering increment`, respectively.
+Both macros are posted in exact mode and with MCSE off. They describe the
+centering convention, not diagnostic availability. The `corrected` row of
+`e(results)` is the final leave-out estimate in every centering mode.
+
+Centering leaves `e(plugin)` unchanged; `e(correction)` includes the selected
+adjustment and `e(kss)=e(plugin)-e(correction)`. No separate increment
+covariance is returned. Mean's MCSE holds its observed mean fixed. Corrected
+JLA returns Mean's MCSE/covariance for the same call and holds the extra
+increment fixed, excluding its numerical uncertainty. Record both centering
+macros with exported diagnostics. See [CENTERING.md](CENTERING.md).
+
 ## All-point-probe numerical diagnostics
 
 `mcse(all)` is the default. The canonical `e(mcse)` is a one-by-four SE
@@ -26,7 +42,8 @@ four-by-four raw and usable numerical covariances in the same order, including
 the exact `(1,1,2)` total contraction of the three primitive components.
 `e(mcse_mode)`, `e(mcse_method)`, `e(mcse_status)` and `e(mcse_available)`
 record requested mode, method, typed status and usability. Exporters must save
-these fields, the four SEs and raw covariance together. These numerical
+these fields, `e(centering)`, `e(mcse_centering)`, the four SEs and raw
+covariance together. These numerical
 diagnostics do not create `e(V)`.
 
 JLA all mode uses method `crossfit_if_v1`. Exact uses method `exact`, status
@@ -55,8 +72,9 @@ work, generator re-evaluations, allocation bound, PSD adjustment, residual and
 sensitivity/maker margins, replay time and failed zero-based probe.
 `e(numerical_replay_rhs)` stores certified phase/probe/complete-residual rows.
 The status, matrix dimensions, conditional contraction, every count and
-residual gate are reconciled before posting. Exact returns zeros and performs
-no probe/replay work. Supported projection/sampling-inference requests retain
+residual gate are reconciled before posting. Exact enabled MCSE returns zeros and performs
+no probe/replay work. With `centering(none)`, supported
+projection/sampling-inference requests retain
 this diagnostic for the main point estimates; no MCSE is attached to those
 additional results. Their estimates, covariance, intervals, simulations and
 scientific gates retain their existing contracts.
@@ -79,6 +97,12 @@ Automatic backend fallback retains its existing structural pre-RNG rules;
 MCSE does not choose a different estimator route. See the
 [original derivation](ALL_PROBE_MCSE.md) and
 [current default/interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md).
+
+Active centering requires native centering API 1 independently of numerical
+API 2. A plugin lacking it fails strict native preflight with
+`RUST_BACKEND_UNAVAILABLE`; automatic routing may use Mata before
+preparation/RNG under the ordinary consent rules. This capability failure
+is distinct from `STALE_NUMERICAL_RUNTIME` for explicit all-probe MCSE.
 
 ## Opt-in inference matrices
 
@@ -335,6 +359,9 @@ file's troubleshooting section. These suggestions explain available remedies
 but never silently alter the deletion assumption, tolerance, sample, or
 estimand. The catalog includes:
 
+- `INVALID_CENTERING` (return code 198) for an unknown centering mode;
+- `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) for active centering
+  with `inference()` or `project()`, rejected before estimator RNG;
 - `INVALID_FREQUENCY`, `PHYSICAL_TOTAL_LIMIT` when the exact literal count
   exceeds `2^53`, and `INVALID_TARGET_WEIGHT`;
 - `INVALID_DEPVAR`, `INVALID_CONTROLS`, `INVALID_INPUT`, `NONFINITE_INPUT`,

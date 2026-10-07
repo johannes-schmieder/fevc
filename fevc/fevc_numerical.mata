@@ -1,6 +1,11 @@
 *! fevc numerical kernels and native validation API 4 30sep2026
 version 18.0
 mata:
+real scalar vckss_nmc__center_mean(real colvector y,real colvector frequency)
+{
+    if(st_global("VCKSS_CENTERING")=="" | st_global("VCKSS_CENTERING")=="none")return(0)
+    return(y[1]+quadcross(frequency:/sum(frequency),y:-y[1]))
+}
 mata set matastrict on
 mata set matalnum off
 real scalar vckss_nmc__module_api()
@@ -9,7 +14,7 @@ real scalar vckss_nmc__module_api()
 }
 string scalar vckss_nmc__build_id()
 {
-    return("vckss-numerical-api4-vector-replay8")
+    return("vckss-numerical-api4-vector-replay8-centering1")
 }
 real scalar vckss_nmc__norm2(real matrix value)
 {

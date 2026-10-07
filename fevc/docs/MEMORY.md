@@ -80,6 +80,21 @@ runtime-RSS allowances. Read `e(memory_forecast_scope)` before comparing
 backends. A zero conditional reserve means the model reports no separate
 reserve, not that the calculation has zero uncertainty.
 
+## Outcome-centering scratch
+
+Mean adds the retained weighted mean and centered outcome factor, without
+additional fit/probe solves or probe pools. Corrected exact retains unit
+maps and the shared coefficient-system scratch, including bounded
+exceptional-unit work. Corrected JLA additionally retains the full/two-half
+deletion moments and correction maps from the existing leverage probes.
+These allocations are forecast and charged before stochastic execution
+under the same budget policy and strict-admission rules.
+
+`mcse(off)` removes the numerical attachment's work and scratch. It does
+not remove the requested Corrected point systems. No production
+observation-square matrix or literal-copy-by-probe expansion is introduced
+by centering. See [the centering contract](CENTERING.md).
+
 ## All-point-probe attachment
 
 `mcse(off)` removes the additional derivative, fold and replay reservation.
