@@ -1,0 +1,61 @@
+{
+  "status": "WINDOWS_UNQUALIFIED_NOT_ADOPTED",
+  "candidate_sha256": "cff60c15ba4ca8dca2e3b343588dbf566c34e5fb07dd8d2f7ef092d8f7bd5397",
+  "retained_windows_sha256": "1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b",
+  "hosted_ci": {
+    "source": {
+      "status": "PASS",
+      "source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571775718",
+      "jobs": 1
+    },
+    "windows_build": {
+      "status": "PASS",
+      "source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571812326",
+      "jobs": 1
+    },
+    "rust_matrix": {
+      "status": "PASS",
+      "source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571775793",
+      "jobs": 7
+    }
+  },
+  "private_runs": [
+    {
+      "run_id": "win-20261007T044313Z-276612fb",
+      "scope": "FULL_QUALIFICATION",
+      "status": "FAIL",
+      "error_code": "STATA_DRIVER_FAILED",
+      "source_revision": "dirty-72d9dfe9589842cc2bde3dba89c44df356ca45d9ac7b8e5ffd1af3010fa5137a",
+      "source_archive_sha256": "98d390cf5ee6d50fab9bf0208d0a7665b9a1457893f108554cadb1f80e57cdfa",
+      "files_verified": 1389,
+      "receipt": "evidence/windows-initial-runtime-failure.json",
+      "receipt_sha256": "aafe04363bad9c4beb64eecb3943cd6b6011141b5a33a238bcf50b9060ba41d8",
+      "cleanup": {
+        "instance_stopped": true,
+        "transient_objects_deleted": true,
+        "lock_released": true
+      }
+    },
+    {
+      "run_id": "win-20261007T050439Z-b57e692e",
+      "scope": "FOUR_CENTERING_TEST_DIAGNOSTIC_ONLY",
+      "status": "FAIL",
+      "error_code": "STATA_DRIVER_FAILED",
+      "source_revision": "dirty-2ab93acd438bb0c855a2adbb516fdb7720ca6a4524da4138be929c05c682934a",
+      "source_archive_sha256": "6bc4a50014ea532a8dece4a7257f8f2bbf19f958b2f1de2f4f0374e61a325bdd",
+      "files_verified": 1391,
+      "receipt": "evidence/windows-diagnostic-failure.json",
+      "receipt_sha256": "36517bdcb1f31271278a48223dd2c6dc685c0d0f1b00e3485f06c614690fc665",
+      "cleanup": {
+        "instance_stopped": true,
+        "transient_objects_deleted": true,
+        "lock_released": true
+      }
+    }
+  ],
+  "diagnosis": "The fixed collector reports only aggregate STATA_DRIVER_FAILED, without a failing stage/assertion; neither attempt proves any individual runtime test passed.",
+  "stopping_decision": "Stop after one focused diagnostic; preserve failures, retain the prior Windows payload, restore the published full driver, no infrastructure or statistical changes."
+}

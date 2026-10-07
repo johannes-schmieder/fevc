@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "source_revision": "dirty-72d9dfe9589842cc2bde3dba89c44df356ca45d9ac7b8e5ffd1af3010fa5137a",
+  "source_sha256": "98d390cf5ee6d50fab9bf0208d0a7665b9a1457893f108554cadb1f80e57cdfa",
+  "files_verified": 1389,
+  "transfer_manifest_sha256": "095a2c095603fbeb7fd60ac80ba83fe121d1b4ac3c64dc16041e731bd6d91e0d",
+  "candidate_sha256": "cff60c15ba4ca8dca2e3b343588dbf566c34e5fb07dd8d2f7ef092d8f7bd5397",
+  "production_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+  "generated_wrapper_manifest_only_extra": true
+}

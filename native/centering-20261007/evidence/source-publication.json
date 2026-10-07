@@ -1,0 +1,52 @@
+{
+  "schema": "FEVC-CENTERING-SOURCE-PUBLICATION-V1",
+  "status": "PUSH_VERIFIED_WINDOWS_BUILD_DISPATCHED",
+  "source_commit": "23adde02b00c8f8bc4ab4fbb7995cfb18c4e7d44",
+  "previous_main": "f9d3f2e27ba329d865731eeb8399b88dfcef4fd4",
+  "owner_authorization": "2026-10-07 Commit and push",
+  "qualified_snapshot_sha256": "2e1e23062afc4b945a99e4b0b7fc43bd227badcfe35ef0bb35aa1f41099f9c60",
+  "qualification_record": "../centering-20261006/manifest.json",
+  "qualification_record_sha256": "4252e084af518dd368f87cc31ea8295a4d576ab9efd3272345ceed0dedd61532",
+  "changed_after_qualification_freeze": [
+    "INSTALLATION.md",
+    "README.md",
+    "fevc/CHANGELOG.md",
+    "fevc/PLAN.md",
+    "fevc/README.md",
+    "fevc/benchmarks/README.md",
+    "fevc/docs/CENTERING.md",
+    "fevc/docs/DECISIONS.md",
+    "fevc/docs/RC_BINARY_PAYLOAD.md",
+    "fevc/docs/RUST_MATA_PARITY.md",
+    "fevc/docs/rust_mata_parity.json",
+    "fevc/fevc.sthlp",
+    "fevc/tests/stata/test_centering_jla.do",
+    "fevc/tests/stata/test_centering_mean.do",
+    "native/README.md",
+    "rust/README.md",
+    "rust/TEST_PLAN.md",
+    "rust/stata_backend/README.md",
+    "rust/stata_backend/write_windows_checks.ps1",
+    "windows-ci.do"
+  ],
+  "compile_and_mata_ado_runtime_unchanged": true,
+  "test_delta": "Two trailing spaces removed; Stata tokens/fixtures/assertions unchanged",
+  "prior_gates_reused": [
+    "879Python",
+    "Rustworkspace/fmt/clippy",
+    "densecenteringoracles",
+    "Mac/Linuxfullplatform/isolatedinstall",
+    "25explicitnativecenteringchecks"
+  ],
+  "new_checks": [
+    "stagedsourcewhitespace",
+    "CMGassembly",
+    "parityrender",
+    "license",
+    "portableartifact",
+    "121indexedpaths/48evidencehashes/4payloadhashes"
+  ],
+  "astra_review_sha256": "6fa300d7224bbe4c639883cbb428089345d797b0b6ccfd3e196abc8a673a16e6",
+  "windows": "Hosted exact-source build dispatched; private exact-artifact qualification and adoption pending",
+  "release": "No tag/release/globalinstallation"
+}

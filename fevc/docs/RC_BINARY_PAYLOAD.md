@@ -12,11 +12,15 @@ The owner requested updated plugins for the smaller None/Mean/Corrected
 implementation. Local macOS and private Linux/Windows candidate preparation
 and tests are in scope. The October 7 instruction authorizes committing and
 pushing the reviewed implementation, documentation and qualified payloads,
-providing the source for the hosted Windows build. Its private qualification
-is still pending; no tag or release is authorized. The four local Mac/Linux payloads have now passed full
+providing the source for the hosted Windows build, which passes after a
+behavior-preserving C identifier rename. Full private qualification and one
+focused centering diagnostic fail; the Windows candidate is not adopted. No
+tag or release is authorized. The four local Mac/Linux payloads have now passed full
 platform and explicit Rust centering checks and are adopted in the local
-checkout. [The adoption record](../../native/centering-20261006/manifest.json)
-binds tested bytes and source identity. Windows remains unchanged.
+checkout and are now published. [The adoption record](../../native/centering-20261006/manifest.json)
+binds tested bytes and source identity. Windows remains unchanged; the
+[October 7 record](../../native/centering-20261007/manifest.json) preserves its
+failed attempts and cleanup.
 Historical payload records below keep their original scope.
 
 Active native centering requires additive centering API 1 independently of

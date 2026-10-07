@@ -16,9 +16,10 @@ options, extra random pools, derivative/adjoint/replay machinery for the
 increment, or automatic centering choices. Native centering API 1 is additive
 and separate from numerical API 2. Source checks and exact-artifact Mac/Linux
 qualification are complete, and the four matching local plugins are updated.
-The owner authorized source commit/push on October 7. Windows build and
-private qualification are pending; no release or representative-scale/
-statistical claim follows. [CENTERING.md](CENTERING.md)
+The owner authorized source commit/push on October 7. The Windows hosted
+build passes, but full private qualification and a focused diagnostic fail.
+Its candidate is not adopted; no release or representative-scale/statistical
+claim follows. [CENTERING.md](CENTERING.md)
 records the method, assumptions, local timings and evidence.
 
 ## Inference

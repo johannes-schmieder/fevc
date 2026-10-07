@@ -28,7 +28,8 @@ projection. See [the centering guide](fevc/docs/CENTERING.md).
 Mata supports these source options. Native active centering needs a matching
 centering API 1 build. This repository includes qualified Mac arm64,
 Rosetta x86-64, universal and Linux x86-64 plugins with this capability.
-The Windows plugin awaits refresh; see [native provenance](native/README.md).
+The Windows candidate builds but failed private runtime checks; its shipped
+plugin remains unchanged. See [native provenance](native/README.md).
 
 ## Requirements
 

@@ -1,0 +1,132 @@
+{
+  "schema": "FEVC-CENTERING-PUBLICATION-V1",
+  "status": "PUBLISHED_FOUR_PAYLOADS_WINDOWS_UNQUALIFIED",
+  "owner_authorization": "2026-10-07 Commit and push",
+  "source_commit": "23adde02b00c8f8bc4ab4fbb7995cfb18c4e7d44",
+  "msvc_compatibility_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+  "prior_qualification": "../centering-20261006/manifest.json",
+  "prior_qualification_sha256": "4252e084af518dd368f87cc31ea8295a4d576ab9efd3272345ceed0dedd61532",
+  "binaries": [
+    {
+      "path": "fevc/fevc_rust_macos_arm64.plugin",
+      "sha256": "d497f387c45354d55749f1489ff4fe822a953b402869dc24b3bdbf7f25cefb04",
+      "bytes": 4962000,
+      "qualification": "UNCHANGED_OCTOBER6_MAC_LINUX_BYTES"
+    },
+    {
+      "path": "fevc/fevc_rust_macos_x86_64.plugin",
+      "sha256": "9c41461a654dddff83c3a4124888773143bd0be17a62dccc8257757f96cb68c6",
+      "bytes": 5642224,
+      "qualification": "UNCHANGED_OCTOBER6_MAC_LINUX_BYTES"
+    },
+    {
+      "path": "fevc/fevc_rust_macos.plugin",
+      "sha256": "a6baf32b6a5c8ea7f26521d1f736a53b09322076fa925e438c7b16e0a8a4a7e3",
+      "bytes": 10630864,
+      "qualification": "UNCHANGED_OCTOBER6_MAC_LINUX_BYTES"
+    },
+    {
+      "path": "fevc/fevc_rust_linux_x64.plugin",
+      "sha256": "880f29d527d4cd0002e7ec76d4a3a5bf5f13fad89e306b1ca688ec120f574e62",
+      "bytes": 6044576,
+      "qualification": "UNCHANGED_OCTOBER6_MAC_LINUX_BYTES"
+    }
+  ],
+  "compatibility": {
+    "production_delta_after_source_publication": "Three centeringv1 block-local C identifier substitutions; MSVC C4456 repair; alpha equivalence verified",
+    "unchanged_surfaces": [
+      "Rust workspace",
+      "Mata/Ado production",
+      "ABI/types/control flow",
+      "Mac/Linux payloads",
+      "fixtures/assertions/probe and acceptance policies"
+    ],
+    "publication_test_delta": "Two trailing spaces removed; Stata tokens/fixtures/assertions unchanged",
+    "prior_gates_reused": [
+      "October6 full Mac/Linux platform and isolated installation",
+      "25 explicit native centering checks",
+      "independent dense centering oracles/local integrated validation"
+    ],
+    "reviews": "Astra/high accepts source publication, MSVC compatibility, exact artifact preflight, failure evidence and bounded stopping decision"
+  },
+  "windows": {
+    "status": "WINDOWS_UNQUALIFIED_NOT_ADOPTED",
+    "candidate_sha256": "cff60c15ba4ca8dca2e3b343588dbf566c34e5fb07dd8d2f7ef092d8f7bd5397",
+    "retained_windows_sha256": "1d1140b5031ee360d87c28c1a75f00243709089d63bb1e539f93046d7c211f1b",
+    "hosted_ci": {
+      "source": {
+        "status": "PASS",
+        "source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571775718",
+        "jobs": 1
+      },
+      "windows_build": {
+        "status": "PASS",
+        "source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571812326",
+        "jobs": 1
+      },
+      "rust_matrix": {
+        "status": "PASS",
+        "source_commit": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571775793",
+        "jobs": 7
+      }
+    },
+    "private_runs": [
+      {
+        "run_id": "win-20261007T044313Z-276612fb",
+        "scope": "FULL_QUALIFICATION",
+        "status": "FAIL",
+        "error_code": "STATA_DRIVER_FAILED",
+        "source_revision": "dirty-72d9dfe9589842cc2bde3dba89c44df356ca45d9ac7b8e5ffd1af3010fa5137a",
+        "source_archive_sha256": "98d390cf5ee6d50fab9bf0208d0a7665b9a1457893f108554cadb1f80e57cdfa",
+        "files_verified": 1389,
+        "receipt": "evidence/windows-initial-runtime-failure.json",
+        "receipt_sha256": "aafe04363bad9c4beb64eecb3943cd6b6011141b5a33a238bcf50b9060ba41d8",
+        "cleanup": {
+          "instance_stopped": true,
+          "transient_objects_deleted": true,
+          "lock_released": true
+        }
+      },
+      {
+        "run_id": "win-20261007T050439Z-b57e692e",
+        "scope": "FOUR_CENTERING_TEST_DIAGNOSTIC_ONLY",
+        "status": "FAIL",
+        "error_code": "STATA_DRIVER_FAILED",
+        "source_revision": "dirty-2ab93acd438bb0c855a2adbb516fdb7720ca6a4524da4138be929c05c682934a",
+        "source_archive_sha256": "6bc4a50014ea532a8dece4a7257f8f2bbf19f958b2f1de2f4f0374e61a325bdd",
+        "files_verified": 1391,
+        "receipt": "evidence/windows-diagnostic-failure.json",
+        "receipt_sha256": "36517bdcb1f31271278a48223dd2c6dc685c0d0f1b00e3485f06c614690fc665",
+        "cleanup": {
+          "instance_stopped": true,
+          "transient_objects_deleted": true,
+          "lock_released": true
+        }
+      }
+    ],
+    "diagnosis": "The fixed collector reports only aggregate STATA_DRIVER_FAILED, without a failing stage/assertion; neither attempt proves any individual runtime test passed.",
+    "stopping_decision": "Stop after one focused diagnostic; preserve failures, retain the prior Windows payload, restore the published full driver, no infrastructure or statistical changes."
+  },
+  "evidence_sha256": {
+    "evidence/msvc-variable-rename.json": "33a0d35a6eb4002eafcaf77a506c791ff106d557487208c38e237f2be46c5fd2",
+    "evidence/source-ci-run.json": "d2c4dcf84fcbb1963d59330ef92263a8b18210b0a0fad0cb2c860943fa2a2069",
+    "evidence/source-publication.json": "3c39ae23faaafe531b36c2b6083f5563cddeda24b94faeef4b13f3637f069a6f",
+    "evidence/windows-archive-verification.json": "12ad9f2fcd05d217825be715ae30868b2a971b7f295c2889d66da879eb6b92d8",
+    "evidence/windows-artifact-verification.json": "8f792cca7b39f1f7bb222152ab30613ba91a0fe6b2428c1ef1c974c815d7b154",
+    "evidence/windows-diagnostic-archive-verification.json": "542fa300750fef85a3d22104eb897f37b7a6c9ceea8b7e5ccb4883efdf850681",
+    "evidence/windows-diagnostic-failure.json": "36517bdcb1f31271278a48223dd2c6dc685c0d0f1b00e3485f06c614690fc665",
+    "evidence/windows-initial-runtime-failure.json": "aafe04363bad9c4beb64eecb3943cd6b6011141b5a33a238bcf50b9060ba41d8",
+    "evidence/windows-stopping-record.json": "67e9b2fb29e1d52ec8e338bec259d5799aca5ede74aae63411f166c7139747b5"
+  },
+  "limitations": [
+    "The Windows centering candidate is not qualified or adopted; the previous shipped Windows payload remains unchanged",
+    "The fixed private collector provides only aggregate failure, not the failing stage/assertion or individual runtime test results",
+    "Intel Mac runtime evidence is Rosetta, not native Intel hardware",
+    "No representative-scale or statistical coverage claim",
+    "Corrected JLA MCSE fixes the increment and excludes its numerical uncertainty",
+    "Repository publication is not a tag/release or global installation"
+  ]
+}

@@ -108,7 +108,10 @@ See [installation](../../INSTALLATION.md), [memory](MEMORY.md) and
 [native provenance](../../native/README.md). The package version remains
 `0.5.0-rc.1`; repository publication does not imply a release. The [native adoption record](../../native/centering-20261006/manifest.json)
 binds the four updated payloads. The owner authorized source publication on
-October 7 for the Windows hosted build; its private runtime checks are pending.
+October 7. The Windows hosted build passes, but full qualification and a
+focused centering diagnostic fail. The shipped Windows plugin is unchanged;
+the [October 7 record](../../native/centering-20261007/manifest.json) preserves
+the aggregate failures and confirmed cleanup. No failing assertion is available.
 
 ## Stored results
 

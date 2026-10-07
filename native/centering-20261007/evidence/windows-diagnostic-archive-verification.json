@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "source_revision": "dirty-2ab93acd438bb0c855a2adbb516fdb7720ca6a4524da4138be929c05c682934a",
+  "source_sha256": "6bc4a50014ea532a8dece4a7257f8f2bbf19f958b2f1de2f4f0374e61a325bdd",
+  "files_verified": 1391,
+  "transfer_manifest_sha256": "ba27cbfeffcc61b13191728bb456e4ad0864bfc25684f1e598ab57c61ae469da",
+  "scope": "DIAGNOSTIC_ONLY_NOT_QUALIFICATION"
+}

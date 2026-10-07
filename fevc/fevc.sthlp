@@ -295,7 +295,8 @@ The repository includes qualified Mac arm64, Rosetta x86-64, universal
 and Linux x86-64 centering plugins. Windows awaits refresh. An older plugin may lead
 {cmd:backend(auto)} to Mata before preparation/RNG under the ordinary consent
 rules. Strict {cmd:backend(rust)} or explicit {cmd:rng(counter_v1)} requires a
-matching plugin. Windows build and private qualification remain pending.
+matching plugin. The new Windows build passes, but private runtime checks
+fail; its shipped plugin remains unchanged without centering API 1.
 Repository publication does not imply a release.
 
 {pstd}

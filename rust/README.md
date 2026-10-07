@@ -27,7 +27,8 @@ solve independently of numerical API 2 and without changing old ABI layouts.
 
 The repository Mac arm64, Rosetta x86-64, universal and Linux x86-64 plugins pass
 full platform and explicit Rust centering checks. Windows remains unchanged
-and lacks active centering while its build/private qualification are pending. See
+and lacks active centering: the new hosted build passes but private runtime
+checks fail. See
 [the centering contract](../fevc/docs/CENTERING.md) and
 [the Stata boundary](stata_backend/README.md) for lifecycle and restrictions.
 

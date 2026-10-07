@@ -80,8 +80,9 @@ restart Stata or run `discard` to clear cached programs and Mata definitions.
 The current repository source implements `centering(none|mean|corrected)` in
 Mata and matching Rust builds. This repository contains qualified Mac
 arm64, Rosetta x86-64, universal and Linux x86-64 centering plugins. The
-Windows plugin is unchanged and lacks active centering while its hosted
-build and private qualification are pending.
+Windows plugin is unchanged and lacks active centering. Its new hosted build
+passes, but full runtime qualification and a focused diagnostic fail; see the
+[October 7 attempt record](native/centering-20261007/manifest.json).
 
 A current source installation can use `backend(mata)` on every platform.
 For Rust, update to the matching qualified repository plugin, restart Stata,
@@ -102,8 +103,8 @@ capability is absent, subject to strict native-consent rules.
 
 The [centering adoption record](native/centering-20261006/manifest.json) binds
 the four updated plugins to full platform and explicit Rust centering
-checks. The owner authorized source publication on October 7 for the Windows
-hosted build; its exact-artifact runtime qualification remains pending.
+checks. The owner authorized source publication on October 7. The Windows hosted
+build passes, but its candidate remains unqualified after two private failures.
 Earlier binary records retain their original tested artifacts. See [centering](fevc/docs/CENTERING.md) and
 [native provenance](native/README.md).
 

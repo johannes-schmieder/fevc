@@ -10,10 +10,17 @@ to a frozen dirty source snapshot, full platform/isolated-install gates and
 five explicit Rust centering checks per candidate/architecture (25 checks).
 Linux baseline job `7910950` and focused job `7911312` finish successfully.
 
-Windows retains its earlier bytes and lacks centering API 1. The owner
-authorized source commit/push on October 7 for the hosted artifact build;
-its private exact-artifact qualification is pending. The October 6 adoption
-record preserves the original local checkpoint and does not assert publication.
+Source/docs and four payloads are committed and pushed as `23adde02`; the
+behavior-preserving MSVC identifier repair is published as `c14fbcb6`. Current
+source checks, all seven Rust matrix jobs and the Windows hosted build pass.
+The exact Windows candidate fails full private runtime qualification and a
+single focused centering diagnostic. The fixed collector reports only a driver
+failure, with no failing assertion or individual test results. It is not
+adopted: Windows retains its earlier bytes without centering API 1. Both runs
+clean up and leave the guarded machine stopped. The
+[October 7 record](centering-20261007/manifest.json) binds publication, source
+compatibility and failed attempts. The October 6 record preserves its original
+local checkpoint; historical evidence is unchanged.
 No tag or release is authorized. Native Intel hardware and representative
 scale are not claimed.
 See [CENTERING.md](../fevc/docs/CENTERING.md) and

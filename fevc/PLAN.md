@@ -39,7 +39,9 @@ The active documentation now includes [CENTERING.md](docs/CENTERING.md),
 the installed help, usage/installation, return/method/resource contracts and
 the capability ledger. Dated qualification reports and binary receipts retain
 their original scope. The subsequent native refresh qualifies and adopts four
-Mac/Linux plugins. Owner-authorized publication is proceeding; the Windows
-hosted artifact build and exact-artifact private qualification remain pending. See [native provenance](../native/README.md).
+Mac/Linux plugins, now committed and pushed with the reviewed source/docs.
+The Windows hosted build and current-source CI pass, but full private runtime
+qualification and one focused diagnostic fail without a reported assertion.
+Windows work stops here; its candidate is not adopted and prior payload remains. See [native provenance](../native/README.md).
 
 Routine validation follows [development_acceptance_v1.json](docs/development_acceptance_v1.json).

@@ -15,8 +15,10 @@
   inference/projection before RNG; correction failures do not change modes.
 - Add centering API 1 without changing existing ABI structures. Refresh the
   four Mac/Linux plugins after full platform and explicit Rust centering
-  qualification. The owner authorized commit/push on October 7; the Windows
-  hosted build/private qualification are pending. No release is implied. See
+  qualification. Owner-authorized source/docs and four payloads are committed
+  and pushed on October 7. The Windows hosted build passes after a local C
+  identifier rename for MSVC; two private runtime attempts fail, so its prior
+  plugin remains. No release is implied. See
   [the centering guide](docs/CENTERING.md) and [native provenance](../native/README.md).
 
 ## September 30, 2026 — consistent MCSE stored results

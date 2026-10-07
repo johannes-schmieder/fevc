@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "conclusion": "success",
+  "headSha": "c14fbcb6a4082793c08e5a603cfc30277dfa757b",
+  "databaseId": 37571775718,
+  "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37571775718",
+  "gates": {
+    "python_tests": "PASS",
+    "generated_cmg_source": "PASS"
+  },
+  "verified_by": "gh run view --json conclusion,headSha,status,url,jobs",
+  "completedAt": "2026-10-07T04:32:05Z"
+}

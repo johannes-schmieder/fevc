@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "path": "rust/stata_backend/cshim/stata_entry.c",
+  "old_sha256": "b5d457491e49fcf6981b79325a891e31dafb1bc074b4f7167c5f0dd7304f3fba",
+  "new_sha256": "280ae214ac22f29dbf0c8559107f1b521a778998d16f2f68713c2e909b850b3d",
+  "delta": "Rename the centeringv1 block-local generation to centering_generation in its declaration, parse output and FFI argument; MSVC C4456 shadowing warning fixed without changing control flow, types, parsing or ABI",
+  "alpha_equivalence": "PASS",
+  "native_binaries": "Existing Mac/Linux bytes unchanged; compatible compiled behavior; no requalification campaign needed"
+}

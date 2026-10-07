@@ -184,7 +184,10 @@ Rust centering checks per candidate/architecture. The small timing grid is
 recorded in [CENTERING.md](../fevc/docs/CENTERING.md). The new
 [adoption record](../native/centering-20261006/manifest.json) covers four local
 payloads; Windows, native Intel hardware and representative-scale evidence
-remain outside that record. Earlier payload qualifications retain their scope.
+remain outside that record. The [October 7 record](../native/centering-20261007/manifest.json)
+preserves passing hosted Windows/source/Rust gates and two failed private
+runtime attempts; its Windows candidate is not adopted. Earlier payload
+qualifications retain their scope.
 
 ## Plugin qualification
 
