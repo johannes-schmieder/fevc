@@ -1,0 +1,97 @@
+{
+  "status": "DEVELOPMENT_TIMING_AND_DIAGNOSTICS_ONLY",
+  "manifest_sha256": "d27e62197c419389c90522a53396ff9e8eae8c224a1c64c6636f14e7c001c43d",
+  "original_aggregate_sha256": "8115a6da619e6535161d9e17206fea94e47d66f18a0347c6b1a35a2fc23b32f3",
+  "original_aggregate_status": "SCREENS_PASS",
+  "acceptance": "Original aggregate is not accepted: its pre-review validator incorrectly classified native TARGET_IDENTITY_FAILED as scientific unavailability. Original bytes retained. Current harness fails such a task with a FAILED receipt.",
+  "scope": "100 outcome draws in three k20 q1 cells; mcse(off), prior to pre-assessment engineering amendment. Timing is developmental and excludes Python generation; it is not sampling coverage qualification.",
+  "engineering_failures": [
+    {
+      "cell": "observation_q1_k20_primary",
+      "replication": 16,
+      "arm": "mean",
+      "status": "TARGET_IDENTITY_FAILED"
+    },
+    {
+      "cell": "observation_q1_k20_primary",
+      "replication": 16,
+      "arm": "fixed_c0",
+      "status": "TARGET_IDENTITY_FAILED"
+    }
+  ],
+  "cells": [
+    {
+      "cell": "mata_q1_k20_primary",
+      "paired_outcomes": 100,
+      "calls": 200,
+      "elapsed_seconds": 129.63963450002484,
+      "failed_calls": [
+        {
+          "replication": 5,
+          "arm": "fixed_c0",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 5,
+          "arm": "mean",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 6,
+          "arm": "fixed_c0",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 6,
+          "arm": "mean",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 26,
+          "arm": "fixed_c0",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 26,
+          "arm": "mean",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 32,
+          "arm": "fixed_c0",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        },
+        {
+          "replication": 32,
+          "arm": "mean",
+          "status": "NEGATIVE_INFERENCE_VARIANCE"
+        }
+      ]
+    },
+    {
+      "cell": "observation_q1_k20_primary",
+      "paired_outcomes": 100,
+      "calls": 200,
+      "elapsed_seconds": 213.22130216704682,
+      "failed_calls": [
+        {
+          "replication": 16,
+          "arm": "fixed_c0",
+          "status": "TARGET_IDENTITY_FAILED"
+        },
+        {
+          "replication": 16,
+          "arm": "mean",
+          "status": "TARGET_IDENTITY_FAILED"
+        }
+      ]
+    },
+    {
+      "cell": "match_q1_k20_primary",
+      "paired_outcomes": 100,
+      "calls": 200,
+      "elapsed_seconds": 141.25310787500348,
+      "failed_calls": []
+    }
+  ]
+}

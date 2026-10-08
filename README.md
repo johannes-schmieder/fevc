@@ -33,18 +33,20 @@ API 1; Mean projection additionally needs projection-centering API 1, and
 Mean component inference needs component-centering API 1. Existing combined
 exact-Mata requests support Mean; native combined component/projection
 requests remain unsupported.
-The local Mac arm64, Rosetta x86-64 and universal candidates at source
-`24754269` pass clean build/runtime qualification and 24 installed-capability,
-point-centering and Mean-projection checks. Linux x86-64 also passes full
-qualification, installed point centering and
-Mean projection at the same source (SCC job `7962808`). Windows runtime
-qualification remains pending after another
-private smoke failure. The existing Windows payload retains its owner-approved
-manual-test status. This local candidate has not been published or tagged.
-Those source-bound point/projection receipts do not qualify Mean component
-inference, which requires fresh bounded sampling assessment and exact-source
-native qualification; see [native provenance](native/README.md) for artifacts
-and scope.
+New Mac candidates at `b9f80ce9` pass full qualification and installed Mean
+component checks for thin arm64, thin Rosetta x86-64 and universal on both
+architectures. Linux passes full and installed Mean checks at `63757839`.
+These candidates are preserved but not adopted: Windows remains blocked after
+two private source-build smoke failures. The prepared hosted-build alternative
+awaits approval for source publication before all five payloads qualify and a
+bounded retry. Shipped binaries retain their preceding capabilities. See
+[native provenance](native/README.md) for exact artifacts and status.
+
+The [completed bounded assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+retains 22 exact-Mata availability-screen failures. All eight native primary
+cells pass the broad descriptive screens with 100% interval availability;
+material numerical sensitivity and earlier calibration limits remain. There
+is no general coverage claim.
 
 ## Requirements
 

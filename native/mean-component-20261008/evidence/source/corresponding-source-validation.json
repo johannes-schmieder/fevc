@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "scope": "Complete Git corresponding-source archives at actual Linux and Mac build commits; portable package and final packaging source remain separate.",
+  "archives": [
+    {
+      "source_commit": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+      "archive": "fevc-corresponding-source-63757839.tar.gz",
+      "sha256": "bed7b8bdfd596a210ffd0ee7a2d6b81b3e99b9cb7d4f5b47ec47670fed8aac9c",
+      "bytes": 4688794,
+      "file_count": 1460,
+      "all_members_match_git_blobs": true,
+      "required_build_runtime_lock_license_members": "PASS",
+      "plugin_payloads_excluded": "PASS"
+    },
+    {
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+      "archive": "fevc-corresponding-source-b9f80ce9.tar.gz",
+      "sha256": "03fa90502a740da19eda75cfa38f79c655bc5824d2f7336f8f346ac621688db6",
+      "bytes": 4689838,
+      "file_count": 1462,
+      "all_members_match_git_blobs": true,
+      "required_build_runtime_lock_license_members": "PASS",
+      "plugin_payloads_excluded": "PASS"
+    }
+  ]
+}

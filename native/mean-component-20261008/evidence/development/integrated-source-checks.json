@@ -1,0 +1,11 @@
+{
+  "command": [
+    "/Users/johannes/Git/varcomp_hdfe/fevc/.venv/bin/python",
+    "fevc/tools/run_checks.py"
+  ],
+  "returncode": 0,
+  "seconds": 1122.5608977500233,
+  "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/integrated-source-checks.log",
+  "source": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+  "scope": "staged development; new native plugin exercised separately and by later clean qualification"
+}

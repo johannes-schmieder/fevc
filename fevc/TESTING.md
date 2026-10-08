@@ -224,6 +224,20 @@ claimed platform. Dirty-tree development successes, old centering receipts
 and passing source gates do not substitute for clean native qualification.
 Preserve all failed gates and record limitations before promotion.
 
+The [October 8 assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+is complete: 48,000 primary calls, 192,000 target rows and all 960 task receipts
+are accounted for. Its 22 exact-Mata availability-screen failures remain
+failures; eight native cells pass the broad descriptive screens. Stress and
+fixed-outcome numerical profiles retain unavailable targets and material
+numerical sensitivity. The final 32 harness tests pass against byte-verified
+`b9f80ce9` harness files, identical at `63757839`.
+Mac full and four-alias installed Mean checks pass at `b9f80ce9`; Linux full
+and installed checks pass at `63757839`. Windows remains blocked, so the
+qualified candidates are preserved without adoption. The earlier integrated
+source checker remains staged-development evidence, not clean-SHA integrated
+qualification. [The candidate record](../native/mean-component-20261008/checkpoint.json)
+binds exact scopes and the approval-dependent Windows continuation.
+
 ## Manual referee checks
 
 The self-contained Stata entry points under [`tests/manual/`](tests/manual/)

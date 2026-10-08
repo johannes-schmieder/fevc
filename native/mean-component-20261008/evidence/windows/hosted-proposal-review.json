@@ -1,0 +1,30 @@
+{
+  "authorizations_pending": [
+    "source push before all native payload qualifications",
+    "hosted workflow dispatch and candidate download",
+    "one owned-prebuilt dirty transport private smoke and conditional full"
+  ],
+  "files": {
+    "BASELINE.sha256": "ecd16f67bd80c2427bd53f9ca962addfc3063dac4582e75967e0568f54709747",
+    "README.md": "46f08a8cf86ad717ec0e9b20c792a588c282db71b4dfc062f183482ddcd4b6c0",
+    "hosted-build-test-scope.patch": "5040c76d01372dee2728bae38348bec97b71594ff3999b117aa8b895372816db",
+    "hosted.py": "5147d9e55ff70c913c2f7768e3df793977a906cf3bcb10fbfa1557bb3f459c9b",
+    "hosted_source.py": "62f29ce83c6c4585d736ddc1ff5093c1fbbc3b2a059405af5197822d7ec87284",
+    "offline-tests.log": "afc55894a64975ca1579a2b0a76555d15f027d269b78afa57b69ab76b12608a0",
+    "run_prebuilt.py": "8b35f7b6b33ee6078f2adc5f7456f5f7fc29008c3510a1737e369433ad17b072",
+    "support.py": "2ff3be675b27177f5d282e3f1e020fb45eb0090b5bac271e5c8fdbce7b0db161",
+    "test_hosted.py": "f8255824820583bff196c084b67d1d9969f9d3da619533ae3748b7e454badd46",
+    "test_supervisor.py": "f9b25ff7ae8f73bc3c58018dbfb3bc64f1fec0eccaee2b220b4cb5794968b1f5"
+  },
+  "independent_review": {
+    "agent": "/root/platform_readiness/prebuilt_review",
+    "scope": "exact-source provenance, artifact verification, owned paths/cleanup, smoke gate; no live operations",
+    "status": "PASS"
+  },
+  "live_operations_performed": false,
+  "offline_tests": "81 passed in 24.93s",
+  "schema": "FEVC-WINDOWS-PREBUILT-PROPOSAL-V1",
+  "source_base": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+  "status": "OFFLINE_REVIEW_PASS_NOT_QUALIFICATION",
+  "tracked_patch_applied": false
+}

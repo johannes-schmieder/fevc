@@ -1,0 +1,109 @@
+{
+  "scope": "Bounded 3-repetition complete-command diagnostic with warmups; concurrent local tests; no representative-scale throughput claim.",
+  "rows": 48,
+  "all_exposed_counts_forecasts_unchanged": true,
+  "count_fields": [
+    "N",
+    "q1_computed",
+    "memory_forecast_bytes",
+    "route_forecast_peak_bytes",
+    "rust_execution_logical_rhs",
+    "rust_leverage_rhs_count",
+    "rust_target_rhs_count",
+    "rust_control_rhs_count",
+    "inference_solver_columns",
+    "inference_counter_atoms",
+    "inference_counter_words",
+    "inference_critical_draws",
+    "inference_peak_forecast_bytes",
+    "inference_simulations",
+    "inference_gram_probes"
+  ],
+  "max_mean_vs_shifted_none_reldif": 3.5999564e-14,
+  "medians": [
+    {
+      "case": "exact_observation",
+      "reference": "highrank",
+      "centering": "mean",
+      "old_median": 0.023,
+      "new_median": 0.026
+    },
+    {
+      "case": "exact_observation",
+      "reference": "highrank",
+      "centering": "none",
+      "old_median": 0.024,
+      "new_median": 0.023
+    },
+    {
+      "case": "exact_observation",
+      "reference": "q1",
+      "centering": "mean",
+      "old_median": 0.156,
+      "new_median": 0.157
+    },
+    {
+      "case": "exact_observation",
+      "reference": "q1",
+      "centering": "none",
+      "old_median": 0.153,
+      "new_median": 0.155
+    },
+    {
+      "case": "native_match",
+      "reference": "highrank",
+      "centering": "mean",
+      "old_median": 0.675,
+      "new_median": 0.681
+    },
+    {
+      "case": "native_match",
+      "reference": "highrank",
+      "centering": "none",
+      "old_median": 0.6679999999999999,
+      "new_median": 0.6819999999999999
+    },
+    {
+      "case": "native_match",
+      "reference": "q1",
+      "centering": "mean",
+      "old_median": 0.57,
+      "new_median": 0.578
+    },
+    {
+      "case": "native_match",
+      "reference": "q1",
+      "centering": "none",
+      "old_median": 0.5680000000000001,
+      "new_median": 0.579
+    },
+    {
+      "case": "native_observation",
+      "reference": "highrank",
+      "centering": "mean",
+      "old_median": 0.665,
+      "new_median": 0.69
+    },
+    {
+      "case": "native_observation",
+      "reference": "highrank",
+      "centering": "none",
+      "old_median": 0.6639999999999999,
+      "new_median": 0.679
+    },
+    {
+      "case": "native_observation",
+      "reference": "q1",
+      "centering": "mean",
+      "old_median": 0.718,
+      "new_median": 0.733
+    },
+    {
+      "case": "native_observation",
+      "reference": "q1",
+      "centering": "none",
+      "old_median": 0.717,
+      "new_median": 0.732
+    }
+  ]
+}

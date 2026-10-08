@@ -64,15 +64,16 @@ The owner requested this exact binary for manual testing. The
 binds its source and hash; earlier passing Windows records apply to earlier
 bytes.
 
-The October 8 bounded smoke `win-20261008T153726Z-59a2355d` also returned
-`STATA_DRIVER_FAILED`. The accepted collector supplies only an aggregate
-receipt, so the failing assertion is unknown. A reviewed proposal to collect
-bounded failure diagnostics and validated candidate artifacts awaits owner
-approval; it has not been deployed. Current Windows qualification remains
-pending. See the [current candidate record](native/prerelease-20261008/manifest.json).
-These point/projection receipts do not qualify Mean component inference. The
-new source and final intended binaries need fresh platform qualification,
-separately from the new bounded sampling assessment.
+The older October 8 smoke `win-20261008T153726Z-59a2355d` remains a
+`STATA_DRIVER_FAILED` attempt with no identified assertion. The diagnostic
+collector has since been deployed and its infrastructure checks pass. For the
+Mean-component extension, the first private source-build smoke failed at
+`build_toolchain` with return code 601 and the second at `build_native` with
+a null return code. Cleanup completed and the guarded machine is stopped.
+The prepared hosted-build alternative passes 81 offline tests and independent
+review; source publication before complete qualification and a bounded retry
+await owner approval. No new full Windows qualification or payload adoption
+has occurred. See [the current candidate record](native/mean-component-20261008/checkpoint.json).
 
 ## Local source installation
 
@@ -99,18 +100,20 @@ existing supported tuples; Corrected remains unsupported with either. Mean
 component inference holds the observed retained physical-frequency
 working-outcome mean fixed and omits its estimation uncertainty. This
 approximation is separate from numerical MCSE and from omitted nuisance-offset
-uncertainty. The local Mac candidates at source `24754269`
-pass clean build/runtime qualification and 24 isolated-install capability,
-point-centering and Mean-projection checks. Linux x86-64 also passes full
-qualification, installed point centering and
-Mean projection at the same source (SCC job `7962808`). The existing Windows
-manual-test payload has centering API 1;
-its runtime qualification is pending and it lacks projection-centering API 1.
-See the [current candidate record](native/prerelease-20261008/manifest.json).
+uncertainty. New Mac candidates at `b9f80ce9` and Linux at `63757839`
+pass source-bound qualification and installed Mean-component checks. They
+remain preserved outside the installation payloads while Windows blocks the
+five-payload update. The existing Windows manual-test binary has point
+centering API 1 and lacks both attachment-centering capabilities. See
+[the current candidate record](native/mean-component-20261008/checkpoint.json).
+The [completed assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+records substantial exact-Mata interval unavailability and native numerical
+sensitivity; installation or successful computation is not a coverage claim.
 
 A current source installation can use `backend(mata)` on every platform.
-For Rust, update to the matching repository plugin, restart Stata,
-and inspect its capability:
+For Rust, use a matching qualified build, restart Stata, and inspect its
+capability. The retained repository payloads do not yet provide Mean component
+inference:
 
 ```stata
 fevc_rust probe

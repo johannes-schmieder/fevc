@@ -1,0 +1,72 @@
+{
+  "kind": "diagnostic development validation; not native qualification or sampling coverage",
+  "source_head": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+  "source_dirty": true,
+  "runtime": "Stata/MP 19.0 macOS",
+  "source_files": {
+    "fevc/fevc_inference.mata": "12dee7a63b10932e0e3fcab996e5e03f4de8c996b4182bdc2c30b67de5f489c2",
+    "fevc/tests/stata/test_component_centering_exact.do": "49b9b0effb4963740864667951d9cbd8a1af613bbe3426cac57d0b5a311451cc"
+  },
+  "commands": [
+    "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/fevc/fevc/tests/stata/test_component_centering_exact.do /Users/johannes/Git/varcomp_hdfe/fevc/fevc",
+    "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_inference_driver.do",
+    "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_inference_lincom_driver.do",
+    "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_projection_mean_driver.do"
+  ],
+  "seeds": {
+    "caller": 719321,
+    "inference": 42,
+    "independent_quadratic_probe": 18431
+  },
+  "new_test_cells": 12,
+  "inference_simulations": 200,
+  "oracle_simulations": 73,
+  "inference_bins": 4,
+  "checks": [
+    {
+      "test": "test_component_centering_exact",
+      "status": "PASS",
+      "marker": "PASS test_component_centering_exact.do",
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_component_centering_exact.log",
+      "sha256": "de2edd0dc37c71d8b90bccd41036f364a082d0cb17015f42626dc727131a259b"
+    },
+    {
+      "test": "test_inference",
+      "status": "PASS",
+      "marker": "PASS test_inference.do",
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_inference.log",
+      "sha256": "c9cdd07bee65ed0daaebceaa27d74c61319aecada78b6cd77ad2ea013f7fa2b5"
+    },
+    {
+      "test": "test_inference_lincom",
+      "status": "PASS",
+      "marker": "PASS test_inference_lincom.do",
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_inference_lincom.log",
+      "sha256": "b3ca4bba9a40ecae4559edf0ca237da13c74dcebbd6d50f3cc11d46f854b0502"
+    },
+    {
+      "test": "test_projection_mean",
+      "status": "PASS",
+      "marker": "PASS test_projection_mean.do",
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-inference-20261008/exact-development/test_projection_mean.log",
+      "sha256": "9562111d54579f5f2376ed5bbe7c962f8271b6ae586a8f4e044b88d1da19ac62"
+    }
+  ],
+  "development_notes": [
+    "Original inherited small fixture with low signal failed the unchanged joint PSD gate; independent dense screen selected stronger fixed signal for an admissible engineering fixture.",
+    "Independent mode-specific public checks require a unique leading eigenvalue; repeated leading eigenspaces are checked by their eigenvalue, variance and remainder identity, and independent direct operator tests.",
+    "Positive outcome rescaling retains canonical draw-to-row assignment; negative scaling may permute rows and change finite Stata Gaussian simulation realization.",
+    "Illegal inferencebins(1) encountered the existing external-helper private failure routine bug; focused test uses legal inferencebins(4)."
+  ],
+  "skipped_external_gates": [
+    "full integrated source checks delegated to root",
+    "native/source-local and platform qualification delegated to other agents",
+    "sampling qualification delegated to assessment agent"
+  ],
+  "all_q1_targets_computed": true,
+  "independent_public_checks": {
+    "joint_covariance": "all 12 cells; full e(V) vs dense same-error-draw oracle, 200 draws at seed 42",
+    "q1_remainder_variance": "at least three unique-mode targets in each q1 cell; weighted total target required unique; comparison tolerance 2e-10",
+    "metadata": "Mean/None interpretation and omitted-mean indicator; both absent on point-only calls"
+  }
+}

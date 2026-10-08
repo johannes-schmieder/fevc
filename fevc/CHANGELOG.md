@@ -21,10 +21,19 @@
   point, influence, covariance and interval values unchanged. The public
   remainder-identity diagnostic remains the raw discrepancy. This numerical
   repair is separate from the observed-mean statistical approximation.
-- Require fresh independent algebra tests, bounded sampling assessment and
-  source-bound native qualification. Earlier None confirmations and historical
-  point/projection platform evidence do not qualify this extension. No new
-  uniform coverage guarantee, tag or release is implied.
+- Complete independent algebra/source checks and the registered bounded
+  assessment. Preserve all 22 exact-Mata primary availability-screen failures
+  across three cells. The eight native primary cells have 100% interval
+  availability and pass broad descriptive screens; separate fixed-outcome
+  checks show material numerical sensitivity. See
+  [the assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md).
+- Preserve new qualified Mac/Linux candidates, including installed Mean checks,
+  without adoption while Windows is blocked after two source-build smokes.
+  A prepared hosted-build alternative passes 81 offline tests and independent
+  review; a source push before all five payloads qualify and bounded retry
+  await owner approval. Earlier receipts and statistical failures retain their
+  scope. No new source push, full Windows qualification, general coverage
+  guarantee, tag or hosted release is claimed.
 
 ## October 7, 2026 — Mean projection covariance
 

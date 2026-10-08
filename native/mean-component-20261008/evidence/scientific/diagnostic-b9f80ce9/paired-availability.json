@@ -1,0 +1,152 @@
+{
+  "status": "engineering complete; descriptive, no primary screens",
+  "scope": "Paired availability/status comparisons only; agreement does not establish causality.",
+  "source_assessment_sha256": "6e0b806d3b0418ab4a335bbe670b30e97201ca48ea7575d8b237e97ca59dd50b",
+  "all_failure_target_rows": 2264,
+  "summaries": [
+    {
+      "cell": "mata_highrank_k12_homoskedastic",
+      "target": "worker",
+      "paired_attempts": 100,
+      "mean_available": 14,
+      "fixed_c0_available": 14,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_homoskedastic",
+      "target": "firm",
+      "paired_attempts": 100,
+      "mean_available": 14,
+      "fixed_c0_available": 14,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_homoskedastic",
+      "target": "covariance",
+      "paired_attempts": 100,
+      "mean_available": 14,
+      "fixed_c0_available": 14,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_homoskedastic",
+      "target": "total",
+      "paired_attempts": 100,
+      "mean_available": 14,
+      "fixed_c0_available": 14,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_weak",
+      "target": "worker",
+      "paired_attempts": 100,
+      "mean_available": 28,
+      "fixed_c0_available": 28,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_weak",
+      "target": "firm",
+      "paired_attempts": 100,
+      "mean_available": 28,
+      "fixed_c0_available": 28,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_weak",
+      "target": "covariance",
+      "paired_attempts": 100,
+      "mean_available": 28,
+      "fixed_c0_available": 28,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_highrank_k12_weak",
+      "target": "total",
+      "paired_attempts": 100,
+      "mean_available": 28,
+      "fixed_c0_available": 28,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_q1_k12_null",
+      "target": "worker",
+      "paired_attempts": 100,
+      "mean_available": 0,
+      "fixed_c0_available": 0,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_q1_k12_null",
+      "target": "firm",
+      "paired_attempts": 100,
+      "mean_available": 0,
+      "fixed_c0_available": 0,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_q1_k12_null",
+      "target": "covariance",
+      "paired_attempts": 100,
+      "mean_available": 0,
+      "fixed_c0_available": 0,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "mata_q1_k12_null",
+      "target": "total",
+      "paired_attempts": 100,
+      "mean_available": 0,
+      "fixed_c0_available": 0,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "match_highrank_k12_concentrated_mass",
+      "target": "worker",
+      "paired_attempts": 100,
+      "mean_available": 100,
+      "fixed_c0_available": 100,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "match_highrank_k12_concentrated_mass",
+      "target": "firm",
+      "paired_attempts": 100,
+      "mean_available": 100,
+      "fixed_c0_available": 100,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "match_highrank_k12_concentrated_mass",
+      "target": "covariance",
+      "paired_attempts": 100,
+      "mean_available": 0,
+      "fixed_c0_available": 0,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    },
+    {
+      "cell": "match_highrank_k12_concentrated_mass",
+      "target": "total",
+      "paired_attempts": 100,
+      "mean_available": 100,
+      "fixed_c0_available": 100,
+      "availability_disagreements": 0,
+      "status_code_disagreements": 0
+    }
+  ]
+}

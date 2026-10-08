@@ -1,0 +1,742 @@
+{
+  "scope": "Diagnostic-only 100-draw cells; no scientific primary screen applies. SCREENS_PASS in frozen aggregation is not a scientific pass.",
+  "source_assessment_sha256": "6e0b806d3b0418ab4a335bbe670b30e97201ca48ea7575d8b237e97ca59dd50b",
+  "manifest_identity": "a8ef35277c72e99e3158dfa506746ad07af37707b6ccc2fc0c19dd11b9a4c9bb",
+  "calls": 2000,
+  "rows": 8000,
+  "attempt_failure_rows": 2264,
+  "caveats": [
+    "Gaussian exact dense oracle covariance excludes finite-probe JLA variability.",
+    "Student-t8 error cell omits fourth-cumulant 1.5 sum_i sigma_i^4 K_t,ii K_s,ii in its Gaussian moment reference.",
+    "Estimated-offset moment reference describes known controls, not an unconditional law after gamma estimation; per-draw point oracle uses independently estimated gamma.",
+    "q1 covariance averages compare successful intervals only; success rates and all attempted failures are separately reported."
+  ],
+  "cells": [
+    {
+      "cell": "mata_highrank_k12_homoskedastic",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 1.0,
+            "coverage_all": 0.14,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 0.9285714285714286,
+            "coverage_all": 0.13,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 0.9285714285714286,
+            "coverage_all": 0.13,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 1.0,
+            "coverage_all": 0.14,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 1.0,
+            "coverage_all": 0.14,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 0.9285714285714286,
+            "coverage_all": 0.13,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 0.9285714285714286,
+            "coverage_all": 0.13,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 14,
+            "coverage_success": 1.0,
+            "coverage_all": 0.14,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 46,
+              "NEGATIVE_INFERENCE_VARIANCE": 40
+            }
+          }
+        }
+      }
+    },
+    {
+      "cell": "mata_highrank_k12_weak",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9642857142857143,
+            "coverage_all": 0.27,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9642857142857143,
+            "coverage_all": 0.27,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9285714285714286,
+            "coverage_all": 0.26,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9642857142857143,
+            "coverage_all": 0.27,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9642857142857143,
+            "coverage_all": 0.27,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9642857142857143,
+            "coverage_all": 0.27,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9285714285714286,
+            "coverage_all": 0.26,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 28,
+            "coverage_success": 0.9642857142857143,
+            "coverage_all": 0.27,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 57,
+              "INFERENCE_VARIANCE_INVALID": 15
+            }
+          }
+        }
+      }
+    },
+    {
+      "cell": "mata_q1_k12_null",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "INFERENCE_COVARIANCE_NOT_PSD": 30,
+              "INFERENCE_VARIANCE_INVALID": 70
+            }
+          }
+        }
+      }
+    },
+    {
+      "cell": "match_highrank_k12_concentrated_mass",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "target_status_6": 100
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.87,
+            "coverage_all": 0.87,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 0,
+            "coverage_success": null,
+            "coverage_all": 0.0,
+            "failures": {
+              "target_status_6": 100
+            }
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.86,
+            "coverage_all": 0.86,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          }
+        }
+      }
+    },
+    {
+      "cell": "match_q1_k12_estimated_offset",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.93,
+            "coverage_all": 0.93,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.93,
+            "coverage_all": 0.93,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          }
+        }
+      }
+    },
+    {
+      "cell": "match_q1_k12_leverage_sensitivity",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.93,
+            "coverage_all": 0.93,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 1.0,
+            "coverage_all": 1.0,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.93,
+            "coverage_all": 0.93,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 1.0,
+            "coverage_all": 1.0,
+            "failures": {}
+          }
+        }
+      }
+    },
+    {
+      "cell": "match_q1_k12_multimode",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.94,
+            "coverage_all": 0.94,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.94,
+            "coverage_all": 0.94,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.98,
+            "coverage_all": 0.98,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          }
+        }
+      }
+    },
+    {
+      "cell": "observation_highrank_k12_heavy_tail",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.92,
+            "coverage_all": 0.92,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          }
+        }
+      }
+    },
+    {
+      "cell": "observation_highrank_k12_mild",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.96,
+            "coverage_all": 0.96,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          }
+        }
+      }
+    },
+    {
+      "cell": "observation_q1_k12_severe",
+      "arms": {
+        "mean": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.9,
+            "coverage_all": 0.9,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.93,
+            "coverage_all": 0.93,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.9,
+            "coverage_all": 0.9,
+            "failures": {}
+          }
+        },
+        "fixed_c0": {
+          "covariance": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.9,
+            "coverage_all": 0.9,
+            "failures": {}
+          },
+          "firm": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.95,
+            "coverage_all": 0.95,
+            "failures": {}
+          },
+          "total": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.93,
+            "coverage_all": 0.93,
+            "failures": {}
+          },
+          "worker": {
+            "attempts": 100,
+            "successes": 100,
+            "coverage_success": 0.9,
+            "coverage_all": 0.9,
+            "failures": {}
+          }
+        }
+      }
+    }
+  ]
+}

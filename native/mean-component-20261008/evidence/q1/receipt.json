@@ -1,0 +1,83 @@
+{
+  "schema": "fevc.q1-signed-solve-certificate.development.v1",
+  "source_head": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+  "working_source_sha256": {
+    "rust/crates/vckss-core/src/centering.rs": "df2a38f1d0cd2118a6abd960ef8556ec8c22349770f3fd1ae8784572f9c71044",
+    "rust/crates/vckss-core/src/generic_jla.rs": "5486cd0c3b7c8e76d39da33b19168939ffc91cedb04dec4fa881c309a75c2d9b",
+    "rust/crates/vckss-core/src/component_inference.rs": "f392ffa1ea88f7e7133d48b3479f5ef4e09894864ae0523ad5b4241b67b37318",
+    "rust/crates/vckss-core/src/component_inference/q1_certificate_tests.rs": "90a17de09a100e0a2e03d06d8f14bc1d98b09518e4fc1c03a1eddb23e5690821"
+  },
+  "scope": "Development diagnosis and focused repair only; exact clean-source full platform qualification pending.",
+  "frozen": {
+    "manifest_identity": "d27e62197c419389c90522a53396ff9e8eae8c224a1c64c6636f14e7c001c43d",
+    "input": "/private/tmp/mean-component-pilot-v2/tasks/observation_q1_k20_primary_00001/data.csv",
+    "input_sha256": "b37c3bd094380fa8e2976843335e086c59f2c1e5bdcd391cef83ea8c531a803b",
+    "replication": 16,
+    "outcome_seed": 613194815,
+    "numerical_seed": 1592795635,
+    "fixed_c0": 3.7404484065078836
+  },
+  "failure": {
+    "code": "TARGET_IDENTITY_FAILED",
+    "phase": "component_inference_q1",
+    "target": 1,
+    "old_q1_arms": [
+      "mean",
+      "fixed_c0",
+      "raw_none"
+    ],
+    "old_highrank_all_success": true
+  },
+  "diagnosis": {
+    "signed_defect": "e0 prime u - beta_c prime e1; e0=X prime r; e1=rhs-Hu",
+    "mean_firm_raw_direct_minus_remainder": 1.1367129459927128e-11,
+    "mean_firm_original_fit_contribution": 1.1367298097860649e-11,
+    "mean_firm_second_solve_contribution": 6.740931597997945e-17,
+    "mean_firm_unexplained": -1.0122861754102694e-16,
+    "original_gate": 5.684341886080802e-14,
+    "original_full_fit_relative_residual": 1.1507212096128632e-11,
+    "dense_audit": "dense_audit.json"
+  },
+  "repair": {
+    "all_frozen_q1_arms_success": true,
+    "highrank_all_success": true,
+    "scientific_values": "unchanged; residual compensation applies only to numerical certificate",
+    "public_raw_identity_error": "preserved",
+    "threshold_and_solver_tolerances": "unchanged",
+    "additional_solves": 0,
+    "additional_rng_atoms": 0,
+    "additional_dynamic_allocations": 0,
+    "additional_state_bytes": 32,
+    "existing_mean_scalar_carried": true,
+    "abi_and_export_changes": false
+  },
+  "checks": {
+    "core_mean_tests": 2,
+    "independent_dense_certificate_cells": 16,
+    "ffi_route_lifecycle": true,
+    "core_clippy_lib_tests": true,
+    "dense_q1_original_unit": true,
+    "native_stata_cells": 8,
+    "c_error_transport": true,
+    "c_abi_header": true,
+    "bounded_overhead": "overhead/comparison.json"
+  },
+  "plugin_sha256": "2d3e6fd1fa03cab6baf3d72f3209022d290b2f4fcb6cd74998231523b341c667",
+  "plugin_source_note": "Compiled after the functional certificate fix; subsequent changes were formatting, comments, and unit-test registration. Clean exact-source rebuild is required for qualification.",
+  "artifacts_sha256": {
+    "reproduce.do": "0982dbfd6c143327a7651f474b6bf343f7a048c0f8bf46b8a83e34740b777c82",
+    "reproduce.log": "6d95ff322c62ee31198f8611ea9d039d1153f07de3ef9d01e4c55df2ef14543f",
+    "instrumented.log": "0f24c3d8bd207734bec96e00bf05c0f624f57148cebe34e6785621075eaeeff2",
+    "dump.log": "f220d98c6535026fde7899a333123354bd5aa01fae8ca4881d00fd1921aeaf23",
+    "dense_audit.py": "582cc79817ad53f82a639d25efd25a657f12342c18b95f22cc3e8b97919ee575",
+    "dense_audit.json": "d8f374d6b99e83e871be62afac9704faf8ff68a712052bd92155689e3d9ddb38",
+    "repaired.do": "62fad53610c44bd9df4531fbc65db5e7e253632d89af8cb166279645168f8a0f",
+    "repaired.log": "a41bc1f92335d2cb465cb6af7c54623f97d285f35a16dacccbe15f2fc82f990c",
+    "test-component-centering-native.log": "36f30a7750b37a3c7d933d311a33c315336de19d2fac89f5269432ada6371653",
+    "test-component-centering.log": "591bb67c8935bcb06b99c67df7a48a1d94f8ee2b94e1115a1e9884c0a71244ea",
+    "test-ffi.log": "b2b8e0fbc7daf4557c97366e167145476784b108468e30e0a88566fa02ccfa4e",
+    "test-dense-q1.log": "47f14ae2ab5cceec790b98811f5686db78d3025944537d2ae50661a49f4626db",
+    "clippy.log": "f85180f1f3a84f3fdcf06266e17fe85b209c4512b0b10bca3b7118a199b1d16b",
+    "overhead/comparison.json": "e2149f586508b1d88855b398c6f281616a5950b75d738f97aa03bd21e34785ce"
+  }
+}

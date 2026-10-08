@@ -95,10 +95,20 @@ to point-centering support. Native Mean projection separately requires
 support Mean; native combined component/projection requests remain unsupported
 for both Mean and None.
 
-The Mean extension is a source candidate with a newly required bounded
-sampling assessment and exact-source native qualification. Historical None
-confirmations, calibration failures and platform receipts retain their
-original scope; none supplies a Mean coverage guarantee.
+The [completed 12-cell assessment](MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+retains **22 failed exact-Mata availability-screen entries**: highrank k12/k20
+and q1 k12 fail in both Mean and fixed-c0 arms. The eight native primary cells
+have 100% interval availability and pass the broad descriptive screens.
+Fixed-outcome native checks nevertheless show material numerical sensitivity,
+including point-budget endpoint changes up to 1.15 dense-oracle SD. These
+results separate mean-approximation error from other inference limitations;
+they establish no general coverage guarantee.
+
+New Mac and Linux candidates pass source-bound qualification and installed
+Mean-component tests, but remain unadopted while Windows qualification is
+blocked. See [native provenance](../../native/mean-component-20261008/checkpoint.json).
+Historical None confirmations, calibration failures and platform receipts
+retain their original scope.
 
 ## Variance proxy and smoothing
 

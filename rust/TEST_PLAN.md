@@ -253,6 +253,15 @@ all failed cells and historical calibration limits. See the
 [package testing guide](../fevc/TESTING.md#mean-component-inference-checks).
 No result at the older point/projection source qualifies this extension.
 
+The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+preserves 22 exact-Mata primary availability-screen failures. Eight native
+cells pass broad descriptive screens, while fixed-outcome checks show material
+numerical sensitivity. New Mac candidates at `b9f80ce9` and Linux at `63757839`
+pass full and installed Mean checks, but remain unadopted while Windows is
+blocked. The [new candidate record](../native/mean-component-20261008/checkpoint.json)
+records exact sources, failed Windows attempts and the approval-dependent
+hosted-build continuation. These results do not establish general coverage.
+
 ## Focused scalable-projection gate
 
 The public default is Mean; the internal prepared-generation default remains
@@ -421,8 +430,10 @@ is numerical Monte Carlo error, never an econometric standard error.
 
 ## Qualification and release boundary
 
-Windows Stata/plugin qualification for the current candidate, native Intel
-hardware qualification, and a command-surviving native cache remain deferred.
+Windows Stata/plugin qualification for the current Mean-component candidate
+is blocked; the proposed hosted-build continuation awaits owner approval.
+Native Intel hardware qualification and a command-surviving native cache remain
+deferred.
 Current platform status is recorded in the
 [capability ledger](../fevc/docs/RUST_MATA_PARITY.md); historical qualification
 receipts retain their original tested sources and scope.

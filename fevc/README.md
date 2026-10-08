@@ -140,19 +140,19 @@ Point centering works in Mata and a matching native build. Native point
 centering requires centering API 1; Mean projection additionally requires
 projection-centering API 1 and Mean component inference requires
 component-centering API 1. Existing combined exact-Mata requests support Mean;
-native combined component/projection requests remain unsupported. The local
-Mac arm64, Rosetta x86-64 and universal candidates at source `24754269` pass
-clean qualification and 24 installed-capability, point-centering and
-Mean-projection checks. Linux x86-64 also passes full qualification and
-installed point-centering
-and Mean-projection checks at the same source (SCC job `7962808`).
-Windows runtime qualification remains pending; its retained manual-test
-payload supports point centering but lacks the Mean-projection capability.
-The [current candidate record](../native/prerelease-20261008/manifest.json)
-binds local point/projection evidence; these candidates have not been
-published or tagged. Those receipts do not qualify Mean component inference,
-which requires fresh bounded sampling assessment and exact-source platform
-qualification. Use current Mata source or a matching qualified native build.
+native combined component/projection requests remain unsupported. New Mac
+candidates at `b9f80ce9` and Linux at `63757839` pass full qualification and
+installed Mean-component checks. They remain unadopted while Windows blocks
+the complete update. The retained payloads lack component-centering API 1;
+the Windows manual-test payload also lacks Mean-projection support. See the
+[current candidate record](../native/mean-component-20261008/checkpoint.json).
+Use current Mata source or a matching qualified native build.
+
+The [completed assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+retains 22 exact-Mata availability-screen failures across three cells. Eight
+native primary cells have 100% interval availability and pass broad descriptive
+screens, but fixed-outcome tests show material numerical sensitivity. These
+results do not establish general coverage.
 Automatic routing may use Mata when the capability is absent, while strict
 Rust/Counter-V1 requires the matching plugin. See [the centering guide](docs/CENTERING.md)
 for restrictions, stored assumptions, formulas and measured local costs.

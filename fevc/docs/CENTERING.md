@@ -80,9 +80,14 @@ mover-only with fixed offsets. Existing combined exact-Mata requests support
 Mean; native combined component/projection requests remain unsupported.
 See [the inference guide](INFERENCE.md) for supported requests and
 [the implementation contract](MATRIX_FREE_COMPONENT_INFERENCE.md) for algebra.
-Historical None coverage and native receipts do not qualify this extension;
-the [accepted implementation plan](MEAN_COMPONENT_INFERENCE_PLAN.md) requires
-fresh bounded sampling assessment and exact-source platform qualification.
+The [completed bounded assessment](MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+retains 22 exact-Mata availability-screen failures across highrank k12/k20 and
+q1 k12 in both arms. All eight native primary cells have 100% interval
+availability and pass broad descriptive screens. Mean-versus-fixed-c0 effects
+are small on those designs, but fixed-outcome native checks show material
+numerical sensitivity. Neither those results nor historical None evidence
+establish general coverage. New Mac/Linux candidates pass qualification;
+Windows still blocks adoption of the complete native update.
 
 ## Projection and the mean convention
 
@@ -198,18 +203,18 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   requests support Mean; native combined component/projection requests remain
   unsupported. Missing metadata is zero; explicit None needs neither
   attachment-centering capability on its separately supported native requests.
-- The local Mac arm64, Rosetta x86-64 and universal candidates at clean
-  source `24754269` expose point and projection centering APIs and pass full qualification
-  plus 24 isolated-install capability, point-centering and Mean-projection
-  checks. Linux x86-64 also passes full qualification and installed point-centering
-  and Mean-projection checks at the same source (SCC job `7962808`).
-  Windows runtime qualification remains pending; the retained manual-test
-  payload has centering API 1 but lacks projection-centering API 1.
-  Native Intel hardware is not claimed. See the
-  [current candidate record](../../native/prerelease-20261008/manifest.json).
-  These local candidates have not been published or tagged. Their point and
-  projection evidence does not qualify Mean component inference, which needs
-  the new component capability and fresh exact-source qualification.
+- New Mac candidates at clean source `b9f80ce9` pass full qualification and
+  separate installed Mean-component checks for thin arm64, thin x86-64 under
+  Rosetta and universal on both architectures. Linux x86-64 passes full and
+  staged/installed Mean-component tests at `63757839` (SCC job `7969972`).
+  They expose all three centering capabilities but remain **unadopted** while
+  Windows qualification is blocked. The retained package payloads lack
+  component-centering API 1; the retained Windows manual-test payload also
+  lacks projection-centering API 1. Native Intel hardware is not claimed.
+  See the [new candidate record](../../native/mean-component-20261008/checkpoint.json)
+  for source identities, compatibility, failed Windows attempts and the
+  proposed hosted-build alternative awaiting approval. No new source push,
+  full Windows qualification or tag has occurred for this extension.
   Use current Mata source or a matching qualified native build.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit

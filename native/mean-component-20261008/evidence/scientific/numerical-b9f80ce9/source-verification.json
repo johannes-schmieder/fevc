@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "manifest_identity": "4a34a112e6260f6ad34c3b94b21e0f110d470faefad562d8aa022f07c8eff445",
+  "manifest_file_sha256": "43a22a1457e19e07fce016b16f85da858cef2f2ccb7faf7d51149ac89e043f0b",
+  "source_files_identical_to_primary_manifest": "f3d566f8cae49fcb41176e0838bc3e3f5fbb3a45a8091957cdea398ee8d89e7f",
+  "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+  "source_patch_empty": true,
+  "plugin_sha256": "a2d599ce727f74d579c0cd315288413ac3980cb795258759537e560b00e89e5d",
+  "cells": 48,
+  "tasks": 48,
+  "rows": 384,
+  "workers": 2
+}

@@ -1,0 +1,67 @@
+{
+  "tested_sha": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+  "commands": [
+    {
+      "name": "fmt",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "fmt",
+        "--manifest-path",
+        "rust/Cargo.toml",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "returncode": 0,
+      "seconds": 0.9185092499828897,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/fmt.log"
+    },
+    {
+      "name": "clippy",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "clippy",
+        "--manifest-path",
+        "rust/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "returncode": 0,
+      "seconds": 3.162274707981851,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/clippy.log"
+    },
+    {
+      "name": "workspace",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "test",
+        "--manifest-path",
+        "rust/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--locked"
+      ],
+      "returncode": 0,
+      "seconds": 383.84481091599446,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/workspace.log"
+    },
+    {
+      "name": "shim",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "test",
+        "--manifest-path",
+        "rust/stata_backend/Cargo.toml",
+        "--all-targets",
+        "--locked"
+      ],
+      "returncode": 0,
+      "seconds": 4.319898042012937,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/shim.log"
+    }
+  ]
+}

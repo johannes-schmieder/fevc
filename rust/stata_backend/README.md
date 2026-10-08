@@ -94,17 +94,16 @@ from accepting a projection request whose covariance it cannot center. Missing
 capability is a structural preflight failure under the usual strict Rust and
 automatic-Mata routing rules, before preparation/RNG.
 
-The local Mac arm64, Rosetta x86-64 and universal candidates built at clean
-source `24754269` expose this capability and pass full qualification plus
-24 isolated-install capability, point-centering and Mean-projection checks.
-Linux x86-64 also passes full qualification and installed point-centering
-and Mean-projection checks at the same source (SCC job `7962808`).
-Windows remains unqualified after the latest bounded private smoke failure;
-its retained manual-test payload lacks this capability. The
-[current candidate manifest](../../native/prerelease-20261008/manifest.json)
-binds exact artifacts and source identities. The local candidate is unpublished.
-Earlier receipts retain their original scope. Use current Mata source or a
-matching qualified native build. No existing ABI structure is changed.
+The retained Mac/Linux point/projection payloads keep their `24754269`
+qualification. New Mac candidates at `b9f80ce9` and Linux at `63757839` also
+pass component-centering qualification and installed Mean tests, but are
+preserved without adoption while Windows is blocked. The retained Windows
+manual-test payload lacks both attachment-centering capabilities. The
+[new candidate record](../../native/mean-component-20261008/checkpoint.json)
+binds source identities, exact artifacts and limits. A prepared hosted-build
+alternative awaits approval for an earlier source push and bounded private
+retry; no new full Windows qualification is claimed. Use current Mata source
+or a matching qualified native build. No existing ABI structure is changed.
 
 ## Additive component-centering API 1
 

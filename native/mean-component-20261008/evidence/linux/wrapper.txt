@@ -1,0 +1,9 @@
+VCKSS_SCC_LINUX_WRAPPER_RECEIPT_V1
+status=PASS
+job_id=7969972
+hostname=scc-gd4
+slots=4
+source_commit=63757839e168170a658bf78c4fcf5487d26ab6bf
+source_bundle_sha256=caadf0ecbc25f1bcd1597adf6416903fe39d8690e3549bc14b58915c7bd3093a
+started_utc=2026-10-08T20:52:54Z
+finished_utc=2026-10-08T21:20:49Z

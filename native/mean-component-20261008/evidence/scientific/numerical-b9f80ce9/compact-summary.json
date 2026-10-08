@@ -1,0 +1,86 @@
+{
+  "status": "NUMERICAL_DIAGNOSTIC_COMPLETE",
+  "scope": "fixed outcomes; numerical sensitivity only, no sampling coverage claim",
+  "source_assessment_sha256": "438873c45f5d2221187455a1f828d2d34c91661bffd1024163cd8bfc5b2aafb9",
+  "manifest_identity": "4a34a112e6260f6ad34c3b94b21e0f110d470faefad562d8aa022f07c8eff445",
+  "calls": 96,
+  "rows": 384,
+  "fixed_outcomes": 4,
+  "attempt_failure_rows": 0,
+  "attempt_failures": [],
+  "elapsed_process_seconds": 115.80489387188572,
+  "summaries": [
+    {
+      "outcome": "match_highrank_k12_primary",
+      "budget": "point800",
+      "mean_arm_max_point_change_over_oracle_sd": 1.0896921825409567,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 1.1498843438234787
+    },
+    {
+      "outcome": "match_highrank_k12_primary",
+      "budget": "gram8192",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.036836354770766515
+    },
+    {
+      "outcome": "match_highrank_k12_primary",
+      "budget": "covariance4000",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.003761914279252819
+    },
+    {
+      "outcome": "match_q1_k12_primary",
+      "budget": "point800",
+      "mean_arm_max_point_change_over_oracle_sd": 0.01762167123972928,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.7821941509111565
+    },
+    {
+      "outcome": "match_q1_k12_primary",
+      "budget": "gram8192",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.16604622511664974
+    },
+    {
+      "outcome": "match_q1_k12_primary",
+      "budget": "covariance4000",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.01444079175159752
+    },
+    {
+      "outcome": "observation_highrank_k12_primary",
+      "budget": "point800",
+      "mean_arm_max_point_change_over_oracle_sd": 0.13109230129770813,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.1506806109035527
+    },
+    {
+      "outcome": "observation_highrank_k12_primary",
+      "budget": "gram8192",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.034677547983245106
+    },
+    {
+      "outcome": "observation_highrank_k12_primary",
+      "budget": "covariance4000",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.002890014718971986
+    },
+    {
+      "outcome": "observation_q1_k12_primary",
+      "budget": "point800",
+      "mean_arm_max_point_change_over_oracle_sd": 0.010545807923132089,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.3329144927655652
+    },
+    {
+      "outcome": "observation_q1_k12_primary",
+      "budget": "gram8192",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.14941144827792413
+    },
+    {
+      "outcome": "observation_q1_k12_primary",
+      "budget": "covariance4000",
+      "mean_arm_max_point_change_over_oracle_sd": 0.0,
+      "mean_arm_max_endpoint_change_over_oracle_sd": 0.011737762765069779
+    }
+  ]
+}

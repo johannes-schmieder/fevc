@@ -1,0 +1,114 @@
+{
+  "schema": "FEVC-LINUX-MEAN-COMPONENT-VALIDATION-V1",
+  "status": "PASS",
+  "source_commit": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+  "source_bundle_sha256": "caadf0ecbc25f1bcd1597adf6416903fe39d8690e3549bc14b58915c7bd3093a",
+  "job_id": 7969972,
+  "candidate_sha256": "19efb7ba9aabfec3a7a8414bde84257b87a73b1c81a5d71fd5204ed8c824d64b",
+  "collected_files": 46,
+  "collected_hashes": {
+    "receipts/wrapper.txt": "18928957671732488318eaa5e29a43109856a4d7bfc92f577d9797ff1565f4af",
+    "receipts/linux-qualification.txt": "213005cb39c0b974b3be7d78cd1b837e59a0a8739b8382d8448aaa82cbf79bfe",
+    "artifacts/SANITIZED_EVIDENCE.txt": "44e4e8d5a46c9ec4508c3484b373b05c0573285897142bad55dfbb0f3008c4cd",
+    "artifacts/qualification-source.sha256": "a54f29a87c6a5730b8f43b1081fddf3eba3182148c5e884017cf307f960a207c",
+    "artifacts/candidate/fevc_rust_linux_x64.plugin": "19efb7ba9aabfec3a7a8414bde84257b87a73b1c81a5d71fd5204ed8c824d64b",
+    "artifacts/stata-logs/stata-diagnostic__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-component-centering-native__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-full-suite__run_all.log.sanitized.log": "bc7ae3d9a73fa9156ca5955b2c097bd4fecba2563c49abbd0e3a0b30d21c94e5",
+    "artifacts/stata-logs/stata-clean-install__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-centering-mean__f rust.log.sanitized.log": "5cf1d98f8608f173ee4ea5f96e7c466da5b13791f5609b7d6a724df819b2d8fd",
+    "artifacts/stata-logs/stata-environment__environment.log.sanitized.log": "1b349289d6bcb8be3c61d988c74f720b7f04f9f0fd43f73664142cd74c7b0fb0",
+    "artifacts/stata-logs/stata-public-control-panel__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-centering-jla__f rust.log.sanitized.log": "f928e7c4d2af521eb9a0ed137c1a72cf91e8e95a67bf9e4effbebd2fbd413c00",
+    "artifacts/stata-logs/stata-mean-projection__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-centering-jla__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-component-centering-exact__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-lifecycle__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-centering-exact__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-component-centering-exact__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-centering-exact__f rust.log.sanitized.log": "77db2bac7a2c5f52474db64282f4cc90b52a66991e16789b8160953ef334c9f9",
+    "artifacts/stata-logs/stata-public-control-panel__fevc rust.log.sanitized.log": "656cd1b8c2c140df36444b41d24f6e56522713df0488a28c77f1ce2d34b24fce",
+    "artifacts/stata-logs/stata-centering-capability__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-centering-capability__fevc.log.sanitized.log": "7b238c2d271e67c808e798600480b2be605f6d5a86a96c534b0ee821e731bbea",
+    "artifacts/stata-logs/stata-mean-projection__fevc.log.sanitized.log": "b07f59e0da83dfd289ce0323baaf930d62d3a00aab21625adf43dc2f9d59348a",
+    "artifacts/stata-logs/test-root__run_all.log.sanitized.log": "bc7ae3d9a73fa9156ca5955b2c097bd4fecba2563c49abbd0e3a0b30d21c94e5",
+    "artifacts/stata-logs/stata-diagnostic__fevc.log.sanitized.log": "83aed2cb32ff63afa9d04d44670549d7628eb17db9a421ab74980cf086f817a7",
+    "artifacts/stata-logs/stata-installed-centering-capability__f.log.sanitized.log": "027d9c8da308700955c1b322ab148a6b69df606782ed797b60c001fd07e9a73d",
+    "artifacts/stata-logs/stata-installed-centering-capability__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-centering-mean__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-lifecycle__fevc.log.sanitized.log": "c926b261723f9be587e7d5ef37b30f7daf4586c71d20df36c9473149367da354",
+    "artifacts/stata-logs/stata-installed-mean-projection__f.log.sanitized.log": "a0fee890776e3c9f15af946a03e7fd3c6c35e1d5db1bd0c1080af9678339ceb0",
+    "artifacts/stata-logs/stata-public-route__fevc.log.sanitized.log": "d70b59a9f21079d07feffcfb8785bffab5536ea123ce306b564a1c9b81012b32",
+    "artifacts/stata-logs/stata-shared-atoms__fevc.log.sanitized.log": "14ab7dfd798c374db9bc614ea95317ff5ec62b8537ffea11cfac774d4bf1a6e5",
+    "artifacts/stata-logs/stata-installed-centering-options__f rust.log.sanitized.log": "0dda61a2846a53f8a0979daa6449bac6800ba813fc2d33bf6b5d57d2eacce113",
+    "artifacts/stata-logs/stata-installed-mean-projection__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-component-centering-exact__fevc.log.sanitized.log": "5202a971954da32a62d0034b291a410e7129f9d9007c90cd1534bc255608b195",
+    "artifacts/stata-logs/stata-installed-component-centering-native__f.log.sanitized.log": "71e5acef911b23f05415d899b7da2027fe7182d1d4c2c4b4896b9a362c8846bd",
+    "artifacts/stata-logs/stata-shared-atoms__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-public-route__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-component-centering-native__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-full-suite__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-installed-component-centering-exact__f.log.sanitized.log": "601a81af031b75e282919e6e23b94f766ab99b83b6fe98a05a246964f5a5f95b",
+    "artifacts/stata-logs/stata-component-centering-native__fevc.log.sanitized.log": "86053df7316caaa43beffe6b0be02894e6f17bf2af66a99dbbae2b7e92e5c869",
+    "artifacts/stata-logs/stata-installed-centering-options__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-environment__console.txt.sanitized.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/stata-logs/stata-clean-install__stata.log.sanitized.log": "a3cc6b79ef6a7b42ef754d415138221f3b2c3a5771b801dba2673ccf7f46f522"
+  },
+  "scheduler": {
+    "failed": "0",
+    "exit_status": "0",
+    "slots": "4",
+    "ru_wallclock": "1676",
+    "cpu": "4224.738",
+    "maxvmem": "9.287G"
+  },
+  "centering_api": 1,
+  "projection_centering_api": 1,
+  "component_centering_api": 1,
+  "mean_component_marker_inventory": {
+    "stata-full-suite__run_all.log.sanitized.log": [
+      {
+        "exact": 12
+      },
+      {
+        "native": 8
+      }
+    ],
+    "test-root__run_all.log.sanitized.log": [
+      {
+        "exact": 12
+      },
+      {
+        "native": 8
+      }
+    ],
+    "stata-component-centering-exact__fevc.log.sanitized.log": [
+      {
+        "exact": 12
+      }
+    ],
+    "stata-installed-component-centering-native__f.log.sanitized.log": [
+      {
+        "native": 8
+      }
+    ],
+    "stata-installed-component-centering-exact__f.log.sanitized.log": [
+      {
+        "exact": 12
+      }
+    ],
+    "stata-component-centering-native__fevc.log.sanitized.log": [
+      {
+        "native": 8
+      }
+    ]
+  },
+  "explicit_qualification_cells": {
+    "staged_exact": 12,
+    "staged_native": 8,
+    "installed_exact": 12,
+    "installed_native": 8
+  },
+  "scope": "Clean Linux build, full Stata suite, staged and installed Mean highrank/q1 exact/native regressions, capability API1, existing point/projection tests and isolated-install byte verification. No statistical coverage or scale extension.",
+  "collection_note": "First copy transferred bytes but warned about local directory metadata; content-only rsync pass succeeded and all remote/local file hashes match."
+}

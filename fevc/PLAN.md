@@ -1,76 +1,77 @@
 # Mean-centered component inference — October 8, 2026
 
 The owner accepted all five recommendations in
-[the implementation plan](docs/MEAN_COMPONENT_INFERENCE_PLAN.md) and requested
-implementation: both highrank and q1 on every currently supported component
-route, the existing Mean default with an explicit approximation note, independent
-algebra and a bounded fresh sampling assessment, qualification/adoption of all
-shipped native platforms, and reviewed commits/pushes of both package and new
-companion technical note. Work stays on `main`; tags, hosted releases and
-manuscript submission remain separate decisions.
+[the implementation plan](docs/MEAN_COMPONENT_INFERENCE_PLAN.md): highrank and
+q1 on existing supported routes, the Mean default with a fixed-observed-mean
+approximation, independent tests and a bounded sampling assessment, all-platform
+native qualification/adoption, and reviewed package/paper commits and pushes.
+Work stays on `main`; tags and hosted releases remain separate decisions.
 
 ## Current checkpoint
 
-- Exact Mata and native generic JLA now calculate component inference using
-  the retained physical-frequency working-outcome mean as fixed. Error probes
-  remain uncentered. Existing unsupported tuples and Corrected inference remain
-  withheld. Public metadata/display identifies omitted mean-estimation
-  uncertainty. Source docs and help describe the approximation.
-- Native readiness bit 16 uses the existing capability interface without
-  changing ABI layouts or the Windows export inventory. Older native payloads
-  fail closed for Mean component inference before preparation or RNG; supported
-  explicit None remains available. Exact runtime identity includes
-  `component-mean1`.
-- Focused development checks pass: independent exact point/influence/public
-  covariance/q1 remainder oracles in 12 cells; native observation/match and both
-  variance models in eight cells; dense Rust/FFI/C capability tests; option,
-  routing, probe-cleanup, caller-state and existing projection regressions.
-  These are development checks, not clean-source platform receipts.
-- The development pilot exposed a shared None/Mean q1 numerical certificate
-  defect: the independent remainder check omitted the original fit's accepted
-  normal-equation residual. The repair accounts for both signed residual terms
-  at the existing threshold while preserving raw diagnostics, solver gates,
-  estimates and reference calculations. Independent dense and fault-injection
-  tests and the preserved failing draw pass with the repair.
-- [The new sampling registration](docs/mean_component_inference_validation_v1.json)
-  fixes designs, targets, thresholds and semantic RNG keys before assessment
-  outcomes. Harness smoke/pilots are in progress; all attempted fits and failures
-  are retained. Scientific availability/calibration screens remain distinct from
-  numerical implementation checks and from any universal coverage claim.
-- A new standalone technical note is drafted in the companion paper's
-  `technical-memos/centering/mean_centered_component_inference.tex`; it compiles
-  in the built-in editor. Final assessment results and independent math review
-  are pending. Existing dirty manuscript/memo files are preserved.
+- Source `63757839` implements Mean component inference and discloses omitted
+  mean-estimation uncertainty. Gaussian error probes remain uncentered.
+  Corrected inference and existing unsupported tuples remain withheld.
+  Native `component_centering_api=1` uses readiness bit 16 through the existing
+  capability interface, with no ABI layout or export-inventory change.
+- Independent exact/native fixed-c oracles, q1 imperfect-solve and fault tests,
+  caller-state/capability regressions and pinned clean Rust source gates pass.
+  The integrated checker passed on the earlier staged development tree; its
+  receipt is not relabelled as a clean-source integrated run. The final 32
+  harness tests pass at `b9f80ce9`, with identical harness bytes at `63757839`.
+- The shared None/Mean q1 certificate repair accounts for both accepted solves'
+  signed normal-equation residuals at unchanged tolerances. Public raw
+  remainder discrepancies, estimator values and solver gates remain intact.
+  The preserved failing draw and independent dense checks pass after repair.
+- Mac thin arm64, thin x86-64 under Rosetta and universal candidates pass full
+  clean-source qualification at `b9f80ce9` and separate exact-byte installed
+  Mean checks across all four architecture aliases. Linux passes full and
+  staged/installed Mean qualification at `63757839` (SCC job `7969972`). These
+  candidates are preserved and **not adopted**; shipped payloads retain their
+  preceding identities. See [the new candidate record](../native/mean-component-20261008/checkpoint.json).
+- The [completed assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+  accounts for all 48,000 primary calls and 192,000 target rows. **All 22 failed
+  primary screen entries are exact-Mata availability failures**, affecting
+  highrank k12/k20 and q1 k12 in both arms. The eight native cells have 100%
+  interval availability and pass the broad descriptive screens. Stress and
+  fixed-outcome numerical profiles are complete; material numerical
+  sensitivity and historical calibration failures remain limitations. There
+  is no general coverage claim and no changed cutoff or discarded attempt.
+- Windows remains blocked: the first source-build smoke failed at
+  `build_toolchain` with return code 601; the second failed at `build_native`
+  with a null return code. Cleanup completed and the guarded machine is
+  stopped. A prepared hosted-build alternative passes 81 offline tests and
+  independent review; no hosted build or full private Windows qualification
+  has run for that alternative.
+- The companion technical note in
+  `technical-memos/centering/mean_centered_component_inference.tex` is complete,
+  with a compiled and visually reviewed 13-page PDF, independent moment checks,
+  and the assessment and numerical limits. Unrelated paper edits remain preserved.
 
-## Remaining gates
+## Remaining work and decision
 
-Finish integrated source validation and make a clean implementation checkpoint.
-Qualify the Mac thin/universal arm64/Rosetta payloads, Linux x86-64 and private
-Windows payload against that source; complete final installed-artifact checks
-before adopting a complete updated distribution. The private Windows collector
-is deployed and infrastructure acceptance passes; valid/malformed diagnostic
-canaries still require a stable clean-source window before project runtime
-qualification. Preserve every failed attempt; one narrow remote repair/retest
-is permitted before reporting a further operational failure.
+The proposed source push before all five payloads qualify, followed by a
+bounded Windows retry using the hosted-build alternative, awaits the owner's
+approval. It changes the originally planned qualification-before-push order.
+No source push, full Windows qualification, new payload adoption or tag has
+been completed for this extension.
 
-Complete the registered bounded sampling assessment, enumerate all failing
-cells without changing thresholds, and finalize the technical note and active
-evidence records. Review the four existing unpublished ancestors and task
-changes, commit only intended package/paper files, push each `main` ordinarily,
-and verify remote identities. Preserve unrelated paper work and historical
-native/scientific evidence.
+After that decision, finish the applicable Windows gate and final five-payload
+source/provenance, compatibility and HTTP fresh/replacement installation checks
+before adoption. Preserve every failed attempt and stop after the authorized
+bounded repair/retest if another operational failure occurs. Complete the
+package/paper review, commit only intended records and source, and push each
+`main` only within the approved sequence. The outgoing four-ancestor audit found
+no blocker within its recorded scope; it does not replace review of new changes.
 
-## Previous candidate and scientific evidence
+## Preserved previous evidence
 
-`native/prerelease-20261008/manifest.json` and its package-validation record
-retain their source-specific Mac/Linux point/Mean-projection claims at
-`24754269` (packaging `623b156d`, follow-up `7fb65c41`). Windows there remains
-unqualified; no new capability or qualification is inferred for those bytes.
-The four existing ancestors are `ed829fbd`, `24754269`, `623b156d`, `7fb65c41`.
-The current task does not edit those frozen receipts or old confirmation
-results, including the observation-q1 SE-ratio failure at 1.101204 against 1.10.
+`native/prerelease-20261008/manifest.json` retains its original Mac/Linux
+point/Mean-projection claims at `24754269` (packaging `623b156d`, follow-up
+`7fb65c41`). Its Windows payload remains unqualified. Earlier receipts and
+registrations are immutable, including the observation-q1 SE-ratio failure at
+1.101204 against 1.10 and the invalidated development pilot aggregate.
 
-Current scientific contracts live in [CENTERING.md](docs/CENTERING.md),
+Current contracts live in [CENTERING.md](docs/CENTERING.md),
 [INFERENCE.md](docs/INFERENCE.md) and [DECISIONS.md](docs/DECISIONS.md).
-Engineering validation follows
-[development_acceptance_v1.json](docs/development_acceptance_v1.json).
+Engineering gates follow [development_acceptance_v1.json](docs/development_acceptance_v1.json).

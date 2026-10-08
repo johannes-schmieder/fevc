@@ -1,0 +1,964 @@
+{
+  "schema": "fevc.mean-component.development-source-compatibility.v1",
+  "recorded_utc": "2026-10-08T21:19:23.405286+00:00",
+  "status": "BOUNDED_COMPATIBILITY_REVIEW_COMPLETE",
+  "scope": "Retrospective file-level review of the recorded development snapshot, committed implementation 63757839 and Windows-only checkpoint b9f80ce9, plus one explicitly requested final focused harness test. This record does not upgrade development evidence into clean-source integrated or platform qualification.",
+  "sources": {
+    "development_base_commit": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+    "development_snapshot": {
+      "path": ".local/mean-component-20261008/task-development-record.json",
+      "sha256": "acc79843d5113d515c2fe3375a68f94cd9a86f3bef45705f3e9e2afc0d1f7dbb"
+    },
+    "development_snapshot_recorded_utc": "2026-10-08T20:35:12.182222+00:00",
+    "implementation_commit": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+    "windows_checkpoint_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+    "implementation_tree": "aa79befe034c38801cef36dce84d3865851fa6e6",
+    "windows_checkpoint_tree": "db3f67a6aa63448a85e04a7ef94e1cb381952b62"
+  },
+  "comparison_method": {
+    "command": "./.venv/bin/python: SHA-256 of git show <commit>:<path> compared with recorded changed_source_sha256; git diff --name-only for complete commit ranges",
+    "snapshot_is_full_tree_manifest": false,
+    "snapshot_hash_count": 61,
+    "snapshot_identical_files": 36,
+    "snapshot_different_files": 25,
+    "snapshot_missing_files_at_implementation": 0,
+    "changed_commit_paths_absent_from_snapshot_count": 4,
+    "snapshot_to_implementation_inventory": [
+      {
+        "path": "INSTALLATION.md",
+        "snapshot_sha256": "c6485f7f440dd32613b2b9bc4aedf9305eef78244f1e1be53a201730a63c865c",
+        "implementation_sha256": "1989caa3526c8d95fc2d3c64b4cf8b2180d417ed03c4c1f038c895196afe6e41",
+        "windows_checkpoint_sha256": "1989caa3526c8d95fc2d3c64b4cf8b2180d417ed03c4c1f038c895196afe6e41",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "README.md",
+        "snapshot_sha256": "e3b617308d4e94a075a6c354130fcecbe229f5a90a923c959d8056a7e66b07d6",
+        "implementation_sha256": "20e3517d44633a64e6a909d581ac7de46b45ea69327276fb4f4377f28f758c65",
+        "windows_checkpoint_sha256": "20e3517d44633a64e6a909d581ac7de46b45ea69327276fb4f4377f28f758c65",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/CHANGELOG.md",
+        "snapshot_sha256": "ae17f2631ebcf66db69729bb79365db0d88d90bb0bf623435c3fb1410950ac40",
+        "implementation_sha256": "861a097b18bc3c72e0fd5a8300d56715bb96f616804728ff997dbb6a1d848dae",
+        "windows_checkpoint_sha256": "861a097b18bc3c72e0fd5a8300d56715bb96f616804728ff997dbb6a1d848dae",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/PLAN.md",
+        "snapshot_sha256": "88d4c8fdffc92d8cc9f94a41525d6d0817c0197a9e6ebf166eaa13d8a0f35f27",
+        "implementation_sha256": "cca29495a6dfeeceeabd4789533f67bbe9afd6e19aabc8ecda4a2c95889361d4",
+        "windows_checkpoint_sha256": "cca29495a6dfeeceeabd4789533f67bbe9afd6e19aabc8ecda4a2c95889361d4",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/README.md",
+        "snapshot_sha256": "3e47af03abc96f51d0bd3119ed759ed85aba17b17e471a77f8afc5b2e595c580",
+        "implementation_sha256": "f2bd2a48c21f9ab685e80d40169f1c189b974d311127e2245b66e7665e9cfaee",
+        "windows_checkpoint_sha256": "f2bd2a48c21f9ab685e80d40169f1c189b974d311127e2245b66e7665e9cfaee",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/TESTING.md",
+        "snapshot_sha256": "a87b4d7cf8a56993f9530ffe45cd8dec011e17fc513e28cae134a2fa0aae1235",
+        "implementation_sha256": "71c03190cc0dd296008d0442f13bbc4713779811d3bc80b071c6bdb1889466b8",
+        "windows_checkpoint_sha256": "71c03190cc0dd296008d0442f13bbc4713779811d3bc80b071c6bdb1889466b8",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/benchmarks/mean_component_inference_20261008/README.md",
+        "snapshot_sha256": "5ee41a64036f7713e037ce3c06c35a48d5ff5635bf7d54562c6c420f8b616540",
+        "implementation_sha256": "ef522ea4de137da8b7bcdb67b6c32179e8bfb1c8a31bd2894b0f6e0832e5d8e1",
+        "windows_checkpoint_sha256": "ef522ea4de137da8b7bcdb67b6c32179e8bfb1c8a31bd2894b0f6e0832e5d8e1",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/benchmarks/mean_component_inference_20261008/oracle.py",
+        "snapshot_sha256": "e412986eecbe59775e6253abcd10d60739a8c1766d339545f192d89da37f56d2",
+        "implementation_sha256": "e412986eecbe59775e6253abcd10d60739a8c1766d339545f192d89da37f56d2",
+        "windows_checkpoint_sha256": "e412986eecbe59775e6253abcd10d60739a8c1766d339545f192d89da37f56d2",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/benchmarks/mean_component_inference_20261008/run.py",
+        "snapshot_sha256": "6155182159242e458ab03d79621e06923522b6e76a23d596d88dd30c50be4c02",
+        "implementation_sha256": "79526d38adc94ea3caf4a456af2aa2282b2e1806355451d6a4bee36e4eaded66",
+        "windows_checkpoint_sha256": "79526d38adc94ea3caf4a456af2aa2282b2e1806355451d6a4bee36e4eaded66",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/benchmarks/mean_component_inference_20261008/test_harness.py",
+        "snapshot_sha256": "3ae720b6eff833c3778b9aaa73008c0d3a6b701dfae746a7ed569057d23590ec",
+        "implementation_sha256": "69af9eaf604f1ec1d0dbfccade1c0d990b121ff8cad5cda9a9da436fc63c431d",
+        "windows_checkpoint_sha256": "69af9eaf604f1ec1d0dbfccade1c0d990b121ff8cad5cda9a9da436fc63c431d",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/CENTERING.md",
+        "snapshot_sha256": "5198514489b2b9ff86e2da07f8414b452ace4128221f364a9bbc71f480e2b759",
+        "implementation_sha256": "f0f31a9cb00643290d47b3ce596185fda1cef623e7cb62ebaf1080b8a9656b71",
+        "windows_checkpoint_sha256": "f0f31a9cb00643290d47b3ce596185fda1cef623e7cb62ebaf1080b8a9656b71",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/DECISIONS.md",
+        "snapshot_sha256": "ab593452c7b6d1a34ea9206ea43df55955f69a7124c8a924caa31061a7cebcf2",
+        "implementation_sha256": "797db61c73d390db1c6fe65ebce88d49786aeaa54570d4fcf965d44018c42206",
+        "windows_checkpoint_sha256": "797db61c73d390db1c6fe65ebce88d49786aeaa54570d4fcf965d44018c42206",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/ESTIMATOR_CONTRACT.md",
+        "snapshot_sha256": "ae1af264e319fb107af88c225f18bec5c5d8f8b04b01c16d56e3cf8d25f45281",
+        "implementation_sha256": "c8954f44c1690ae2e7d079a6bb732bc3822db231ea4b10a49f2309538de0a887",
+        "windows_checkpoint_sha256": "c8954f44c1690ae2e7d079a6bb732bc3822db231ea4b10a49f2309538de0a887",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/FAILURES_AND_RETURNS.md",
+        "snapshot_sha256": "1405565ec578bf63ce453c9087c2f02177fe879e2ea6fe56cbde9d9326aabc37",
+        "implementation_sha256": "5de476ad89be34cd3d1bac4dcf0e3a3366fc3442c68dac5e41aeb57343675080",
+        "windows_checkpoint_sha256": "5de476ad89be34cd3d1bac4dcf0e3a3366fc3442c68dac5e41aeb57343675080",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md",
+        "snapshot_sha256": "1a238d74b754c3b0dde80b1d4c0a3291da478d2717f5314f4016d7d735578fe0",
+        "implementation_sha256": "dc0564e8a59254fb391588d67cde1aaef5589dc6eadb534b317d9aa56c15cb3c",
+        "windows_checkpoint_sha256": "dc0564e8a59254fb391588d67cde1aaef5589dc6eadb534b317d9aa56c15cb3c",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/INFERENCE.md",
+        "snapshot_sha256": "de3c57edcf122e4ef3a8811888e09b85896e30d69b7da1eb073085acd01dcd1b",
+        "implementation_sha256": "5cf6d2e8b172407e2b7b289e9af2977f2b6d0f661ee074bd9a1bfa221ca00c03",
+        "windows_checkpoint_sha256": "5cf6d2e8b172407e2b7b289e9af2977f2b6d0f661ee074bd9a1bfa221ca00c03",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/MATRIX_FREE_COMPONENT_INFERENCE.md",
+        "snapshot_sha256": "6a102bf3fa069078e5363e8ea959363bb619310aaa859a320c2ee3ee2b0b8e3c",
+        "implementation_sha256": "dba94e7b4d54d0677d2df0993dd37bce1f85a7975a2b5078af14048906dfd89e",
+        "windows_checkpoint_sha256": "dba94e7b4d54d0677d2df0993dd37bce1f85a7975a2b5078af14048906dfd89e",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/MEAN_COMPONENT_INFERENCE_PLAN.md",
+        "snapshot_sha256": "005429c451b0bf04c602a048bed24bb809e372481d6ddab274ff5d3c6438fdd5",
+        "implementation_sha256": "e9974a06153b50e9a4729f393ba80c940555b783e934266b1256489a93346c5e",
+        "windows_checkpoint_sha256": "e9974a06153b50e9a4729f393ba80c940555b783e934266b1256489a93346c5e",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/NUMERICAL_ARCHITECTURE.md",
+        "snapshot_sha256": "22efe64dcb59184a65283c93feb99b97215e0a11dbf53612ff2535e2bb3291a6",
+        "implementation_sha256": "d0ec9ed2da143a83ba7222b926b1d29edb1c387175df8ea433b0c3f4d470a2db",
+        "windows_checkpoint_sha256": "d0ec9ed2da143a83ba7222b926b1d29edb1c387175df8ea433b0c3f4d470a2db",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/README.md",
+        "snapshot_sha256": "d68ecdb4d878f005f64b1aaf527f750e98268547b3b80c15b67f564eba7c7017",
+        "implementation_sha256": "352982fd202a7e8772fc6accdc764ce65e54a899019387d8b8683c3ad6581a23",
+        "windows_checkpoint_sha256": "352982fd202a7e8772fc6accdc764ce65e54a899019387d8b8683c3ad6581a23",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/docs/RUST_MATA_PARITY.md",
+        "snapshot_sha256": "4db58c471221de9061102e83732ebf68e407360e23dea15b17add8bc2beeb871",
+        "implementation_sha256": "4db58c471221de9061102e83732ebf68e407360e23dea15b17add8bc2beeb871",
+        "windows_checkpoint_sha256": "4db58c471221de9061102e83732ebf68e407360e23dea15b17add8bc2beeb871",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/docs/mean_component_inference_validation_v1.json",
+        "snapshot_sha256": "c1c18f01d8da1e5b9357fe49f2260cf4031f0a02dcc6768be03da77a91776d47",
+        "implementation_sha256": "c1c18f01d8da1e5b9357fe49f2260cf4031f0a02dcc6768be03da77a91776d47",
+        "windows_checkpoint_sha256": "c1c18f01d8da1e5b9357fe49f2260cf4031f0a02dcc6768be03da77a91776d47",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/docs/mean_component_inference_validation_v1_amendment1.json",
+        "snapshot_sha256": "bc5e84a7d0a3dc8ff911f9114bbea1790fd486d5f4e648529a0bf37acf618b5d",
+        "implementation_sha256": "bc5e84a7d0a3dc8ff911f9114bbea1790fd486d5f4e648529a0bf37acf618b5d",
+        "windows_checkpoint_sha256": "bc5e84a7d0a3dc8ff911f9114bbea1790fd486d5f4e648529a0bf37acf618b5d",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/docs/rust_mata_parity.json",
+        "snapshot_sha256": "4aeedb42e7c8198b01e2721c7b74c5ef0c0318be22ede19994b4c68147be3d05",
+        "implementation_sha256": "4aeedb42e7c8198b01e2721c7b74c5ef0c0318be22ede19994b4c68147be3d05",
+        "windows_checkpoint_sha256": "4aeedb42e7c8198b01e2721c7b74c5ef0c0318be22ede19994b4c68147be3d05",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc.ado",
+        "snapshot_sha256": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+        "implementation_sha256": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+        "windows_checkpoint_sha256": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc.sthlp",
+        "snapshot_sha256": "4311f2def99522ab44124343af73b52c8d2f1b1395f8a1ead00ba0cc1f124481",
+        "implementation_sha256": "a2e574a7f92c2d3be8c0382f8f8bde45f7f616498c5487dd25e1a267d38fed67",
+        "windows_checkpoint_sha256": "a2e574a7f92c2d3be8c0382f8f8bde45f7f616498c5487dd25e1a267d38fed67",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "fevc/fevc__centering.ado",
+        "snapshot_sha256": "68f1a47a55f297e0d362eee259e81bec76f1d9c19d178f0e011d7f5434424194",
+        "implementation_sha256": "68f1a47a55f297e0d362eee259e81bec76f1d9c19d178f0e011d7f5434424194",
+        "windows_checkpoint_sha256": "68f1a47a55f297e0d362eee259e81bec76f1d9c19d178f0e011d7f5434424194",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc__component_model_route.ado",
+        "snapshot_sha256": "46c582959f8245573a893363b7fa0d2fc9daa1bdcf0b2752bb1a64aeacbc33ca",
+        "implementation_sha256": "46c582959f8245573a893363b7fa0d2fc9daa1bdcf0b2752bb1a64aeacbc33ca",
+        "windows_checkpoint_sha256": "46c582959f8245573a893363b7fa0d2fc9daa1bdcf0b2752bb1a64aeacbc33ca",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc__display.ado",
+        "snapshot_sha256": "3f6bbd70d3d3f67e9ffc40b6636002ba9e78001ce029feb0ec799a0a1792e9db",
+        "implementation_sha256": "3f6bbd70d3d3f67e9ffc40b6636002ba9e78001ce029feb0ec799a0a1792e9db",
+        "windows_checkpoint_sha256": "3f6bbd70d3d3f67e9ffc40b6636002ba9e78001ce029feb0ec799a0a1792e9db",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc__exact_inference_model_post.ado",
+        "snapshot_sha256": "ec1169b6e67a356173be932a3ca53f4c2f9332303c6dfac62bb2e284c0e29540",
+        "implementation_sha256": "ec1169b6e67a356173be932a3ca53f4c2f9332303c6dfac62bb2e284c0e29540",
+        "windows_checkpoint_sha256": "ec1169b6e67a356173be932a3ca53f4c2f9332303c6dfac62bb2e284c0e29540",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc__rust_component_post.ado",
+        "snapshot_sha256": "f4fd5e73e0fa906ae73b486e0dd5bd04225f04403ded1ddec020b6c283b439a4",
+        "implementation_sha256": "f4fd5e73e0fa906ae73b486e0dd5bd04225f04403ded1ddec020b6c283b439a4",
+        "windows_checkpoint_sha256": "f4fd5e73e0fa906ae73b486e0dd5bd04225f04403ded1ddec020b6c283b439a4",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc_inference.mata",
+        "snapshot_sha256": "12dee7a63b10932e0e3fcab996e5e03f4de8c996b4182bdc2c30b67de5f489c2",
+        "implementation_sha256": "12dee7a63b10932e0e3fcab996e5e03f4de8c996b4182bdc2c30b67de5f489c2",
+        "windows_checkpoint_sha256": "12dee7a63b10932e0e3fcab996e5e03f4de8c996b4182bdc2c30b67de5f489c2",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/fevc_rust.ado",
+        "snapshot_sha256": "c9fdad3249a90b982404cac564b35a98e0f2885c1ed26c169fcb6f7c151d7f29",
+        "implementation_sha256": "c9fdad3249a90b982404cac564b35a98e0f2885c1ed26c169fcb6f7c151d7f29",
+        "windows_checkpoint_sha256": "c9fdad3249a90b982404cac564b35a98e0f2885c1ed26c169fcb6f7c151d7f29",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/python/test_linux_scc_qualifier.py",
+        "snapshot_sha256": "43a9d432713bb274989833e9628d0e69fd64c9bfad624dde1c3a425639089431",
+        "implementation_sha256": "43a9d432713bb274989833e9628d0e69fd64c9bfad624dde1c3a425639089431",
+        "windows_checkpoint_sha256": "43a9d432713bb274989833e9628d0e69fd64c9bfad624dde1c3a425639089431",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/python/test_windows_ci.py",
+        "snapshot_sha256": "3284fe38ccd6c41223f7467368de339b3c7d1bd82f453b5c70f9d7c6c64f625f",
+        "implementation_sha256": "3284fe38ccd6c41223f7467368de339b3c7d1bd82f453b5c70f9d7c6c64f625f",
+        "windows_checkpoint_sha256": "3284fe38ccd6c41223f7467368de339b3c7d1bd82f453b5c70f9d7c6c64f625f",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/run_all.do",
+        "snapshot_sha256": "a85d55fa070289d4b631f63d794167b881db542aa656747e0ceda8137ec90e17",
+        "implementation_sha256": "a85d55fa070289d4b631f63d794167b881db542aa656747e0ceda8137ec90e17",
+        "windows_checkpoint_sha256": "a85d55fa070289d4b631f63d794167b881db542aa656747e0ceda8137ec90e17",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/test_backend_routing.do",
+        "snapshot_sha256": "49d6952a350e38b627a5507e0b160ffa4522c51905fa015995fce600babf056a",
+        "implementation_sha256": "49d6952a350e38b627a5507e0b160ffa4522c51905fa015995fce600babf056a",
+        "windows_checkpoint_sha256": "49d6952a350e38b627a5507e0b160ffa4522c51905fa015995fce600babf056a",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/test_centering_options.do",
+        "snapshot_sha256": "1f131efa66a6e814e4b538bb352c6cd4048560dc522cda1efb2c5a5e4dd02bdf",
+        "implementation_sha256": "1f131efa66a6e814e4b538bb352c6cd4048560dc522cda1efb2c5a5e4dd02bdf",
+        "windows_checkpoint_sha256": "1f131efa66a6e814e4b538bb352c6cd4048560dc522cda1efb2c5a5e4dd02bdf",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/test_component_centering_exact.do",
+        "snapshot_sha256": "49b9b0effb4963740864667951d9cbd8a1af613bbe3426cac57d0b5a311451cc",
+        "implementation_sha256": "49b9b0effb4963740864667951d9cbd8a1af613bbe3426cac57d0b5a311451cc",
+        "windows_checkpoint_sha256": "49b9b0effb4963740864667951d9cbd8a1af613bbe3426cac57d0b5a311451cc",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/test_component_centering_native.do",
+        "snapshot_sha256": "7f1d7fcc7c4881b9373f560c3e0edf35c428a6d3c1a0fd10bda68189d8afb909",
+        "implementation_sha256": "7f1d7fcc7c4881b9373f560c3e0edf35c428a6d3c1a0fd10bda68189d8afb909",
+        "windows_checkpoint_sha256": "7f1d7fcc7c4881b9373f560c3e0edf35c428a6d3c1a0fd10bda68189d8afb909",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/test_inference.do",
+        "snapshot_sha256": "0c67f4b1678b0841a7643830accdc095f7c1c3b9c2214c57503ea74832147d27",
+        "implementation_sha256": "0c67f4b1678b0841a7643830accdc095f7c1c3b9c2214c57503ea74832147d27",
+        "windows_checkpoint_sha256": "0c67f4b1678b0841a7643830accdc095f7c1c3b9c2214c57503ea74832147d27",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "fevc/tests/stata/test_install.do",
+        "snapshot_sha256": "484fb7a5cbd90b0affc3e4000d4e4e9a95236b9a2b1adfd97ad261ad035d60e9",
+        "implementation_sha256": "484fb7a5cbd90b0affc3e4000d4e4e9a95236b9a2b1adfd97ad261ad035d60e9",
+        "windows_checkpoint_sha256": "484fb7a5cbd90b0affc3e4000d4e4e9a95236b9a2b1adfd97ad261ad035d60e9",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "native/README.md",
+        "snapshot_sha256": "cd1b5748b74417a9b7ab5c4e3eae226b623e95c544bf603e97097d16116de4a1",
+        "implementation_sha256": "cd1b5748b74417a9b7ab5c4e3eae226b623e95c544bf603e97097d16116de4a1",
+        "windows_checkpoint_sha256": "cd1b5748b74417a9b7ab5c4e3eae226b623e95c544bf603e97097d16116de4a1",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/README.md",
+        "snapshot_sha256": "84bc3a3618f66e0729c49fa3cc927384eaf3ee4126ff660e29251dbd7b399fce",
+        "implementation_sha256": "1e2e964531dc63c92b9097922eb6a5bd326f52ff5b0b6f259ce878dcd0b2e881",
+        "windows_checkpoint_sha256": "1e2e964531dc63c92b9097922eb6a5bd326f52ff5b0b6f259ce878dcd0b2e881",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "rust/TEST_PLAN.md",
+        "snapshot_sha256": "adc2b2c34a8f05c8074bd1ed4ca75cb2970b65a80f01d21b05c617d18493fb1a",
+        "implementation_sha256": "ef0d113b479b11c980d4453d0bdb38d7dd4d1ebb4e0563bc7fa2ffeeaca636ae",
+        "windows_checkpoint_sha256": "ef0d113b479b11c980d4453d0bdb38d7dd4d1ebb4e0563bc7fa2ffeeaca636ae",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "rust/crates/vckss-core/src/component_inference.rs",
+        "snapshot_sha256": "5c887b0118894b9e91bd9347f12c212cef6d896fb50362c87a924893d1c4ccb5",
+        "implementation_sha256": "f392ffa1ea88f7e7133d48b3479f5ef4e09894864ae0523ad5b4241b67b37318",
+        "windows_checkpoint_sha256": "f392ffa1ea88f7e7133d48b3479f5ef4e09894864ae0523ad5b4241b67b37318",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "rust/crates/vckss-core/src/generic_jla.rs",
+        "snapshot_sha256": "2d61a124605bd3fa3f8674a7f472a2188f839f97b55f60eb08d646045c2ddb90",
+        "implementation_sha256": "5486cd0c3b7c8e76d39da33b19168939ffc91cedb04dec4fa881c309a75c2d9b",
+        "windows_checkpoint_sha256": "5486cd0c3b7c8e76d39da33b19168939ffc91cedb04dec4fa881c309a75c2d9b",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/generic_jla.rs",
+        "snapshot_sha256": "d50256de1aec7e17ebc0f9a0832953f3f0ccbd800e381e819a60d8a2c5f282c9",
+        "implementation_sha256": "d50256de1aec7e17ebc0f9a0832953f3f0ccbd800e381e819a60d8a2c5f282c9",
+        "windows_checkpoint_sha256": "d50256de1aec7e17ebc0f9a0832953f3f0ccbd800e381e819a60d8a2c5f282c9",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/generic_jla/component_centering.rs",
+        "snapshot_sha256": "a32c2233c078e4ed8bc5dcbe1309223293fcad98c41eef0add295a1806f4820d",
+        "implementation_sha256": "a32c2233c078e4ed8bc5dcbe1309223293fcad98c41eef0add295a1806f4820d",
+        "windows_checkpoint_sha256": "a32c2233c078e4ed8bc5dcbe1309223293fcad98c41eef0add295a1806f4820d",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/crates/vckss-core/tests/generic_jla/projection_centering.rs",
+        "snapshot_sha256": "bccb4fd2eb20b3ecfb2713aa9ed2d3daa1a97fac2c0e523cc951b926910e9a47",
+        "implementation_sha256": "bccb4fd2eb20b3ecfb2713aa9ed2d3daa1a97fac2c0e523cc951b926910e9a47",
+        "windows_checkpoint_sha256": "bccb4fd2eb20b3ecfb2713aa9ed2d3daa1a97fac2c0e523cc951b926910e9a47",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/crates/vckss-plugin/src/ffi_engine.rs",
+        "snapshot_sha256": "e439d87fb78de56e489aefa08663b3183cd63c4650ea0a3248ac84580d9942e1",
+        "implementation_sha256": "e439d87fb78de56e489aefa08663b3183cd63c4650ea0a3248ac84580d9942e1",
+        "windows_checkpoint_sha256": "e439d87fb78de56e489aefa08663b3183cd63c4650ea0a3248ac84580d9942e1",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/crates/vckss-plugin/tests/engine_ffi.rs",
+        "snapshot_sha256": "ce85919047e21329a4d7b6ef26936fb28569a7e011aa6857948549efccc62c17",
+        "implementation_sha256": "ce85919047e21329a4d7b6ef26936fb28569a7e011aa6857948549efccc62c17",
+        "windows_checkpoint_sha256": "ce85919047e21329a4d7b6ef26936fb28569a7e011aa6857948549efccc62c17",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/crates/vckss-plugin/tests/engine_ffi/generic_execution.rs",
+        "snapshot_sha256": "ce151c772ac0662852f85cb667155da6e05b2319a34cc5b642646200454815a8",
+        "implementation_sha256": "ce151c772ac0662852f85cb667155da6e05b2319a34cc5b642646200454815a8",
+        "windows_checkpoint_sha256": "ce151c772ac0662852f85cb667155da6e05b2319a34cc5b642646200454815a8",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/README.md",
+        "snapshot_sha256": "b71c57b93d9b9275b2ccc3ee64a4a69d33ce900941505e369953cb8dc05fe6e4",
+        "implementation_sha256": "9079ccc1b1db81ef2673daf355ec03cdc24a46639e96746d9af4be96929caf39",
+        "windows_checkpoint_sha256": "9079ccc1b1db81ef2673daf355ec03cdc24a46639e96746d9af4be96929caf39",
+        "snapshot_matches_implementation": false,
+        "snapshot_matches_windows_checkpoint": false
+      },
+      {
+        "path": "rust/stata_backend/cshim/stata_entry.c",
+        "snapshot_sha256": "4bcdd7c4e9c95d53a933fde02bb0b6f72d09d1f736f3518ae8cd21ae5ee20cae",
+        "implementation_sha256": "4bcdd7c4e9c95d53a933fde02bb0b6f72d09d1f736f3518ae8cd21ae5ee20cae",
+        "windows_checkpoint_sha256": "4bcdd7c4e9c95d53a933fde02bb0b6f72d09d1f736f3518ae8cd21ae5ee20cae",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/include/vckss_rust.h",
+        "snapshot_sha256": "086b67af70499922b4e14861d88542c6de1ee48b8c9900e66b1f9bde1b0e54de",
+        "implementation_sha256": "086b67af70499922b4e14861d88542c6de1ee48b8c9900e66b1f9bde1b0e54de",
+        "windows_checkpoint_sha256": "086b67af70499922b4e14861d88542c6de1ee48b8c9900e66b1f9bde1b0e54de",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/qualify_linux_scc.sh",
+        "snapshot_sha256": "483ad3340f5f2af03c704e340ffa194b49e76e290124784d4f1a70c8a383b75d",
+        "implementation_sha256": "483ad3340f5f2af03c704e340ffa194b49e76e290124784d4f1a70c8a383b75d",
+        "windows_checkpoint_sha256": "483ad3340f5f2af03c704e340ffa194b49e76e290124784d4f1a70c8a383b75d",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/qualify_macos.sh",
+        "snapshot_sha256": "da29f047b21bb342a0bfbe4fe51bb71e39d511a6cf88639546a0414ee8e579dd",
+        "implementation_sha256": "da29f047b21bb342a0bfbe4fe51bb71e39d511a6cf88639546a0414ee8e579dd",
+        "windows_checkpoint_sha256": "da29f047b21bb342a0bfbe4fe51bb71e39d511a6cf88639546a0414ee8e579dd",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/tests/abi_header_compat_test.c",
+        "snapshot_sha256": "2b185d2fe70a77ca801425aaa958e9fac87f612b6eb6cfec8ef12bb5eb1c60dc",
+        "implementation_sha256": "2b185d2fe70a77ca801425aaa958e9fac87f612b6eb6cfec8ef12bb5eb1c60dc",
+        "windows_checkpoint_sha256": "2b185d2fe70a77ca801425aaa958e9fac87f612b6eb6cfec8ef12bb5eb1c60dc",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/tests/cshim_error_transport_test.c",
+        "snapshot_sha256": "f63674ee3b41e0e717f5262ec52a92e0a379c2521df496c26095b0bc781cba72",
+        "implementation_sha256": "f63674ee3b41e0e717f5262ec52a92e0a379c2521df496c26095b0bc781cba72",
+        "windows_checkpoint_sha256": "f63674ee3b41e0e717f5262ec52a92e0a379c2521df496c26095b0bc781cba72",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      },
+      {
+        "path": "rust/stata_backend/windows_runtime.do",
+        "snapshot_sha256": "177c550cff2b22e2813130241ae58c3be2f27d23fec38d03c8aa3e58e86b28d6",
+        "implementation_sha256": "177c550cff2b22e2813130241ae58c3be2f27d23fec38d03c8aa3e58e86b28d6",
+        "windows_checkpoint_sha256": "177c550cff2b22e2813130241ae58c3be2f27d23fec38d03c8aa3e58e86b28d6",
+        "snapshot_matches_implementation": true,
+        "snapshot_matches_windows_checkpoint": true
+      }
+    ],
+    "implementation_changes_not_hashed_in_snapshot": [
+      {
+        "path": "fevc/benchmarks/mean_component_inference_20261008/numerical_profile.py",
+        "base_sha256": null,
+        "implementation_sha256": "f2d35cdeb104a1f0074e840bfd14f1dd16b0947d12d600ab622d1ec0d289e5eb",
+        "snapshot_status": "not recorded; do not infer historical snapshot bytes from baseline"
+      },
+      {
+        "path": "fevc/docs/mean_component_inference_numerical_v1.json",
+        "base_sha256": null,
+        "implementation_sha256": "32c57fd1b5f0574b88ae2fb80620bee7ef2bf44356d5c02b3044713b67c64f3e",
+        "snapshot_status": "not recorded; do not infer historical snapshot bytes from baseline"
+      },
+      {
+        "path": "rust/crates/vckss-core/src/centering.rs",
+        "base_sha256": "7b199c8e852ab7ca98a6d7b01b7ed7f8a832a0e65fc59a0d5844b1992fb476d7",
+        "implementation_sha256": "df2a38f1d0cd2118a6abd960ef8556ec8c22349770f3fd1ae8784572f9c71044",
+        "snapshot_status": "not recorded; do not infer historical snapshot bytes from baseline"
+      },
+      {
+        "path": "rust/crates/vckss-core/src/component_inference/q1_certificate_tests.rs",
+        "base_sha256": null,
+        "implementation_sha256": "90a17de09a100e0a2e03d06d8f14bc1d98b09518e4fc1c03a1eddb23e5690821",
+        "snapshot_status": "not recorded; do not infer historical snapshot bytes from baseline"
+      }
+    ]
+  },
+  "affected_surfaces": {
+    "byte_identical_recorded_stata_mata_runtime": [
+      "fevc/fevc.ado",
+      "fevc/fevc__centering.ado",
+      "fevc/fevc__component_model_route.ado",
+      "fevc/fevc__display.ado",
+      "fevc/fevc__exact_inference_model_post.ado",
+      "fevc/fevc__rust_component_post.ado",
+      "fevc/fevc_inference.mata",
+      "fevc/fevc_rust.ado"
+    ],
+    "byte_identical_recorded_stata_tests": [
+      "fevc/tests/stata/run_all.do",
+      "fevc/tests/stata/test_backend_routing.do",
+      "fevc/tests/stata/test_centering_options.do",
+      "fevc/tests/stata/test_component_centering_exact.do",
+      "fevc/tests/stata/test_component_centering_native.do",
+      "fevc/tests/stata/test_inference.do",
+      "fevc/tests/stata/test_install.do"
+    ],
+    "byte_identical_recorded_native_boundary_and_platform_harness": [
+      "rust/crates/vckss-plugin/src/ffi_engine.rs",
+      "rust/crates/vckss-plugin/tests/engine_ffi.rs",
+      "rust/crates/vckss-plugin/tests/engine_ffi/generic_execution.rs",
+      "rust/stata_backend/cshim/stata_entry.c",
+      "rust/stata_backend/include/vckss_rust.h",
+      "rust/stata_backend/qualify_linux_scc.sh",
+      "rust/stata_backend/qualify_macos.sh",
+      "rust/stata_backend/tests/abi_header_compat_test.c",
+      "rust/stata_backend/tests/cshim_error_transport_test.c",
+      "rust/stata_backend/windows_runtime.do"
+    ],
+    "native_certificate_changed": [
+      "rust/crates/vckss-core/src/centering.rs",
+      "rust/crates/vckss-core/src/component_inference.rs",
+      "rust/crates/vckss-core/src/generic_jla.rs",
+      "rust/crates/vckss-core/src/component_inference/q1_certificate_tests.rs"
+    ],
+    "native_certificate_meaning": "The old q1 gate omitted the original-fit residual term. Signed residual compensation changes only the identity certificate, retains raw public discrepancy, point/influence/remainder values and solver/arithmetic tolerances, and adds no solve/RNG/dynamic allocation. It permits correctly computed calls previously rejected by the incomplete certificate. Earlier native q1 passes do not by themselves qualify this changed behavior.",
+    "harness_changed": [
+      "fevc/benchmarks/mean_component_inference_20261008/run.py",
+      "fevc/benchmarks/mean_component_inference_20261008/test_harness.py"
+    ],
+    "harness_added": [
+      "fevc/benchmarks/mean_component_inference_20261008/numerical_profile.py",
+      "fevc/docs/mean_component_inference_numerical_v1.json"
+    ],
+    "unchanged_oracle_and_primary_registration": [
+      "fevc/benchmarks/mean_component_inference_20261008/oracle.py",
+      "fevc/docs/mean_component_inference_validation_v1.json",
+      "fevc/docs/mean_component_inference_validation_v1_amendment1.json"
+    ],
+    "documentation_or_help_changed": [
+      "INSTALLATION.md",
+      "README.md",
+      "fevc/CHANGELOG.md",
+      "fevc/PLAN.md",
+      "fevc/README.md",
+      "fevc/TESTING.md",
+      "fevc/benchmarks/mean_component_inference_20261008/README.md",
+      "fevc/docs/CENTERING.md",
+      "fevc/docs/DECISIONS.md",
+      "fevc/docs/ESTIMATOR_CONTRACT.md",
+      "fevc/docs/FAILURES_AND_RETURNS.md",
+      "fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md",
+      "fevc/docs/INFERENCE.md",
+      "fevc/docs/MATRIX_FREE_COMPONENT_INFERENCE.md",
+      "fevc/docs/MEAN_COMPONENT_INFERENCE_PLAN.md",
+      "fevc/docs/NUMERICAL_ARCHITECTURE.md",
+      "fevc/docs/README.md",
+      "fevc/fevc.sthlp",
+      "rust/README.md",
+      "rust/TEST_PLAN.md",
+      "rust/stata_backend/README.md"
+    ]
+  },
+  "evidence": {
+    "integrated_development": {
+      "receipt": {
+        "path": ".local/mean-component-20261008/integrated-source-checks.json",
+        "sha256": "087d97da03f7a946d55f886330f54594d20fb3053149fc64928a992876943ca5"
+      },
+      "log": {
+        "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/integrated-source-checks.log",
+        "sha256": "f20f02d3b41eda48f49b91727bd751286bdbb1784b4c60c3b44fe15eff0938e4"
+      },
+      "command": [
+        "/Users/johannes/Git/varcomp_hdfe/fevc/.venv/bin/python",
+        "fevc/tools/run_checks.py"
+      ],
+      "returncode": 0,
+      "recorded_source": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+      "recorded_scope": "staged development; new native plugin exercised separately and by later clean qualification",
+      "pass_marker_observed": "FEVC LOCAL QUALIFICATION PASS",
+      "allowed_claim": "The integrated checker completed successfully on a staged development tree based on 7fb65c41.",
+      "prohibited_claim": "The complete integrated checker ran on clean 63757839 or b9f80ce9, or that every phase ran on the later file hash snapshot.",
+      "limitation": "The run receipt records a base HEAD and staged-development scope, not a complete immutable run-start source or binary hash manifest. The separate changed-file snapshot does not establish that exact snapshot was used throughout the integrated run. Matching later file hashes cannot retrospectively supply that missing link."
+    },
+    "exact_focused_development": {
+      "receipt": {
+        "path": ".local/mean-component-inference-20261008/exact-development/validation.json",
+        "sha256": "8af5384a63fa6b282be220b41178b7263d1a5a749edc87056829fe950cad2356"
+      },
+      "recorded_source": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+      "source_dirty": true,
+      "recorded_file_hashes_match_implementation": {
+        "fevc/fevc_inference.mata": true,
+        "fevc/tests/stata/test_component_centering_exact.do": true
+      },
+      "checks": [
+        {
+          "test": "test_component_centering_exact",
+          "status": "PASS",
+          "recorded_log_sha256": "de2edd0dc37c71d8b90bccd41036f364a082d0cb17015f42626dc727131a259b"
+        },
+        {
+          "test": "test_inference",
+          "status": "PASS",
+          "recorded_log_sha256": "c9cdd07bee65ed0daaebceaa27d74c61319aecada78b6cd77ad2ea013f7fa2b5"
+        },
+        {
+          "test": "test_inference_lincom",
+          "status": "PASS",
+          "recorded_log_sha256": "b3ca4bba9a40ecae4559edf0ca237da13c74dcebbd6d50f3cc11d46f854b0502"
+        },
+        {
+          "test": "test_projection_mean",
+          "status": "PASS",
+          "recorded_log_sha256": "9562111d54579f5f2376ed5bbe7c962f8271b6ae586a8f4e044b88d1da19ac62"
+        }
+      ],
+      "allowed_claim": "Source-hashed exact runtime and independent exact oracle bytes are unchanged at 637 and b9; focused exact/projection/inference checks remain relevant within their declared development scope.",
+      "limitation": "Only the two listed source files were hashed by this focused receipt; it is not a complete installed-package or native qualification manifest."
+    },
+    "q1_certificate_focused": {
+      "receipt": {
+        "path": ".local/mean-component-inference/q1-identity-diagnostic/receipt.json",
+        "sha256": "b8840e0599f1c10f035fea677bb2f45c942302c8f531140abfa3ad922a0de94a"
+      },
+      "dense_audit": {
+        "path": ".local/mean-component-inference/q1-identity-diagnostic/dense_audit.json",
+        "sha256": "d8f374d6b99e83e871be62afac9704faf8ff68a712052bd92155689e3d9ddb38"
+      },
+      "working_source_hashes_match_implementation": {
+        "rust/crates/vckss-core/src/centering.rs": true,
+        "rust/crates/vckss-core/src/generic_jla.rs": true,
+        "rust/crates/vckss-core/src/component_inference.rs": true,
+        "rust/crates/vckss-core/src/component_inference/q1_certificate_tests.rs": true
+      },
+      "checks": {
+        "core_mean_tests": 2,
+        "independent_dense_certificate_cells": 16,
+        "ffi_route_lifecycle": true,
+        "core_clippy_lib_tests": true,
+        "dense_q1_original_unit": true,
+        "native_stata_cells": 8,
+        "c_error_transport": true,
+        "c_abi_header": true,
+        "bounded_overhead": "overhead/comparison.json"
+      },
+      "raw_failure_preserved": true,
+      "allowed_claim": "Independent imperfect-solve/fault tests, frozen failed-draw retest, paired core/FFI tests and eight-cell Stata tests exercise the repaired certificate; the recorded four source hashes equal committed 637.",
+      "limitation": "Compiled after the functional certificate fix; subsequent changes were formatting, comments, and unit-test registration. Clean exact-source rebuild is required for qualification."
+    },
+    "clean_rust_source_gates": {
+      "receipt": {
+        "path": ".local/mean-component-20261008/source-gates-63757839/receipt.json",
+        "sha256": "56a3503f887b7b42d5083ced66d2ef3276f7b328f7752533241bad89cc008474"
+      },
+      "tested_sha": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+      "commands": [
+        {
+          "name": "fmt",
+          "command": [
+            "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+            "fmt",
+            "--manifest-path",
+            "rust/Cargo.toml",
+            "--all",
+            "--",
+            "--check"
+          ],
+          "returncode": 0,
+          "log": {
+            "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/fmt.log",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        {
+          "name": "clippy",
+          "command": [
+            "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+            "clippy",
+            "--manifest-path",
+            "rust/Cargo.toml",
+            "--workspace",
+            "--all-targets",
+            "--locked",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "returncode": 0,
+          "log": {
+            "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/clippy.log",
+            "sha256": "d856717f6ebf102a1dcd39ecba82307eeb2ee5a536ed9eebc55e803b4d065f6e"
+          }
+        },
+        {
+          "name": "workspace",
+          "command": [
+            "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--manifest-path",
+            "rust/Cargo.toml",
+            "--workspace",
+            "--all-targets",
+            "--locked"
+          ],
+          "returncode": 0,
+          "log": {
+            "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/workspace.log",
+            "sha256": "0469ff5c4675954207b6d94d82d6a2cc83e82204bb379d2e16fa233f93b77425"
+          }
+        },
+        {
+          "name": "shim",
+          "command": [
+            "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--manifest-path",
+            "rust/stata_backend/Cargo.toml",
+            "--all-targets",
+            "--locked"
+          ],
+          "returncode": 0,
+          "log": {
+            "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/source-gates-63757839/shim.log",
+            "sha256": "3ad112f738650d79dfb87be9385ccc90d9cffa3668032cc2d0d9cdded2794a17"
+          }
+        }
+      ],
+      "allowed_claim": "Fresh pinned formatting, strict Clippy, workspace all-target tests and backend all-target tests pass at 637; these cover the committed Rust certificate and its registered tests.",
+      "limitation": "These commands do not establish Stata runtime, licensed Windows execution, full Python harness validation, statistical coverage or complete native distribution qualification."
+    },
+    "final_harness_bytes_development_smoke": {
+      "manifest": {
+        "path": ".local/mean-component-20261008/scientific/mean-component-numerical-smoke-v1/manifest.json",
+        "sha256": "0da77ac4df86fcd32f4f69ec59744743a503bc7b3e8f45c530bed367d427be4c"
+      },
+      "manifest_identity": "f913af0df17c6dabf0dcaa333a8b22a1f29d1af3b41665b58299e66bbc7daa44",
+      "execution": {
+        "path": ".local/mean-component-20261008/scientific/mean-component-numerical-smoke-v1/execution.json",
+        "sha256": "d6ce41bf21130af65360348a80f7bfb41ec4b315faa1f1af614ea8d2d3f00b0f"
+      },
+      "assessment": {
+        "path": ".local/mean-component-20261008/scientific/mean-component-numerical-smoke-v1/assessment.json",
+        "sha256": "a45ba317a691e17b165f3579b00c2575812ad21762008a0da370f96aaf321a2f"
+      },
+      "frozen_harness_hashes": {
+        "fevc/benchmarks/mean_component_inference_20261008/run.py": {
+          "frozen_sha256": "79526d38adc94ea3caf4a456af2aa2282b2e1806355451d6a4bee36e4eaded66",
+          "matches_implementation": true
+        },
+        "fevc/benchmarks/mean_component_inference_20261008/oracle.py": {
+          "frozen_sha256": "e412986eecbe59775e6253abcd10d60739a8c1766d339545f192d89da37f56d2",
+          "matches_implementation": true
+        },
+        "fevc/benchmarks/mean_component_inference_20261008/numerical_profile.py": {
+          "frozen_sha256": "f2d35cdeb104a1f0074e840bfd14f1dd16b0947d12d600ab622d1ec0d289e5eb",
+          "matches_implementation": true
+        },
+        "fevc/docs/mean_component_inference_validation_v1.json": {
+          "frozen_sha256": "c1c18f01d8da1e5b9357fe49f2260cf4031f0a02dcc6768be03da77a91776d47",
+          "matches_implementation": true
+        },
+        "fevc/docs/mean_component_inference_validation_v1_amendment1.json": {
+          "frozen_sha256": "bc5e84a7d0a3dc8ff911f9114bbea1790fd486d5f4e648529a0bf37acf618b5d",
+          "matches_implementation": true
+        },
+        "fevc/docs/mean_component_inference_numerical_v1.json": {
+          "frozen_sha256": "32c57fd1b5f0574b88ae2fb80620bee7ef2bf44356d5c02b3044713b67c64f3e",
+          "matches_implementation": true
+        }
+      },
+      "tasks": 2,
+      "calls": 4,
+      "rows": 16,
+      "status": "NUMERICAL_DIAGNOSTIC_COMPLETE",
+      "allowed_claim": "Final 637 harness/registration bytes complete a two-task development numerical smoke with per-task output/receipt validation.",
+      "limitation": "The smoke used an earlier development production/plugin before the certificate repair. It binds final harness bytes, not 637 native runtime or complete sampling coverage. Earlier 12-cell smoke-v4 used an older run.py and remains older transport-development evidence."
+    },
+    "final_harness_unit_tests": {
+      "status": "PASS",
+      "tests_passed": 32,
+      "receipt": {
+        "path": ".local/mean-component-20261008/final-harness-tests-b9f80ce9/receipt.json",
+        "sha256": "1fd4d8da94a7e870a5fc82a24528b226e9395b4568886c8ef1007c026b475b34"
+      },
+      "tested_sha": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+      "source_files": {
+        "fevc/benchmarks/mean_component_inference_20261008/oracle.py": {
+          "sha256": "e412986eecbe59775e6253abcd10d60739a8c1766d339545f192d89da37f56d2",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        },
+        "fevc/benchmarks/mean_component_inference_20261008/run.py": {
+          "sha256": "79526d38adc94ea3caf4a456af2aa2282b2e1806355451d6a4bee36e4eaded66",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        },
+        "fevc/benchmarks/mean_component_inference_20261008/numerical_profile.py": {
+          "sha256": "f2d35cdeb104a1f0074e840bfd14f1dd16b0947d12d600ab622d1ec0d289e5eb",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        },
+        "fevc/benchmarks/mean_component_inference_20261008/test_harness.py": {
+          "sha256": "69af9eaf604f1ec1d0dbfccade1c0d990b121ff8cad5cda9a9da436fc63c431d",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        },
+        "fevc/docs/mean_component_inference_validation_v1.json": {
+          "sha256": "c1c18f01d8da1e5b9357fe49f2260cf4031f0a02dcc6768be03da77a91776d47",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        },
+        "fevc/docs/mean_component_inference_validation_v1_amendment1.json": {
+          "sha256": "bc5e84a7d0a3dc8ff911f9114bbea1790fd486d5f4e648529a0bf37acf618b5d",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        },
+        "fevc/docs/mean_component_inference_numerical_v1.json": {
+          "sha256": "32c57fd1b5f0574b88ae2fb80620bee7ef2bf44356d5c02b3044713b67c64f3e",
+          "matches_63757839": true,
+          "matches_b9f80ce9": true
+        }
+      },
+      "command": [
+        "/Users/johannes/Git/varcomp_hdfe/fevc/.venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "fevc/benchmarks/mean_component_inference_20261008/test_harness.py"
+      ],
+      "returncode": 0,
+      "seconds": 0.7621483749826439,
+      "runtime": {
+        "python_version": "3.13.0 (main, Oct  7 2024, 05:02:14) [Clang 15.0.0 (clang-1500.3.9.4)]",
+        "python_executable": "/Users/johannes/Git/varcomp_hdfe/fevc/.venv/bin/python",
+        "python_executable_sha256": "9321496412550d8046fa0992c3899aa0c2d1ccbc734be35178065f4031700bcc",
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "packages": {
+          "pytest": "7.4.4",
+          "numpy": "2.5.2",
+          "scipy": "1.18.1"
+        }
+      },
+      "log": {
+        "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/final-harness-tests-b9f80ce9/pytest.log",
+        "sha256": "0b43f7b1daacc664a21f6d6dc0eb45c27ddf23f44750638da975502713758586"
+      },
+      "git_status_before": "?? windows-input-identity.json",
+      "git_status_after": "?? windows-input-identity.json",
+      "untracked_scope": "windows-input-identity.json was outside the affected source and was not opened, hashed, copied or treated as test input. Status records filenames only.",
+      "allowed_claim": "All 32 final focused harness tests pass against byte-verified b9f80ce9 source; each recorded harness/registration file also exactly matches 63757839.",
+      "limitation": "This replaces the prior unsaved focused-test report with an explicit source/runtime/log receipt. It does not retroactively bind the earlier integrated checker or establish sampling or platform qualification."
+    }
+  },
+  "windows_only_implementation_to_checkpoint": {
+    "from": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+    "to": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+    "changed_paths": [
+      {
+        "path": "rust/stata_backend/WINDOWS_CI.md",
+        "implementation_sha256": "0ed6ce43ed8bdfdcf36adb260fd0aab6ca6b58f03026027d66c4067127a83e90",
+        "windows_checkpoint_sha256": "07af12117e88701d232e81a5f02b9194ffcc4341bf814ee8d0e1932d50704636"
+      },
+      {
+        "path": "rust/stata_backend/build_windows_ci.ps1",
+        "implementation_sha256": "028db86cb1390473736e0eb576675fa62832ee4b2df0cfd8fd8a015d7be98a60",
+        "windows_checkpoint_sha256": "5946843b4982fa21d99ce76b3143d44a3fa1196ca6b9180f547244f759661b27"
+      },
+      {
+        "path": "rust/stata_backend/invoke_windows_native.ps1",
+        "implementation_sha256": null,
+        "windows_checkpoint_sha256": "77063655244d09bc658e7b864e5007329daf3fcedd13ba6f7553b432fa48cf5b"
+      },
+      {
+        "path": "rust/stata_backend/test_windows_native.ps1",
+        "implementation_sha256": null,
+        "windows_checkpoint_sha256": "349f88979c449b6261d6fbd51bdc4ee71cc68ca8ca9db866150301cf7a82f70b"
+      }
+    ],
+    "review_status": "PASS_NO_BLOCKING_FINDING",
+    "review": "Read-only review checked Start-Process process-level stdout/stderr redirection, waiting, zero/nonzero native ExitCode propagation, process disposal, and preservation of the explicitly quoted cmd payload. The added regression checks exact stdout/stderr on exit 0 and exact native exit 17 failure. No estimator/scientific behavior, ABI, solver/RNG tolerance or route changes occur in this four-file commit.",
+    "unchanged_surfaces": [
+      "all Rust estimator/plugin/C shim source and headers",
+      "all Stata/Mata runtime and tests",
+      "Linux and Mac build/qualification scripts",
+      "Cargo manifests/locks and toolchain pin",
+      "assessment harness, oracle, registrations and acceptance thresholds",
+      "tracked native payload bytes"
+    ],
+    "reuse_rule": "Source-compatible Linux/Mac/Rust/assessment claims bound to 637 may be carried to b9 through this recorded four-file review while retaining their actual tested source, binary/input hashes and limitations. Do not relabel a 637 receipt as exact-b9 execution.",
+    "windows_exclusion": "The changed Windows launcher requires its real source-bound retest. Source compatibility alone does not establish a passing Windows qualification or a qualified complete distribution."
+  },
+  "not_reused_or_not_established": [
+    "Whole integrated clean-SHA qualification at 637 or b9",
+    "Native qualification from the staged integrated checker",
+    "Statistical coverage from algebra or numerical-smoke success",
+    "A successful complete five-platform distribution",
+    "Unchanged native-runtime identity between pre-certificate development builds and637",
+    "Final harness coverage inferred solely from the earlier integrated receipt"
+  ],
+  "preservation": {
+    "original_development_record_modified": false,
+    "tracked_files_modified": false,
+    "new_record_ignored": true,
+    "old_failed_pilot_and_receipts_preserved": true
+  },
+  "review_result": "PASS for the stated file-level compatibility and bounded claim carry-forward; all limitations above remain explicit."
+}

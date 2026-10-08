@@ -1,0 +1,575 @@
+{
+  "scope": "Outcome-free Gaussian exact dense covariance and recorded failure types only; no new outcome or production run. Primitive worker/firm/covariance basis excludes total=sum identity.",
+  "manifest_identity": "bf8f3bc71988ed88080da7b0937f681d0ffb3410f5938353fd0a5a34507dbeb1",
+  "source_assessment_sha256": "322e9b5c23178906b2708487ecc9423c37f2eab953541588c1e01f68cf485525",
+  "cells": [
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arms": {
+        "mean": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.01718680040930466,
+              -1.8501915383497576e-05,
+              3.546094686735713e-05
+            ],
+            [
+              -1.8501915383497576e-05,
+              0.008223734070415737,
+              3.68869394470726e-05
+            ],
+            [
+              3.546094686735713e-05,
+              3.68869394470726e-05,
+              1.3194619497247567e-06
+            ]
+          ],
+          "standard_deviations": [
+            0.13109843785989467,
+            0.09068480617179339,
+            0.0011486783491146495
+          ],
+          "raw_eigenvalues": [
+            1.0804735413757257e-06,
+            0.008223862009636042,
+            0.017186911458492705
+          ],
+          "raw_condition_number": 15906.83232891503,
+          "correlation_matrix": [
+            [
+              0.9999999999999998,
+              -0.0015562689209561698,
+              0.23548018900331447
+            ],
+            [
+              -0.0015562689209561698,
+              1.0,
+              0.35411119618781695
+            ],
+            [
+              0.23548018900331447,
+              0.35411119618781695,
+              1.0000000000000002
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.5740218704039852,
+            1.0014351580012566,
+            1.424542971594758
+          ],
+          "correlation_condition_number": 2.4816876238394765,
+          "smallest_standardized_contrast": [
+            0.39270837961983224,
+            0.5887485189350237,
+            -0.7065092427054166
+          ],
+          "atomic_failure_counts": {
+            "INFERENCE_COVARIANCE_NOT_PSD": 637,
+            "NEGATIVE_INFERENCE_VARIANCE": 1135
+          },
+          "all_attempts": 2000
+        },
+        "fixed_c0": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.017186800518699422,
+              -1.8501805853894504e-05,
+              3.546094679269619e-05
+            ],
+            [
+              -1.8501805853894504e-05,
+              0.00822373417983539,
+              3.688693919402101e-05
+            ],
+            [
+              3.546094679269619e-05,
+              3.688693919402101e-05,
+              1.319462094426406e-06
+            ]
+          ],
+          "standard_deviations": [
+            0.1310984382771184,
+            0.09068480677508989,
+            0.001148678412100796
+          ],
+          "raw_eigenvalues": [
+            1.0804736933610178e-06,
+            0.00822386211949949,
+            0.017186911567436375
+          ],
+          "raw_condition_number": 15906.830192203233,
+          "correlation_matrix": [
+            [
+              1.0,
+              -0.0015562596926840585,
+              0.23548017484588268
+            ],
+            [
+              -0.0015562596926840585,
+              1.0,
+              0.3541111719855753
+            ],
+            [
+              0.23548017484588268,
+              0.3541111719855753,
+              1.0
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.5740219026614246,
+            1.00143514949574,
+            1.4245429478428357
+          ],
+          "correlation_condition_number": 2.4816874430017597,
+          "smallest_standardized_contrast": [
+            0.392708375057242,
+            0.5887485177691776,
+            -0.7065092462130251
+          ],
+          "atomic_failure_counts": {
+            "INFERENCE_COVARIANCE_NOT_PSD": 630,
+            "NEGATIVE_INFERENCE_VARIANCE": 1142
+          },
+          "all_attempts": 2000
+        }
+      }
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arms": {
+        "mean": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.006446736619290659,
+              4.631275578801114e-06,
+              1.080878605112498e-05
+            ],
+            [
+              4.631275578801114e-06,
+              0.0030071395516703976,
+              1.1938098129412856e-05
+            ],
+            [
+              1.080878605112498e-05,
+              1.1938098129412856e-05,
+              2.3460721650636945e-07
+            ]
+          ],
+          "standard_deviations": [
+            0.08029157252969119,
+            0.05483739191163633,
+            0.00048436269107598437
+          ],
+          "raw_eigenvalues": [
+            1.6915006158427087e-07,
+            0.0030071805960731105,
+            0.006446761032042871
+          ],
+          "raw_condition_number": 38112.6732775742,
+          "correlation_matrix": [
+            [
+              0.9999999999999999,
+              0.001051850139335784,
+              0.2779305413393964
+            ],
+            [
+              0.001051850139335784,
+              1.0,
+              0.4494565041916491
+            ],
+            [
+              0.2779305413393964,
+              0.4494565041916491,
+              0.9999999999999999
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.47202281043622846,
+            0.9990589685915341,
+            1.5289182209722378
+          ],
+          "correlation_condition_number": 3.2390769835026836,
+          "smallest_standardized_contrast": [
+            0.3711927472151273,
+            0.6014741509553841,
+            -0.7074212254006708
+          ],
+          "atomic_failure_counts": {
+            "INFERENCE_COVARIANCE_NOT_PSD": 1617,
+            "NEGATIVE_INFERENCE_VARIANCE": 7
+          },
+          "all_attempts": 2000
+        },
+        "fixed_c0": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.006446736622285535,
+              4.631278868036226e-06,
+              1.0808786025318488e-05
+            ],
+            [
+              4.631278868036226e-06,
+              0.003007139555106308,
+              1.1938098121155093e-05
+            ],
+            [
+              1.0808786025318488e-05,
+              1.1938098121155093e-05,
+              2.3460721773885863e-07
+            ]
+          ],
+          "standard_deviations": [
+            0.08029157254834118,
+            0.054837391942964504,
+            0.0004843626923482636
+          ],
+          "raw_eigenvalues": [
+            1.691500630748862e-07,
+            0.003007180599499959,
+            0.006446761035046548
+          ],
+          "raw_condition_number": 38112.67295946815,
+          "correlation_matrix": [
+            [
+              1.0,
+              0.0010518508855379542,
+              0.27793053988122446
+            ],
+            [
+              0.0010518508855379542,
+              0.9999999999999999,
+              0.4494565024433913
+            ],
+            [
+              0.27793053988122446,
+              0.4494565024433913,
+              1.0
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.4720228130229806,
+            0.9990589679245201,
+            1.528918219052499
+          ],
+          "correlation_condition_number": 3.239076961685034,
+          "smallest_standardized_contrast": [
+            0.3711927463472533,
+            0.6014741512275608,
+            -0.7074212256246409
+          ],
+          "atomic_failure_counts": {
+            "INFERENCE_COVARIANCE_NOT_PSD": 1616,
+            "NEGATIVE_INFERENCE_VARIANCE": 7
+          },
+          "all_attempts": 2000
+        }
+      }
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arms": {
+        "mean": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.0006842336655335205,
+              -1.506867076619981e-06,
+              -0.000215662197673148
+            ],
+            [
+              -1.506867076619981e-06,
+              0.0008613423019938109,
+              -0.00020899359797132682
+            ],
+            [
+              -0.000215662197673148,
+              -0.00020899359797132682,
+              0.00021619945304395606
+            ]
+          ],
+          "standard_deviations": [
+            0.026157860492278806,
+            0.029348633733000434,
+            0.014703722421344741
+          ],
+          "raw_eigenvalues": [
+            8.252850206883744e-05,
+            0.000738470185108897,
+            0.0009407767333935531
+          ],
+          "raw_condition_number": 11.39941607820346,
+          "correlation_matrix": [
+            [
+              1.0,
+              -0.001962839714514675,
+              -0.5607180179671127
+            ],
+            [
+              -0.001962839714514675,
+              0.9999999999999999,
+              -0.4843037133004054
+            ],
+            [
+              -0.5607180179671127,
+              -0.4843037133004054,
+              1.0
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.25811350020942153,
+            1.0019419610077884,
+            1.7399445387827899
+          ],
+          "correlation_condition_number": 6.741005555195982,
+          "smallest_standardized_contrast": [
+            0.5353053720918567,
+            0.462713183091761,
+            0.7066432401167427
+          ],
+          "atomic_failure_counts": {
+            "NEGATIVE_INFERENCE_VARIANCE": 1278
+          },
+          "all_attempts": 2000
+        },
+        "fixed_c0": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.0006842336777225769,
+              -1.5068605917520092e-06,
+              -0.00021566219460690224
+            ],
+            [
+              -1.5068605917520092e-06,
+              0.0008613423298299078,
+              -0.00020899359543166758
+            ],
+            [
+              -0.00021566219460690224,
+              -0.00020899359543166758,
+              0.0002161995096876717
+            ]
+          ],
+          "standard_deviations": [
+            0.026157860725269124,
+            0.02934863420723199,
+            0.014703724347513852
+          ],
+          "raw_eigenvalues": [
+            8.252855621880914e-05,
+            0.0007384701965293362,
+            0.0009407767644920109
+          ],
+          "raw_condition_number": 11.399408975454703,
+          "correlation_matrix": [
+            [
+              0.9999999999999999,
+              -0.0019628312181490075,
+              -0.5607179315472202
+            ],
+            [
+              -0.0019628312181490075,
+              1.0000000000000002,
+              -0.48430363614640365
+            ],
+            [
+              -0.5607179315472202,
+              -0.48430363614640365,
+              1.0000000000000002
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.25811362025306467,
+            1.0019419526003368,
+            1.7399444271465987
+          ],
+          "correlation_condition_number": 6.74100198757698,
+          "smallest_standardized_contrast": [
+            0.5353053725486165,
+            0.462713179607938,
+            0.7066432420519555
+          ],
+          "atomic_failure_counts": {
+            "NEGATIVE_INFERENCE_VARIANCE": 1278
+          },
+          "all_attempts": 2000
+        }
+      }
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "arms": {
+        "mean": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.0017656280531639832,
+              3.994757556038141e-07,
+              -0.0005858274170550754
+            ],
+            [
+              3.994757556038141e-07,
+              0.0017456790435940448,
+              -0.0005885443954209705
+            ],
+            [
+              -0.0005858274170550754,
+              -0.0005885443954209705,
+              0.000557246262482379
+            ]
+          ],
+          "standard_deviations": [
+            0.04201937711537361,
+            0.04178132410053617,
+            0.023606064104004697
+          ],
+          "raw_eigenvalues": [
+            0.00013248738241636646,
+            0.0017551276056363917,
+            0.002180938371187649
+          ],
+          "raw_condition_number": 16.461479813478697,
+          "correlation_matrix": [
+            [
+              0.9999999999999999,
+              0.00022754045252531112,
+              -0.5906041586443005
+            ],
+            [
+              0.00022754045252531112,
+              1.0,
+              -0.596723919889352
+            ],
+            [
+              -0.5906041586443005,
+              -0.596723919889352,
+              0.9999999999999998
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.16053486870845468,
+            0.9997724716368708,
+            1.8396926596546728
+          ],
+          "correlation_condition_number": 11.459769920737376,
+          "smallest_standardized_contrast": [
+            -0.4973811721947698,
+            -0.5025377784911936,
+            -0.7071546865681461
+          ],
+          "atomic_failure_counts": {
+            "NEGATIVE_INFERENCE_VARIANCE": 32,
+            "INFERENCE_COVARIANCE_NOT_PSD": 4
+          },
+          "all_attempts": 2000
+        },
+        "fixed_c0": {
+          "primitive_targets": [
+            "worker",
+            "firm",
+            "covariance"
+          ],
+          "gaussian_covariance": [
+            [
+              0.001765628061269058,
+              3.9947594075086307e-07,
+              -0.0005858274167659391
+            ],
+            [
+              3.9947594075086307e-07,
+              0.0017456790506634615,
+              -0.0005885443949201159
+            ],
+            [
+              -0.0005858274167659391,
+              -0.0005885443949201159,
+              0.0005572462671723784
+            ]
+          ],
+          "standard_deviations": [
+            0.042019377211818094,
+            0.04178132418513637,
+            0.023606064203343564
+          ],
+          "raw_eigenvalues": [
+            0.00013248738819775672,
+            0.0017551276130188746,
+            0.002180938377888268
+          ],
+          "raw_condition_number": 16.461479145719892,
+          "correlation_matrix": [
+            [
+              1.0000000000000002,
+              0.00022754055700164412,
+              -0.5906041545118532
+            ],
+            [
+              0.00022754055700164412,
+              0.9999999999999999,
+              -0.5967239156621411
+            ],
+            [
+              -0.5906041545118532,
+              -0.5967239156621411,
+              1.0
+            ]
+          ],
+          "correlation_eigenvalues": [
+            0.16053487467212116,
+            0.9997724715324002,
+            1.8396926537954787
+          ],
+          "correlation_condition_number": 11.459769458523542,
+          "smallest_standardized_contrast": [
+            -0.49738117220028577,
+            -0.5025377784543086,
+            -0.7071546865904785
+          ],
+          "atomic_failure_counts": {
+            "NEGATIVE_INFERENCE_VARIANCE": 32,
+            "INFERENCE_COVARIANCE_NOT_PSD": 4
+          },
+          "all_attempts": 2000
+        }
+      }
+    }
+  ],
+  "observed_contract": [
+    "NEGATIVE_INFERENCE_VARIANCE reports materially negative binned local-linear fitted variance in a primitive or polarized fit.",
+    "INFERENCE_COVARIANCE_NOT_PSD checks the primitive3x3 estimated covariance before the redundant total target is appended.",
+    "The exact runtime estimates target-specific and polarized variance fits separately and then builds cross-covariances by polarization."
+  ],
+  "interpretation": "The true Gaussian primitive covariance is positive definite in all four cells. Scaling and correlation conditioning describe design sensitivity; they do not prove the mechanism of any estimated-variance failure. Separate fitted variance surfaces and finite simulated trace subtraction can yield an indefinite estimate even when the true covariance is positive definite. Recorded failure labels establish the gate encountered but do not identify which primitive/polarized smoother failed first."
+}

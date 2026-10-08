@@ -1,20 +1,35 @@
 # Native package provenance
 
-## Mean component inference qualification in progress
+## Mean component inference: qualified Mac/Linux candidates, adoption blocked
 
-The owner accepted implementation and qualification of Mean component
-highrank/q1 inference on the existing supported tuples, followed by adoption
-of all qualified payloads and source/payload commits and pushes. Readiness bit
-16 is transported through the existing native capability interface as
-`component_centering_api=1`. Source support does not update the payloads below;
-fresh platform, installed-artifact and package checks are in progress. No tag
-or hosted release is authorized. See
+The [new candidate record](mean-component-20261008/checkpoint.json) preserves
+Mean highrank/q1 implementation and source-bound evidence. Native
+`component_centering_api=1` uses readiness bit 16 through the existing capability
+interface. Mac thin arm64, thin x86-64 under Rosetta and universal builds pass
+full qualification at `b9f80ce9`, plus separate exact-byte installed Mean
+checks for all four architecture aliases. Linux x86-64 passes full and
+staged/installed Mean tests at `63757839` (SCC job `7969972`). The four intervening
+Windows runner/documentation changes have bounded compatibility review.
+Native Intel hardware and representative scale are not claimed.
+
+**These new candidates are not adopted.** The package retains its previous
+payloads while Windows qualification blocks the complete five-payload update.
+The first new Windows source-build smoke failed at `build_toolchain` with
+return code 601; the second failed at `build_native` with a null return code.
+Cleanup completed and the guarded machine is stopped. A prepared hosted-build
+alternative passes 81 offline tests and independent review. Its proposed
+source push before all five payloads qualify and subsequent bounded private
+retry await owner approval; no such push, hosted build or full Windows
+qualification has occurred. No tag or hosted release has been made.
+
+The [completed bounded assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+retains all 22 exact-Mata availability-screen failures. Eight native primary
+cells have 100% interval availability and pass the broad descriptive screens,
+but fixed-outcome tests show material numerical sensitivity. Engineering
+qualification and these finite designs establish no general coverage guarantee.
+Earlier scientific failures and exact-artifact receipts retain their scope.
+See [the current checkpoint](../fevc/PLAN.md) and
 [the accepted plan](../fevc/docs/MEAN_COMPONENT_INFERENCE_PLAN.md).
-
-The private Windows collector has been deployed and its infrastructure
-acceptance passes. Valid/malformed diagnostic canaries and source-bound project
-runtime qualification still require a clean, stable checkpoint. This progress
-does not change the status of any earlier Windows attempt or payload.
 
 ## Previous local October 8 prerelease candidate
 

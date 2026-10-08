@@ -303,17 +303,12 @@ Mean projection additionally requires {cmd:r(projection_centering_api)} equal
 to 1; Mean component inference requires {cmd:r(component_centering_api)} equal
 to 1. These are separate native attachment capabilities; native combined
 component/projection requests remain unsupported for both Mean and None.
-The local Mac arm64, Rosetta x86-64 and universal candidates at clean
-source 24754269 expose point and projection capabilities and pass full qualification plus
-24 isolated-install capability, point-centering and Mean-projection checks.
-Linux x86-64 also passes full qualification and installed point-centering
-and Mean-projection checks at the same source (SCC job 7962808).
-Windows runtime qualification remains pending after the latest private smoke
-failure. Its retained manual-test payload has centering API 1 but lacks
-projection-centering API 1. These local candidates have not been published or tagged.
-Those point/projection receipts do not qualify Mean component inference; the
-extension requires fresh bounded sampling assessment and exact-source native
-qualification.
+New Mac candidates at source b9f80ce9 pass full qualification and installed
+Mean-component checks for thin arm64, thin Rosetta x86-64 and universal on both
+architectures. Linux passes full and installed checks at source 63757839.
+These candidates remain unadopted while Windows qualification is blocked.
+Retained package payloads lack component-centering API 1; the Windows
+manual-test payload also lacks projection-centering API 1.
 An older plugin may lead {cmd:backend(auto)} to Mata before preparation/RNG
 under the ordinary consent rules. Strict {cmd:backend(rust)} or explicit
 {cmd:rng(counter_v1)} requires a matching plugin. Use current source with
@@ -411,7 +406,13 @@ omits mean-estimation uncertainty; its effect must be negligible on the
 component and q1 remainder sampling scales. No conservative-coverage guarantee
 is implied. Fixed-offset match inference is also approximate, ignoring
 nuisance-control estimation uncertainty, a separate approximation.
+The October 8 bounded assessment retains 22 exact-Mata availability-screen
+failures across three primary cells in both Mean and fixed-c0 arms. All eight
+native primary cells have complete interval availability and pass the broad
+descriptive screens, but separate numerical checks show material sensitivity
+to probe budgets. These finite designs provide no general coverage guarantee.
 Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
+and {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md":assessment}
 for supported requests, assumptions, and limitations before reporting intervals.
 An {help fevc##component_example:illustrative example} appears below.
 

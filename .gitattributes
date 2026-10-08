@@ -59,3 +59,7 @@ rust/qualification/evidence/INFERENCE-LINUX-SCC/*/qacct.txt whitespace=-blank-at
 # Preserve the current Windows controller receipt and scheduler accounting.
 native/prerelease-20261008/evidence/windows-smoke-receipt.json -text whitespace=cr-at-eol
 native/prerelease-20261008/evidence/linux-qacct.txt whitespace=-blank-at-eol
+
+# Preserve fixed-width accounting and avoid nesting corresponding-source bundles.
+native/mean-component-20261008/evidence/linux/qacct.txt whitespace=-blank-at-eol
+native/mean-component-20261008/*.tar.gz export-ignore

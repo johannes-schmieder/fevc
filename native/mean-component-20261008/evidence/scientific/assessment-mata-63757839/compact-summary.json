@@ -1,0 +1,1646 @@
+{
+  "schema": "FEVC_MEAN_COMPONENT_COMPACT_PRIMARY_V1",
+  "status": "engineering complete; descriptive scientific screen failures retained",
+  "scope": "Descriptive only; no general coverage qualification. All outcome counts and unavailable fits retained.",
+  "source_assessments": [
+    {
+      "path": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/scientific/assessment-mata-63757839/assessment.json",
+      "sha256": "322e9b5c23178906b2708487ecc9423c37f2eab953541588c1e01f68cf485525",
+      "manifest_identity": "bf8f3bc71988ed88080da7b0937f681d0ffb3410f5938353fd0a5a34507dbeb1"
+    }
+  ],
+  "total_rows": 64000,
+  "paired_outcomes": 8000,
+  "calls": 16000,
+  "failed_calls": 9419,
+  "failed_target_rows": 38090,
+  "failure_target_counts": {
+    "INFERENCE_COVARIANCE_NOT_PSD": 18032,
+    "NEGATIVE_INFERENCE_VARIANCE": 19644,
+    "target_status_5": 414
+  },
+  "scientific_screen_failures": [
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "fixed_c0",
+      "target": "covariance",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "fixed_c0",
+      "target": "firm",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "fixed_c0",
+      "target": "total",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "fixed_c0",
+      "target": "worker",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "mean",
+      "target": "covariance",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "mean",
+      "target": "firm",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "mean",
+      "target": "total",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "arm": "mean",
+      "target": "worker",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "fixed_c0",
+      "target": "covariance",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "fixed_c0",
+      "target": "firm",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "fixed_c0",
+      "target": "total",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "fixed_c0",
+      "target": "worker",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "mean",
+      "target": "covariance",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "mean",
+      "target": "firm",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "mean",
+      "target": "total",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "arm": "mean",
+      "target": "worker",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arm": "fixed_c0",
+      "target": "firm",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arm": "fixed_c0",
+      "target": "total",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arm": "fixed_c0",
+      "target": "worker",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arm": "mean",
+      "target": "firm",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arm": "mean",
+      "target": "total",
+      "screens": [
+        "success_rate"
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "arm": "mean",
+      "target": "worker",
+      "screens": [
+        "success_rate"
+      ]
+    }
+  ],
+  "paired_coverage": [
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "worker",
+      "all_attempt_coverage_drop": -0.0005,
+      "paired_mcse": 0.001500333463017514,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "firm",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0014145672484014765,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "covariance",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0014145672484014765,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "total",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0014145672484014765,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "worker",
+      "all_attempt_coverage_drop": 0.0005,
+      "paired_mcse": 0.0013231592402986098,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "firm",
+      "all_attempt_coverage_drop": 0.0005,
+      "paired_mcse": 0.0013231592402986098,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "covariance",
+      "all_attempt_coverage_drop": 0.0005,
+      "paired_mcse": 0.0013231592402986098,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "total",
+      "all_attempt_coverage_drop": 0.0005,
+      "paired_mcse": 0.0013231592402986098,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "worker",
+      "all_attempt_coverage_drop": 0.0005,
+      "paired_mcse": 0.002398489394533118,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "firm",
+      "all_attempt_coverage_drop": 0.0015,
+      "paired_mcse": 0.002598509404555385,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "covariance",
+      "all_attempt_coverage_drop": -0.0025,
+      "paired_mcse": 0.0025,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "total",
+      "all_attempt_coverage_drop": 0.0005,
+      "paired_mcse": 0.0026932325838804633,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "worker",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "firm",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "covariance",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "total",
+      "all_attempt_coverage_drop": 0.0,
+      "paired_mcse": 0.0,
+      "screen_failed": false
+    }
+  ],
+  "approximation": [
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "worker",
+      "rms_over_actual_sd": 2.351943075198381e-05,
+      "rms_over_conditional_remainder_sd": 1.792361272548659e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "firm",
+      "rms_over_actual_sd": 3.400318368322677e-05,
+      "rms_over_conditional_remainder_sd": 2.4339476510759384e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "covariance",
+      "rms_over_actual_sd": 0.0004034609235481853,
+      "rms_over_conditional_remainder_sd": 0.0003376844465082051,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k12_primary",
+      "target": "total",
+      "rms_over_actual_sd": 3.911793655697871e-05,
+      "rms_over_conditional_remainder_sd": 3.364567823608082e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "worker",
+      "rms_over_actual_sd": 4.818497162221339e-06,
+      "rms_over_conditional_remainder_sd": 3.4369613339036542e-06,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "firm",
+      "rms_over_actual_sd": 7.056723835964649e-06,
+      "rms_over_conditional_remainder_sd": 5.010891163292776e-06,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "covariance",
+      "rms_over_actual_sd": 0.00012013296510618611,
+      "rms_over_conditional_remainder_sd": 0.00011202906115297661,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "target": "total",
+      "rms_over_actual_sd": 7.957538423677876e-06,
+      "rms_over_conditional_remainder_sd": 7.1324174740637945e-06,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "worker",
+      "rms_over_actual_sd": 5.306696820992716e-05,
+      "rms_over_conditional_remainder_sd": 2.2351148312346318e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "firm",
+      "rms_over_actual_sd": 4.645748025038812e-05,
+      "rms_over_conditional_remainder_sd": 3.286661020749788e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "covariance",
+      "rms_over_actual_sd": 0.0004796086912351721,
+      "rms_over_conditional_remainder_sd": 0.00024704243668978193,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "target": "total",
+      "rms_over_actual_sd": 0.0005406228355032993,
+      "rms_over_conditional_remainder_sd": 4.92676614540133e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "worker",
+      "rms_over_actual_sd": 8.915499232184459e-06,
+      "rms_over_conditional_remainder_sd": 4.697261646391655e-06,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "firm",
+      "rms_over_actual_sd": 9.036104721165668e-06,
+      "rms_over_conditional_remainder_sd": 6.936274545395963e-06,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "covariance",
+      "rms_over_actual_sd": 0.0001060279774388083,
+      "rms_over_conditional_remainder_sd": 5.317630727068756e-05,
+      "screen_failed": false
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "target": "total",
+      "rms_over_actual_sd": 0.00015714241648470039,
+      "rms_over_conditional_remainder_sd": 9.896440838896535e-06,
+      "screen_failed": false
+    }
+  ],
+  "cells": [
+    {
+      "cell": "mata_highrank_k12_primary",
+      "targets": [
+        {
+          "target": "worker",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 8,
+            "status_code_disagreements": 20
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "mean",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9692982456140351,
+              "coverage_all": 0.1105,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1135,
+                "INFERENCE_COVARIANCE_NOT_PSD": 637
+              },
+              "bias": -0.0076078394784977335,
+              "bias_over_oracle_sd": -0.058031503675339415,
+              "empirical_sd": 0.12434010813528631,
+              "oracle_sd": 0.13109843785989467,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 1.0618622022184325,
+              "mean_interval_width": 0.5170099123156163,
+              "lower_miss": 0.002,
+              "upper_miss": 0.0015,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "fixed_c0",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9649122807017544,
+              "coverage_all": 0.11,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1142,
+                "INFERENCE_COVARIANCE_NOT_PSD": 630
+              },
+              "bias": -0.005874843532772657,
+              "bias_over_oracle_sd": -0.04481246008708586,
+              "empirical_sd": 0.125179961855942,
+              "oracle_sd": 0.1310984382771184,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 1.054512652322885,
+              "mean_interval_width": 0.51688856872754,
+              "lower_miss": 0.002,
+              "upper_miss": 0.002,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        },
+        {
+          "target": "firm",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 8,
+            "status_code_disagreements": 20
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "mean",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9736842105263158,
+              "coverage_all": 0.111,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1135,
+                "INFERENCE_COVARIANCE_NOT_PSD": 637
+              },
+              "bias": -0.006698134972723041,
+              "bias_over_oracle_sd": -0.07386171129962044,
+              "empirical_sd": 0.08475573242023234,
+              "oracle_sd": 0.09068480617179339,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 1.0853598051072433,
+              "mean_interval_width": 0.3600622123960505,
+              "lower_miss": 0.0005,
+              "upper_miss": 0.0025,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "fixed_c0",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9736842105263158,
+              "coverage_all": 0.111,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1142,
+                "INFERENCE_COVARIANCE_NOT_PSD": 630
+              },
+              "bias": -0.006618986579948086,
+              "bias_over_oracle_sd": -0.07298892521615041,
+              "empirical_sd": 0.0842910404758631,
+              "oracle_sd": 0.09068480677508989,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 1.0910901322157047,
+              "mean_interval_width": 0.3599772376601179,
+              "lower_miss": 0.0005,
+              "upper_miss": 0.0025,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        },
+        {
+          "target": "covariance",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 8,
+            "status_code_disagreements": 20
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "mean",
+              "target": "covariance",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9692982456140351,
+              "coverage_all": 0.1105,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1135,
+                "INFERENCE_COVARIANCE_NOT_PSD": 637
+              },
+              "bias": -7.307816350521698e-05,
+              "bias_over_oracle_sd": -0.0636193444070243,
+              "empirical_sd": 0.0011679735662622592,
+              "oracle_sd": 0.0011486783491146495,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 0.9826805200846321,
+              "mean_interval_width": 0.004492741624909742,
+              "lower_miss": 0.0015,
+              "upper_miss": 0.002,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "fixed_c0",
+              "target": "covariance",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9692982456140351,
+              "coverage_all": 0.1105,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1142,
+                "INFERENCE_COVARIANCE_NOT_PSD": 630
+              },
+              "bias": -8.395581762083652e-05,
+              "bias_over_oracle_sd": -0.07308905324275342,
+              "empirical_sd": 0.0011666579172105093,
+              "oracle_sd": 0.001148678412100796,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 0.9844801042635625,
+              "mean_interval_width": 0.0044959511437760395,
+              "lower_miss": 0.0015,
+              "upper_miss": 0.002,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        },
+        {
+          "target": "total",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 8,
+            "status_code_disagreements": 20
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "mean",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9692982456140351,
+              "coverage_all": 0.1105,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1135,
+                "INFERENCE_COVARIANCE_NOT_PSD": 637
+              },
+              "bias": -0.014452130778231435,
+              "bias_over_oracle_sd": -0.09020574034489069,
+              "empirical_sd": 0.15084329481842845,
+              "oracle_sd": 0.16021298337528708,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 1.0567127285620068,
+              "mean_interval_width": 0.6242855535738188,
+              "lower_miss": 0.0015,
+              "upper_miss": 0.002,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k12_primary",
+              "arm": "fixed_c0",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 228,
+              "point_successes": 228,
+              "success_rate": 0.114,
+              "coverage_success": 0.9692982456140351,
+              "coverage_all": 0.1105,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1142,
+                "INFERENCE_COVARIANCE_NOT_PSD": 630
+              },
+              "bias": -0.012661741747962625,
+              "bias_over_oracle_sd": -0.07903068386465102,
+              "empirical_sd": 0.1504066138573993,
+              "oracle_sd": 0.1602129847395385,
+              "highrank_se_available": 228,
+              "rms_se_over_empirical_sd": 1.0595771296650291,
+              "mean_interval_width": 0.6241523000808568,
+              "lower_miss": 0.0015,
+              "upper_miss": 0.002,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cell": "mata_highrank_k20_primary",
+      "targets": [
+        {
+          "target": "worker",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 7,
+            "status_code_disagreements": 7
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "mean",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 376,
+              "point_successes": 376,
+              "success_rate": 0.188,
+              "coverage_success": 0.9547872340425532,
+              "coverage_all": 0.1795,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1617,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 0.0034702300567953414,
+              "bias_over_oracle_sd": 0.04322035236652113,
+              "empirical_sd": 0.08199304678062155,
+              "oracle_sd": 0.08029157252969119,
+              "highrank_se_available": 376,
+              "rms_se_over_empirical_sd": 0.9802692296479729,
+              "mean_interval_width": 0.3149251372037936,
+              "lower_miss": 0.005,
+              "upper_miss": 0.0035,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "fixed_c0",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 377,
+              "point_successes": 377,
+              "success_rate": 0.1885,
+              "coverage_success": 0.9549071618037135,
+              "coverage_all": 0.18,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1616,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 0.004209802759989386,
+              "bias_over_oracle_sd": 0.05243143989308203,
+              "empirical_sd": 0.08196833731562395,
+              "oracle_sd": 0.08029157254834118,
+              "highrank_se_available": 377,
+              "rms_se_over_empirical_sd": 0.9808320802356632,
+              "mean_interval_width": 0.3150110342260956,
+              "lower_miss": 0.005,
+              "upper_miss": 0.0035,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        },
+        {
+          "target": "firm",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 7,
+            "status_code_disagreements": 7
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "mean",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 376,
+              "point_successes": 376,
+              "success_rate": 0.188,
+              "coverage_success": 0.9468085106382979,
+              "coverage_all": 0.178,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1617,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 0.00015410557059452505,
+              "bias_over_oracle_sd": 0.0028102279343052475,
+              "empirical_sd": 0.05520963694430033,
+              "oracle_sd": 0.05483739191163633,
+              "highrank_se_available": 376,
+              "rms_se_over_empirical_sd": 0.9971240776275581,
+              "mean_interval_width": 0.21562311783872937,
+              "lower_miss": 0.0045,
+              "upper_miss": 0.0055,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "fixed_c0",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 377,
+              "point_successes": 377,
+              "success_rate": 0.1885,
+              "coverage_success": 0.946949602122016,
+              "coverage_all": 0.1785,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1616,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 0.00019436770927653042,
+              "bias_over_oracle_sd": 0.0035444375158958904,
+              "empirical_sd": 0.05523313534176679,
+              "oracle_sd": 0.054837391942964504,
+              "highrank_se_available": 377,
+              "rms_se_over_empirical_sd": 0.9968430381117409,
+              "mean_interval_width": 0.2156540628352759,
+              "lower_miss": 0.0045,
+              "upper_miss": 0.0055,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        },
+        {
+          "target": "covariance",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 7,
+            "status_code_disagreements": 7
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "mean",
+              "target": "covariance",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 376,
+              "point_successes": 376,
+              "success_rate": 0.188,
+              "coverage_success": 0.9441489361702128,
+              "coverage_all": 0.1775,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1617,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 2.8585751634755448e-05,
+              "bias_over_oracle_sd": 0.05901724505505124,
+              "empirical_sd": 0.0004849819402928934,
+              "oracle_sd": 0.00048436269107598437,
+              "highrank_se_available": 376,
+              "rms_se_over_empirical_sd": 1.0065371405652623,
+              "mean_interval_width": 0.001910551889738099,
+              "lower_miss": 0.0055,
+              "upper_miss": 0.005,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "fixed_c0",
+              "target": "covariance",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 377,
+              "point_successes": 377,
+              "success_rate": 0.1885,
+              "coverage_success": 0.9442970822281167,
+              "coverage_all": 0.178,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1616,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 2.7282909819393812e-05,
+              "bias_over_oracle_sd": 0.05632743861242107,
+              "empirical_sd": 0.00048480141552403465,
+              "oracle_sd": 0.0004843626923482636,
+              "highrank_se_available": 377,
+              "rms_se_over_empirical_sd": 1.0068722606281655,
+              "mean_interval_width": 0.0019104784165836475,
+              "lower_miss": 0.0055,
+              "upper_miss": 0.005,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        },
+        {
+          "target": "total",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 7,
+            "status_code_disagreements": 7
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "mean",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 376,
+              "point_successes": 376,
+              "success_rate": 0.188,
+              "coverage_success": 0.9547872340425532,
+              "coverage_all": 0.1795,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1617,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 0.00368150713065892,
+              "bias_over_oracle_sd": 0.037662472728429305,
+              "empirical_sd": 0.09670931017962234,
+              "oracle_sd": 0.09775001119031558,
+              "highrank_se_available": 376,
+              "rms_se_over_empirical_sd": 1.0054144291917377,
+              "mean_interval_width": 0.38099603714614116,
+              "lower_miss": 0.006,
+              "upper_miss": 0.0025,
+              "screens": [
+                "success_rate"
+              ]
+            },
+            "fixed_c0": {
+              "cell": "mata_highrank_k20_primary",
+              "arm": "fixed_c0",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 377,
+              "point_successes": 377,
+              "success_rate": 0.1885,
+              "coverage_success": 0.9549071618037135,
+              "coverage_all": 0.18,
+              "failures": {
+                "INFERENCE_COVARIANCE_NOT_PSD": 1616,
+                "NEGATIVE_INFERENCE_VARIANCE": 7
+              },
+              "bias": 0.004458736288904271,
+              "bias_over_oracle_sd": 0.04561366522218223,
+              "empirical_sd": 0.09685683321635463,
+              "oracle_sd": 0.09775001125618728,
+              "highrank_se_available": 377,
+              "rms_se_over_empirical_sd": 1.00410368641198,
+              "mean_interval_width": 0.3810789607219268,
+              "lower_miss": 0.006,
+              "upper_miss": 0.0025,
+              "screens": [
+                "success_rate"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cell": "mata_q1_k12_primary",
+      "targets": [
+        {
+          "target": "worker",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 24,
+            "status_code_disagreements": 28
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "mean",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 671,
+              "point_successes": 722,
+              "success_rate": 0.3355,
+              "coverage_success": 0.9582712369597616,
+              "coverage_all": 0.3215,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 51
+              },
+              "bias": -0.0024777258874687474,
+              "bias_over_oracle_sd": -0.09472203922029918,
+              "empirical_sd": 0.026399457813460564,
+              "oracle_sd": 0.026157860492278806,
+              "highrank_se_available": 671,
+              "rms_se_over_empirical_sd": 0.9855868661852413,
+              "mean_interval_width": 0.11225033268978811,
+              "lower_miss": 0.007,
+              "upper_miss": 0.007,
+              "screens": [
+                "success_rate"
+              ],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.9206786947146325,
+                "mean_cov_br": -1.405285715300123e-05,
+                "mean_var_r": 0.00033597930347533295,
+                "empirical_var_b": 0.9548254404521214,
+                "empirical_cov_br": -4.765135539364437e-05,
+                "empirical_var_r": 0.00033538106841214595
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "fixed_c0",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 671,
+              "point_successes": 722,
+              "success_rate": 0.3355,
+              "coverage_success": 0.9597615499254843,
+              "coverage_all": 0.322,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 51
+              },
+              "bias": -0.002219680110772658,
+              "bias_over_oracle_sd": -0.08485709646081238,
+              "empirical_sd": 0.02644923590237885,
+              "oracle_sd": 0.026157860725269124,
+              "highrank_se_available": 671,
+              "rms_se_over_empirical_sd": 0.9858340890598019,
+              "mean_interval_width": 0.11251578369815754,
+              "lower_miss": 0.0065,
+              "upper_miss": 0.007,
+              "screens": [
+                "success_rate"
+              ],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.9227957943481824,
+                "mean_cov_br": -1.52622296576526e-05,
+                "mean_var_r": 0.00033601002108107127,
+                "empirical_var_b": 0.9534930960957391,
+                "empirical_cov_br": -1.4349649798407977e-05,
+                "empirical_var_r": 0.000333445144295398
+              }
+            }
+          }
+        },
+        {
+          "target": "firm",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 26,
+            "status_code_disagreements": 31
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "mean",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 648,
+              "point_successes": 722,
+              "success_rate": 0.324,
+              "coverage_success": 0.970679012345679,
+              "coverage_all": 0.3145,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 74
+              },
+              "bias": 0.0003765964663656064,
+              "bias_over_oracle_sd": 0.012831822761894046,
+              "empirical_sd": 0.02851876144884582,
+              "oracle_sd": 0.029348633733000434,
+              "highrank_se_available": 648,
+              "rms_se_over_empirical_sd": 1.012134639579382,
+              "mean_interval_width": 0.12350206615132184,
+              "lower_miss": 0.005,
+              "upper_miss": 0.0045,
+              "screens": [
+                "success_rate"
+              ],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8429178745886572,
+                "mean_cov_br": 3.654434321966418e-05,
+                "mean_var_r": 0.00016131059106080803,
+                "empirical_var_b": 0.8595764327833968,
+                "empirical_cov_br": 0.00040106773532402776,
+                "empirical_var_r": 0.00015602767006227069
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "fixed_c0",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 652,
+              "point_successes": 722,
+              "success_rate": 0.326,
+              "coverage_success": 0.9693251533742331,
+              "coverage_all": 0.316,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 70
+              },
+              "bias": 0.0006524637979323486,
+              "bias_over_oracle_sd": 0.022231487616264294,
+              "empirical_sd": 0.028640833309074566,
+              "oracle_sd": 0.02934863420723199,
+              "highrank_se_available": 652,
+              "rms_se_over_empirical_sd": 1.0091219550025408,
+              "mean_interval_width": 0.12368404863144317,
+              "lower_miss": 0.005,
+              "upper_miss": 0.005,
+              "screens": [
+                "success_rate"
+              ],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8424762520838561,
+                "mean_cov_br": 3.777970896031816e-05,
+                "mean_var_r": 0.0001615006299926178,
+                "empirical_var_b": 0.8629143250736642,
+                "empirical_cov_br": 0.00033528832013423487,
+                "empirical_var_r": 0.00015821575920848296
+              }
+            }
+          }
+        },
+        {
+          "target": "covariance",
+          "primary": false,
+          "paired_availability": {
+            "availability_disagreements": 27,
+            "status_code_disagreements": 31
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "mean",
+              "target": "covariance",
+              "primary": false,
+              "attempts": 2000,
+              "successes": 661,
+              "point_successes": 722,
+              "success_rate": 0.3305,
+              "coverage_success": 0.9334341906202723,
+              "coverage_all": 0.3085,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 61
+              },
+              "bias": -0.00031317739696344767,
+              "bias_over_oracle_sd": -0.021299191319663513,
+              "empirical_sd": 0.015066953418321757,
+              "oracle_sd": 0.014703722421344741,
+              "highrank_se_available": 661,
+              "rms_se_over_empirical_sd": 1.01015520566682,
+              "mean_interval_width": 0.0616833299040278,
+              "lower_miss": 0.0195,
+              "upper_miss": 0.0025,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.9692238058139228,
+                "mean_cov_br": -0.0003635984225414792,
+                "mean_var_r": 0.0002146956337337179,
+                "empirical_var_b": 0.8944302125968029,
+                "empirical_cov_br": -0.0008884115277813121,
+                "empirical_var_r": 0.00021159540526722036
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "fixed_c0",
+              "target": "covariance",
+              "primary": false,
+              "attempts": 2000,
+              "successes": 656,
+              "point_successes": 722,
+              "success_rate": 0.328,
+              "coverage_success": 0.9329268292682927,
+              "coverage_all": 0.306,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 66
+              },
+              "bias": -0.0005107316477940822,
+              "bias_over_oracle_sd": -0.03473484919352682,
+              "empirical_sd": 0.01512378772651762,
+              "oracle_sd": 0.014703724347513852,
+              "highrank_se_available": 656,
+              "rms_se_over_empirical_sd": 1.0063389642080904,
+              "mean_interval_width": 0.061704857131530316,
+              "lower_miss": 0.0195,
+              "upper_miss": 0.0025,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.97045270721506,
+                "mean_cov_br": -0.0003717264736149374,
+                "mean_var_r": 0.00021501910545032815,
+                "empirical_var_b": 0.8941880754723897,
+                "empirical_cov_br": -0.0010411481699206177,
+                "empirical_var_r": 0.0002117137774687911
+              }
+            }
+          }
+        },
+        {
+          "target": "total",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 29,
+            "status_code_disagreements": 31
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "mean",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 709,
+              "point_successes": 722,
+              "success_rate": 0.3545,
+              "coverage_success": 0.9760225669957687,
+              "coverage_all": 0.346,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 13
+              },
+              "bias": -0.0027274842150300073,
+              "bias_over_oracle_sd": -0.10245183345904907,
+              "empirical_sd": 0.02632478508503519,
+              "oracle_sd": 0.02662211229358045,
+              "highrank_se_available": 709,
+              "rms_se_over_empirical_sd": 1.0361906479785299,
+              "mean_interval_width": 0.12546559630739143,
+              "lower_miss": 0.0075,
+              "upper_miss": 0.001,
+              "screens": [
+                "success_rate"
+              ],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.9065861118061826,
+                "mean_cov_br": -8.818205593572864e-05,
+                "mean_var_r": 0.0005114665988180419,
+                "empirical_var_b": 0.8878916214285486,
+                "empirical_cov_br": 0.0011482977926273034,
+                "empirical_var_r": 0.0004952926402367071
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k12_primary",
+              "arm": "fixed_c0",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 710,
+              "point_successes": 722,
+              "success_rate": 0.355,
+              "coverage_success": 0.976056338028169,
+              "coverage_all": 0.3465,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 1278,
+                "target_status_5": 12
+              },
+              "bias": -0.0025886796084284456,
+              "bias_over_oracle_sd": -0.09723792869484511,
+              "empirical_sd": 0.026232966277949035,
+              "oracle_sd": 0.02662211796543214,
+              "highrank_se_available": 710,
+              "rms_se_over_empirical_sd": 1.03957325375864,
+              "mean_interval_width": 0.12528363044828256,
+              "lower_miss": 0.0075,
+              "upper_miss": 0.001,
+              "screens": [
+                "success_rate"
+              ],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.9067713788867965,
+                "mean_cov_br": -8.494588379569947e-05,
+                "mean_var_r": 0.0005118663964754755,
+                "empirical_var_b": 0.8853497416242145,
+                "empirical_cov_br": 0.0012213596895338684,
+                "empirical_var_r": 0.0004949166915352835
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "cell": "mata_q1_k20_primary",
+      "targets": [
+        {
+          "target": "worker",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 0,
+            "status_code_disagreements": 0
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "mean",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 1962,
+              "point_successes": 1964,
+              "success_rate": 0.981,
+              "coverage_success": 0.9622833843017329,
+              "coverage_all": 0.944,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "target_status_5": 2,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4
+              },
+              "bias": -0.00038389611715866135,
+              "bias_over_oracle_sd": -0.009136168680097008,
+              "empirical_sd": 0.0416967554740477,
+              "oracle_sd": 0.04201937711537361,
+              "highrank_se_available": 1962,
+              "rms_se_over_empirical_sd": 0.9927862126503542,
+              "mean_interval_width": 0.17638113682773165,
+              "lower_miss": 0.0195,
+              "upper_miss": 0.0175,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8748364739909679,
+                "mean_cov_br": 7.33847534132771e-06,
+                "mean_var_r": 0.0006249795965305052,
+                "empirical_var_b": 0.8392706114208984,
+                "empirical_cov_br": 7.1143104892094484e-06,
+                "empirical_var_r": 0.0006438746459542308
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "fixed_c0",
+              "target": "worker",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 1962,
+              "point_successes": 1964,
+              "success_rate": 0.981,
+              "coverage_success": 0.9622833843017329,
+              "coverage_all": 0.944,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "target_status_5": 2,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4
+              },
+              "bias": -0.00038392040470635355,
+              "bias_over_oracle_sd": -0.009136746667401215,
+              "empirical_sd": 0.041696755141738505,
+              "oracle_sd": 0.042019377211818094,
+              "highrank_se_available": 1962,
+              "rms_se_over_empirical_sd": 0.9927860725400226,
+              "mean_interval_width": 0.17638083693998738,
+              "lower_miss": 0.0195,
+              "upper_miss": 0.0175,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8748291811158981,
+                "mean_cov_br": 7.339714893259658e-06,
+                "mean_var_r": 0.0006249797906271108,
+                "empirical_var_b": 0.8392706114208971,
+                "empirical_cov_br": 7.1120274134732645e-06,
+                "empirical_var_r": 0.0006438747105862668
+              }
+            }
+          }
+        },
+        {
+          "target": "firm",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 0,
+            "status_code_disagreements": 0
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "mean",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 1960,
+              "point_successes": 1964,
+              "success_rate": 0.98,
+              "coverage_success": 0.9535714285714286,
+              "coverage_all": 0.9345,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "target_status_5": 4,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4
+              },
+              "bias": 0.0009100212438381492,
+              "bias_over_oracle_sd": 0.02178057453728402,
+              "empirical_sd": 0.04387153802870531,
+              "oracle_sd": 0.04178132410053617,
+              "highrank_se_available": 1960,
+              "rms_se_over_empirical_sd": 0.9666653979179809,
+              "mean_interval_width": 0.17628568413731333,
+              "lower_miss": 0.0255,
+              "upper_miss": 0.02,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8607805496625104,
+                "mean_cov_br": 1.273057300299952e-06,
+                "mean_var_r": 0.0002886103174783812,
+                "empirical_var_b": 0.9293031691328503,
+                "empirical_cov_br": -0.0003862610756727486,
+                "empirical_var_r": 0.00029662663040155694
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "fixed_c0",
+              "target": "firm",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 1960,
+              "point_successes": 1964,
+              "success_rate": 0.98,
+              "coverage_success": 0.9535714285714286,
+              "coverage_all": 0.9345,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "target_status_5": 4,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4
+              },
+              "bias": 0.0009099933244552671,
+              "bias_over_oracle_sd": 0.021779906266805097,
+              "empirical_sd": 0.04387153450377409,
+              "oracle_sd": 0.04178132418513637,
+              "highrank_se_available": 1960,
+              "rms_se_over_empirical_sd": 0.9666581437323735,
+              "mean_interval_width": 0.17628446267706424,
+              "lower_miss": 0.0255,
+              "upper_miss": 0.02,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8607687206219589,
+                "mean_cov_br": 1.2790654354919083e-06,
+                "mean_var_r": 0.00028861040921516194,
+                "empirical_var_b": 0.9293031691328503,
+                "empirical_cov_br": -0.0003862615987357281,
+                "empirical_var_r": 0.0002966266982167252
+              }
+            }
+          }
+        },
+        {
+          "target": "covariance",
+          "primary": false,
+          "paired_availability": {
+            "availability_disagreements": 0,
+            "status_code_disagreements": 0
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "mean",
+              "target": "covariance",
+              "primary": false,
+              "attempts": 2000,
+              "successes": 1963,
+              "point_successes": 1964,
+              "success_rate": 0.9815,
+              "coverage_success": 0.9358125318390219,
+              "coverage_all": 0.9185,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4,
+                "target_status_5": 1
+              },
+              "bias": -0.0004276623010561422,
+              "bias_over_oracle_sd": -0.018116628810797418,
+              "empirical_sd": 0.024280656352906754,
+              "oracle_sd": 0.023606064104004697,
+              "highrank_se_available": 1963,
+              "rms_se_over_empirical_sd": 0.9614279347546608,
+              "mean_interval_width": 0.09397532732441105,
+              "lower_miss": 0.0515,
+              "upper_miss": 0.0115,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8551995797581675,
+                "mean_cov_br": -9.018339344430748e-05,
+                "mean_var_r": 0.0005448065805874463,
+                "empirical_var_b": 0.8620737200076148,
+                "empirical_cov_br": 0.0011860670770617106,
+                "empirical_var_r": 0.000584623558537199
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "fixed_c0",
+              "target": "covariance",
+              "primary": false,
+              "attempts": 2000,
+              "successes": 1963,
+              "point_successes": 1964,
+              "success_rate": 0.9815,
+              "coverage_success": 0.9358125318390219,
+              "coverage_all": 0.9185,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4,
+                "target_status_5": 1
+              },
+              "bias": -0.0004276523043981612,
+              "bias_over_oracle_sd": -0.018116205256172628,
+              "empirical_sd": 0.02428067604206212,
+              "oracle_sd": 0.023606064203343564,
+              "highrank_se_available": 1963,
+              "rms_se_over_empirical_sd": 0.9614244680009351,
+              "mean_interval_width": 0.09397530185041661,
+              "lower_miss": 0.0515,
+              "upper_miss": 0.0115,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8552082019965656,
+                "mean_cov_br": -9.00701921907933e-05,
+                "mean_var_r": 0.0005448087769221805,
+                "empirical_var_b": 0.8620737200076148,
+                "empirical_cov_br": 0.0011860924578525021,
+                "empirical_var_r": 0.0005846239280897632
+              }
+            }
+          }
+        },
+        {
+          "target": "total",
+          "primary": true,
+          "paired_availability": {
+            "availability_disagreements": 0,
+            "status_code_disagreements": 0
+          },
+          "arms": {
+            "mean": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "mean",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 1963,
+              "point_successes": 1964,
+              "success_rate": 0.9815,
+              "coverage_success": 0.9623025980641875,
+              "coverage_all": 0.9445,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4,
+                "target_status_5": 1
+              },
+              "bias": -0.00032919947543293696,
+              "bias_over_oracle_sd": -0.010190401572575827,
+              "empirical_sd": 0.033465760384298944,
+              "oracle_sd": 0.03230485796741033,
+              "highrank_se_available": 1963,
+              "rms_se_over_empirical_sd": 0.9467034861591674,
+              "mean_interval_width": 0.14375648388278883,
+              "lower_miss": 0.024,
+              "upper_miss": 0.013,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8397737901627707,
+                "mean_cov_br": -5.127317858769811e-05,
+                "mean_var_r": 0.0009358308663026887,
+                "empirical_var_b": 0.8622853266733792,
+                "empirical_cov_br": -0.0009544431384374988,
+                "empirical_var_r": 0.0009737161215059889
+              }
+            },
+            "fixed_c0": {
+              "cell": "mata_q1_k20_primary",
+              "arm": "fixed_c0",
+              "target": "total",
+              "primary": true,
+              "attempts": 2000,
+              "successes": 1963,
+              "point_successes": 1964,
+              "success_rate": 0.9815,
+              "coverage_success": 0.9623025980641875,
+              "coverage_all": 0.9445,
+              "failures": {
+                "NEGATIVE_INFERENCE_VARIANCE": 32,
+                "INFERENCE_COVARIANCE_NOT_PSD": 4,
+                "target_status_5": 1
+              },
+              "bias": -0.0003292316890475489,
+              "bias_over_oracle_sd": -0.01019139856519637,
+              "empirical_sd": 0.03346595459639476,
+              "oracle_sd": 0.03230485854727292,
+              "highrank_se_available": 1963,
+              "rms_se_over_empirical_sd": 0.9467249247141665,
+              "mean_interval_width": 0.14375605950810139,
+              "lower_miss": 0.024,
+              "upper_miss": 0.013,
+              "screens": [],
+              "q1_joint_covariance": {
+                "comparison_population": "computed q1 targets; availability and all attempts reported separately",
+                "mean_var_b": 0.8397669787467703,
+                "mean_cov_br": -5.1300223107471686e-05,
+                "mean_var_r": 0.0009358303575222916,
+                "empirical_var_b": 0.862285326673379,
+                "empirical_cov_br": -0.0009544469041996613,
+                "empirical_var_r": 0.0009737160389923914
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "caveats": [
+    "Coverage_success is conditional on interval availability; coverage_all counts missing intervals as not covered.",
+    "Bias and empirical SD use posted finite points only; atomic failures may select that population. SE ratios use available highrank SEs divided by posted-point SD.",
+    "q1 covariance diagnostics condition on interval success. Joint covariance availability and all attempts are separately retained.",
+    "Exact Gaussian dense oracle SD omits finite-probe JLA variability and describes an unconditional dense point estimator. Fixed numerical seeds may create systematic approximation differences.",
+    "Mean-vs-fixed-c0 agreement in a bounded design does not establish general causality or coverage."
+  ],
+  "presentation_script_sha256": "6fb9b001c120ca773b24182dbc3d1d71894be8e004287972433c3bf73a0ffde8"
+}

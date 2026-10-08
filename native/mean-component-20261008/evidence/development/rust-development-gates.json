@@ -1,0 +1,64 @@
+[
+  {
+    "name": "rust-fmt",
+    "command": [
+      "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+      "fmt",
+      "--manifest-path",
+      "rust/Cargo.toml",
+      "--all",
+      "--",
+      "--check"
+    ],
+    "returncode": 0,
+    "seconds": 0.9412800840218551,
+    "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/rust-fmt.log"
+  },
+  {
+    "name": "rust-clippy",
+    "command": [
+      "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+      "clippy",
+      "--manifest-path",
+      "rust/Cargo.toml",
+      "--workspace",
+      "--all-targets",
+      "--locked",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "returncode": 0,
+    "seconds": 6.454108709003776,
+    "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/rust-clippy.log"
+  },
+  {
+    "name": "rust-tests",
+    "command": [
+      "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+      "test",
+      "--manifest-path",
+      "rust/Cargo.toml",
+      "--workspace",
+      "--all-targets",
+      "--locked"
+    ],
+    "returncode": 0,
+    "seconds": 378.3613565409905,
+    "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/rust-tests.log"
+  },
+  {
+    "name": "shim-tests",
+    "command": [
+      "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+      "test",
+      "--manifest-path",
+      "rust/stata_backend/Cargo.toml",
+      "--all-targets",
+      "--locked"
+    ],
+    "returncode": 0,
+    "seconds": 10.293307374988217,
+    "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/shim-tests.log"
+  }
+]

@@ -1,0 +1,173 @@
+{
+  "schema": "fevc.mean-component.development-checkpoint.v1",
+  "recorded_utc": "2026-10-08T20:35:12.182222+00:00",
+  "base_commit": "7fb65c41e8c170644866cebac5d0bb69b9fd827f",
+  "scope": "Development only; pending native q1 pilot identity diagnosis and clean-source platform qualification. No production assessment yet.",
+  "changed_source_sha256": {
+    "INSTALLATION.md": "c6485f7f440dd32613b2b9bc4aedf9305eef78244f1e1be53a201730a63c865c",
+    "README.md": "e3b617308d4e94a075a6c354130fcecbe229f5a90a923c959d8056a7e66b07d6",
+    "fevc/CHANGELOG.md": "ae17f2631ebcf66db69729bb79365db0d88d90bb0bf623435c3fb1410950ac40",
+    "fevc/PLAN.md": "88d4c8fdffc92d8cc9f94a41525d6d0817c0197a9e6ebf166eaa13d8a0f35f27",
+    "fevc/README.md": "3e47af03abc96f51d0bd3119ed759ed85aba17b17e471a77f8afc5b2e595c580",
+    "fevc/TESTING.md": "a87b4d7cf8a56993f9530ffe45cd8dec011e17fc513e28cae134a2fa0aae1235",
+    "fevc/benchmarks/mean_component_inference_20261008/README.md": "5ee41a64036f7713e037ce3c06c35a48d5ff5635bf7d54562c6c420f8b616540",
+    "fevc/benchmarks/mean_component_inference_20261008/oracle.py": "e412986eecbe59775e6253abcd10d60739a8c1766d339545f192d89da37f56d2",
+    "fevc/benchmarks/mean_component_inference_20261008/run.py": "6155182159242e458ab03d79621e06923522b6e76a23d596d88dd30c50be4c02",
+    "fevc/benchmarks/mean_component_inference_20261008/test_harness.py": "3ae720b6eff833c3778b9aaa73008c0d3a6b701dfae746a7ed569057d23590ec",
+    "fevc/docs/CENTERING.md": "5198514489b2b9ff86e2da07f8414b452ace4128221f364a9bbc71f480e2b759",
+    "fevc/docs/DECISIONS.md": "ab593452c7b6d1a34ea9206ea43df55955f69a7124c8a924caa31061a7cebcf2",
+    "fevc/docs/ESTIMATOR_CONTRACT.md": "ae1af264e319fb107af88c225f18bec5c5d8f8b04b01c16d56e3cf8d25f45281",
+    "fevc/docs/FAILURES_AND_RETURNS.md": "1405565ec578bf63ce453c9087c2f02177fe879e2ea6fe56cbde9d9326aabc37",
+    "fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md": "1a238d74b754c3b0dde80b1d4c0a3291da478d2717f5314f4016d7d735578fe0",
+    "fevc/docs/INFERENCE.md": "de3c57edcf122e4ef3a8811888e09b85896e30d69b7da1eb073085acd01dcd1b",
+    "fevc/docs/MATRIX_FREE_COMPONENT_INFERENCE.md": "6a102bf3fa069078e5363e8ea959363bb619310aaa859a320c2ee3ee2b0b8e3c",
+    "fevc/docs/MEAN_COMPONENT_INFERENCE_PLAN.md": "005429c451b0bf04c602a048bed24bb809e372481d6ddab274ff5d3c6438fdd5",
+    "fevc/docs/NUMERICAL_ARCHITECTURE.md": "22efe64dcb59184a65283c93feb99b97215e0a11dbf53612ff2535e2bb3291a6",
+    "fevc/docs/README.md": "d68ecdb4d878f005f64b1aaf527f750e98268547b3b80c15b67f564eba7c7017",
+    "fevc/docs/RUST_MATA_PARITY.md": "4db58c471221de9061102e83732ebf68e407360e23dea15b17add8bc2beeb871",
+    "fevc/docs/mean_component_inference_validation_v1.json": "c1c18f01d8da1e5b9357fe49f2260cf4031f0a02dcc6768be03da77a91776d47",
+    "fevc/docs/mean_component_inference_validation_v1_amendment1.json": "bc5e84a7d0a3dc8ff911f9114bbea1790fd486d5f4e648529a0bf37acf618b5d",
+    "fevc/docs/rust_mata_parity.json": "4aeedb42e7c8198b01e2721c7b74c5ef0c0318be22ede19994b4c68147be3d05",
+    "fevc/fevc.ado": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+    "fevc/fevc.sthlp": "4311f2def99522ab44124343af73b52c8d2f1b1395f8a1ead00ba0cc1f124481",
+    "fevc/fevc__centering.ado": "68f1a47a55f297e0d362eee259e81bec76f1d9c19d178f0e011d7f5434424194",
+    "fevc/fevc__component_model_route.ado": "46c582959f8245573a893363b7fa0d2fc9daa1bdcf0b2752bb1a64aeacbc33ca",
+    "fevc/fevc__display.ado": "3f6bbd70d3d3f67e9ffc40b6636002ba9e78001ce029feb0ec799a0a1792e9db",
+    "fevc/fevc__exact_inference_model_post.ado": "ec1169b6e67a356173be932a3ca53f4c2f9332303c6dfac62bb2e284c0e29540",
+    "fevc/fevc__rust_component_post.ado": "f4fd5e73e0fa906ae73b486e0dd5bd04225f04403ded1ddec020b6c283b439a4",
+    "fevc/fevc_inference.mata": "12dee7a63b10932e0e3fcab996e5e03f4de8c996b4182bdc2c30b67de5f489c2",
+    "fevc/fevc_rust.ado": "c9fdad3249a90b982404cac564b35a98e0f2885c1ed26c169fcb6f7c151d7f29",
+    "fevc/tests/python/test_linux_scc_qualifier.py": "43a9d432713bb274989833e9628d0e69fd64c9bfad624dde1c3a425639089431",
+    "fevc/tests/python/test_windows_ci.py": "3284fe38ccd6c41223f7467368de339b3c7d1bd82f453b5c70f9d7c6c64f625f",
+    "fevc/tests/stata/run_all.do": "a85d55fa070289d4b631f63d794167b881db542aa656747e0ceda8137ec90e17",
+    "fevc/tests/stata/test_backend_routing.do": "49d6952a350e38b627a5507e0b160ffa4522c51905fa015995fce600babf056a",
+    "fevc/tests/stata/test_centering_options.do": "1f131efa66a6e814e4b538bb352c6cd4048560dc522cda1efb2c5a5e4dd02bdf",
+    "fevc/tests/stata/test_component_centering_exact.do": "49b9b0effb4963740864667951d9cbd8a1af613bbe3426cac57d0b5a311451cc",
+    "fevc/tests/stata/test_component_centering_native.do": "7f1d7fcc7c4881b9373f560c3e0edf35c428a6d3c1a0fd10bda68189d8afb909",
+    "fevc/tests/stata/test_inference.do": "0c67f4b1678b0841a7643830accdc095f7c1c3b9c2214c57503ea74832147d27",
+    "fevc/tests/stata/test_install.do": "484fb7a5cbd90b0affc3e4000d4e4e9a95236b9a2b1adfd97ad261ad035d60e9",
+    "native/README.md": "cd1b5748b74417a9b7ab5c4e3eae226b623e95c544bf603e97097d16116de4a1",
+    "rust/README.md": "84bc3a3618f66e0729c49fa3cc927384eaf3ee4126ff660e29251dbd7b399fce",
+    "rust/TEST_PLAN.md": "adc2b2c34a8f05c8074bd1ed4ca75cb2970b65a80f01d21b05c617d18493fb1a",
+    "rust/crates/vckss-core/src/component_inference.rs": "5c887b0118894b9e91bd9347f12c212cef6d896fb50362c87a924893d1c4ccb5",
+    "rust/crates/vckss-core/src/generic_jla.rs": "2d61a124605bd3fa3f8674a7f472a2188f839f97b55f60eb08d646045c2ddb90",
+    "rust/crates/vckss-core/tests/generic_jla.rs": "d50256de1aec7e17ebc0f9a0832953f3f0ccbd800e381e819a60d8a2c5f282c9",
+    "rust/crates/vckss-core/tests/generic_jla/component_centering.rs": "a32c2233c078e4ed8bc5dcbe1309223293fcad98c41eef0add295a1806f4820d",
+    "rust/crates/vckss-core/tests/generic_jla/projection_centering.rs": "bccb4fd2eb20b3ecfb2713aa9ed2d3daa1a97fac2c0e523cc951b926910e9a47",
+    "rust/crates/vckss-plugin/src/ffi_engine.rs": "e439d87fb78de56e489aefa08663b3183cd63c4650ea0a3248ac84580d9942e1",
+    "rust/crates/vckss-plugin/tests/engine_ffi.rs": "ce85919047e21329a4d7b6ef26936fb28569a7e011aa6857948549efccc62c17",
+    "rust/crates/vckss-plugin/tests/engine_ffi/generic_execution.rs": "ce151c772ac0662852f85cb667155da6e05b2319a34cc5b642646200454815a8",
+    "rust/stata_backend/README.md": "b71c57b93d9b9275b2ccc3ee64a4a69d33ce900941505e369953cb8dc05fe6e4",
+    "rust/stata_backend/cshim/stata_entry.c": "4bcdd7c4e9c95d53a933fde02bb0b6f72d09d1f736f3518ae8cd21ae5ee20cae",
+    "rust/stata_backend/include/vckss_rust.h": "086b67af70499922b4e14861d88542c6de1ee48b8c9900e66b1f9bde1b0e54de",
+    "rust/stata_backend/qualify_linux_scc.sh": "483ad3340f5f2af03c704e340ffa194b49e76e290124784d4f1a70c8a383b75d",
+    "rust/stata_backend/qualify_macos.sh": "da29f047b21bb342a0bfbe4fe51bb71e39d511a6cf88639546a0414ee8e579dd",
+    "rust/stata_backend/tests/abi_header_compat_test.c": "2b185d2fe70a77ca801425aaa958e9fac87f612b6eb6cfec8ef12bb5eb1c60dc",
+    "rust/stata_backend/tests/cshim_error_transport_test.c": "f63674ee3b41e0e717f5262ec52a92e0a379c2521df496c26095b0bc781cba72",
+    "rust/stata_backend/windows_runtime.do": "177c550cff2b22e2813130241ae58c3be2f27d23fec38d03c8aa3e58e86b28d6"
+  },
+  "rust_gates": [
+    {
+      "name": "rust-fmt",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "fmt",
+        "--manifest-path",
+        "rust/Cargo.toml",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "returncode": 0,
+      "seconds": 0.9412800840218551,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/rust-fmt.log"
+    },
+    {
+      "name": "rust-clippy",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "clippy",
+        "--manifest-path",
+        "rust/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "returncode": 0,
+      "seconds": 6.454108709003776,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/rust-clippy.log"
+    },
+    {
+      "name": "rust-tests",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "test",
+        "--manifest-path",
+        "rust/Cargo.toml",
+        "--workspace",
+        "--all-targets",
+        "--locked"
+      ],
+      "returncode": 0,
+      "seconds": 378.3613565409905,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/rust-tests.log"
+    },
+    {
+      "name": "shim-tests",
+      "command": [
+        "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+        "test",
+        "--manifest-path",
+        "rust/stata_backend/Cargo.toml",
+        "--all-targets",
+        "--locked"
+      ],
+      "returncode": 0,
+      "seconds": 10.293307374988217,
+      "log": "/Users/johannes/Git/varcomp_hdfe/fevc/.local/mean-component-20261008/shim-tests.log"
+    }
+  ],
+  "focused_evidence": {
+    "exact_oracles": ".local/mean-component-inference-20261008/exact-development/validation.json",
+    "native_stata": ".local/mean-component-20261008/component-centering-native.log",
+    "centering_guard": ".local/mean-component-20261008/test_centering_options.log",
+    "backend_probe_cleanup": ".local/mean-component-inference/native-dev/probe-cleanup/test_backend_routing.log",
+    "installed_mean": ".local/mean-component-20261008/install-development.log",
+    "overhead": ".local/mean-component-inference/overhead-audit/receipt.json"
+  },
+  "outgoing_ancestor_review": {
+    "commits": [
+      "ed829fbd",
+      "24754269",
+      "623b156d",
+      "7fb65c41"
+    ],
+    "result": "No blocker found in bounded source/artifact review",
+    "verified": [
+      "132 changed paths; no added restricted data, manuscript, comparator Matlab, credentials or runner state",
+      "four Mac/Linux binaries and all 23 bound evidence hashes; Windows payload unchanged",
+      "267 Mac and 1420 Linux source-manifest entries",
+      "1404 unchanged source compatibility entries and digest",
+      "both 61-file install inventories",
+      "all members in 1419/1443 source archives and 58-file portable archive"
+    ],
+    "limitation": "No rerun of historical platform or sampling experiments; historical receipts retain their source-specific scope"
+  },
+  "current_issue": {
+    "status": "engineering_failure_under_diagnosis",
+    "run": "/private/tmp/mean-component-pilot-v2",
+    "cell": "observation_q1_k20_primary",
+    "replication": 16,
+    "arms": [
+      "mean",
+      "fixed_c0"
+    ],
+    "error": "TARGET_IDENTITY_FAILED",
+    "numerical_seed": 1592795635,
+    "outcome_seed": 613194815,
+    "disposition": "Preserved and blocks assessment; never classify as scientific withholding"
+  }
+}

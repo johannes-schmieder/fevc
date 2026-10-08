@@ -38,18 +38,22 @@ None needs neither attachment-centering capability for its separately
 supported requests. Existing supported tuples and ABI
 request/result layouts remain.
 
-The local Mac arm64, Rosetta x86-64 and universal candidates at clean source
-`24754269` expose point and projection centering APIs and pass full qualification plus
-24 isolated-install capability, point-centering and Mean-projection checks.
-Linux x86-64 also passes full qualification and installed point-centering
-and Mean-projection checks at the same source (SCC job `7962808`).
-Windows runtime qualification remains pending after the latest private smoke
-failure. Its retained manual-test payload has point-centering API 1 but lacks
-projection-centering API 1. The [current candidate record](../native/prerelease-20261008/manifest.json)
-binds the local point/projection evidence. These receipts do not qualify Mean
-component inference: the new capability needs fresh exact-source runtime
-qualification on every intended platform and a separate bounded sampling
-assessment. Source push authorization does not imply a tag or hosted release.
+New Mac candidates at clean source `b9f80ce9` pass full arm64/Rosetta
+thin/universal qualification and separate exact-byte installed Mean-component
+checks for all four architecture aliases. Linux x86-64 passes full and
+staged/installed Mean tests at `63757839` (SCC job `7969972`). These candidates
+remain unadopted while Windows is blocked after two private source-build
+smokes. The prepared hosted-build alternative passes 81 offline tests and
+independent review; source publication before complete qualification and a
+bounded retry await approval. [The new candidate record](../native/mean-component-20261008/checkpoint.json)
+retains exact source/payload identities and limitations. No new source push,
+full Windows qualification or tag has occurred for this extension.
+
+The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+retains 22 exact-Mata availability-screen failures. All eight native primary
+cells pass broad descriptive screens, but material numerical sensitivity
+remains; there is no general coverage guarantee. Earlier receipts retain their
+original scope and do not qualify different payloads.
 See [the centering contract](../fevc/docs/CENTERING.md) and
 [the Stata boundary](stata_backend/README.md) for lifecycle and restrictions.
 
