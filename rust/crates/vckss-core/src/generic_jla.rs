@@ -46,13 +46,13 @@ use crate::batch_plan::{
 };
 use crate::component_inference::{
     fill_gaussian_pseudo_outcome, finish_component_covariance_with_reporting, finish_influence,
-    finish_q1_influence, finish_q1_interval, finish_q1_target, finish_spectrum_diagnostics,
-    primitive_plugins, primitive_target_rhs, probe_scalar, q1_probe_scalar, q1_remainder_ratio,
-    reported_target_rhs, target_ratios, ComponentInferenceResult, ComponentInferenceSolvePhase,
-    ComponentInferenceSolveReceipt, ComponentInferenceUnit, ComponentQ1Status,
-    ComponentQ1TargetResult, ComponentReferenceDistribution, ComponentSpectrumDiagnostics,
-    ComponentVarianceSource, JointProbeMoments, PreparedComponentInference, PRIMITIVE_TARGETS,
-    REPORTED_TARGETS,
+    finish_q1_influence, finish_q1_interval, finish_q1_target_with_solve_defect,
+    finish_spectrum_diagnostics, primitive_plugins, primitive_target_rhs, probe_scalar,
+    q1_probe_scalar, q1_remainder_ratio, reported_target_rhs, target_ratios,
+    ComponentInferenceResult, ComponentInferenceSolvePhase, ComponentInferenceSolveReceipt,
+    ComponentInferenceUnit, ComponentQ1Status, ComponentQ1TargetResult,
+    ComponentReferenceDistribution, ComponentSpectrumDiagnostics, ComponentVarianceSource,
+    JointProbeMoments, PreparedComponentInference, PRIMITIVE_TARGETS, REPORTED_TARGETS,
 };
 use crate::control_basis::{
     canonicalize_controls_in_order_with_interrupt, refine_control_semantic_order_with_interrupt,
@@ -1204,13 +1204,13 @@ fn run_generic_jla_with_execution_interrupt(
     let mut options = execution_options.estimator;
     options.solver = routing.solver;
     let mut options = options.validate()?;
-    if (component_inference.is_some() && options.centering != crate::types::Centering::None)
-        || (projection.is_some() && options.centering == crate::types::Centering::Corrected)
+    if (component_inference.is_some() || projection.is_some())
+        && options.centering == crate::types::Centering::Corrected
     {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "centering",
-            "component inference requires None; projection supports None or Mean centering",
+            "component inference and projection support None or Mean centering",
         ));
     }
     validate_problem(problem)?;
@@ -2002,7 +2002,11 @@ fn run_generic_jla_with_execution_interrupt(
         rss.add(weights[row] * residual[row] * residual[row]);
     }
     let weighted_rss = rss.finish();
-    crate::centering::subtract(
+    // Mean component inference holds this observed mean fixed. Preserve the
+    // original residuals and coefficients: target actions annihilate a common
+    // shift, while influence and raw leave-out products use the centered outcome.
+    // Gaussian inference probes retain the original error kernel.
+    let outcome_center = crate::centering::subtract(
         options.centering,
         &mut working_y,
         &problem.frequency,
@@ -2610,6 +2614,7 @@ fn run_generic_jla_with_execution_interrupt(
                     row_order: &row_order,
                 },
                 &working_y,
+                outcome_center,
                 &residual,
                 &deleted_adjusted,
                 leverage,
@@ -2646,6 +2651,7 @@ fn run_generic_jla_with_execution_interrupt(
                     coefficients,
                     ComponentInferenceRows::Match { plan: match_plan },
                     &collapsed.outcome,
+                    outcome_center,
                     &collapsed.residual,
                     &collapsed.deleted_adjusted,
                     leverage,
@@ -7075,6 +7081,7 @@ struct PreparedComponentQ1 {
     leading_score: [f64; REPORTED_TARGETS],
     leading_variance_correction: [f64; REPORTED_TARGETS],
     direct_remainder_estimate: [f64; REPORTED_TARGETS],
+    solve_identity_defect: [f64; REPORTED_TARGETS],
     remainder_identity_tolerance: [f64; REPORTED_TARGETS],
     probe: [ComponentScalarMoments; REPORTED_TARGETS],
 }
@@ -7096,6 +7103,7 @@ fn prepare_component_q1(
     inference_rows: ComponentInferenceRows<'_>,
     controls: &[Vec<f64>],
     working_y: &[f64],
+    outcome_center: f64,
     residual: &[f64],
     deleted_adjusted: &[f64],
     maker_inverse: &[f64],
@@ -7193,6 +7201,7 @@ fn prepare_component_q1(
     )?;
     let mut influence: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| Vec::new());
     let mut direct_remainder_estimate = [0.0; REPORTED_TARGETS];
+    let mut solve_identity_defect = [0.0; REPORTED_TARGETS];
     let mut remainder_identity_tolerance = [0.0; REPORTED_TARGETS];
     for target in 0..REPORTED_TARGETS {
         let solution = &solved.solution[target];
@@ -7220,6 +7229,34 @@ fn prepare_component_q1(
         )?;
         direct_remainder_estimate[target] =
             component_prediction_inner(working_y, &influence[target])?;
+        // Both inverse actions enter the scalar identity. With e0=X'r and
+        // e1=rhs-Hu (the retained full-system residual), its signed numerical
+        // defect is e0'u-beta_c'e1. Compute it independently of either target
+        // estimate; an incorrect maker or recentering remains unexplained.
+        // Subtracting c from workers also represents the sqrt-mass common
+        // direction in collapsed-match geometry without another row buffer.
+        let first_defect = component_prediction_inner(residual, &prediction)?;
+        let mut second_defect = StableAccumulator::default();
+        for (position, (&coefficient, &error)) in coefficients
+            .worker
+            .iter()
+            .zip(&solution.residual.worker)
+            .enumerate()
+        {
+            checkpoint_chunk(interrupt, position, "component_q1_solve_certificate")?;
+            second_defect.add((coefficient - outcome_center) * error);
+        }
+        for (position, (&coefficient, &error)) in coefficients
+            .firm
+            .iter()
+            .zip(&solution.residual.firm)
+            .chain(coefficients.control.iter().zip(&solution.residual.control))
+            .enumerate()
+        {
+            checkpoint_chunk(interrupt, position, "component_q1_solve_certificate")?;
+            second_defect.add(coefficient * error);
+        }
+        solve_identity_defect[target] = first_defect - second_defect.finish();
         remainder_identity_tolerance[target] =
             (8.0 * solution.receipt.full_residual).max(256.0 * f64::EPSILON);
         solve_receipts.push(component_solve_receipt(
@@ -7250,6 +7287,7 @@ fn prepare_component_q1(
         leading_score,
         leading_variance_correction,
         direct_remainder_estimate,
+        solve_identity_defect,
         remainder_identity_tolerance,
         probe: [ComponentScalarMoments::default(); REPORTED_TARGETS],
     })
@@ -7263,12 +7301,13 @@ fn finish_component_q1(
     let mut output = [ComponentQ1TargetResult::default(); REPORTED_TARGETS];
     for target in 0..REPORTED_TARGETS {
         let (trace_variance, trace_mcse) = state.probe[target].finish()?;
-        let mut target_result = finish_q1_target(
+        let mut target_result = finish_q1_target_with_solve_defect(
             state.point_estimate[target],
             state.leading_score[target],
             state.leading_variance_correction[target],
             state.direct_remainder_estimate[target],
             state.remainder_identity_tolerance[target],
+            state.solve_identity_defect[target],
             state.eigenvalue[target],
             &state.mode[target],
             &state.influence[target],
@@ -7304,6 +7343,7 @@ fn run_component_inference_attachment(
     coefficients: &ModelCoefficients,
     inference_rows: ComponentInferenceRows<'_>,
     working_y: &[f64],
+    outcome_center: f64,
     residual: &[f64],
     deleted_adjusted: &[f64],
     leverage: &[f64],
@@ -7573,6 +7613,7 @@ fn run_component_inference_attachment(
             inference_rows,
             controls,
             working_y,
+            outcome_center,
             residual,
             deleted_adjusted,
             maker_inverse,

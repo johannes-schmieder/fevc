@@ -146,6 +146,8 @@ pub const VCKSS_CORE_AUTOMATIC_COMPONENT_BATCH_V1_READY: u64 = 1 << 13;
 pub const VCKSS_CORE_RESOLVED_EXECUTION_V1_READY: u64 = 1 << 14;
 /// Match mover support counts original deletion units, including parallel blocks.
 pub const VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY: u64 = 1 << 15;
+/// Component inference supports Mean with the observed centering mean fixed.
+pub const VCKSS_CORE_COMPONENT_CENTERING_V1_READY: u64 = 1 << 16;
 const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 =
     if cfg!(any(target_os = "macos", target_os = "linux")) {
         VCKSS_CORE_FULL_CMG_V2_READY
@@ -174,7 +176,8 @@ const VCKSS_BACKEND_CAPABILITIES_V1_CORE_READY_FLAGS: u64 = VCKSS_CORE_MATCH_GRA
     | VCKSS_CORE_JLA_PLAN_READY
     | VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY
     | VCKSS_CORE_PROJECTION_JLA_READY
-    | VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY;
+    | VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY
+    | VCKSS_CORE_COMPONENT_CENTERING_V1_READY;
 const VCKSS_BACKEND_CAPABILITIES_V1_SUPPORT_FLAGS: u64 =
     VCKSS_SUPPORT_JLA | VCKSS_SUPPORT_MATCH_DELETION | VCKSS_SUPPORT_DIAGONAL;
 pub const VCKSS_INTERRUPT_CONTINUE: i32 = 0;
@@ -2385,11 +2388,11 @@ fn validate_attachment_centering(
     component: bool,
 ) -> Result<()> {
     use vckss_core::types::Centering;
-    if (component && mode != Centering::None) || (projection && mode == Centering::Corrected) {
+    if (component || projection) && mode == Centering::Corrected {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "centering",
-            "component inference requires None; projection supports None or Mean centering",
+            "component inference and projection support None or Mean centering",
         ));
     }
     Ok(())

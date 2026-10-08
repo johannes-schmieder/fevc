@@ -2,7 +2,7 @@
   "schema_version": 1,
   "updated": "2026-10-08",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Clean source 24754269 qualifies the local Mac arm64, Rosetta x86-64, universal and Linux x86-64 candidates, including point-centering API 1 and Mean-projection API 1. Exact candidate evidence is bound in native/prerelease-20261008/manifest.json. Mac passes full qualification plus 24 installed-capability/point-centering/Mean-projection checks; Linux SCC job 7962808 passes full and installed checks with scheduler failed=0 and exit_status=0. Windows remains unqualified after the bounded private smoke fails with STATA_DRIVER_FAILED; the retained October 7 payload is owner-approved for manual testing only and lacks Mean-projection API 1. A reviewed collector proposal awaits explicit shared-backend approval. No current candidate is published or tagged. Historical receipts qualify their recorded source and binary hashes only. Engineering qualification does not extend statistical coverage, representative scale, native Intel hardware, or unsupported routes; prior scientific confirmation failures remain unchanged. The retained alpha_required field describes prior alpha gates, not release authorization. Mean uses the retained frequency-weighted working-outcome mean; Corrected projection and centered component inference remain unsupported. See CENTERING.md for semantics and MCSE limitations.",
+  "qualification_scope": "Mean component highrank/q1 inference is implemented on the existing exact Mata and native generic-JLA observation/fixed-offset-match tuples under the fixed observed mean approximation. Native Mean component inference requires component_centering_api 1, conveyed by readiness bit 16 through the existing capability export. Fresh full-source, native-platform and bounded sampling assessment are in progress; existing payloads do not acquire this capability through source changes. Clean source 24754269 and native/prerelease-20261008/manifest.json retain their original Mac arm64, Rosetta x86-64, universal and Linux x86-64 point/Mean-projection qualification. The private Windows collector has since been deployed and infrastructure acceptance passes, but diagnostic canaries and source-bound runtime qualification remain pending. Historical receipts qualify their recorded source and binary hashes only. No candidate is tagged or released. Engineering qualification does not establish statistical coverage, representative scale, native Intel hardware, or unsupported routes; prior scientific confirmation failures remain unchanged. Mean uses the retained physical-frequency working-outcome mean. Corrected projection/component inference remains unsupported. See CENTERING.md and MEAN_COMPONENT_INFERENCE_PLAN.md.",
   "statuses": [
     "qualified",
     "implemented",
@@ -17,6 +17,14 @@
       "rust": "implemented",
       "alpha_required": false,
       "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. The four local Mac/Linux candidates at clean source 24754269 pass full platform and explicit installed Rust centering checks. Windows runtime remains pending. native/prerelease-20261008/manifest.json; CENTERING.md."
+    },
+    {
+      "id": "mean-component-inference",
+      "surface": "Fixed-observed-mean component highrank/q1 inference",
+      "mata": "implemented",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "Independent exact dense point/influence/public covariance/q1 remainder oracles and native observation/weighted-match fixed-c tests pass in development. Error probes remain uncentered; mean-estimation uncertainty is omitted and disclosed. Exact runtime component-mean1 and native component_centering_api 1 fail closed on stale runtimes. New registered bounded sampling assessment and clean platform qualification pending; no claim extends historical coverage. mean_component_inference_validation_v1.json; MEAN_COMPONENT_INFERENCE_PLAN.md."
     },
     {
       "id": "exact-corrected-centering",
@@ -168,7 +176,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Retained Windows centering binary is the exact c14fbcb6 hosted build (Rust tests/static CRT/144-export PE audit PASS), adopted at owner request for manual testing. It lacks Mean-projection API 1. Earlier private runtime attempts and the October 8 bounded source smoke fail; the latest aggregate error is STATA_DRIVER_FAILED and identifies no assertion. Windows runtime qualification remains pending; a reviewed bounded collector proposal awaits owner approval. Earlier passing receipts qualify their original bytes only. native/centering-windows-manual-20261007.json; native/prerelease-20261008/manifest.json. Existing unsupported routes remain."
+      "evidence": "Retained Windows centering binary is the exact c14fbcb6 hosted build adopted for manual testing; it lacks Mean-projection and Mean-component capability. Earlier runtime failures remain recorded. The bounded private collector is now deployed and infrastructure acceptance passes; diagnostic canaries and source-bound project runtime qualification are pending. Existing historical receipts qualify only their original bytes. native/centering-windows-manual-20261007.json; native/prerelease-20261008/manifest.json."
     },
     {
       "id": "all-point-probe-numerical-mcse",

@@ -23,11 +23,19 @@ program define fevc_rust, rclass
         return scalar memory_api = 1
         exit 0
     }
+    if "`subcommand'"=="componentversion" {
+        return scalar interface_version = 4
+        exit 0
+    }
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "probe" {
         // Unrelated fault modes must advertise centering and exact transports so
         // they still reach the specific capability under test.
         return scalar centering_api = 1
+        if "$VCKSS_ROUTING_PROXY_MODE"!="stale_component_missing" {
+            return scalar component_centering_api = ///
+                cond("$VCKSS_ROUTING_PROXY_MODE"=="stale_component_zero",0,1)
+        }
         if "$VCKSS_ROUTING_PROXY_MODE"!="stale_projection_missing" {
             return scalar projection_centering_api = ///
                 cond("$VCKSS_ROUTING_PROXY_MODE"=="stale_projection_zero",0,1)
@@ -36,7 +44,8 @@ program define fevc_rust, rclass
         return scalar exact_resolved_api = 2
         return scalar exact_legacy_api = 1
         if inlist("$VCKSS_ROUTING_PROXY_MODE", ///
-            "stale_projection_missing","stale_projection_zero") {
+            "stale_projection_missing","stale_projection_zero", ///
+            "stale_component_missing","stale_component_zero") {
             return scalar abi_compiled = 1
             return scalar abi_runtime = 1
             return scalar core_ready_flags = 65535
@@ -667,6 +676,24 @@ foreach capability_mode in stale_projection_missing stale_projection_zero {
     assert `"`c(rngstate)'"'==`"`caller_rngstate'"'
 }
 
+// Component Mean needs its own capability even if point/projection centering
+// are available. Neither a missing nor a false flag may reach preparation.
+foreach capability_mode in stale_component_missing stale_component_zero {
+    global VCKSS_ROUTING_PROXY_MODE `capability_mode'
+    foreach reference in highrank q1 {
+        global VCKSS_ROUTING_PREPARE_CALLED 0
+        capture quietly fevc y, worker(worker) firm(firm) ///
+            deletion(observation) stayers(movers) algorithm(jla) ///
+            backend(rust) rng(counter_v1) engine(generic) ///
+            preconditioner(diagonal) batch(2) probes(4) ///
+            inference(`reference') inferencemodel(structured_common) nodisplay
+        assert _rc==498
+        assert "`e(withholding_status)'"=="RUST_BACKEND_UNAVAILABLE"
+        assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+        assert `"`c(rngstate)'"'==`"`caller_rngstate'"'
+    }
+}
+
 // The successful and typed-failure routes cumulatively preserve caller state.
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_rngstream'
@@ -705,6 +732,17 @@ program define fevc__rust_plugin_call, rclass
     if "$VCKSS_ROUTING_PROXY_MODE"=="stale_projection_scalar" {
         scalar __vckss_rust_core_flags=65535
     }
+    if inlist("$VCKSS_ROUTING_PROXY_MODE","partial_probe_error","malformed_probe") {
+        foreach field in progress_api execution_api numerical_api centering_api ///
+            proj_center_api comp_center_api exact_api exact_resolved_api exact_legacy_api {
+            scalar __vckss_rust_`field'=1
+        }
+        if "$VCKSS_ROUTING_PROXY_MODE"=="partial_probe_error" {
+            scalar __vckss_rust_core_flags=131071
+            exit 909
+        }
+        // A successful transport without its required core mask fails collection.
+    }
 end
 scalar __vckss_rust_core_flags=65535
 capture quietly fevc_rust probe
@@ -713,10 +751,31 @@ capture confirm scalar __vckss_rust_core_flags
 assert _rc!=0
 global VCKSS_ROUTING_PROXY_MODE stale_projection_scalar
 scalar __vckss_rust_proj_center_api=1
+scalar __vckss_rust_comp_center_api=1
 quietly fevc_rust probe
 assert r(projection_centering_api)==0
+assert r(component_centering_api)==0
 capture confirm scalar __vckss_rust_proj_center_api
 assert _rc!=0
+capture confirm scalar __vckss_rust_comp_center_api
+assert _rc!=0
+// A late transport failure and a malformed successful transport both clear
+// every produced scalar, including readiness written before the failure.
+foreach probe_mode in partial_probe_error malformed_probe {
+    global VCKSS_ROUTING_PROXY_MODE `probe_mode'
+    scalar __vckss_rust_comp_center_api=1
+    capture quietly fevc_rust probe
+    local probe_rc=_rc
+    if "`probe_mode'"=="partial_probe_error" assert `probe_rc'==909
+    else assert `probe_rc'!=0
+    foreach field in abi_compiled abi_runtime core_flags support_flags ///
+        deterministic progress_api execution_api numerical_api centering_api ///
+        proj_center_api comp_center_api exact_api exact_resolved_api exact_legacy_api {
+        capture confirm scalar __vckss_rust_`field'
+        assert _rc!=0
+    }
+    assert missing(r(component_centering_api))
+}
 capture program drop fevc__rust_plugin_call
 foreach field in abi_compiled abi_runtime support_flags deterministic {
     capture scalar drop __vckss_rust_`field'

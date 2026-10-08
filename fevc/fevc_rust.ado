@@ -57,54 +57,64 @@ program define fevc_rust, rclass
             di as err "probe does not accept additional arguments"
             exit 198
         }
-        // Old FFI-only builds advertise native V6 but omit this shim field.
-        // Drop any stale scalar first so absence cannot inherit readiness.
-        capture scalar drop __vckss_rust_core_flags
-        capture scalar drop __vckss_rust_progress_api
-        capture scalar drop __vckss_rust_execution_api
-        capture scalar drop __vckss_rust_numerical_api
-        capture scalar drop __vckss_rust_centering_api
-        capture scalar drop __vckss_rust_proj_center_api
-        capture scalar drop __vckss_rust_exact_api
-        capture scalar drop __vckss_rust_exact_resolved_api
-        capture scalar drop __vckss_rust_exact_legacy_api
-        fevc__rust_plugin_call `plugin', probe
-        local progress_api = 0
-        capture confirm scalar __vckss_rust_progress_api
-        if !_rc local progress_api = scalar(__vckss_rust_progress_api)
-        if "$VCKSS_REPORT_LEVEL" != "" global VCKSS_REPORT_API `progress_api'
-        return scalar progress_api = `progress_api'
-        capture scalar drop __vckss_rust_progress_api
-        local execution_api = 0
-        capture confirm scalar __vckss_rust_execution_api
-        if !_rc local execution_api = scalar(__vckss_rust_execution_api)
-        foreach name in centering_api numerical_api exact_api exact_resolved_api exact_legacy_api {
-            local `name' = 0
-            capture confirm scalar __vckss_rust_`name'
-            if !_rc local `name' = scalar(__vckss_rust_`name')
-        }
-        local projection_centering_api = 0
-        capture confirm scalar __vckss_rust_proj_center_api
-        if !_rc local projection_centering_api = scalar(__vckss_rust_proj_center_api)
-        capture scalar drop __vckss_rust_proj_center_api
-        return scalar abi_compiled = scalar(__vckss_rust_abi_compiled)
-        return scalar abi_runtime = scalar(__vckss_rust_abi_runtime)
-        return scalar core_ready_flags = scalar(__vckss_rust_core_flags)
-        return scalar support_flags = scalar(__vckss_rust_support_flags)
-        return scalar deterministic_parallelism = scalar(__vckss_rust_deterministic)
-        return scalar execution_api = `execution_api'
-        return scalar numerical_api = `numerical_api'
-        return scalar centering_api = `centering_api'
-        return scalar projection_centering_api = `projection_centering_api'
-        return scalar exact_api = `exact_api'
-        return scalar exact_resolved_api = `exact_resolved_api'
-        return scalar exact_legacy_api = `exact_legacy_api'
-        foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api centering_api numerical_api exact_api exact_resolved_api exact_legacy_api {
+        // Missing transport metadata must not inherit readiness from an earlier
+        // call. The same inventory is cleared after partial writes or a malformed
+        // successful response fails during collection.
+        local probe_scalars abi_compiled abi_runtime core_flags support_flags ///
+            deterministic progress_api execution_api numerical_api centering_api ///
+            proj_center_api comp_center_api exact_api exact_resolved_api exact_legacy_api
+        foreach name of local probe_scalars {
             capture scalar drop __vckss_rust_`name'
         }
-        return local backend "rust"
-        return local subcommand "probe"
-        exit
+        capture noisily {
+            fevc__rust_plugin_call `plugin', probe
+            local progress_api = 0
+            capture confirm scalar __vckss_rust_progress_api
+            if !_rc local progress_api = scalar(__vckss_rust_progress_api)
+            if "$VCKSS_REPORT_LEVEL" != "" global VCKSS_REPORT_API `progress_api'
+            return scalar progress_api = `progress_api'
+            capture scalar drop __vckss_rust_progress_api
+            local execution_api = 0
+            capture confirm scalar __vckss_rust_execution_api
+            if !_rc local execution_api = scalar(__vckss_rust_execution_api)
+            foreach name in centering_api numerical_api exact_api exact_resolved_api exact_legacy_api {
+                local `name' = 0
+                capture confirm scalar __vckss_rust_`name'
+                if !_rc local `name' = scalar(__vckss_rust_`name')
+            }
+            local projection_centering_api = 0
+            capture confirm scalar __vckss_rust_proj_center_api
+            if !_rc local projection_centering_api = scalar(__vckss_rust_proj_center_api)
+            capture scalar drop __vckss_rust_proj_center_api
+            local component_centering_api = 0
+            capture confirm scalar __vckss_rust_comp_center_api
+            if !_rc local component_centering_api = scalar(__vckss_rust_comp_center_api)
+            capture scalar drop __vckss_rust_comp_center_api
+            return scalar abi_compiled = scalar(__vckss_rust_abi_compiled)
+            return scalar abi_runtime = scalar(__vckss_rust_abi_runtime)
+            return scalar core_ready_flags = scalar(__vckss_rust_core_flags)
+            return scalar support_flags = scalar(__vckss_rust_support_flags)
+            return scalar deterministic_parallelism = scalar(__vckss_rust_deterministic)
+            return scalar execution_api = `execution_api'
+            return scalar numerical_api = `numerical_api'
+            return scalar centering_api = `centering_api'
+            return scalar projection_centering_api = `projection_centering_api'
+            return scalar component_centering_api = `component_centering_api'
+            return scalar exact_api = `exact_api'
+            return scalar exact_resolved_api = `exact_resolved_api'
+            return scalar exact_legacy_api = `exact_legacy_api'
+            foreach name in abi_compiled abi_runtime core_flags support_flags deterministic execution_api centering_api numerical_api exact_api exact_resolved_api exact_legacy_api {
+                capture scalar drop __vckss_rust_`name'
+            }
+            return local backend "rust"
+            return local subcommand "probe"
+        }
+        local probe_rc = _rc
+        foreach name of local probe_scalars {
+            capture scalar drop __vckss_rust_`name'
+        }
+        if `probe_rc' return clear
+        exit `probe_rc'
     }
 
     if "`subcommand'" == "memorycapabilities" {

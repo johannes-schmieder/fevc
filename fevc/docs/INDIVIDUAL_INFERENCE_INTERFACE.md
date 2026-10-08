@@ -40,8 +40,43 @@ solver, resource and corrupted-transport errors remain atomic failures.
 There is no new reporting-mode option, fallback or positive target-variance
 floor. Fixed-offset match inference still ignores estimated-control uncertainty.
 
+## Mean centering
+
+Both references accept Mean (the default) and explicit None on the existing
+supported tuples. Mean holds the retained physical-frequency working-outcome
+mean `c` fixed. Realized component influences, q1 leading scores, raw
+leave-out recentering products and remainder calculations use `u-c`. Match
+collapse uses `sqrt(F_g)(ubar_g-c)`; target weights do not redefine `c`.
+Residual-moment fitting uses unchanged residuals, and Gaussian inference
+error probes are not centered by either `c` or their own sample means.
+Corrected component inference is still unsupported.
+
+`e(inference_centering)` is `fixed observed mean` for Mean and `uncentered`
+for None; `e(inference_mean_omitted)` is respectively `1` or `0`. Both are
+present only with active component inference. Mean output explicitly notes
+that mean-estimation uncertainty is omitted. This is separate from omitted
+nuisance-control uncertainty in fixed-offset match inference and is not a
+claim of conditional validity given the observed mean. q-specific
+identification and variance-model assumptions remain necessary.
+
+The extension needs fresh bounded sampling assessment and exact-source native
+qualification. Older source-bound receipts do not qualify Mean. See
+[CENTERING.md](CENTERING.md#component-inference-with-a-fixed-observed-mean)
+for the approximation and [the implementation plan](MEAN_COMPONENT_INFERENCE_PLAN.md)
+for validation scope.
+
 ## Additive transport
 
+- Additive `component_centering_api=1` permits Mean component inference.
+  Rust advertises readiness bit 16 through the existing capabilities struct
+  and export; the matching C transport exposes the probe field only with that
+  bit set. There is no new DLL export or ABI layout. Missing metadata means
+  zero; point-centering API 1 alone is insufficient.
+  Existing combined exact-Mata requests support Mean; native combined
+  component/projection requests remain unsupported for Mean and None.
+  Separate native Mean projection requires projection-centering API 1.
+  The frontend checks capabilities before preparation/RNG, with existing
+  strict/fallback rules; explicit None needs neither attachment-centering API.
 - `vckss_rust_component_inference_interface_version()` returns 4. Stata checks
   this before native preparation or estimator RNG.
 - Observation/match `...augment...interrupt_v4` entrypoints reuse the frozen

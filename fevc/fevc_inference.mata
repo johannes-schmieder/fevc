@@ -13,7 +13,7 @@ real scalar vckss_inference__api_level()
 
 string scalar vckss_inference__build_id()
 {
-    return("vckss-inference-api2-q1-target-status-projection-mean1")
+    return("vckss-inference-api2-q1-target-status-projection-mean1-component-mean1")
 }
 
 real colvector vckss_inf__mover(
@@ -206,6 +206,8 @@ real colvector vckss_inf__simquad(
     for (begin=1; begin<=simulations; begin=begin+batch) {
         finish = min((simulations,begin+batch-1))
         draw = rnormal(rows(design),finish-begin+1,0,1)
+        // Fixed-c inference keeps the quadratic error kernel unchanged:
+        // these are uncentered zero-mean errors, not new observed outcomes.
         simulated_y = (sqrt(variance)*J(1,cols(draw),1)):*draw
         simulated_beta = inverse*(design'*simulated_y)
         simulated_residual = simulated_y-design*simulated_beta
@@ -388,7 +390,7 @@ void vckss_inference__stata(
     real scalar block_solver_residual
     real colvector y, worker, firm, frequency, target_weight, deletion_id
     real colvector stayer, row_order, index, block_frequency
-    real colvector working_y, beta, residual, leverage, leaveout_residual
+    real colvector working_y, component_y, beta, residual, leverage, leaveout_residual
     real colvector raw_variance, projection_raw_variance, projection_y, mover
     real colvector transformed_residual, deleted_residual
     real colvector diagonal_j, sigma_j, W_j
@@ -557,16 +559,19 @@ void vckss_inference__stata(
         }
         leaveout_residual[index] = residual[index]:/(1:-leverage[index])
     }
-    raw_variance = J(n,1,.)
-    if (inference != "none") raw_variance = working_y:*leaveout_residual
-    // Keep projection coefficients and deleted fits on the original outcome.
-    // Center only the variance proxy, using literal physical-copy mass on
-    // the retained working sample, independently of projection target weights.
-    projection_y = working_y
+    // Freeze the retained working-outcome mean for component inference.
+    // The fitted coefficients and deleted residuals stay on the original
+    // outcome; target matrices annihilate the common-shift coefficient direction.
+    component_y = working_y
     if (st_global("VCKSS_CENTERING") == "mean") {
-        projection_y = working_y :-
+        component_y = working_y :-
             vckss_nmc__center_mean(working_y,frequency)
     }
+    raw_variance = J(n,1,.)
+    if (inference != "none") raw_variance = component_y:*leaveout_residual
+    // Projection uses the same physical-frequency mean only in its variance
+    // proxy, independently of target and projection weights.
+    projection_y = component_y
     projection_raw_variance = J(n,1,.)
     if (deletion_mode == "observation") {
         projection_raw_variance = projection_y:*leaveout_residual
@@ -611,7 +616,7 @@ void vckss_inference__stata(
                 sum(sigma_j:<0)
             sigma_j[selectindex(sigma_j:<0)] = J(
                 rows(selectindex(sigma_j:<0)),1,0)
-            W_j = vckss_inf__W(working_y,design,inverse,
+            W_j = vckss_inf__W(component_y,design,inverse,
                 target_j,beta,leverage,leaveout_residual,diagonal_j)
             target_diagonal[.,j] = diagonal_j
             W[.,j] = W_j
@@ -731,9 +736,9 @@ void vckss_inference__stata(
             sigma_j[selectindex(sigma_j:<0)] = J(
                 rows(selectindex(sigma_j:<0)),1,0)
             diagonal_j = diagonal_j-lambda:*mode:^2
-            W_j = vckss_inf__W(working_y,design,inverse,
+            W_j = vckss_inf__W(component_y,design,inverse,
                 target_j,beta,leverage,leaveout_residual,
-                diagonal_j)-lambda:*mode:*(mode'*working_y)
+                diagonal_j)-lambda:*mode:*(mode'*component_y)
             variance_b = sum(mode:^2:*sigma_j)
             covariance_b_theta = 2*sum(mode:*sigma_j:*W_j)
             qsim2 = vckss_inf__simquad(
@@ -743,10 +748,10 @@ void vckss_inference__stata(
             remainder_trace = vckss_inf__variance(qsim2)
             variance_theta = remainder_influence-remainder_trace
             raw_variance_b = sum(mode:^2:*raw_variance)
-            center = ((mode'*working_y)[1]\
-                posted_corrected[1,j]-lambda*((mode'*working_y)[1]^2-
+            center = ((mode'*component_y)[1]\
+                posted_corrected[1,j]-lambda*((mode'*component_y)[1]^2-
                 raw_variance_b))
-            direct_remainder = quadcross(working_y,W_j)
+            direct_remainder = quadcross(component_y,W_j)
             remainder_identity_error = abs(center[2]-direct_remainder)
             if (missing(remainder_identity_error) |
                 remainder_identity_error > 1e-9*

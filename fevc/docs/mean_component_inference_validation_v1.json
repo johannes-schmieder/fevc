@@ -1,0 +1,82 @@
+{
+  "schema": "FEVC_MEAN_COMPONENT_INFERENCE_VALIDATION_V1",
+  "registered_date": "2026-10-08",
+  "status": "REGISTERED_BEFORE_OUTCOME_RESULTS",
+  "scope": "Bounded implementation assessment of fixed-observed-mean component inference; not a general coverage qualification or a replacement for historical passes or failures.",
+  "authority": "Owner accepted the complete Mean component inference plan and requested implementation, including a bounded new sampling assessment.",
+  "primary": {
+    "routes": ["mata", "observation", "match"],
+    "references": ["highrank", "q1"],
+    "dimensions": [12, 20],
+    "cells": 12,
+    "replications_per_cell": 2000,
+    "paired_arms": ["mean", "fixed_c0"],
+    "all_reported_targets": ["worker", "firm", "covariance", "total"],
+    "highrank_primary_targets": ["worker", "firm", "covariance", "total"],
+    "q1_primary_targets": ["worker", "firm", "total"],
+    "q1_covariance": "Predeclared diagnostic: two concentrated modes, with remainder leading share approximately one.",
+    "variance": "Positive quadratic in normalized leverage midranks, within both native structured model spans; exact Mata retains its own target-specific smoother.",
+    "design": "Complete worker-by-firm grid with outcome-free varying observation multiplicities or whole-match integer masses. q1 uses concentrated target mass, not outcome-driven q selection.",
+    "spectral_interpretation": "Report exact finite-sample shares at both dimensions. No universal diffuseness cutoff or claim follows from the fixture name. Outcome-free q0 largest shares are at most 0.214 in this grid; q1 primary leading shares are 0.914--0.959 and remainder shares at most 0.136.",
+    "count_note": "2000 is the proposed production precision; measure development runtime before freezing an assessment manifest. Any bounded-scope amendment must precede assessment outcomes, preserve this registration, and be recorded separately."
+  },
+  "profiles": {
+    "smoke": {"replications_per_cell": 2, "domain": "pipeline"},
+    "pilot": {"replications_per_cell": 100, "domain": "development"},
+    "assessment": {"replications_per_cell": 2000, "domain": "assessment"},
+    "diagnostic": {"replications_per_cell": 100, "domain": "diagnostic"}
+  },
+  "diagnostic_grid": {
+    "dimension": 12,
+    "cells": [
+      {"route": "mata", "reference": "highrank", "diagnostic": "homoskedastic"},
+      {"route": "observation", "reference": "highrank", "diagnostic": "heavy_tail"},
+      {"route": "observation", "reference": "highrank", "diagnostic": "mild"},
+      {"route": "observation", "reference": "q1", "diagnostic": "severe"},
+      {"route": "mata", "reference": "highrank", "diagnostic": "weak"},
+      {"route": "mata", "reference": "q1", "diagnostic": "null"},
+      {"route": "match", "reference": "q1", "diagnostic": "multimode"},
+      {"route": "match", "reference": "highrank", "diagnostic": "concentrated_mass"},
+      {"route": "match", "reference": "q1", "diagnostic": "leverage_sensitivity"},
+      {"route": "match", "reference": "q1", "diagnostic": "estimated_offset"}
+    ],
+    "interpretation": "All attempts and targets are descriptive; no post-result relabeling of primary cells. Gaussian oracle moments do not describe the heavy-tail cell. Estimated-offset diagnostics compare to an explicitly known-offset FE oracle, not an exact sampling law for estimated controls."
+  },
+  "numerics": {
+    "point_probes": 200,
+    "gram_probes": 2048,
+    "covariance_simulations": 1000,
+    "inference_bins": 1000,
+    "critical_draws": "Unchanged production q1 minimum 100000",
+    "solver": "Explicit diagonal; unchanged default phase tolerances and original-system residual gates",
+    "native_threads": 1,
+    "rng": "Independent NumPy PCG64 outcome stream addressed by SHA256(domain, canonical cell, replication), production Counter-V1 numerical addresses; fixed outcome-free numerical seeds per cell/reference across outcome draws. Separate pipeline/development/assessment/diagnostic domains. Mean and fixed-c0 use the same draws and numerical seed.",
+    "fixed_c0": "Population mean of the retained working outcome from known DGP; None inference on y-c0.",
+    "actual_mean": "Recompute retained physical-frequency working mean on every outcome draw; treat it as fixed only inside inference calculations."
+  },
+  "descriptive_screens": {
+    "status": "Descriptive screens registered before outcomes, not public-enablement coverage qualification. Engineering errors block completion; scientific screen failures are enumerated without retuning.",
+    "success_rate_minimum": 0.95,
+    "absolute_bias_over_oracle_sd_maximum": 0.10,
+    "bias_mcse_multiplier": 3.0,
+    "coverage_lower": 0.90,
+    "coverage_mcse_multiplier": 3.0,
+    "paired_coverage_drop_maximum": 0.02,
+    "paired_mcse_multiplier": 3.0,
+    "q0_rms_se_over_empirical_sd": [0.8, 1.2],
+    "q1_conservatism": "No upper coverage penalty. q1 highrank SE is descriptive, not a validity gate for AM endpoints.",
+    "mean_approximation_rms_over_actual_sd": 0.10,
+    "rationale": "Broad screens expose material calibration or approximation problems in a bounded assessment. They neither replace older stricter policies nor establish general coverage. 2000 independent outcomes give about 0.0049 binomial MCSE at 95% coverage."
+  },
+  "engineering_gates": {
+    "dense_point_absolute_scaled": 1e-8,
+    "deterministic_moment_identity_absolute_scaled": 1e-10,
+    "q1_remainder_identity_absolute_scaled": 1e-8,
+    "sample": "Every designed row retained; exact counts and physical-frequency mean semantics.",
+    "inventory": "Exact unique cell/replication/arm/target keys, frozen dimensions, seeds, source, binaries and expected row counts; classify every attempt.",
+    "failure_tests": ["malformed", "missing", "duplicate", "partial", "wrong_profile", "wrong_source", "wrong_seed", "wrong_count", "scientific_failure", "reverse_order_and_sharding"]
+  },
+  "source_binding": "Freeze all runtime package files, native payload hashes, harness source hashes, registration hash, exact source commit plus dirty-content identities, DGP/geometry, numerical settings and task inventory before each run. Assessment uses immutable copies. Aggregate only complete validated outputs.",
+  "execution": "Local private licensed Stata by default. No large run before measured pilot. SCC requires the cluster skill, a tiny local complete path, one real 1--4-core end-to-end smoke, and scheduler dependencies. No public licensed runner.",
+  "historical_evidence": "All prior observation/match inference and centering experiments retain original identities, failures and scope. No historical receipt is modified."
+}

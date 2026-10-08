@@ -377,6 +377,8 @@ source_inputs=(
   "${package_dir}/tests/stata/test_centering_options.do"
   "${package_dir}/tests/stata/test_projection_mean.do"
   "${package_dir}/tests/stata/test_projection_mean_native.do"
+  "${package_dir}/tests/stata/test_component_centering_exact.do"
+  "${package_dir}/tests/stata/test_component_centering_native.do"
   "${package_dir}/tests/stata/test_memory_policy.do"
   "${package_dir}/tests/stata/test_rust_plugin.do"
   "${package_dir}/tests/stata/test_rust_mata_diagnostic.do"
@@ -834,6 +836,12 @@ run_stata_case arm64 public-generic \
 run_stata_case arm64 public-projection-mean \
   "${package_dir}/tests/stata/test_projection_mean_native.do" \
   'PASS test_projection_mean_native.do cells=8' "${test_package_dir}"
+run_stata_case arm64 component-centering-exact \
+  "${package_dir}/tests/stata/test_component_centering_exact.do" \
+  'PASS test_component_centering_exact.do' "${test_package_dir}"
+run_stata_case arm64 component-centering-native \
+  "${package_dir}/tests/stata/test_component_centering_native.do" \
+  'PASS test_component_centering_native.do' "${test_package_dir}"
 run_stata_case arm64 public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${test_package_dir}"
@@ -915,6 +923,12 @@ run_stata_case arm64 universal-public-generic \
 run_stata_case arm64 universal-public-projection-mean \
   "${package_dir}/tests/stata/test_projection_mean_native.do" \
   'PASS test_projection_mean_native.do cells=8' "${universal_test_package_dir}"
+run_stata_case arm64 universal-component-centering-exact \
+  "${package_dir}/tests/stata/test_component_centering_exact.do" \
+  'PASS test_component_centering_exact.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-component-centering-native \
+  "${package_dir}/tests/stata/test_component_centering_native.do" \
+  'PASS test_component_centering_native.do' "${universal_test_package_dir}"
 run_stata_case arm64 universal-public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
@@ -1005,6 +1019,12 @@ run_stata_case x86_64 public-timer-ownership \
   run_stata_case x86_64 public-projection-mean \
     "${package_dir}/tests/stata/test_projection_mean_native.do" \
     'PASS test_projection_mean_native.do cells=8' "${test_package_dir}"
+  run_stata_case x86_64 component-centering-exact \
+    "${package_dir}/tests/stata/test_component_centering_exact.do" \
+    'PASS test_component_centering_exact.do' "${test_package_dir}"
+  run_stata_case x86_64 component-centering-native \
+    "${package_dir}/tests/stata/test_component_centering_native.do" \
+    'PASS test_component_centering_native.do' "${test_package_dir}"
   run_stata_case x86_64 public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${test_package_dir}"
@@ -1086,6 +1106,12 @@ run_stata_case x86_64 universal-public-timer-ownership \
   run_stata_case x86_64 universal-public-projection-mean \
     "${package_dir}/tests/stata/test_projection_mean_native.do" \
     'PASS test_projection_mean_native.do cells=8' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-component-centering-exact \
+    "${package_dir}/tests/stata/test_component_centering_exact.do" \
+    'PASS test_component_centering_exact.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-component-centering-native \
+    "${package_dir}/tests/stata/test_component_centering_native.do" \
+    'PASS test_component_centering_native.do' "${universal_test_package_dir}"
   run_stata_case x86_64 universal-public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
@@ -1274,6 +1300,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
   printf 'arm64_public_subsample=PASS test_subsample_equivalence.do\n'
   printf 'arm64_public_component_inference=PASS test_rust_component_inference.do\n'
+  printf 'arm64_component_centering_native=PASS test_component_centering_native.do thin,universal\n'
+  printf 'arm64_component_centering_exact=PASS test_component_centering_exact.do thin,universal\n'
   printf 'arm64_public_match_component_inference=PASS test_rust_match_component_inference.do\n'
   printf 'arm64_public_individual_inference=PASS test_rust_individual_inference.do\n'
   printf 'arm64_backend_routing=PASS test_backend_routing.do\n'
@@ -1310,6 +1338,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
     printf 'x86_64_public_subsample=PASS test_subsample_equivalence.do\n'
     printf 'x86_64_public_component_inference=PASS test_rust_component_inference.do\n'
+    printf 'x86_64_component_centering_native=PASS test_component_centering_native.do thin,universal\n'
+    printf 'x86_64_component_centering_exact=PASS test_component_centering_exact.do thin,universal\n'
     printf 'x86_64_public_match_component_inference=PASS test_rust_match_component_inference.do\n'
     printf 'x86_64_public_individual_inference=PASS test_rust_individual_inference.do\n'
     printf 'x86_64_backend_routing=PASS test_backend_routing.do\n'
@@ -1365,6 +1395,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_subsample=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_component_centering=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_component_centering_{exact,native}.do <temporary-thin-or-universal-package>\n'
   printf 'command.test_arm64_public_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_match_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_individual_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>\n'
@@ -1415,6 +1446,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_subsample=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_subsample_equivalence.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_component_centering=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_component_centering_{exact,native}.do <temporary-thin-or-universal-package>\n'
     printf 'command.test_x86_64_public_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_match_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_individual_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>\n'

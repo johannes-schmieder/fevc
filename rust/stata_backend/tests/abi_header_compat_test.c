@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 
 #include "vckss_rust.h"
+_Static_assert(VCKSS_CORE_COMPONENT_CENTERING_V1_READY == UINT64_C(65536), "component centering capability bit");
+_Static_assert(sizeof(VckssBackendCapabilitiesV1) == 32, "component centering preserves capability layout");
 _Static_assert(sizeof(VckssProgressOptionsV1) == 32, "progress scope layout");
 _Static_assert(sizeof(VckssProgressUpdateV1) == 96, "progress update layout");
 

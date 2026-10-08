@@ -344,6 +344,7 @@ adopath ++ `"`pkgroot'"'
 quietly fevc_rust probe
 assert r(centering_api)==1
 assert r(projection_centering_api)==1
+assert r(component_centering_api)==1
 assert r(numerical_api)==2
 display as result "FEVC LINUX CENTERING CAPABILITY PASS"
 CENTERING_CAPABILITY
@@ -352,6 +353,12 @@ run_stata_case centering-capability "${centering_capability_do}" \
 run_stata_case mean-projection \
   "${test_package_dir}/tests/stata/test_projection_mean_native.do" \
   'PASS test_projection_mean_native.do cells=8' "${test_package_dir}"
+run_stata_case component-centering-exact \
+  "${test_package_dir}/tests/stata/test_component_centering_exact.do" \
+  'PASS test_component_centering_exact.do' "${test_package_dir}"
+run_stata_case component-centering-native \
+  "${test_package_dir}/tests/stata/test_component_centering_native.do" \
+  'PASS test_component_centering_native.do' "${test_package_dir}"
 
 run_stata_case lifecycle \
   "${test_package_dir}/tests/stata/test_rust_plugin.do" \
@@ -386,6 +393,12 @@ run_stata_case installed-centering-capability "${centering_capability_do}" \
 run_stata_case installed-mean-projection \
   "${test_package_dir}/tests/stata/test_projection_mean_native.do" \
   'PASS test_projection_mean_native.do cells=8' "${installed_package_dir}"
+run_stata_case installed-component-centering-exact \
+  "${test_package_dir}/tests/stata/test_component_centering_exact.do" \
+  'PASS test_component_centering_exact.do' "${installed_package_dir}"
+run_stata_case installed-component-centering-native \
+  "${test_package_dir}/tests/stata/test_component_centering_native.do" \
+  'PASS test_component_centering_native.do' "${installed_package_dir}"
 # The ordinary suite uses Mata for these oracles; qualify native centering
 # explicitly against the bytes delivered by the isolated installation.
 run_stata_case installed-centering-mean \
@@ -449,6 +462,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'linux_clean_install=PASS test_rust_public_install.do\n'
   printf 'linux_centering_api=1\n'
   printf 'linux_projection_centering_api=1\n'
+  printf 'linux_component_centering_api=1\n'
+  printf 'linux_component_centering=PASS exact,native,installed-exact,installed-native\n'
   printf 'linux_mean_projection=PASS test_projection_mean_native.do cells=8\n'
   printf 'linux_installed_mean_projection=PASS test_projection_mean_native.do cells=8\n'
   printf 'linux_installed_native_centering=PASS mean,exact,jla,options\n'
@@ -460,6 +475,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.build=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release\n'
   printf 'command.full_suite=stata-mp -q -b do fevc/tests/stata/run_all.do full\n'
   printf 'command.clean_install=stata-mp -q -b do fevc/tests/stata/test_rust_public_install.do <temporary-package> <isolated-plus> qualified <test-root>\n'
+  printf 'command.component_centering=stata-mp -q -b do fevc/tests/stata/test_component_centering_{exact,native}.do <staged-or-installed-package>\n'
   printf 'command.mean_projection=stata-mp -q -b do fevc/tests/stata/test_projection_mean_native.do <staged-or-installed-package>\n'
   printf 'command.installed_native_centering=stata-mp -q -b do fevc/tests/stata/test_centering_{mean,exact,jla,options}.do <isolated-plus>/f rust\n'
   printf 'raw_logs=temporary-only; sanitized logs exported and raw temporary evidence deleted on exit\n'

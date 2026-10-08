@@ -7,4 +7,5 @@ program define fevc__exact_inference_model_post, eclass
             "target-specific MATLAB approximation; not the paper's unrestricted variance-product construction"
     }
     ereturn scalar inference_model_option_supplied = `supplied'
+    fevc__centering inference
 end

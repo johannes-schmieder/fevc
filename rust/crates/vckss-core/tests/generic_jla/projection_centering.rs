@@ -183,7 +183,7 @@ fn mean_projection_matches_independently_centered_input_and_is_location_invarian
 }
 
 #[test]
-fn corrected_projection_and_centered_component_inference_reject_before_rng() {
+fn corrected_projection_and_component_inference_reject_before_rng() {
     let problem = fixture();
     let error = run(
         &problem,
@@ -203,9 +203,9 @@ fn corrected_projection_and_centered_component_inference_reject_before_rng() {
         ComponentInferenceOptions::default(),
     )
     .unwrap();
-    for centering in [Centering::Mean, Centering::Corrected] {
+    {
         let mut estimator = options(DeletionMode::Observation, NuisanceMode::Joint);
-        estimator.centering = centering;
+        estimator.centering = Centering::Corrected;
         let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             &problem,
             routed_options(estimator, ModelSolverRoute::Diagonal),
@@ -214,7 +214,7 @@ fn corrected_projection_and_centered_component_inference_reject_before_rng() {
             None,
             &mut NeverInterrupt,
         )
-        .expect_err("component inference remains None only");
+        .expect_err("Corrected component inference remains unsupported");
         assert_eq!(error.code, ErrorCode::UnsupportedFeature);
         assert_eq!(error.phase, "centering");
     }

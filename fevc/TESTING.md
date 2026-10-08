@@ -140,8 +140,9 @@ projection cells, covering controls, both deletion/population modes, both
 effect dimensions, frequency/target projection weights, Mean/None, shifts
 and literal-copy expansion. `test_projection_mean_native.do` checks the
 explicit JLA projection attachment with the new native capability, including
-diagonal/CMG agreement and the same mean convention. Mean remains unsupported
-for component inference; Corrected remains unsupported for projection.
+diagonal/CMG agreement and the same mean convention. These point/projection
+checks do not qualify the separate Mean component extension below. Corrected
+remains unsupported for both projection and component inference.
 The map oracle is Mata-specific; the other files accept package root and
 backend arguments. They are part of the ordinary Stata runner.
 
@@ -168,6 +169,60 @@ quiet repeat; do not reinterpret them as platform or representative-scale
 qualification. [CENTERING.md](docs/CENTERING.md) records the exact scope.
 Documentation-only updates reuse these scientific/runtime results with
 focused source and documentation checks under the evidence rules above.
+
+## Mean component inference checks
+
+`test_component_centering_exact.do` and
+`test_component_centering_native.do` cover the public exact and structured
+routes, respectively. Core `generic_jla/component_centering.rs` checks the
+centered native execution path alongside FFI lifecycle/transport tests.
+
+Mean component inference extends every existing supported highrank/q1 tuple
+with the observed retained physical-frequency working-outcome mean fixed.
+Run independent exact observation and physical-block/collapsed-match oracles
+for the centered point, influence, primitive cross-covariances, q1 raw
+recenter, leading/remainder covariance and remainder identity. The exact
+Mata oracle must retain target-specific smoothing and polarization; native
+oracles must separately cover both residual-moment variance models. Do not
+center inference error probes by either the observed mean or their own means.
+
+Check default/explicit Mean equivalence; Mean versus None on externally
+shifted outcomes; original None regressions; outcome translation and unit
+rescaling; literal-copy match frequency weights and target weights; controls,
+pooled deletion IDs, coherent fourth-target accounting, highrank `lincom`,
+existing supported projection combinations and point/MCSE attachment
+equivalence under the registered numerical tolerance rules. Cover q1
+eligibility and target-local unavailable statuses, strict rank/positivity/PSD
+withholding, partial Gram batches, semantic RNG domains, memory boundaries,
+cancellation/reuse, and data/sample/sort/RNG restoration on every exit.
+
+Public tests must check `e(inference_centering)` and
+`e(inference_mean_omitted)` only on active component requests, their absence
+after failures and irrelevant requests, the fixed-mean output/replay note,
+and continued Corrected rejection before RNG. Exact tests require build
+identity `vckss-inference-api2-q1-target-status-projection-mean1-component-mean1`.
+Native tests additionally require `component_centering_api=1` from matching
+C transport and Rust core readiness bit 16, stale/missing cached capability rejection
+before preparation/RNG and unchanged None compatibility. Check combined
+exact-Mata requests with Mean, and continued rejection of native combined
+component/projection requests for Mean and None. Register the focused regressions in
+source quick/full, affected native and isolated-install profiles.
+
+The [accepted plan](docs/MEAN_COMPONENT_INFERENCE_PLAN.md) also requires exact
+Gaussian moments of the actual Mean kernel and a fresh bounded sampling
+assessment. Freeze the source/input/semantic-seed/task inventory before final
+outcomes. Recompute the observed mean on every outcome replication, never
+within inference error probes. Report every attempted replication, all
+unavailable targets and atomic failures, bias/true SD, approximation error,
+SE calibration, coverage and numerical sensitivity. Validate missing,
+duplicate, malformed, partial and scientifically failing outputs and
+schedule-invariant aggregation. A bounded assessment is not a uniform
+coverage theorem; historical None confirmations do not qualify Mean.
+
+Qualification must bind the new source and final intended binaries on every
+claimed platform. Dirty-tree development successes, old centering receipts
+and passing source gates do not substitute for clean native qualification.
+Preserve all failed gates and record limitations before promotion.
 
 ## Manual referee checks
 

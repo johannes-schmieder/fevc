@@ -21,13 +21,18 @@ Outcome centering is available in the current repository source through
 JLA. Mean adds only a frequency-weighted mean and subtraction. Corrected adjusts for estimating
 that mean, using a shared exact system or the existing JLA full/two-half
 leverage pools. MCSE holds the mean fixed and, for Corrected, also holds its
-extra increment fixed. Projection supports Mean (the default) and None;
-component inference requires explicit `centering(none)`. Corrected is not
-available with projection. See
+extra increment fixed. Projection and component `inference(highrank|q1)`
+support Mean (the default) and None on their existing supported tuples. Mean
+component inference treats the observed mean as fixed and omits its estimation
+uncertainty; it is a working approximation, not conditional inference given
+the observed mean. Corrected is unavailable with either attachment. See
 [the centering guide](fevc/docs/CENTERING.md).
 
 Mata supports these source options. Native point centering needs centering
-API 1; Mean projection additionally needs projection-centering API 1.
+API 1; Mean projection additionally needs projection-centering API 1, and
+Mean component inference needs component-centering API 1. Existing combined
+exact-Mata requests support Mean; native combined component/projection
+requests remain unsupported.
 The local Mac arm64, Rosetta x86-64 and universal candidates at source
 `24754269` pass clean build/runtime qualification and 24 installed-capability,
 point-centering and Mean-projection checks. Linux x86-64 also passes full
@@ -35,8 +40,11 @@ qualification, installed point centering and
 Mean projection at the same source (SCC job `7962808`). Windows runtime
 qualification remains pending after another
 private smoke failure. The existing Windows payload retains its owner-approved
-manual-test status. This local candidate has not been published or tagged;
-see [native provenance](native/README.md) for exact artifacts and scope.
+manual-test status. This local candidate has not been published or tagged.
+Those source-bound point/projection receipts do not qualify Mean component
+inference, which requires fresh bounded sampling assessment and exact-source
+native qualification; see [native provenance](native/README.md) for artifacts
+and scope.
 
 ## Requirements
 

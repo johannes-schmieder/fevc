@@ -162,6 +162,7 @@ program define fevc__rust_component_post, eclass
         ereturn scalar inference_smallest_maker = `units'[1,8]
     }
     ereturn matrix component_unit_receipt = `units'
+    fevc__centering inference
     ereturn local status = cond("`inference'"=="q1",             ///
         "FEVC_STRUCTURED_Q1_INFERENCE","FEVC_STRUCTURED_Q0_INFERENCE")
     if "`inference'"=="q1" & `q1computed'<4 {

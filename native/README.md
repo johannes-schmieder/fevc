@@ -1,8 +1,24 @@
 # Native package provenance
 
-## Local October 8 prerelease candidate
+## Mean component inference qualification in progress
 
-The current local candidate is built from clean source `24754269` and adds
+The owner accepted implementation and qualification of Mean component
+highrank/q1 inference on the existing supported tuples, followed by adoption
+of all qualified payloads and source/payload commits and pushes. Readiness bit
+16 is transported through the existing native capability interface as
+`component_centering_api=1`. Source support does not update the payloads below;
+fresh platform, installed-artifact and package checks are in progress. No tag
+or hosted release is authorized. See
+[the accepted plan](../fevc/docs/MEAN_COMPONENT_INFERENCE_PLAN.md).
+
+The private Windows collector has been deployed and its infrastructure
+acceptance passes. Valid/malformed diagnostic canaries and source-bound project
+runtime qualification still require a clean, stable checkpoint. This progress
+does not change the status of any earlier Windows attempt or payload.
+
+## Previous local October 8 prerelease candidate
+
+The preceding local candidate is built from clean source `24754269` and adds
 Mean projection through `projection_centering_api=1`. The
 [candidate manifest](prerelease-20261008/manifest.json) binds its platform
 status, exact build sources, plugin hashes and sanitized evidence.
@@ -30,9 +46,10 @@ claimed.
 The existing Windows binary retains its October 7 owner-approved manual-test
 status. The latest private smoke `win-20261008T153726Z-59a2355d` returns
 `STATA_DRIVER_FAILED`; the aggregate receipt does not identify an assertion.
-Windows is still unqualified for the current candidate. The bounded collector
-proposal awaits owner approval and has not been deployed. Historical Windows
-PASS receipts qualify only their recorded earlier binaries.
+Windows remains unqualified for that candidate. The collector subsequently
+advanced as recorded above; it does not retroactively qualify the failed
+attempt. Historical Windows PASS receipts qualify only their recorded earlier
+binaries.
 
 ## Preserved October 7 Mean-projection development checkpoint
 

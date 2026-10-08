@@ -567,6 +567,13 @@ fn v7_automatic_component_batches_are_distinct_from_literal_eight() {
 }
 
 fn inference(generation: u64) -> (Vec<f64>, VckssComponentInferenceResultReceiptV5) {
+    inference_with_q1(generation, false)
+}
+
+fn inference_with_q1(
+    generation: u64,
+    q1_requested: bool,
+) -> (Vec<f64>, VckssComponentInferenceResultReceiptV5) {
     let mut primitive = [0.; 9];
     let mut covariance = [0.; 16];
     let mut mcse = [0.; 9];
@@ -575,6 +582,7 @@ fn inference(generation: u64) -> (Vec<f64>, VckssComponentInferenceResultReceipt
     let mut folds = [0.; 150];
     let mut cv = [0.; 490];
     let mut targets = [0.; 8];
+    let mut q1 = [0.; 80];
     let mut receipt = VckssComponentInferenceResultReceiptV5::default();
     ok(vckss_rust_engine_component_inference_result_v5(
         generation,
@@ -586,8 +594,12 @@ fn inference(generation: u64) -> (Vec<f64>, VckssComponentInferenceResultReceipt
         9,
         spectrum.as_mut_ptr(),
         60,
-        ptr::null_mut(),
-        0,
+        if q1_requested {
+            q1.as_mut_ptr()
+        } else {
+            ptr::null_mut()
+        },
+        if q1_requested { 80 } else { 0 },
         summaries.as_mut_ptr(),
         24,
         folds.as_mut_ptr(),
@@ -604,6 +616,7 @@ fn inference(generation: u64) -> (Vec<f64>, VckssComponentInferenceResultReceipt
             .into_iter()
             .chain(covariance)
             .chain(targets)
+            .chain(q1.into_iter().take(if q1_requested { 80 } else { 0 }))
             .collect(),
         receipt,
     )
@@ -1303,5 +1316,144 @@ fn projection_mean_capability_lifecycle_and_execution_routes() {
             .to_string_lossy()
             .contains("centering"));
         ok(vckss_rust_engine_release_v1(generation));
+    }
+}
+
+#[test]
+fn component_mean_capability_lifecycle_and_execution_routes() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let mut capabilities = VckssBackendCapabilitiesV1::default();
+    ok(vckss_rust_backend_capabilities_v1(
+        &mut capabilities,
+        bytes::<VckssBackendCapabilitiesV1>(),
+    ));
+    assert_ne!(
+        capabilities.core_ready_flags & VCKSS_CORE_COMPONENT_CENTERING_V1_READY,
+        0
+    );
+    for grouped in [false, true] {
+        let deletion = if grouped {
+            VCKSS_DELETION_MATCH
+        } else {
+            VCKSS_DELETION_OBSERVATION
+        };
+        let nuisance = if grouped {
+            VCKSS_NUISANCE_FIXED_OFFSET
+        } else {
+            VCKSS_NUISANCE_JOINT
+        };
+        let mut columns = OwnedColumns::structured_component_sized(12, 12);
+        if grouped {
+            for (row, key) in columns.deletion.iter_mut().enumerate() {
+                *key = (row / 2 + 1) as f64;
+                columns.frequency[row] = (1 + row % 3) as f64;
+            }
+        }
+        for reference_distribution in [VCKSS_COMPONENT_REFERENCE_Q0, VCKSS_COMPONENT_REFERENCE_Q1] {
+            let mut reference: Option<(Vec<f64>, [f64; 4])> = None;
+            for (executor, threads, numerical, configure_first) in [
+                (1, 0, false, false),
+                (1, 2, false, true),
+                (2, 2, false, false),
+                (1, 2, true, false),
+                (2, 2, true, true),
+            ] {
+                reset();
+                let generation = prepare_with_controls_memory(&columns, &[], deletion, 1 << 30);
+                if configure_first {
+                    ok(vckss_rust_engine_centering_v1(generation, 1));
+                }
+                let mut augmentation =
+                    VckssComponentInferenceAugmentationRequestInterruptV1::default();
+                augmentation.options.seed = 8_675_309;
+                augmentation.options.reference_distribution = reference_distribution;
+                augmentation.options.probes = 33;
+                augmentation.options.batch_width = 7;
+                augmentation.options.spectrum_probes = 17;
+                augmentation.options.spectrum_iterations = 128;
+                augmentation.options.critical_simulations = 1000;
+                let attach = if grouped {
+                    vckss_rust_engine_augment_match_component_inference_interrupt_v4
+                } else {
+                    vckss_rust_engine_augment_component_inference_interrupt_v4
+                };
+                ok(attach(generation, &augmentation, 513));
+                if !configure_first {
+                    ok(vckss_rust_engine_centering_v1(generation, 1));
+                }
+                let mut request = request(deletion, nuisance, 0, executor, threads, false);
+                request.v4.v3.v2.v1.probes = 200;
+                request.v4.v3.v2.v1.seed = 8_675_309;
+                let status = if numerical {
+                    let mut attached = VckssNumericalRequestV2::default();
+                    attached.v1.point = request.v4;
+                    attached.v1.point.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV4>();
+                    attached.v1.threads = threads;
+                    attached.v1.component_requested = 1;
+                    attached.execution_mode = executor;
+                    vckss_rust_engine_solve_numerical_interrupt_v2(
+                        generation,
+                        &attached,
+                        None,
+                        ptr::null_mut(),
+                        0,
+                    )
+                } else if threads == 0 {
+                    vckss_rust_engine_solve_v4(generation, &request.v4)
+                } else {
+                    vckss_rust_engine_solve_v6(generation, &request)
+                };
+                ok(status);
+                let (actual, receipt) = inference_with_q1(
+                    generation,
+                    reference_distribution == VCKSS_COMPONENT_REFERENCE_Q1,
+                );
+                assert_eq!(
+                    receipt.v4.v3.v2.reference_distribution,
+                    reference_distribution
+                );
+                assert_eq!(receipt.gram_probes, 513);
+                if reference_distribution == VCKSS_COMPONENT_REFERENCE_Q1 {
+                    assert!(receipt.v4.computed_targets > 0);
+                    assert!(receipt.v4.v3.maximum_remainder_identity_error < 1e-8);
+                }
+                if let Some((expected, expected_point)) = &reference {
+                    for (&actual, &expected) in actual.iter().zip(expected) {
+                        if actual.is_nan() || expected.is_nan() {
+                            assert!(actual.is_nan() && expected.is_nan());
+                        } else {
+                            close(&[actual], &[expected]);
+                        }
+                    }
+                    close(&point(generation), expected_point);
+                } else {
+                    reference = Some((actual, point(generation)));
+                }
+                assert_eq!(
+                    vckss_rust_engine_centering_v1(generation, 1),
+                    ErrorCode::ContextPoisoned as i32
+                );
+                ok(vckss_rust_engine_release_v1(generation));
+            }
+        }
+        for configure_first in [false, true] {
+            reset();
+            let generation = prepare_with_controls_memory(&columns, &[], deletion, 1 << 30);
+            if configure_first {
+                ok(vckss_rust_engine_centering_v1(generation, 2));
+            }
+            attach(generation, grouped, 7);
+            let status = if configure_first {
+                let request = request(deletion, nuisance, 0, 1, 1, false);
+                vckss_rust_engine_solve_v6(generation, &request)
+            } else {
+                vckss_rust_engine_centering_v1(generation, 2)
+            };
+            assert_eq!(status, ErrorCode::UnsupportedFeature as i32);
+            assert!(unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }
+                .to_string_lossy()
+                .contains("centering"));
+            ok(vckss_rust_engine_release_v1(generation));
+        }
     }
 }

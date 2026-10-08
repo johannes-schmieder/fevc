@@ -11,6 +11,7 @@ def test_windows_driver_uses_one_stata_process_and_installed_plugin_first():
     assert "assert _rc == 601" in driver
     assert driver.index("net install fevc") < driver.index("test_rust_plugin.do")
     assert "test_rust_match_component_inference.do" in driver
+    assert "assert r(component_centering_api) == 1" in driver
     assert "WINDOWS_CI=PASS" not in driver
     assert "assert r(state) == 0 & r(handle) == 0" in driver
     assert "capture noisily do" in wrapper
@@ -30,7 +31,8 @@ def test_windows_smoke_keeps_full_profile_and_distinguishes_qualification():
                  "test_rust_match_component_inference.do", "test_pooled_deletion.do",
                  "test_mcse_modes.do", "test_mcse_attachments.do",
                  "test_centering_mean.do", "test_centering_exact.do",
-                 "test_centering_jla.do", "test_centering_options.do"):
+                 "test_centering_jla.do", "test_centering_options.do",
+                 "test_component_centering_exact.do", "test_component_centering_native.do"):
         assert driver.index(name) > full
     assert "$runtimeProfile = 'full'" in build
     assert "-notin @('smoke', 'full')" in build

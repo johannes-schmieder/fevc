@@ -219,6 +219,9 @@ program define _fevc_display_inference
         di as txt _newline "Econometric component inference ("    ///
             as result "`e(inference)'" as txt "; "               ///
             as result %4.1f e(level) as txt "% confidence level)"
+        if e(inference_mean_omitted)==1 {
+            di as txt "Observed mean treated as fixed; mean-estimation uncertainty omitted."
+        }
         di as txt "{hline 78}"
         di as txt %-18s "Component" %12s "Estimate" %12s "Std. err." ///
             %10s "P>|z|" %13s "Lower" %13s "Upper"
@@ -331,6 +334,9 @@ program define _fevc_display_structured
     tempname component_spectrum variance_summary q1_diagnostics
     matrix `component_spectrum' = e(component_spectrum)
     di as txt _newline "Explicit structured-model diagnostics"
+    if e(inference_mean_omitted)==1 {
+        di as txt "Observed mean treated as fixed; mean-estimation uncertainty omitted."
+    }
     if "`e(inference_deletion_selected)'"=="match" {
         di as txt "`e(inference_method)'"
         di as txt "Independent matches: " as result %12.0fc e(inference_independent_units) ///

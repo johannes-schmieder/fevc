@@ -136,7 +136,10 @@ def test_scc_wrapper_preserves_pinned_stata_and_rust_tools() -> None:
 
 
 @pytest.mark.parametrize("failure", ["", "centering-capability",
-    "installed-centering-capability", "installed-mean-projection", "installed-hash"])
+    "component-centering-exact", "component-centering-native",
+    "installed-centering-capability", "installed-mean-projection",
+    "installed-component-centering-exact", "installed-component-centering-native",
+    "installed-hash"])
 def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, failure):
     source = QUALIFIER.read_text(encoding="utf-8")
     runner = source.split("last_run_directory=\n", 1)[1].split("\nenvironment_do=", 1)[0]
@@ -159,6 +162,8 @@ def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, fa
         "name = pathlib.Path(sys.argv[4]).name\n"
         "markers = {'centering-capability.do': 'FEVC LINUX CENTERING CAPABILITY PASS',\n"
         " 'test_projection_mean_native.do': 'PASS test_projection_mean_native.do cells=8',\n"
+        " 'test_component_centering_exact.do': 'PASS test_component_centering_exact.do cells=12',\n"
+        " 'test_component_centering_native.do': 'PASS test_component_centering_native.do cells=8',\n"
         " 'test_centering_mean.do': 'SIMPLE_MEAN_PASS',\n"
         " 'test_centering_exact.do': 'SIMPLE_EXACT_ORACLE_PASS',\n"
         " 'test_centering_jla.do': 'SIMPLE_CORRECTED_MCSE_PASS',\n"
@@ -188,16 +193,21 @@ def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, fa
         return
     assert result.returncode == 0, result.stderr
     calls = [json.loads(line) for line in (tmp_path / "calls.jsonl").read_text().splitlines()]
-    assert len(calls) == 8
-    assert [call[4] for call in calls[:2]] == [str(package)] * 2
-    assert [call[4] for call in calls[2:]] == [str(install / "f")] * 6
-    assert [Path(call[3]).name for call in calls[4:]] == [
+    assert len(calls) == 12
+    assert [call[4] for call in calls[:4]] == [str(package)] * 4
+    assert [call[4] for call in calls[4:]] == [str(install / "f")] * 8
+    assert [Path(call[3]).name for call in calls[2:4]] == [
+        "test_component_centering_exact.do", "test_component_centering_native.do"]
+    assert [Path(call[3]).name for call in calls[6:8]] == [
+        "test_component_centering_exact.do", "test_component_centering_native.do"]
+    assert [Path(call[3]).name for call in calls[8:]] == [
         "test_centering_mean.do", "test_centering_exact.do",
         "test_centering_jla.do", "test_centering_options.do"]
-    assert all(call[5] == "rust" for call in calls[4:])
+    assert all(call[5] == "rust" for call in calls[8:])
     capability = (tmp_path / "centering-capability.do").read_text()
     assert "assert r(centering_api)==1" in capability
     assert "assert r(projection_centering_api)==1" in capability
+    assert "assert r(component_centering_api)==1" in capability
     assert "assert r(numerical_api)==2" in capability
 
 

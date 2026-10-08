@@ -50,6 +50,8 @@ int32_t vckss_rust_engine_numerical_rhs_v1(uint64_t g, VckssNumericalRhsV1 *r, u
     *written=n; return 0;
 }
 
+static int mock_component_centering_ready = 1;
+
 uint32_t vckss_rust_abi_version(void) { return VCKSS_RUST_ABI_VERSION_V1; }
 const char *vckss_rust_backend_version(void) { return VCKSS_RUST_RUNTIME_BUILD_ID; }
 int32_t vckss_rust_backend_capabilities_v1(VckssBackendCapabilitiesV1 *output, uint32_t capacity)
@@ -57,7 +59,8 @@ int32_t vckss_rust_backend_capabilities_v1(VckssBackendCapabilitiesV1 *output, u
     assert(capacity == sizeof(*output));
     *output = (VckssBackendCapabilitiesV1){
         .struct_size = sizeof(*output), .abi_version = VCKSS_RUST_ABI_VERSION_V1,
-        .core_ready_flags = 32767, .support_flags = 38, .deterministic_parallelism = 1};
+        .core_ready_flags = 32767 | (mock_component_centering_ready ? VCKSS_CORE_COMPONENT_CENTERING_V1_READY : 0),
+        .support_flags = 38, .deterministic_parallelism = 1};
     return 0;
 }
 
@@ -80,10 +83,12 @@ int32_t vckss_rust_engine_memory_forecast_v1(uint64_t generation, VckssMemoryFor
 static int fail_scalar;
 static int fail_plan_scalar;
 static int fail_execution_api_scalar;
+static int fail_component_centering_api_scalar;
 static double saved_execution_api;
 static double saved_progress_api;
 static double saved_centering_api;
 static double saved_projection_centering_api;
+static double saved_component_centering_api;
 static int fail_matrix;
 static int error_calls;
 static int release_calls;
@@ -799,6 +804,10 @@ static ST_int mock_scalar_save(char *name, ST_double value)
     if (strcmp(name, "__vckss_rust_progress_api") == 0) saved_progress_api = value;
     if (strcmp(name, "__vckss_rust_centering_api") == 0) saved_centering_api = value;
     if (strcmp(name, "__vckss_rust_proj_center_api") == 0) saved_projection_centering_api = value;
+    if (strcmp(name, "__vckss_rust_comp_center_api") == 0) {
+        if (fail_component_centering_api_scalar) return 1;
+        saved_component_centering_api = value;
+    }
     if (strcmp(name, "__vckss_rust_error_code") == 0) saved_error_code = value;
     if (fail_plan_scalar && strcmp(name, "__vckss_plan_struct") == 0) return 1;
     return fail_scalar;
@@ -865,10 +874,13 @@ static void reset_transport(void)
     fail_scalar = 0;
     fail_plan_scalar = 0;
     fail_execution_api_scalar = 0;
+    fail_component_centering_api_scalar = 0;
     saved_execution_api = -1;
     saved_progress_api = -1;
     saved_centering_api = -1;
     saved_projection_centering_api = -1;
+    saved_component_centering_api = -1;
+    mock_component_centering_ready = 1;
     fail_matrix = 0;
     error_calls = 0;
     release_calls = 0;
@@ -1125,11 +1137,21 @@ int main(void)
     reset_transport();
     assert(vckss_probe() == 0);
     assert(saved_execution_api == 3 && saved_progress_api == 2 &&
-        saved_centering_api == 1 && saved_projection_centering_api == 1 && scalar_calls == 13);
+        saved_centering_api == 1 && saved_projection_centering_api == 1 &&
+        saved_component_centering_api == 1 && scalar_calls == 14);
     reset_transport();
     fail_execution_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
     assert(saved_execution_api == -1 && release_calls == 0 && clear_calls == 0);
+    reset_transport();
+    mock_component_centering_ready = 0;
+    assert(vckss_probe() == 0);
+    assert(saved_centering_api == 1 && saved_projection_centering_api == 1 &&
+        saved_component_centering_api == 0 && scalar_calls == 14);
+    reset_transport();
+    fail_component_centering_api_scalar = 1;
+    assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
+    assert(saved_component_centering_api == -1 && release_calls == 0 && clear_calls == 0);
 
     for (int numerical = 0; numerical <= 1; ++numerical) {
     for (int mode = 1; mode <= 2; ++mode) {

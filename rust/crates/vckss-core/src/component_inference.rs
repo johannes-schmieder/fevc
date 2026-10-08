@@ -211,8 +211,8 @@ pub struct ComponentQ1TargetResult {
     pub leading_variance: f64,
     pub leading_recentered_component: f64,
     pub remainder_estimate: f64,
-    /// Numerical discrepancy between the algebraic q=1 decomposition and the
-    /// direct rank-one-subtracted leave-out kernel action.
+    /// Raw discrepancy between the algebraic q=1 decomposition and the direct
+    /// leave-out kernel action, before the signed numerical-solve certificate.
     pub remainder_identity_error: f64,
     pub leading_remainder_covariance: f64,
     pub remainder_variance: f64,
@@ -819,6 +819,10 @@ pub fn q1_probe_scalar(
     )
 }
 
+#[cfg(test)]
+#[path = "component_inference/q1_certificate_tests.rs"]
+mod q1_certificate_tests;
+
 #[allow(clippy::too_many_arguments)]
 pub fn finish_q1_target(
     point_estimate: f64,
@@ -826,6 +830,39 @@ pub fn finish_q1_target(
     leading_variance_correction: f64,
     direct_remainder_estimate: f64,
     remainder_identity_tolerance: f64,
+    eigenvalue: f64,
+    mode: &[f64],
+    influence: &[f64],
+    variance: &[f64],
+    remainder_trace_variance: f64,
+    remainder_trace_mcse: f64,
+    psd_tolerance: f64,
+) -> Result<ComponentQ1TargetResult> {
+    finish_q1_target_with_solve_defect(
+        point_estimate,
+        leading_score,
+        leading_variance_correction,
+        direct_remainder_estimate,
+        remainder_identity_tolerance,
+        0.0,
+        eigenvalue,
+        mode,
+        influence,
+        variance,
+        remainder_trace_variance,
+        remainder_trace_mcse,
+        psd_tolerance,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn finish_q1_target_with_solve_defect(
+    point_estimate: f64,
+    leading_score: f64,
+    leading_variance_correction: f64,
+    direct_remainder_estimate: f64,
+    remainder_identity_tolerance: f64,
+    solve_identity_defect: f64,
     eigenvalue: f64,
     mode: &[f64],
     influence: &[f64],
@@ -842,6 +879,7 @@ pub fn finish_q1_target(
             leading_variance_correction,
             direct_remainder_estimate,
             remainder_identity_tolerance,
+            solve_identity_defect,
             eigenvalue,
             remainder_trace_variance,
             remainder_trace_mcse,
@@ -900,7 +938,13 @@ pub fn finish_q1_target(
         .max(remainder_estimate.abs())
         .max(direct_remainder_estimate.abs())
         .max(1.0);
-    if remainder_identity_error > remainder_identity_tolerance * identity_scale {
+    // Keep the raw discrepancy in the public diagnostic. The certificate
+    // removes only the independently evaluated, signed normal-equation
+    // residual contribution of the two accepted numerical solves. Neither
+    // the target estimates nor the solver/arithmetic tolerances change.
+    let unexplained_identity_error =
+        (direct_remainder_estimate - remainder_estimate - solve_identity_defect).abs();
+    if unexplained_identity_error > remainder_identity_tolerance * identity_scale {
         return Err(BackendError::new(
             ErrorCode::TargetIdentityFailed,
             "component_inference_q1",
@@ -1959,7 +2003,17 @@ mod tests {
 
     #[test]
     fn dense_q1_remainder_influence_probe_and_covariance_identities_hold() {
-        let (n, p, x, y, targets, variance) = dense_fixture();
+        dense_q1_remainder_identities(false);
+        dense_q1_remainder_identities(true);
+    }
+
+    fn dense_q1_remainder_identities(center_mean: bool) {
+        let (n, p, x, mut y, targets, variance) = dense_fixture();
+        let raw_y = y.clone();
+        if center_mean {
+            let mean = y.iter().sum::<f64>() / n as f64;
+            y.iter_mut().for_each(|value| *value -= mean);
+        }
         let target = &targets[0];
         let xt = transpose(&x, n, p);
         let h = multiply(&xt, p, n, &x, p);
@@ -2007,19 +2061,30 @@ mod tests {
             .collect::<Vec<_>>();
         let ratio = q1_remainder_ratio(&target_diagonal, &maker_inverse, &mode, eigenvalue)
             .expect("q=1 remainder ratio");
+        let dense_ratio = (0..n)
+            .map(|row| {
+                (b[row * n + row] - eigenvalue * mode[row].powi(2))
+                    / (1.0 - projection[row * n + row])
+            })
+            .collect::<Vec<_>>();
+        for (actual, expected) in ratio.iter().zip(&dense_ratio) {
+            assert!((actual - expected).abs() < 3.0e-12);
+        }
         let mut c1 = b.clone();
         for row in 0..n {
             for column in 0..n {
                 let maker = f64::from(row == column) - projection[row * n + column];
                 c1[row * n + column] -= eigenvalue * mode[row] * mode[column]
-                    + 0.5 * (ratio[row] * maker + maker * ratio[column]);
+                    + 0.5 * (dense_ratio[row] * maker + maker * dense_ratio[column]);
             }
             assert!(c1[row * n + row].abs() < 3.0e-12);
         }
 
-        let beta = matrix_vector(&sxt, p, n, &y);
-        let fitted = matrix_vector(&projection, n, n, &y);
-        let residual = y
+        // Production retains the original coefficient fit and residuals;
+        // the target annihilates its intercept, while the influence uses y-c.
+        let beta = matrix_vector(&sxt, p, n, &raw_y);
+        let fitted = matrix_vector(&projection, n, n, &raw_y);
+        let residual = raw_y
             .iter()
             .zip(fitted)
             .map(|(left, right)| left - right)

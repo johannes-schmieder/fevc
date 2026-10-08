@@ -72,14 +72,15 @@ Exact, generic/compressed JLA and existing hybrid point executors receive
 the configured mode. Corrected JLA requires even probes of at least four
 and uses the existing full/two-half leverage pools. Mean MCSE fixes the
 observed mean; Corrected fixes the added increment too and returns Mean's
-MCSE/covariance. Mean projection is supported; Corrected projection and
-centered component inference are rejected by the frontend and native boundary.
+MCSE/covariance. Mean projection and Mean component highrank/q1 inference
+are supported on their existing tuples; Corrected with either attachment is
+rejected by the frontend and native boundary.
 Projection uses the same frequency-weighted retained working-outcome mean as
 point centering. Only the outcome factor in covariance contractions changes;
 projection coefficients and residual-squared naive covariance are unchanged.
 
-Numerical API 2 and centering API 1 are separate capabilities. Point-centering
-and Mean-projection checks are required against the exact installed candidate;
+Numerical API 2 and centering API 1 are separate capabilities. Point-centering,
+Mean-projection and Mean-component checks are required against the exact installed candidate;
 capability exposure alone is not runtime qualification. The local candidate
 status is recorded below and in [native provenance](../../native/README.md).
 
@@ -104,6 +105,49 @@ its retained manual-test payload lacks this capability. The
 binds exact artifacts and source identities. The local candidate is unpublished.
 Earlier receipts retain their original scope. Use current Mata source or a
 matching qualified native build. No existing ABI structure is changed.
+
+## Additive component-centering API 1
+
+The Rust core advertises `VCKSS_CORE_COMPONENT_CENTERING_V1_READY` as bit 16
+of `core_ready_flags` in the existing capabilities struct/export. The C shim
+exposes `component_centering_api=1` only when this bit is set, and
+`fevc_rust probe` returns `r(component_centering_api)`. Both the matching C
+transport and Rust readiness are required: absent metadata is zero, with
+cached scalars cleared before and after a probe. This adds no DLL export and
+changes no request, result or capabilities layout.
+
+Mean component inference requires this capability and point-centering API 1
+before preparation/RNG. Native Mean projection separately requires
+projection-centering API 1. Existing combined exact-Mata requests support Mean;
+native combined component/projection requests remain unsupported for both
+Mean and None. No platform tuple is added. Explicit None retains its previous
+capability requirements. Validate configuration both before and after
+attachment; Corrected remains a typed pre-RNG failure. No late fallback is
+permitted.
+
+Mean holds the observed retained physical-frequency working-outcome mean
+fixed. Realized influences and q1 leading/remainder terms consume the centered
+outcome; the residual-moment variance fit uses unchanged residuals. Gaussian
+inference error probes are never shifted by the observed mean or their own
+sample means. Fixed-offset match collapse uses `sqrt(F_g)(ubar_g-c)` and one
+error draw per independent declared match. The approximation omits
+mean-estimation uncertainty, separately from estimated nuisance-offset
+uncertainty, and does not imply conditional validity given the observed mean.
+The public metadata are `e(inference_centering)` and
+`e(inference_mean_omitted)` on active component requests.
+
+The exact-Mata counterpart uses the runtime build identity
+`vckss-inference-api2-q1-target-status-projection-mean1-component-mean1` to
+prevent stale installed inference code from silently using the old calculation.
+It retains target-specific smoothing, unlike the native residual-moment fit.
+
+`test_component_centering_exact.do` and `test_component_centering_native.do`
+run in affected source, native and isolated-install profiles. Core/FFI and C
+transport tests cover the bit, missing/stale probe metadata, lifecycle and
+unchanged layouts. Qualification must bind the new source and exact intended
+payloads; earlier point/projection receipts and capability exposure do not
+qualify this extension. See [the inference contract](../../fevc/docs/INFERENCE.md)
+and [native test plan](../TEST_PLAN.md).
 
 ## All-probe numerical attachment
 
@@ -290,14 +334,18 @@ qualified separately on SCC. Current all-platform build/runtime qualification
 and repository distribution are recorded in [`native/README.md`](../../native/README.md);
 release tags and archives remain separate owner decisions.
 
-The Linux qualifier requires centering API 1 and projection-centering API 1
-unconditionally on both the staged candidate and its isolated installation.
-It runs the existing eight-cell Mean-projection test against both copies,
-checks the installed plugin hash, and runs the four point-centering tests
-with explicit `rust` against the installed package. These checks supplement
-the full suite, whose ordinary point-centering tests use Mata. The receipt
-records their results separately; adding a gate does not qualify an older
-Linux payload for Mean projection.
+The Linux qualifier requires point-, projection- and component-centering
+API 1 on both the staged candidate and its isolated installation. It runs
+the eight-cell Mean-projection test and both component-centering regressions
+against both copies, checks the installed plugin hash, and runs the four
+point-centering tests with explicit `rust` against the installed package.
+These checks supplement the full suite, whose ordinary point-centering tests
+use Mata. The receipt records their results separately; adding a gate does
+not qualify an older Linux payload for either attachment. Mac qualification
+also runs the component regressions for thin and universal arm64/Rosetta
+installs; the Windows full runtime profile includes them for its isolated
+installation. These are required checks, not statements of completed
+qualification.
 
 ## Runtime reporting
 

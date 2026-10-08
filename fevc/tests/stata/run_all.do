@@ -35,6 +35,7 @@ do `"`pkgroot'/tests/stata/test_all_probe_transport.do"'
 do `"`pkgroot'/tests/stata/test_mcse_modes.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_centering_mean.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_centering_options.do"' `"`pkgroot'"' mata
+do `"`pkgroot'/tests/stata/test_component_centering_exact.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_projection_mean.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_centering_exact.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_centering_jla.do"' `"`pkgroot'"' mata
@@ -72,6 +73,10 @@ if !_rc {
     quietly fevc_rust probe
     if r(projection_centering_api)==1 {
         do `"`pkgroot'/tests/stata/test_projection_mean_native.do"' `"`pkgroot'"'
+    }
+    quietly fevc_rust probe
+    if r(component_centering_api)==1 {
+        do `"`pkgroot'/tests/stata/test_component_centering_native.do"' `"`pkgroot'"'
     }
     do `"`pkgroot'/tests/stata/test_rust_component_inference.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_match_component_inference.do"' `"`pkgroot'"'

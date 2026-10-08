@@ -70,6 +70,9 @@ receipt, so the failing assertion is unknown. A reviewed proposal to collect
 bounded failure diagnostics and validated candidate artifacts awaits owner
 approval; it has not been deployed. Current Windows qualification remains
 pending. See the [current candidate record](native/prerelease-20261008/manifest.json).
+These point/projection receipts do not qualify Mean component inference. The
+new source and final intended binaries need fresh platform qualification,
+separately from the new bounded sampling assessment.
 
 ## Local source installation
 
@@ -90,9 +93,13 @@ restart Stata or run `discard` to clear cached programs and Mata definitions.
 
 The current repository source implements `centering(none|mean|corrected)` in
 Mata and matching Rust builds. Omitted `centering()` selects `mean` for both
-exact and JLA. Use explicit `centering(none)` to reproduce the former default
-or request supported component inference. Projection supports Mean and None;
-Corrected remains unsupported. The local Mac candidates at source `24754269`
+exact and JLA. Use explicit `centering(none)` to reproduce the former default.
+Projection and component `inference(highrank|q1)` support Mean or None on their
+existing supported tuples; Corrected remains unsupported with either. Mean
+component inference holds the observed retained physical-frequency
+working-outcome mean fixed and omits its estimation uncertainty. This
+approximation is separate from numerical MCSE and from omitted nuisance-offset
+uncertainty. The local Mac candidates at source `24754269`
 pass clean build/runtime qualification and 24 isolated-install capability,
 point-centering and Mean-projection checks. Linux x86-64 also passes full
 qualification, installed point centering and
@@ -110,6 +117,7 @@ fevc_rust probe
 return list
 * Active native centering requires r(centering_api) == 1
 * Mean projection also requires r(projection_centering_api) == 1
+* Mean component inference also requires r(component_centering_api) == 1
 ```
 
 A missing or zero `r(centering_api)` means the plugin does not support active
@@ -119,7 +127,13 @@ requires the separate additive `r(projection_centering_api) == 1` capability.
 The local Mac candidates expose this capability. Earlier point-centering
 payloads, including the retained Windows manual-test binary, lack it.
 Use current source with `backend(mata)` or a matching qualified native build
-and inspect the probe result. None projection retains its existing capability contract.
+and inspect the probe result. Mean component inference additionally requires
+`r(component_centering_api) == 1`, which identifies matching C transport and
+Rust core readiness bit 16. It uses the existing capabilities struct/export;
+there is no new DLL export or layout. Existing combined exact-Mata requests
+support Mean; native combined component/projection requests remain unsupported
+for both Mean and None. Missing metadata is zero; None retains its
+existing capability contract.
 `backend(auto)` may use Mata before preparation/RNG if the centering
 capability is absent, subject to strict native-consent rules.
 `backend(rust)` or explicit `rng(counter_v1)` requires the matching build.

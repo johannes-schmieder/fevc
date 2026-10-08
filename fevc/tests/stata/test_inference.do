@@ -243,7 +243,7 @@ assert "`e(inference)'" == "highrank"
 capture mata: vckss_inference__api_level()
 assert _rc == 0
 mata: assert(vckss_inference__api_level() == 2)
-mata: assert(vckss_inference__build_id() == "vckss-inference-api2-q1-target-status-projection-mean1")
+mata: assert(vckss_inference__build_id() == "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1")
 tempname critical
 mata: st_numscalar("`critical'",vckss_inf__critical(.5,.95,100000,12345))
 assert scalar(`critical') > 2.11 & scalar(`critical') < 2.17

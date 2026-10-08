@@ -35,7 +35,8 @@ pass at 53f22a1; see `FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`.
 The corrected observation-q1 confirmation remains FAIL under
 its frozen SE-ratio gate and is an unresolved RC limitation. Dated development
 statements below retain their historical source scope; they do not override
-this current interface decision. No new statistical formula is introduced.
+this current interface decision. The Mean extension below adds the
+fixed-observed-mean approximation without changing those historical results.
 
 The statistical reference is Kline, Saggio, and Sølvsten (2020, henceforth
 KSS), especially Sections 5--7 and the supplement. The maintained
@@ -52,6 +53,76 @@ The three dimensions below are independent and must remain explicit:
    dominant generalized eigenmode handled explicitly.
 
 In particular, `q=1` does not mean match deletion.
+
+## Mean centering in the current component interface
+
+The October 8 extension accepts Mean (the public default) and None for
+highrank and q1 on the existing exact-Mata and native structured tuples.
+Corrected remains rejected before RNG. Native Mean component execution
+requires additive `component_centering_api=1` independently of the existing
+point and projection capabilities. Rust advertises readiness bit 16 through
+the existing capabilities struct/export and the matching C shim supplies the
+probe field. There is no new DLL export or request/result ABI layout change.
+Existing combined exact-Mata requests support Mean; native combined
+component/projection requests remain unsupported for both Mean and None.
+Separate native Mean projection requires projection-centering API 1. Explicit
+None retains its previous capability requirements.
+
+Let `u` be the retained working outcome and
+`c = sum_i f_i u_i / sum_i f_i`. Hold that observed value fixed and use
+`z=u-c` for realized influences and raw leave-out products. Target and
+projection weights do not define the mean. Fits, residuals, target operators,
+eigenmodes and design-only spectral diagnostics keep their meanings. The
+native direct residual-moment fitter is unchanged. Exact Mata remains a
+separate target-specific smoother/polarization family and smooths the
+centered leave-out products; it does not adopt the native common variance fit.
+
+In the unit-observation exact notation below, the fixed-c point estimate is
+`z'C_t z`, with `g_t=C_t z`, and common-model covariance
+
+```text
+Omega[t,s] = 4 g_t' V_hat g_s - 2 tr(V_hat C_t V_hat C_s).
+```
+
+Only the realized outcome is centered. Gaussian error probes continue to
+estimate the trace using the original `C_t`; neither the observed `c` nor a
+probe's own sample mean is removed. q1 uses
+
+```text
+b_1_hat = v_1' z,
+V_b1_hat_LO = sum_i v_1i^2 z_i e_hat_i,-i,
+R_hat = theta_hat - lambda_1 (b_1_hat^2 - V_b1_hat_LO) = z' C_t^R z,
+g_R = C_t^R z,
+Cov_hat(b_1_hat,R_hat) = 2 v_1' V_hat g_R.
+```
+
+The positive variance fit enters covariance, not the raw recenter. The
+remainder identity, covariance admissibility, curvature and ellipse-image
+checks remain mandatory. Native finite-probe kernels retain their existing
+maker and numerical-approximation conventions; the displayed exact identities
+are independent-oracle limits, not claims of finite-JLA exact unbiasedness.
+
+For fixed-offset matches, physical-block centering collapses to
+`z_g = sqrt(F_g)(ubar_g-c)`. Its centering direction is `sqrt(F_g)`, not one;
+using the unweighted mean of transformed match outcomes is a different
+estimator. Apply the same replacement in the grouped realized point,
+influence and raw q1 recenter below, preserving one error draw per match and
+the full physical-block/collapsed-row identity.
+
+If `c0` is the population working-outcome mean, replacing it by `ubar`
+changes the exact unit-observation estimator by
+`(ubar-c0) sum_i B_ii e_hat_i,-i`. Negligibility is required relative to the
+relevant target and q1 remainder sampling scales. The calculation omits this
+term's uncertainty and possible finite-sample bias. It is not inference
+conditional on an estimated mean, and does not imply conservative coverage.
+Omitted fixed-offset estimation uncertainty is a separate approximation.
+
+`e(inference_centering)` and `e(inference_mean_omitted)` record this convention
+only on active component requests. Current numerical support does not extend
+historical None sampling confirmations or platform receipts. The accepted
+[Mean plan](MEAN_COMPONENT_INFERENCE_PLAN.md) requires a fresh bounded
+assessment and exact-source qualification; older formulas and dated evidence
+below retain their original None source scope unless explicitly extended here.
 
 ## Estimand and unchanged point estimator
 
@@ -256,8 +327,15 @@ product `V_b1_hat_LO` used to recenter the leading square. This distinction is
 structural: using the positive modeled value `sum_i v_1i^2 sigma_hat_i^2` as
 the realized recenter changes the remainder center while the remainder
 influence and trace covariance still describe the rank-one-subtracted
-leave-out kernel. FEVC verifies the exact remainder identity and fails closed
-on a material discrepancy. The remainder receives the Gaussian
+leave-out kernel. FEVC verifies the remainder identity using an independent
+signed certificate for the normal-equation residuals of both accepted native
+solves, including the original fit. It fails closed on a material unexplained
+discrepancy at the unchanged arithmetic threshold. The returned identity error
+is still the raw absolute difference between the two remainders. This shared
+None/Mean numerical repair changes no estimates, covariance or intervals and
+adds no solve or random draw; see the
+[numerical certificate](NUMERICAL_ARCHITECTURE.md#native-q1-remainder-certificate).
+The remainder receives the Gaussian
 approximation only when its reported concentration is diffuse. Confidence
 sets are the Andrews--Mikusheva image of the joint Gaussian covariance ellipse,
 using a separate Counter-V1 critical-value domain and the same deterministic
@@ -619,14 +697,14 @@ population label without changing the default observation sample or formula:
 ```text
 backend(rust) rng(counter_v1) algorithm(jla)
 deletion(observation) stayers(both|movers)
-preconditioner(diagonal|cmg) centering(none)
+preconditioner(diagonal|cmg)
 inference(highrank|q1)
 inferencemodel(structured_common|structured_leverage)
 ```
 
-Explicit `centering(none)` is required; the Mean default does not support
-active component inference. Mean support for standalone `project()` does not
-extend this component-inference attachment. The nuisance mode must be `joint`, frequency weights are
+Mean is the default; explicit `centering(none)` retains the uncentered
+calculation. Mean requires the component-centering capability and uses the
+fixed-observed-mean approximation above. The nuisance mode must be `joint`, frequency weights are
 rejected, and `project()` cannot share the generation. `structured_common` is the primary
 15-term model; `structured_leverage` selects the three-term sensitivity model
 as the covariance input. Both fits and their discrepancy diagnostics are

@@ -1,0 +1,21 @@
+{
+  "schema": "FEVC_MEAN_COMPONENT_INFERENCE_VALIDATION_V1_AMENDMENT1",
+  "registered_date": "2026-10-08",
+  "status": "PRE_ASSESSMENT_ENGINEERING_CORRECTION",
+  "parent": "mean_component_inference_validation_v1.json",
+  "reason": "Independent harness review before assessment found missing native point/metadata validation and insufficient separation of engineering failures from statistical withholding. Development smoke also found CSV float coercion, physical/stored count confusion and absent Mata q0-status handling. Original development attempts remain preserved.",
+  "unchanged": ["primary fixtures", "all primary and diagnostic targets", "outcome domains", "proposed replication counts", "scientific descriptive screens", "existing historical results"],
+  "point_mcse": "Request mcse(all), the ordinary production diagnostic, and export its availability, mode and centering convention separately from inference metadata.",
+  "native_point_gate": {
+    "reference": "Independent dense exact point on the same realized working outcome",
+    "absolute_scaled_tolerance": 1e-8,
+    "numerical_mcse_multiplier": 6,
+    "formula": "abs(native-exact) <= max(1e-8*max(1,abs(native),abs(exact)),6*reported_point_MCSE)",
+    "authority": "Existing development_acceptance_v1.json randomized equivalence policy; exact reference has zero numerical MCSE. No post-result relaxation."
+  },
+  "transport": "Import numeric CSV as double; validate e(N_stored) separately from e(N_physical); exact Mata highrank has no target-local q0 status matrix and successful calls imply status zero.",
+  "failure_classification": "Interpreter/process/unknown/native structural or solver errors block the pipeline. Only explicitly enumerated maintained statistical withholding is counted as a scientific unavailable result. Atomic failures must agree across all four target rows; target codes and endpoint missingness must match their current route/reference schema.",
+  "mean_approximation_screen": "Apply the already registered exact Gaussian discrepancy RMS/actual SD screen and expose q1 conditional-remainder discrepancy in reports. No new asymptotic claim is inferred.",
+  "variance_model_precision": "The primary variance is in the intended exact-design leverage-rank span. Native regressors use estimated JLA leverage and target ranks, so this does not assert exact specification in every realized numerical basis.",
+  "estimated_offset_diagnostic": "Add independent within-match weighted-zero-mean contrasts so first-stage controls genuinely have estimation error. Build each realized dense point reference from independently estimated WLS controls held fixed for the FE-only oracle; known-offset Gaussian covariance remains diagnostic, not the exact unconditional law."
+}

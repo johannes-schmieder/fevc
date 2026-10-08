@@ -129,10 +129,18 @@ Corrected JLA returns exactly Mean's MCSE/covariance for the same call,
 excluding numerical uncertainty in the extra increment. Projection supports
 Mean (the default) and None, using the same retained frequency-weighted
 working-outcome mean. Neither target nor projection weights redefine it.
-Corrected projection is unsupported; component `inference()` requires explicit
-`centering(none)`. Point centering works in Mata
-and a matching native build. Native point centering requires centering API 1;
-Mean projection additionally requires projection-centering API 1. The local
+Component `inference(highrank|q1)` also accepts Mean or None on its existing
+supported tuples. Mean inference treats that observed mean as a fixed constant
+and omits its estimation uncertainty; this is not conditional inference given
+the observed mean. Corrected remains unsupported with either inference or
+projection. `e(inference_centering)` and `e(inference_mean_omitted)` record the
+component convention separately from MCSE.
+
+Point centering works in Mata and a matching native build. Native point
+centering requires centering API 1; Mean projection additionally requires
+projection-centering API 1 and Mean component inference requires
+component-centering API 1. Existing combined exact-Mata requests support Mean;
+native combined component/projection requests remain unsupported. The local
 Mac arm64, Rosetta x86-64 and universal candidates at source `24754269` pass
 clean qualification and 24 installed-capability, point-centering and
 Mean-projection checks. Linux x86-64 also passes full qualification and
@@ -141,8 +149,10 @@ and Mean-projection checks at the same source (SCC job `7962808`).
 Windows runtime qualification remains pending; its retained manual-test
 payload supports point centering but lacks the Mean-projection capability.
 The [current candidate record](../native/prerelease-20261008/manifest.json)
-binds local evidence; these candidates have not been published or tagged.
-Use current Mata source or a matching qualified native build.
+binds local point/projection evidence; these candidates have not been
+published or tagged. Those receipts do not qualify Mean component inference,
+which requires fresh bounded sampling assessment and exact-source platform
+qualification. Use current Mata source or a matching qualified native build.
 Automatic routing may use Mata when the capability is absent, while strict
 Rust/Counter-V1 requires the matching plugin. See [the centering guide](docs/CENTERING.md)
 for restrictions, stored assumptions, formulas and measured local costs.
@@ -162,8 +172,9 @@ in `e()`; see `help fevc` for their names.
 
 Component inference and fixed-effect projection inference require explicit
 options and have different assumptions and supported combinations. Component
-inference also requires `centering(none)`; projection accepts Mean and None.
-Structured component inference imposes variance-model
+inference and projection accept Mean (the default) and None on their existing
+supported tuples. Mean component inference uses a fixed-observed-mean
+approximation; structured component inference also imposes variance-model
 assumptions. Fixed-offset match
 inference omits nuisance-control estimation uncertainty, and observation-q1
 calibration retains a documented limitation. Read the

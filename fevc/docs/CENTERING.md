@@ -36,6 +36,54 @@ frequency and target weights, match or observation deletion, and
 `stayers(movers|both)`. Match deletion with `stayers(both)` retains its hybrid
 correction: mover match blocks and separate stayer observation copies.
 
+## Component inference with a fixed observed mean
+
+`inference(highrank|q1)` accepts Mean (the default) and None on every
+previously supported inference tuple. Mean uses the observed retained
+physical-frequency mean `c = ubar` as a fixed constant in the inference
+calculation. This omits uncertainty from estimating the mean; it is a working
+approximation, not a claim about the sampling distribution conditional on the
+observed mean. Corrected component inference remains unsupported.
+
+The exact Mata route uses `z = u - c` in its target-specific variance proxy,
+influence vectors and q1 leading/remainder terms. It still fits primitive and
+polarized targets separately. The native structured route uses the centered
+outcome in influence and q1 terms; its residual-moment variance fit is
+unchanged because a constant shift leaves regression residuals unchanged.
+For fixed-offset match inference, collapse gives
+`z_g = sqrt(F_g) (ubar_g - c)`, using the physical-frequency mean before
+square-root-mass transformation. Frequency mass does not create independent
+matches. The separate omission of estimated nuisance-offset uncertainty
+remains.
+
+For the exact unit-observation kernel `C`, a constant-shift-invariant target
+has fixed-c point estimate `z'Cz` and influence `Cz`. The covariance trace
+continues to use the original kernel `C`. Inference Gaussian error probes
+are never shifted by `c` or by their own realized sample means. q1 uses the
+raw product `sum_i v_i^2 z_i ehat_i,-i` to recenter the leading square and
+checks its exact rank-one-subtracted remainder identity. A positive fitted
+variance is not substituted for that raw product.
+
+Replacing a population mean `c0` by the observed mean changes the estimator
+by `(ubar-c0) sum_i B_ii ehat_i,-i` in the unit-observation exact case.
+The omitted term must be negligible relative to the relevant component and
+q1 remainder sampling scales for the approximation to preserve inference.
+High leverage, concentrated frequency mass, weak signal and a small number
+of independent matches can matter. A large row count or a small observed
+point difference alone does not establish this condition. Mean inference
+neither corrects estimated-mean bias nor guarantees conservative intervals.
+
+The existing deletion, nuisance, weighting, backend and q-specific
+identification restrictions still apply. In particular, observation component
+inference remains unit-frequency; the supported native match tuple remains
+mover-only with fixed offsets. Existing combined exact-Mata requests support
+Mean; native combined component/projection requests remain unsupported.
+See [the inference guide](INFERENCE.md) for supported requests and
+[the implementation contract](MATRIX_FREE_COMPONENT_INFERENCE.md) for algebra.
+Historical None coverage and native receipts do not qualify this extension;
+the [accepted implementation plan](MEAN_COMPONENT_INFERENCE_PLAN.md) requires
+fresh bounded sampling assessment and exact-source platform qualification.
+
 ## Projection and the mean convention
 
 `project()` supports Mean (the default) and None. Mean replaces `u_g` by
@@ -46,8 +94,10 @@ correction: mover match blocks and separate stayer observation copies.
 \]
 The fitted projection coefficients, leave-out residuals, score loadings and
 residual-squared naive covariance are unchanged. Corrected projection is not
-implemented. A combined `project()` and component `inference()` request must
-use None because component inference remains None-only.
+implemented. Existing combined exact-Mata `project()` and component
+`inference()` requests accept Mean or None, using the same observed mean.
+Native combined component/projection requests remain unsupported for either
+centering mode.
 
 The mean uses Stata's frequency-weight convention on the retained working
 outcome: `sum(f_i*u_i)/sum(f_i)`, as in `summarize u if e(sample) [fw=f]`.
@@ -131,11 +181,10 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
 - Only Corrected JLA requires an even `probes()` budget of at least four.
   Mean and None keep the ordinary probe rules. Exact Corrected does not
   require an even budget; probes are not used by exact estimation.
-- Component `inference()` requires explicit `centering(none)`, including
-  requests that also specify `project()`. Projection alone accepts Mean
-  (the default) and None; Corrected projection is unsupported. Rejected
-  combinations return `CENTERING_INFERENCE_UNSUPPORTED` (return code 498)
-  before estimator RNG. The command does not silently switch to None.
+- Component `inference(highrank|q1)` and `project()` accept Mean (the default)
+  or None on their existing supported tuples. Corrected with either request
+  returns `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) before estimator
+  RNG. The command does not silently switch to None.
 - An unknown mode returns `INVALID_CENTERING` (return code 198).
   Additional correction-system failures return a typed error; the command
   does not substitute None or Mean or fall back after RNG.
@@ -144,9 +193,13 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   `fevc_rust probe` exposes `r(centering_api)`; a missing/zero capability
   does not support active centering. Mean projection additionally requires
   projection-centering API 1, exposed as `r(projection_centering_api)`.
-  None projection does not require this additional capability.
+  Mean component inference additionally requires component-centering API 1,
+  exposed as `r(component_centering_api)`. Existing combined exact-Mata
+  requests support Mean; native combined component/projection requests remain
+  unsupported. Missing metadata is zero; explicit None needs neither
+  attachment-centering capability on its separately supported native requests.
 - The local Mac arm64, Rosetta x86-64 and universal candidates at clean
-  source `24754269` expose both centering APIs and pass full qualification
+  source `24754269` expose point and projection centering APIs and pass full qualification
   plus 24 isolated-install capability, point-centering and Mean-projection
   checks. Linux x86-64 also passes full qualification and installed point-centering
   and Mean-projection checks at the same source (SCC job `7962808`).
@@ -154,8 +207,10 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   payload has centering API 1 but lacks projection-centering API 1.
   Native Intel hardware is not claimed. See the
   [current candidate record](../../native/prerelease-20261008/manifest.json).
-  These local candidates have not been published or tagged.
-  Use current Mata source or a matching qualified native build for Mean projection.
+  These local candidates have not been published or tagged. Their point and
+  projection evidence does not qualify Mean component inference, which needs
+  the new component capability and fresh exact-source qualification.
+  Use current Mata source or a matching qualified native build.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit
   Counter-V1 requests require the matching native capability and fail
@@ -193,8 +248,13 @@ pending; no failing assertion is available from the private collector.
 | `e(mcse_centering)` for None | `uncentered` |
 | `e(mcse_centering)` for Mean | `fixed observed mean` |
 | `e(mcse_centering)` for Corrected | `fixed observed mean and fixed centering increment` |
+| `e(inference_centering)` with active component inference | `uncentered` for None; `fixed observed mean` for Mean. |
+| `e(inference_mean_omitted)` with active component inference | `0` for None; `1` for Mean. |
 
-Both macros are recorded even in exact mode and with MCSE off.
+The centering and MCSE macros are recorded even in exact mode and with MCSE off.
+The two inference returns are present only for active component inference;
+Mean component output and diagnostic replay state the omitted mean uncertainty.
+They describe sampling-inference assumptions separately from numerical MCSE.
 `e(mcse_centering)` describes the convention if a diagnostic is calculated;
 availability is determined separately by `e(mcse_available)` and status.
 `e(plugin)` is unchanged. `e(correction)` contains the selected correction,

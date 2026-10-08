@@ -42,6 +42,8 @@ file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "lifecycle" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_rust_plugin.do" `"`rc_plus'/f"'
+quietly fevc_rust probe
+assert r(component_centering_api) == 1
 file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "point_mean" _n
 file close `rc_stage'
@@ -83,10 +85,12 @@ file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "centering_exact" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_centering_exact.do" `"`rc_plus'/f"' rust
+do "fevc/tests/stata/test_component_centering_exact.do" `"`rc_plus'/f"'
 file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "centering_jla" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_centering_jla.do" `"`rc_plus'/f"' rust
+do "fevc/tests/stata/test_component_centering_native.do" `"`rc_plus'/f"'
 file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "centering_options" _n
 file close `rc_stage'

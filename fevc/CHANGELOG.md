@@ -1,10 +1,36 @@
 # Pending changes
 
+## October 8, 2026 — Mean component inference candidate
+
+- Permit Mean (the default) and explicit None for `inference(highrank|q1)` on
+  every existing supported tuple. Treat the observed retained physical-
+  frequency working-outcome mean as fixed; report omitted mean-estimation
+  uncertainty in output and `e(inference_centering)` /
+  `e(inference_mean_omitted)`. Corrected inference remains unsupported.
+- Center realized influence, exact-Mata variance-proxy and q1 leading/remainder
+  terms. Retain native residual-moment fitting on unchanged residuals and
+  leave Gaussian error probes uncentered; preserve raw q1 recentering and its
+  remainder-identity gate.
+- Add native `component_centering_api=1` without changing existing ABI
+  structures. Existing combined exact-Mata requests support Mean; native
+  combined component/projection requests remain unsupported for Mean and None.
+  Each separate native attachment retains its own centering capability.
+- Repair the shared native q1 remainder certificate for None and Mean: account
+  for the independently computed signed normal-equation residual contributions
+  of both accepted solves. Keep solver/arithmetic tolerances and all reported
+  point, influence, covariance and interval values unchanged. The public
+  remainder-identity diagnostic remains the raw discrepancy. This numerical
+  repair is separate from the observed-mean statistical approximation.
+- Require fresh independent algebra tests, bounded sampling assessment and
+  source-bound native qualification. Earlier None confirmations and historical
+  point/projection platform evidence do not qualify this extension. No new
+  uniform coverage guarantee, tag or release is implied.
+
 ## October 7, 2026 — Mean projection covariance
 
 - Permit Mean (the default) and None with `project()`; Corrected remains
-  unsupported. Component inference still requires explicit None, including
-  combined inference/projection requests.
+  unsupported. At this checkpoint component inference still required explicit
+  None, including combined requests; the October 8 entry extends that scope.
 - Center only the projection variance-proxy outcome factor using the retained
   working-outcome mean weighted by frequency mass. Target/projection weights
   do not redefine this mean. Projection coefficients and naive covariance

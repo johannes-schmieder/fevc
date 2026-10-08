@@ -105,7 +105,21 @@ preparation/RNG under the ordinary consent rules. This capability failure
 is distinct from `STALE_NUMERICAL_RUNTIME` for explicit all-probe MCSE.
 Mean projection additionally requires native projection-centering API 1
 (`r(projection_centering_api)`); None projection does not require it. The same
-preflight/fallback rules apply when that capability is absent.
+preflight/fallback rules apply when that capability is absent. Mean component
+inference additionally requires `r(component_centering_api) == 1`. Existing
+combined exact-Mata requests support Mean; native combined component/projection
+requests remain unsupported for both Mean and None. Missing metadata is zero,
+and probe cache state is cleared. Separate None component/projection
+requests retain their existing capability requirements.
+
+For active component inference, `e(inference_centering)` records `uncentered`
+for None or `fixed observed mean` for Mean, and `e(inference_mean_omitted)`
+records `0` or `1`, respectively. These returns are absent for point-only or
+projection-only requests and cleared on failure. Mean treats the observed
+retained physical-frequency working-outcome mean as a constant, omitting its
+estimation uncertainty. The output and diagnostic replay state this
+approximation. It is separate from numerical MCSE and from fixed-offset
+nuisance uncertainty; it does not claim conditional validity given that mean.
 
 ## Opt-in inference matrices
 
@@ -167,10 +181,17 @@ For structured `q=1`, `e(component_q1_diagnostics)` also reports the raw
 leave-out leading-mode variance product and the remainder-identity error.
 `e(component_inference_receipt)` records the requested per-target critical
 count, actual total `critical_draws`, actual `solver_columns`, and maximum
-remainder-identity error. The raw product recenters the leading
-square; the positive structured variance fit is used only for covariance and
-studentization. A material identity error, fewer than 100,000 public q=1
-critical draws per computed target, or malformed V4 dimensions withholds the result.
+remainder-identity error. This diagnostic remains the raw absolute difference
+between direct and raw-recentered remainders. The native hard gate separately
+subtracts the independently computed signed normal-equation residual
+contribution of both accepted solves and tests the unexplained discrepancy at
+the unchanged arithmetic threshold. No displayed error is replaced by zero,
+and both original solver gates remain mandatory. The raw product recenters
+the leading square; the positive structured variance fit is used only for
+covariance and studentization. A material unexplained identity error, fewer
+than 100,000 public q=1 critical draws per computed target, or malformed V4
+dimensions withholds the result. See the
+[numerical certificate](NUMERICAL_ARCHITECTURE.md#native-q1-remainder-certificate).
 
 The explicit fixed-offset match `q=0`/`q=1` attachment retains the statistical
 result V4 and adds `e(component_unit_receipt)` from a separate native V1 ABI.
@@ -201,7 +222,8 @@ remainder-identity error, curvature, critical value, interval endpoints,
 remainder spectral share, maximum leading-mode match weight, and maximum
 remainder-influence share for each target. Singular or materially indefinite
 joint covariance or an unidentified/nonconverged mode withholds that target's
-q1 interval. A material remainder identity error, nonestimable deletion,
+q1 interval. A material unexplained remainder identity error under the
+certificate above, nonestimable deletion,
 malformed shared state, resource rejection, or interruption withholds the
 atomic result. These diagnostics do not assert that
 a computed target has a one-mode, diffuse-remainder asymptotic regime.
@@ -346,6 +368,9 @@ Accepted opt-in requests instead use `KSS_HIGHRANK_INFERENCE`,
 projection variants when both are requested. These statuses mean that the
 finite inference calculation passed the registered numerical and capability
 gates; they do not verify the sampling assumptions in an application.
+For Mean, read these statuses together with `e(inference_centering)` and
+`e(inference_mean_omitted)`; successful calculation does not validate the
+omitted-mean-uncertainty approximation.
 The explicitly selected Rust structured modes use
 `FEVC_STRUCTURED_Q0_INFERENCE` and `FEVC_STRUCTURED_Q1_INFERENCE`. The FEVC
 prefix is intentional: these are pragmatic structured-variance extensions,
@@ -363,11 +388,11 @@ but never silently alter the deletion assumption, tolerance, sample, or
 estimand. The catalog includes:
 
 - `INVALID_CENTERING` (return code 198) for an unknown centering mode;
-- `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) for Mean or Corrected
-  with active component `inference()`, or Corrected with `project()`, rejected
-  before estimator RNG. Component inference requires explicit
-  `centering(none)`, including combined inference/projection requests.
-  Projection alone permits Mean (the default) and None;
+- `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) for Corrected with
+  active component `inference()` or `project()`, rejected before estimator RNG.
+  Mean (the default) and None are permitted on existing supported tuples,
+  including combined exact-Mata requests; native combined component/projection
+  requests remain unsupported for Mean and None;
 - `INVALID_FREQUENCY`, `PHYSICAL_TOTAL_LIMIT` when the exact literal count
   exceeds `2^53`, and `INVALID_TARGET_WEIGHT`;
 - `INVALID_DEPVAR`, `INVALID_CONTROLS`, `INVALID_INPUT`, `NONFINITE_INPUT`,

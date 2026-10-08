@@ -186,9 +186,18 @@ Mean's numerical MCSE treats the observed mean as fixed. Corrected uses
 exactly Mean's numerical MCSE/covariance, also treating its added increment
 as fixed. Enabled exact MCSE is zero; off is unavailable. Projection accepts
 Mean and None, using the same mean in its symmetrized block covariance proxy;
-projection coefficients and naive covariance are unchanged. Corrected
-projection is unsupported. Component `inference()` requires explicit
-`centering(none)`, including when combined with projection.
+projection coefficients and naive covariance are unchanged. Component
+`inference(highrank|q1)` accepts Mean or None on every existing supported
+tuple. Existing combined exact-Mata requests support Mean; native combined
+component/projection requests remain unsupported for both Mean and None.
+Mean holds the
+observed mean fixed in realized influence, exact-route variance-proxy and
+q1 leading/remainder calculations; Gaussian error probes remain uncentered.
+This omits mean-estimation uncertainty and is not inference conditional on
+the estimated mean. Fixed-offset nuisance uncertainty is a separate omission.
+Corrected with either inference or projection remains unsupported. See
+[INFERENCE.md](INFERENCE.md) for the unchanged tuple, variance-model and
+identification restrictions.
 
 ## Sample and dependence contract
 

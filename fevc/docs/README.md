@@ -8,8 +8,9 @@ and the installed `help fevc`.
 - [Estimator and sample](ESTIMATOR_CONTRACT.md): targets, controls, weighting,
   deletion, and retained population.
 - [Outcome centering](CENTERING.md): None/Mean/Corrected, exact/JLA,
-  Mean projection, Stata's frequency-weighted mean, the KSS mean distinction,
-  fixed-mean MCSE, native availability and local timing evidence.
+  Mean projection and fixed-observed-mean component inference, Stata's
+  frequency-weighted mean, the KSS mean distinction, MCSE, native availability
+  and local timing evidence.
 - [Inference](INFERENCE.md): supported requests, assumptions, and limitations.
 - [Memory](MEMORY.md): optional budgets, forecasts, and returned diagnostics.
 - [Failures and returned results](FAILURES_AND_RETURNS.md).
@@ -41,6 +42,12 @@ status are in [native provenance](../../native/README.md).
 
 - [Contributing](../../CONTRIBUTING.md) and [testing](../TESTING.md).
 - [Current checkpoint](../PLAN.md).
+- [Accepted Mean component inference plan](MEAN_COMPONENT_INFERENCE_PLAN.md):
+  implementation, independent algebra, bounded sampling assessment, companion
+  technical note and exact-source platform qualification.
+- [Mean component sampling registration](mean_component_inference_validation_v1.json),
+  [pre-assessment harness correction](mean_component_inference_validation_v1_amendment1.json)
+  and [fixed-outcome numerical registration](mean_component_inference_numerical_v1.json).
 - [Default MCSE interface validation](MCSE_DEFAULT_VALIDATION_2026-09-30.md).
 - [MCSE native publication and installation](MCSE_NATIVE_INSTALL_2026-09-30.md).
 - [All-probe MCSE optimization and qualification](ALL_PROBE_OPTIMIZATION_2026-09-30.md).

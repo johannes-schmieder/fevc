@@ -17,13 +17,19 @@ local before `"`c(rngstate)'"'
 capture noisily fevc y, `common' centering(unknown)
 assert _rc==198
 capture noisily fevc y, `common' centering(mean) inference(observation)
-assert _rc==498
+assert _rc==198
+assert "`e(withholding_status)'"=="INVALID_INFERENCE"
+capture noisily fevc y, `common' inference(highrank) inferencebins(1)
+assert _rc==198
+assert "`e(withholding_status)'"=="INVALID_INFERENCE_TUNING"
+assert "$VCKSS_INFERENCE_ERROR"==""
+assert "$VCKSS_INFERENCE_DETAIL"==""
 capture noisily fevc y, `common' centering(corrected) project(x)
 assert _rc==498
-capture noisily fevc y, `common' inference(highrank)
+capture noisily fevc y, `common' centering(corrected) inference(highrank)
 assert _rc==498
 assert "`e(withholding_status)'"=="CENTERING_INFERENCE_UNSUPPORTED"
-capture noisily fevc y, `common' project(x) inference(highrank)
+capture noisily fevc y, `common' centering(corrected) project(x) inference(q1)
 assert _rc==498
 assert "`e(withholding_status)'"=="CENTERING_INFERENCE_UNSUPPORTED"
 capture noisily fevc y, `common' algorithm(jla) centering(corrected) probes(3) mcse(off)

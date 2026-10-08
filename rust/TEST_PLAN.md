@@ -210,6 +210,49 @@ This evidence qualifies only the recorded macOS candidate and routes. It does
 not qualify native Intel hardware, Linux, Windows, production scale, or public
 release.
 
+## Mean component inference gate
+
+The public Mean default is accepted for highrank and q1 on every existing
+component tuple. The native requirement is additive
+`component_centering_api=1`, independent of point/projection centering and
+numerical API capabilities. Rust readiness bit 16 uses the existing
+capabilities struct/export; the C shim exposes the field only when the bit is
+set. There is no new DLL export. Freeze existing ABI layouts and export
+inventory. Header/readiness/C-shim checks must cover the new capability;
+stale/missing metadata is zero and
+probe cache state must not confer support. Test configuration both before
+and after attachment, generation lifecycle, explicit None compatibility,
+Corrected rejection, and continued rejection of native combined
+component/projection requests for Mean and None. Combined exact-Mata requests
+with Mean are checked separately. Frontend rejection must
+precede preparation/RNG, with the existing strict Rust/Counter behavior.
+
+Use independent dense fixed-c observation and physical-block/collapsed-match
+oracles for centered influences, all primitive covariance entries, q1 raw
+leave-out recentering, leading/remainder covariance and exact remainder
+identity. Unequal match mass must use `sqrt(F_g)(ubar_g-c)` with the retained
+physical-frequency mean. Native residual-moment fitting uses unchanged
+residuals; Gaussian error probes remain uncentered. Exact Mata's target-specific smoothing
+is a separate oracle family, not an interval-equality requirement.
+
+Exercise structured common/leverage fits, observation and fixed-offset match
+routes, ordinary/planned/direct/queued execution, diagonal/CMG solvers,
+partial Gram batches, permitted thread/order/batch changes, Counter counts,
+receipt and memory reconciliation, corruption, cancellation/reuse and caller
+restoration. Public tests check default/explicit Mean, Mean versus None on
+externally shifted outcomes, unchanged None, target accounting, active-only
+centering metadata and display, source runtime identity, and pre-RNG guards.
+Run them through the actual native and isolated-install profiles on final
+intended binaries. A unit or quick-profile pass does not qualify a platform.
+
+The new bounded sampling assessment separately measures the omission of
+mean-estimation uncertainty, recomputing the observed mean on each outcome
+draw. Freeze source/binary/input identities and semantic RNG domains; preserve
+all failed cells and historical calibration limits. See the
+[accepted plan](../fevc/docs/MEAN_COMPONENT_INFERENCE_PLAN.md) and
+[package testing guide](../fevc/TESTING.md#mean-component-inference-checks).
+No result at the older point/projection source qualifies this extension.
+
 ## Focused scalable-projection gate
 
 The public default is Mean; the internal prepared-generation default remains
@@ -222,8 +265,9 @@ translation invariance, unchanged coefficients and naive covariance, and
 caller-state restoration. The native test runs for separate and universal
 Mac binaries under arm64 and Rosetta. Core/FFI tests separately exercise the
 centering guards and capability; stale-capability frontend tests must reject
-before native preparation or RNG. Corrected projection and active component
-inference with Mean remain unsupported. Historical None comparator gates
+before native preparation or RNG. Corrected remains unsupported with either
+projection or component inference; Mean component support has its separate
+gate below. Historical None comparator gates
 below explicitly select None and keep their original scope.
 
 The sparse `project()` route is deliberately bounded to explicit Rust generic

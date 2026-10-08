@@ -242,7 +242,9 @@ intervals require an explicit {help fevc##inference:inference request}.
 Use {cmd:centering(none|mean|corrected)} in exact or JLA point estimation.
 The default is {cmd:mean} for both exact and JLA. In point estimation, the modes
 change the bias-correction outcome factor and, for Corrected, its estimated-mean
-adjustment. Mean also changes the covariance proxy when {cmd:project()} is requested. Fitted coefficients,
+adjustment. Mean also changes the covariance proxy when {cmd:project()} is
+requested and uses a fixed-observed-mean approximation for component
+{cmd:inference()}. Fitted coefficients,
 full-sample residuals, plug-in components, sample, target weights and deletion
 units are unchanged. The {cmd:corrected} result row always means the final
 leave-out estimate, whichever centering mode is selected.
@@ -284,25 +286,34 @@ when the estimated-mean adjustment is wanted. For JLA, the default
 diagnostic with the observed mean fixed.
 
 {pstd}
-Component {cmd:inference()} requires explicit {cmd:centering(none)}, including
-when combined with {cmd:project()}. Projection alone accepts Mean (the default)
-and None; Corrected projection is unsupported. Unsupported combinations are
-rejected before estimator RNG. A failed correction solve returns a typed error
-and does not substitute another centering mode.
+Component {cmd:inference(highrank|q1)} and {cmd:project()} accept Mean (the
+default) or None on their existing supported tuples. Existing combined
+exact-Mata requests also support Mean; native combined component/projection
+requests remain unsupported. Mean component inference treats the observed retained
+working-outcome mean as a fixed constant and omits its estimation uncertainty.
+This is an approximation, not conditional validity given the observed mean.
+Corrected with either request is rejected before estimator RNG. A failed
+correction solve returns a typed error and does not substitute another mode.
 
 {pstd}
 Mata supports active centering with the current source. Rust additionally
 requires centering API 1, shown by {cmd:fevc_rust probe} as
 {cmd:r(centering_api)}. Numerical API 2 for MCSE is a separate capability.
 Mean projection additionally requires {cmd:r(projection_centering_api)} equal
-to 1. The local Mac arm64, Rosetta x86-64 and universal candidates at clean
-source 24754269 expose both capabilities and pass full qualification plus
+to 1; Mean component inference requires {cmd:r(component_centering_api)} equal
+to 1. These are separate native attachment capabilities; native combined
+component/projection requests remain unsupported for both Mean and None.
+The local Mac arm64, Rosetta x86-64 and universal candidates at clean
+source 24754269 expose point and projection capabilities and pass full qualification plus
 24 isolated-install capability, point-centering and Mean-projection checks.
 Linux x86-64 also passes full qualification and installed point-centering
 and Mean-projection checks at the same source (SCC job 7962808).
 Windows runtime qualification remains pending after the latest private smoke
 failure. Its retained manual-test payload has centering API 1 but lacks
 projection-centering API 1. These local candidates have not been published or tagged.
+Those point/projection receipts do not qualify Mean component inference; the
+extension requires fresh bounded sampling assessment and exact-source native
+qualification.
 An older plugin may lead {cmd:backend(auto)} to Mata before preparation/RNG
 under the ordinary consent rules. Strict {cmd:backend(rust)} or explicit
 {cmd:rng(counter_v1)} requires a matching plugin. Use current source with
@@ -311,7 +322,9 @@ Repository publication does not imply a release.
 
 {pstd}
 The choice and MCSE assumptions are recorded in {cmd:e(centering)} and
-{cmd:e(mcse_centering)}. For the formulas, local timing evidence and complete
+{cmd:e(mcse_centering)}. Active component requests also record
+{cmd:e(inference_centering)} and {cmd:e(inference_mean_omitted)}. For the
+formulas, local timing evidence and complete
 restrictions, see the
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/CENTERING.md":centering guide}
 ({cmd:fevc/docs/CENTERING.md} in the matching source checkout).
@@ -375,7 +388,12 @@ dropped. See the
   {hline 76}
 
 {pstd}
-Include {cmd:centering(none)} with any active inference request.
+Mean is the default. Its component inference holds the observed retained
+physical-frequency working-outcome mean fixed; use {cmd:centering(none)}
+for the uncentered calculation. The fitted model and leave-out residuals are
+unchanged. Mean affects realized influence vectors, exact-route variance
+proxies and q1 leading/remainder calculations. Gaussian inference error draws
+remain uncentered; the mean is not re-estimated within these draws.
 {cmd:inference(highrank)} requests Gaussian component intervals;
 {cmd:inference(q1)} requests intervals allowing one dominant weakly
 identified mode. These require different identification conditions; q1
@@ -388,8 +406,11 @@ calculation, observation deletion, and unit frequency weights.
 The explicit structured models {cmd:structured_common} and
 {cmd:structured_leverage} impose additional variance assumptions; they are
 not unrestricted heteroskedasticity-robust inference. Observation-q1
-calibration retains a documented limitation. Fixed-offset match inference
-is approximate, ignoring nuisance-control estimation uncertainty.
+calibration retains a documented limitation. Mean inference additionally
+omits mean-estimation uncertainty; its effect must be negligible on the
+component and q1 remainder sampling scales. No conservative-coverage guarantee
+is implied. Fixed-offset match inference is also approximate, ignoring
+nuisance-control estimation uncertainty, a separate approximation.
 Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
 for supported requests, assumptions, and limitations before reporting intervals.
 An {help fevc##component_example:illustrative example} appears below.
@@ -597,7 +618,7 @@ coverage. This example uses observation deletion and exact inference.
         fevc, simulate_data(ex5) clear
         fevc log_wage productivity policy, ///
             worker(worker_id) firm(firm_id) ///
-            deletion(observation) centering(none) inference(highrank) ///
+            deletion(observation) inference(highrank) ///
             inferencesimulations(100) inferenceseed(42) inferencebins(16)
         lincom worker_variance+firm_variance+2*worker_firm_covariance
 {* example_end}{...}
@@ -658,6 +679,15 @@ zero MCSE, {cmd:conditional_target_v1} for the developer diagnostic, or
 These macros are recorded in exact mode and with MCSE off; availability
 remains a separate diagnostic. Centering leaves {cmd:e(plugin)} unchanged
 and changes {cmd:e(correction)}; {cmd:e(kss)} is their difference.
+
+{pstd}
+With active component inference, {cmd:e(inference_centering)} is
+{cmd:uncentered} for None or {cmd:fixed observed mean} for Mean, and
+{cmd:e(inference_mean_omitted)} is respectively 0 or 1. These returns are
+absent for point-only or projection-only requests and cleared on failure.
+Mean output and diagnostic replay state that uncertainty from estimating the
+mean is omitted. These sampling assumptions are separate from the numerical
+MCSE convention and from omitted fixed-offset nuisance uncertainty.
 
 {pstd}
 {cmd:e(mcse_cov_raw)} and {cmd:e(mcse_cov)} are raw and usable 4 by 4 numerical

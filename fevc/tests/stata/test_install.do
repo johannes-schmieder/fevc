@@ -166,6 +166,16 @@ fevc y c1 c2, worker(worker) firm(firm) ///
     inferencesimulations(100) inferenceseed(42) inferencebins(16) nodisplay
 assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
 assert rowsof(e(V)) == 4
+assert "`e(inference_centering)'" == "uncentered"
+assert e(inference_mean_omitted) == 0
+fevc y c1 c2, worker(worker) firm(firm) ///
+    deletion(observation) inference(highrank) ///
+    inferencesimulations(100) inferenceseed(42) inferencebins(16) nodisplay
+assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
+assert "`e(centering)'" == "mean"
+assert "`e(inference_centering)'" == "fixed observed mean"
+assert e(inference_mean_omitted) == 1
+assert strpos("`e(inference_reference_guarantee)'", "mean-estimation") > 0
 
 // The normal installed path must load and execute the supported CMG backend,
 // not merely place its source files on disk.

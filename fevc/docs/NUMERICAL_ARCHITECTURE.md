@@ -310,9 +310,11 @@ See the [default/interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md), [the
 
 Omitted `centering()` resolves to Mean before capability and inference
 checks for exact and JLA. Explicit `centering(none)` preserves the ordinary
-executors. Mean calculates the frequency-weighted retained working-outcome mean and subtracts it only in
-the point-correction factor and, when requested, projection covariance proxy;
-fixedoffset first subtracts the fitted nuisance index.
+executors. Mean calculates the frequency-weighted retained working-outcome
+mean and subtracts it in the point-correction factor, requested projection
+covariance proxy and realized component-inference outcome terms. Fixedoffset
+first subtracts the fitted nuisance index. Target/projection weights do not
+redefine this mean.
 It adds no fit, target/leverage directions, or inverse-action solves. The
 ordinary numerical attachment consumes that factor and holds its mean fixed.
 
@@ -333,16 +335,62 @@ Mean and Corrected support existing exact, generic, compressed and hybrid
 point routes. Mean also supports projection through the same working-outcome
 factor in observation, match and eligible-stayer covariance contractions.
 Projection coefficients, full residuals, score loadings and naive covariance
-remain unchanged. Corrected projection and all active centering with component
-inference are rejected before RNG.
+remain unchanged. Highrank and q1 component inference also accept Mean on
+existing supported tuples, holding the observed mean fixed. Exact Mata uses
+the centered outcome in its target-specific smoother, primitive/polarized
+influences and q1 leading/remainder calculations. Native residual-moment
+fitting uses unchanged residuals. Its match collapse is
+`sqrt(F_g)(ubar_g-c)`. Gaussian error probes are never centered by the observed
+mean or their own means; the quadratic trace kernel remains the original
+one. Preserve the raw q1 recenter and exact remainder-identity gate. The
+calculation omits mean-estimation uncertainty without claiming conditional
+validity given that mean. Corrected with projection or component inference
+is rejected before RNG.
 Correction scratch is forecast and admitted before stochastic work.
 Extra-system failures are typed errors and cannot trigger post-RNG fallback.
 The additive native centering API configures a prepared generation before
 solve without altering the established ABI structures; numerical API 2
 remains independent. Native Mean projection additionally requires the additive
-projection-centering API 1 capability, checked before preparation/RNG; None
-projection retains its existing native contract. See [CENTERING.md](CENTERING.md), [MEMORY.md](MEMORY.md)
-and [the native boundary](../../rust/stata_backend/README.md).
+projection-centering API 1 capability. Mean component inference additionally
+requires component-centering API 1: Rust core readiness bit 16 in the existing
+capabilities struct/export plus matching C transport. There is no new DLL
+export or ABI layout. Missing metadata is zero, and checks precede
+preparation/RNG. Existing combined exact-Mata requests support Mean; native
+combined component/projection requests remain unsupported for Mean and None.
+Explicit None retains its existing native contract. The Mata runtime build
+identity has suffix `component-mean1`, preventing stale inference code from
+using the prior calculation. See [CENTERING.md](CENTERING.md),
+[MEMORY.md](MEMORY.md) and [the native boundary](../../rust/stata_backend/README.md).
+
+## Native q1 remainder certificate
+
+The direct and raw-recentered q1 remainders can differ because both the
+original fit and the influence inverse action are numerical solves. Let
+`r = z - X beta_c`, `H = X'X`, `q = Q beta_c + X'R z/2`, and `a` be the
+computed influence-system solution, with `R` the diagonal remainder-maker
+ratio. The signed discrepancy implied by these accepted solves is
+
+```text
+d_solve = r' X a - beta_c' (q - H a).
+```
+
+The certificate forms this quantity independently of either scalar remainder
+from the existing fitted residual, predicted influence action and retained
+full-system residual. It checks
+`abs(direct - raw_recentered - d_solve)` against the unchanged threshold
+`max(8 * influence_full_residual, 256 * machine_epsilon) * identity_scale`,
+where the scale is the maximum of one and the absolute point and two
+remainder estimates. Both solves must still pass their original-system and
+phase-specific gates. Unexplained discrepancies remain hard failures.
+
+The prior scalar check omitted the original fit's normal-equation residual.
+This repair applies to None and Mean, using the appropriate `beta_c`; it is
+unrelated to omitted mean-estimation uncertainty. Reported
+`remainder_identity_error` remains `abs(direct - raw_recentered)`, without
+subtracting the certificate or replacing it by zero. Estimates, influences,
+covariances, intervals and solver tolerances are unchanged. The implementation
+adds four scalar stack entries, no solves, random draws, row-sized allocation,
+ABI layouts or exports.
 
 ## Memory and runtime boundary
 

@@ -12,9 +12,9 @@ program define fevc__centering, eclass
         exit 198
     }
     global VCKSS_CENTERING `centering'
-    if "`centering'"!="none" & !inlist(lower(strtrim("`inference'")),"","none") {
+    if "`centering'"=="corrected" & !inlist(lower(strtrim("`inference'")),"","none") {
         global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
-        di as error "inference() requires centering(none)"
+        di as error "inference() supports centering(none) or centering(mean)"
         exit 498
     }
     if "`centering'"=="corrected" & "`project'"!="" {
@@ -76,6 +76,19 @@ program define fevc__centering, eclass
         di as error "physical_limit() must be between 1 and 1,000,000,000"
         exit 198
     }
+        exit
+    }
+    if "`action'"=="inference" {
+        if inlist("`e(inference)'","highrank","q1") {
+            ereturn local inference_centering "uncentered"
+            ereturn scalar inference_mean_omitted = 0
+            if "$VCKSS_CENTERING"=="mean" {
+                ereturn local inference_centering "fixed observed mean"
+                ereturn scalar inference_mean_omitted = 1
+                ereturn local inference_reference_guarantee ///
+                    "fixed observed mean approximation; validity requires negligible mean-estimation effects and the target-specific reference and variance-model assumptions"
+            }
+        }
         exit
     }
     if "`action'"=="post" {

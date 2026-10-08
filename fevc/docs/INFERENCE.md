@@ -1,9 +1,13 @@
 # Inference
 
-Component-inference routes in this guide require explicit `centering(none)`,
-including combined inference/projection requests. Projection alone supports
-Mean (the exact/JLA default) and None. Corrected projection and centered
-component inference are rejected before estimator RNG.
+Component-inference routes in this guide accept Mean (the exact/JLA default)
+and explicit None. Mean treats the observed retained working-outcome mean as
+a fixed constant in highrank and q1 inference, omitting its estimation
+uncertainty. This is an approximation, not conditional validity given the
+observed mean. Existing combined exact-Mata inference/projection requests
+accept both modes; native combined component/projection requests remain
+unsupported. Corrected with either request is rejected before estimator
+RNG; all other tuple restrictions remain.
 The centered point estimator's numerical MCSE is a separate diagnostic,
 with the fixed-mean/increment conventions in [CENTERING.md](CENTERING.md).
 
@@ -50,6 +54,51 @@ The implementation follows the high-rank and rank-one procedures described by
 Kline, Saggio, and Sølvsten (2020) and the KSS Matlab package's
 observable behavior. It is repository-authored GPL-3.0-only source. No MATLAB
 source, critical-value table, or binary data are included.
+
+## Fixed-observed-mean approximation
+
+For Mean, let `c = sum_i f_i u_i / sum_i f_i` over the retained working
+outcome and write `z = u - c`. Joint nuisance handling uses the retained
+outcome; fixed-offset handling first subtracts the full fitted nuisance
+index. Neither target nor projection weights redefine `c`. The fit,
+residuals, target matrices and eigendirections are unchanged.
+
+The realized component calculation uses `z` in every influence vector and
+raw leave-out variance proxy, including primitive/polarized exact-Mata
+smoothing and q1 leading/remainder terms. Native residual-moment variance
+fitting uses unchanged residuals. For fixed-offset match inference the
+collapsed outcome is `sqrt(F_g) (ubar_g-c)`. This is not subtraction of the
+unweighted mean of the square-root-mass-transformed outcomes.
+
+For an exact observation kernel `C`, the fixed-c calculation uses `z'Cz`
+and influence `Cz`, retaining the quadratic-noise trace for `C`. Gaussian
+inference error draws remain uncentered: neither `c` nor each draw's own mean
+is subtracted. Centering those error draws would describe a different kernel.
+q1 retains its raw recenter and exact remainder-identity gate.
+
+The approximation is credible only when the effect of estimating `c` is
+negligible on the target's sampling scale, including the q1 remainder scale.
+It does not remove estimated-mean bias or guarantee conservative intervals.
+This condition is separate from highrank diffuseness, one-mode q1
+identification, the variance model and independence assumptions. Fixed-offset
+match inference additionally omits nuisance-control estimation uncertainty.
+The [centering guide](CENTERING.md#component-inference-with-a-fixed-observed-mean)
+details these distinctions.
+
+`e(inference_centering)` records `fixed observed mean` or `uncentered`, and
+`e(inference_mean_omitted)` is respectively `1` or `0`. Both belong only to
+active component requests. The default output and diagnostic replay state
+Mean's omission; numerical MCSE remains a separate diagnostic. Native Mean
+component inference requires `r(component_centering_api) == 1` in addition
+to point-centering support. Native Mean projection separately requires
+`r(projection_centering_api) == 1`. Existing combined exact-Mata requests
+support Mean; native combined component/projection requests remain unsupported
+for both Mean and None.
+
+The Mean extension is a source candidate with a newly required bounded
+sampling assessment and exact-source native qualification. Historical None
+confirmations, calibration failures and platform receipts retain their
+original scope; none supplies a Mean coverage guarantee.
 
 ## Variance proxy and smoothing
 
@@ -172,7 +221,9 @@ confirmation's failed SE-ratio gate as an unresolved RC limitation; it does
 not turn that failure into a pass.
 
 The grouped q1 leading square uses the raw leave-match product
-`sum_g v_1g^2 y_g_c ehat_g,-g,c`; positive modeled variances are used only
+`sum_g v_1g^2 z_g_c ehat_g,-g,c`, where `z_g_c` is the centered
+collapsed working outcome for Mean and the original one for None; positive
+modeled variances are used only
 for covariance and studentization. Independent physical-block and collapsed
 oracles protect this identity. The interval uses the existing corrected
 KSS/Andrews--Mikusheva ellipse-image calculation. A computed target is covered
@@ -196,11 +247,13 @@ For the retained exact design, let \(H=X'X\),
 For a quadratic target \(Q\), define
 \(B_{ii}=x_i'H^{-1}QH^{-1}x_i\). The high-rank calculation smooths the
 maintained-procedure proxy
-\(\widehat\sigma_{Q,i}^2=y_i\widehat e_{i,-i}\) over
+\(\widehat\sigma_{Q,i}^2=z_i\widehat e_{i,-i}\) over
 \((P_{ii},B_{ii})\), separately for movers and
 stayers. The implementation rank-bins each dimension, aggregates populated
 joint cells, and applies a weighted local-linear tricube fit. `inferencebins()`
 sets the maximum requested joint-cell resolution; the default is 1,000.
+Here `z_i=u_i-c` for Mean and `z_i=u_i` for None; the original fit and
+leave-out residuals are preserved.
 
 Materially negative fitted variances withhold the request. Tiny negative
 roundoff values are set to zero and counted in
@@ -216,9 +269,10 @@ targets, FEVC evaluates the KSS high-rank variance approximation
               - \widehat{\operatorname{Var}}(\widehat\theta_Q^*).
 \]
 
-The first term uses the target-specific influence weights. The second is the
-variance of the same corrected quadratic form on Gaussian draws with fitted
-observation variances. `inferencesimulations()` controls this numerical
+The first term uses the target-specific influence weights evaluated at the
+selected centered or uncentered working outcome. The second is the variance
+of the original corrected quadratic kernel on uncentered Gaussian error
+draws with fitted observation variances. `inferencesimulations()` controls this numerical
 approximation and defaults to 1,000. This simulation error is computational;
 it is not a second sampling uncertainty estimate.
 
@@ -239,7 +293,7 @@ Request this calculation with
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) centering(none) inference(highrank)
+    deletion(observation) inference(highrank)
 ```
 
 `e(component_inference)` contains the four estimates, standard errors, and
@@ -276,21 +330,27 @@ critical value.
 For observation-space leading mode \(v_1\), FEVC forms
 
 \[
-\widehat b_1=v_1'y,
+\widehat b_1=v_1'z,
 \qquad
 \widehat V_{b_1}^{\mathrm{LO}}
-=\sum_i v_{1i}^2 y_i\widehat e_{i,-i},
+=\sum_i v_{1i}^2 z_i\widehat e_{i,-i},
 \]
 
-and removes
+with `z=u-c` for Mean and `z=u` for None, and removes
 \(\lambda_1(\widehat b_1^2-\widehat V_{b_1}^{\mathrm{LO}})\)
 from the unchanged leave-out component point estimate. This raw leave-out
 product is not positivity-smoothed. In the structured Rust modes, the common
 positive fitted variance vector separately estimates the joint covariance of
-the leading score and Gaussian remainder. The implementation verifies that
-the resulting remainder equals the direct rank-one-subtracted leave-out
-quadratic form within the complete-system residual tolerance; a material
-identity failure withholds inference.
+the leading score and Gaussian remainder. The native implementation verifies
+that the resulting remainder agrees with the direct rank-one-subtracted leave-out
+quadratic form after accounting for the independently computed signed
+normal-equation residual contribution of both accepted native solves. The
+arithmetic threshold and both solve gates are unchanged; an unexplained
+identity error withholds inference. The public remainder-identity diagnostic
+retains the raw discrepancy before this numerical certificate. This shared
+None/Mean repair does not change the point, covariance or interval calculation
+and is separate from the statistical mean approximation. See the
+[numerical certificate](NUMERICAL_ARCHITECTURE.md#native-q1-remainder-certificate).
 
 For curvature \(\kappa>0\), the q=1 critical-value draw is
 
@@ -305,14 +365,17 @@ resulting two-dimensional confidence ellipsoid through the rank-one quadratic
 by a global angular grid followed by bounded refinement. It does not ship or
 interpolate the KSS Matlab package's unlicensed critical-value table.
 This critical value is based on the maximal-curvature circle and gives the KSS
-uniform asymptotic guarantee of coverage at least at the nominal level. It is
+uniform asymptotic guarantee of coverage at least at the nominal level under
+its maintained assumptions. FEVC's fitted-variance and fixed-observed-mean
+approximations require their own validity conditions; selecting Mean does
+not inherit that guarantee automatically. It is
 not an exact finite-sample quantile of the shortest distance to a particular
 parabola, so design-specific conservatism is expected and is not removed by an
 empirical critical value.
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) centering(none) inference(q1) level(95)
+    deletion(observation) inference(q1) level(95)
 ```
 
 The Anderson--Rubin-style endpoints and all diagnostics are stored in
@@ -326,8 +389,9 @@ if the calculation succeeds; V5's deliberately multi-mode covariance target
 is the canonical example. FEVC therefore reports leading and remainder shares,
 maximum mode weight, and remainder-influence concentration without applying a
 post-hoc cutoff or automatically changing `q`. The KSS/Andrews--Mikusheva
-interval has an asymptotic at-least-nominal uniform coverage guarantee and may
-be modestly conservative for a particular design.
+reference has an asymptotic at-least-nominal uniform coverage guarantee under
+its assumptions and may be modestly conservative for a particular design.
+This is not a new coverage guarantee for FEVC's observed-mean approximation.
 
 ## Fixed-effect projections
 

@@ -35,9 +35,9 @@ pub(crate) fn subtract(
     frequency: &[u64],
     total: u64,
     interrupt: &mut dyn InterruptCheck,
-) -> Result<()> {
+) -> Result<f64> {
     if mode == Centering::None {
-        return Ok(());
+        return Ok(0.0);
     }
     let center = mean(mode, y, frequency, total, interrupt)?;
     for (row, value) in y.iter_mut().enumerate() {
@@ -50,7 +50,7 @@ pub(crate) fn subtract(
             ));
         }
     }
-    Ok(())
+    Ok(center)
 }
 
 pub(crate) mod jla;

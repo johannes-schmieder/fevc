@@ -1,5 +1,36 @@
 # Current decisions
 
+## October 8, 2026: Mean component inference with the observed mean fixed
+
+The owner accepts all five recommendations in
+[the implementation plan](MEAN_COMPONENT_INFERENCE_PLAN.md): extend highrank
+and q1 on every existing supported tuple, keep Mean as the default with
+explicit output/metadata, perform independent algebra checks and a new bounded
+sampling assessment, qualify the complete intended native platform set, and
+review then commit/push the task changes and four existing package ancestors.
+The companion technical note belongs in the separate paper repository. This
+authorization does not include a package tag or hosted release.
+
+Mean uses the retained physical-frequency working-outcome mean as a fixed
+constant in realized influence, variance-proxy and q1 calculations. Inference
+error probes remain uncentered. Exact Mata retains target-specific smoothing;
+Rust retains residual-moment variance fitting. The approximation omits
+mean-estimation uncertainty and is not inference conditional on the observed
+mean. Fixed-offset nuisance uncertainty is a separate omission. Corrected
+inference and all previously unsupported tuples remain withheld.
+
+The active component returns are `e(inference_centering)` (`uncentered` or
+`fixed observed mean`) and `e(inference_mean_omitted)` (`0` or `1`). Native Mean
+component inference requires additive `component_centering_api=1`; native
+Mean projection separately requires projection-centering API 1. Existing
+combined exact-Mata requests support Mean; native combined component/projection
+requests remain unsupported for Mean and None.
+Existing ABI layouts and explicit None behavior remain. Historical source-
+bound confirmations, failures and native receipts retain their scope and do
+not qualify this extension. Pending assessment or platform results must not
+be reported as passes; an incomplete platform set is not a complete qualified
+distribution.
+
 ## October 7, 2026: Mean projection covariance
 
 The owner requests Mean support for `project()`, using the same retained
@@ -8,7 +39,8 @@ default; None remains available and Corrected projection is unsupported.
 Target/projection weights keep their separate roles and do not redefine this
 mean. Only the outcome factor in the symmetric leave-out covariance proxy
 changes; fitted coefficients, residuals and naive covariance are unchanged.
-Component inference remains None-only, including combined requests.
+At this checkpoint component inference remained None-only, including combined
+requests; the October 8 decision above extends that scope.
 
 This convention is translation invariant and follows Stata frequency weights.
 It differs from the KSS Matlab main mover-match mean after square-root-mass

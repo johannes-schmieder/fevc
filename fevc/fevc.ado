@@ -130,8 +130,13 @@ program define _fevc_command, eclass
     tempname nmc_cond nmc_lev nmc_raw nmc_all nmc_se nmc_meta nmc_rhs
     quietly fevc__numerical init `nmc_cond' `nmc_lev' `nmc_raw' `nmc_all' ///
         `nmc_se' `nmc_meta' `nmc_rhs'
+    capture macro drop VCKSS_INFERENCE_ERROR VCKSS_INFERENCE_DETAIL
     capture noisily _vckss_impl `0'
     local command_rc = _rc
+    if `command_rc' & "$VCKSS_INFERENCE_ERROR"!="" {
+        quietly _vckss_post_failure "$VCKSS_INFERENCE_ERROR" `"$VCKSS_INFERENCE_DETAIL"'
+    }
+    capture macro drop VCKSS_INFERENCE_ERROR VCKSS_INFERENCE_DETAIL
     if !`command_rc' {
         capture noisily fevc__numerical post
         local command_rc = _rc
@@ -4849,6 +4854,9 @@ program define _vckss_impl, eclass sortpreserve
         if !`rust_probe_rc' & "$VCKSS_CENTERING"=="mean" & "`project'"!="" {
             if r(projection_centering_api)!=1 local rust_probe_rc=498
         }
+        if !`rust_probe_rc' & "$VCKSS_CENTERING"=="mean" & "`inference'"!="none" {
+            if r(component_centering_api)!=1 local rust_probe_rc=498
+        }
         if !`rust_probe_rc' & `rust_full_cmg_platform' & inlist("`algorithm'","auto","exact") {
             if r(exact_api)!=1 | ("`algorithm'"=="auto" & r(exact_resolved_api)!=2) | ///
                 ("`algorithm'"=="exact" & r(exact_legacy_api)!=1) ///
@@ -6963,7 +6971,7 @@ program define _vckss_impl, eclass sortpreserve
         if !_rc local inference_runtime_loaded = 1
         capture mata: assert(vckss_inference__api_level() == 2 & ///
             vckss_inference__build_id() ==                       ///
-            "vckss-inference-api2-q1-target-status-projection-mean1")
+            "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1")
         if _rc {
             if `inference_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
@@ -6981,7 +6989,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_inference__api_level() == 2 & ///
                 vckss_inference__build_id() ==                   ///
-                "vckss-inference-api2-q1-target-status-projection-mean1")
+                "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1")
             if _rc {
                 quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
                     "The installed fevc inference runtime is incompatible with this command."
