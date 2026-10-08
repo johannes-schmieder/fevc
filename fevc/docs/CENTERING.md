@@ -212,9 +212,10 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   component-centering API 1; the retained Windows manual-test payload also
   lacks projection-centering API 1. Native Intel hardware is not claimed.
   See the [new candidate record](../../native/mean-component-20261008/checkpoint.json)
-  for source identities, compatibility, failed Windows attempts and the
-  proposed hosted-build alternative awaiting approval. No new source push,
-  full Windows qualification or tag has occurred for this extension.
+  for source identities, compatibility and the preserved failed Windows
+  attempts. The owner has since approved the GitHub-hosted build, source-first
+  publication and bounded private retry. Preparation is underway; Windows
+  remains unqualified and no new payload adoption or tag has occurred.
   Use current Mata source or a matching qualified native build.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit

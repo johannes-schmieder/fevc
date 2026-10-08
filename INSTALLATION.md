@@ -69,11 +69,11 @@ The older October 8 smoke `win-20261008T153726Z-59a2355d` remains a
 collector has since been deployed and its infrastructure checks pass. For the
 Mean-component extension, the first private source-build smoke failed at
 `build_toolchain` with return code 601 and the second at `build_native` with
-a null return code. Cleanup completed and the guarded machine is stopped.
-The prepared hosted-build alternative passes 81 offline tests and independent
-review; source publication before complete qualification and a bounded retry
-await owner approval. No new full Windows qualification or payload adoption
-has occurred. See [the current candidate record](native/mean-component-20261008/checkpoint.json).
+a null return code. Both attempts completed cleanup and left the guarded
+machine stopped. The prepared hosted-build alternative passed 81 offline tests
+and independent review. The owner approved the GitHub-hosted build, source-first
+publication and bounded private retry; preparation is underway. Windows remains
+unqualified, and no new payload adoption has occurred. See [the current candidate record](native/mean-component-20261008/checkpoint.json).
 
 ## Local source installation
 

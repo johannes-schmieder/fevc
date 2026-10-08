@@ -236,7 +236,9 @@ and installed checks pass at `63757839`. Windows remains blocked, so the
 qualified candidates are preserved without adoption. The earlier integrated
 source checker remains staged-development evidence, not clean-SHA integrated
 qualification. [The candidate record](../native/mean-component-20261008/checkpoint.json)
-binds exact scopes and the approval-dependent Windows continuation.
+binds exact scopes and the earlier blocked Windows state. The owner has since
+approved the GitHub-hosted build, source-first publication and bounded private
+retry. Preparation is underway; full Windows qualification remains incomplete.
 
 ## Manual referee checks
 

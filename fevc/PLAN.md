@@ -39,24 +39,28 @@ Work stays on `main`; tags and hosted releases remain separate decisions.
   is no general coverage claim and no changed cutoff or discarded attempt.
 - Windows remains blocked: the first source-build smoke failed at
   `build_toolchain` with return code 601; the second failed at `build_native`
-  with a null return code. Cleanup completed and the guarded machine is
-  stopped. A prepared hosted-build alternative passes 81 offline tests and
-  independent review; no hosted build or full private Windows qualification
-  has run for that alternative.
+  with a null return code. Both attempts completed cleanup and left the guarded
+  machine stopped. The prepared hosted-build alternative passed 81 offline
+  tests and independent review. The owner has approved the GitHub-hosted build
+  and source-first sequence; preparation is underway. Windows remains
+  unqualified, and the Mac/Linux candidates remain unadopted.
 - The companion technical note in
   `technical-memos/centering/mean_centered_component_inference.tex` is complete,
   with a compiled and visually reviewed 13-page PDF, independent moment checks,
   and the assessment and numerical limits. Unrelated paper edits remain preserved.
 
-## Remaining work and decision
+## Approved continuation
 
-The proposed source push before all five payloads qualify, followed by a
-bounded Windows retry using the hosted-build alternative, awaits the owner's
-approval. It changes the originally planned qualification-before-push order.
-No source push, full Windows qualification, new payload adoption or tag has
-been completed for this extension.
+The owner approved pushing the reviewed source before all five payloads qualify,
+using GitHub for the Windows build, then conducting a bounded private Windows
+retry on the exact hosted artifact. This replaces the earlier
+qualification-before-push order. Source-first preparation is underway; Windows
+qualification and new payload adoption remain incomplete. No tag or hosted
+release has been made. The immutable
+candidate checkpoint preserves the preceding blocked state and failed attempts.
 
-After that decision, finish the applicable Windows gate and final five-payload
+Complete the source review and push, obtain and verify the hosted artifact,
+then run the applicable private Windows gate. Finish five-payload
 source/provenance, compatibility and HTTP fresh/replacement installation checks
 before adoption. Preserve every failed attempt and stop after the authorized
 bounded repair/retest if another operational failure occurs. Complete the

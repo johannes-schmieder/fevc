@@ -100,9 +100,10 @@ pass component-centering qualification and installed Mean tests, but are
 preserved without adoption while Windows is blocked. The retained Windows
 manual-test payload lacks both attachment-centering capabilities. The
 [new candidate record](../../native/mean-component-20261008/checkpoint.json)
-binds source identities, exact artifacts and limits. A prepared hosted-build
-alternative awaits approval for an earlier source push and bounded private
-retry; no new full Windows qualification is claimed. Use current Mata source
+binds source identities, exact artifacts and the earlier blocked state. The
+owner approved the GitHub-hosted build, source-first publication and bounded
+private retry; preparation is underway. Windows remains unqualified, and the
+new candidates remain unadopted. Use current Mata source
 or a matching qualified native build. No existing ABI structure is changed.
 
 ## Additive component-centering API 1

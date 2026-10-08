@@ -17,7 +17,7 @@ foreach ($line in $environment) {
     }
 }
 $env:RUSTFLAGS = '-C target-feature=+crt-static'
-& cargo +1.85.1 test --manifest-path rust/stata_backend/Cargo.toml --locked --lib
+& cargo +1.85.1 test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets
 if ($LASTEXITCODE -ne 0) { throw 'Standalone Rust tests failed' }
 & cargo +1.85.1 build --manifest-path rust/stata_backend/Cargo.toml --locked --release
 if ($LASTEXITCODE -ne 0) { throw 'Windows compilation failed' }

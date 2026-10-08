@@ -43,11 +43,12 @@ thin/universal qualification and separate exact-byte installed Mean-component
 checks for all four architecture aliases. Linux x86-64 passes full and
 staged/installed Mean tests at `63757839` (SCC job `7969972`). These candidates
 remain unadopted while Windows is blocked after two private source-build
-smokes. The prepared hosted-build alternative passes 81 offline tests and
-independent review; source publication before complete qualification and a
-bounded retry await approval. [The new candidate record](../native/mean-component-20261008/checkpoint.json)
-retains exact source/payload identities and limitations. No new source push,
-full Windows qualification or tag has occurred for this extension.
+smokes. The prepared hosted-build alternative passed 81 offline tests and
+independent review. The owner approved the GitHub-hosted build, source-first
+publication and bounded private retry; preparation is underway. [The candidate
+record](../native/mean-component-20261008/checkpoint.json) retains exact
+source/payload identities and the earlier blocked state. Windows remains
+unqualified; no new payload adoption or tag has occurred for this extension.
 
 The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures. All eight native primary

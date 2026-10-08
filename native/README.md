@@ -16,11 +16,13 @@ Native Intel hardware and representative scale are not claimed.
 payloads while Windows qualification blocks the complete five-payload update.
 The first new Windows source-build smoke failed at `build_toolchain` with
 return code 601; the second failed at `build_native` with a null return code.
-Cleanup completed and the guarded machine is stopped. A prepared hosted-build
-alternative passes 81 offline tests and independent review. Its proposed
-source push before all five payloads qualify and subsequent bounded private
-retry await owner approval; no such push, hosted build or full Windows
-qualification has occurred. No tag or hosted release has been made.
+Both attempts completed cleanup and left the guarded machine stopped. The
+prepared hosted-build alternative passed 81 offline tests and independent
+review. The owner approved using GitHub for the Windows build, pushing reviewed
+source before all five payloads qualify, and a bounded private retry on the
+exact artifact. Preparation is underway; Windows remains unqualified and the
+new Mac/Linux candidates remain unadopted. The immutable checkpoint above
+preserves the earlier blocked state. No tag or hosted release has been made.
 
 The [completed bounded assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains all 22 exact-Mata availability-screen failures. Eight native primary

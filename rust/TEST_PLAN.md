@@ -259,8 +259,10 @@ cells pass broad descriptive screens, while fixed-outcome checks show material
 numerical sensitivity. New Mac candidates at `b9f80ce9` and Linux at `63757839`
 pass full and installed Mean checks, but remain unadopted while Windows is
 blocked. The [new candidate record](../native/mean-component-20261008/checkpoint.json)
-records exact sources, failed Windows attempts and the approval-dependent
-hosted-build continuation. These results do not establish general coverage.
+records exact sources and the earlier failed Windows attempts. The owner has
+since approved the GitHub-hosted build, source-first publication and bounded
+private retry; preparation is underway. These results do not establish general
+coverage or qualify Windows.
 
 ## Focused scalable-projection gate
 
@@ -431,7 +433,8 @@ is numerical Monte Carlo error, never an econometric standard error.
 ## Qualification and release boundary
 
 Windows Stata/plugin qualification for the current Mean-component candidate
-is blocked; the proposed hosted-build continuation awaits owner approval.
+remains incomplete. The owner approved the GitHub-hosted build and source-first
+sequence followed by a bounded private retry; preparation is underway.
 Native Intel hardware qualification and a command-surviving native cache remain
 deferred.
 Current platform status is recorded in the

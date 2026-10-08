@@ -37,9 +37,10 @@ New Mac candidates at `b9f80ce9` pass full qualification and installed Mean
 component checks for thin arm64, thin Rosetta x86-64 and universal on both
 architectures. Linux passes full and installed Mean checks at `63757839`.
 These candidates are preserved but not adopted: Windows remains blocked after
-two private source-build smoke failures. The prepared hosted-build alternative
-awaits approval for source publication before all five payloads qualify and a
-bounded retry. Shipped binaries retain their preceding capabilities. See
+two private source-build smoke failures. The owner approved the GitHub-hosted
+Windows build, source publication before all five payloads qualify, and a
+bounded private retry. Preparation is underway; Windows remains unqualified.
+Shipped binaries retain their preceding capabilities. See
 [native provenance](native/README.md) for exact artifacts and status.
 
 The [completed bounded assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)

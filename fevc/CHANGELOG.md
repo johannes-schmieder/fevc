@@ -29,11 +29,12 @@
   [the assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md).
 - Preserve new qualified Mac/Linux candidates, including installed Mean checks,
   without adoption while Windows is blocked after two source-build smokes.
-  A prepared hosted-build alternative passes 81 offline tests and independent
-  review; a source push before all five payloads qualify and bounded retry
-  await owner approval. Earlier receipts and statistical failures retain their
-  scope. No new source push, full Windows qualification, general coverage
-  guarantee, tag or hosted release is claimed.
+  The prepared hosted-build alternative passed 81 offline tests and independent
+  review. The owner approved the GitHub-hosted build, source-first publication
+  and bounded private retry; preparation is underway. Windows remains
+  unqualified, and the new candidates remain unadopted. Earlier receipts and
+  statistical failures retain their scope. No general coverage guarantee,
+  tag or hosted release is claimed.
 
 ## October 7, 2026 — Mean projection covariance
 
