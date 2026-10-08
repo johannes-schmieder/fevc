@@ -33,8 +33,9 @@ and the installed `help fevc`.
 - [Design decisions](DECISIONS.md).
 
 The dated validation, installation and qualification reports below retain
-their original tested sources and payloads. They do not qualify the new
-centering capability; its current local scope is in [CENTERING.md](CENTERING.md).
+their original tested sources and payloads. Current centering semantics are in
+[CENTERING.md](CENTERING.md); exact candidate qualification and publication
+status are in [native provenance](../../native/README.md).
 
 ## Development
 

@@ -1,0 +1,50 @@
+{
+  "schema": "FEVC-DEVELOPMENT-EVIDENCE-COMPATIBILITY-V1",
+  "status": "PASS",
+  "tested_source": {
+    "base_commit": "283d2524a011a71b4ed1e2e7e65d3fd605cb1576",
+    "kind": "FROZEN_DIRTY_DEVELOPMENT_SOURCE",
+    "validation_sha256": "a16e4152bad4f92126fdbdc3523a78ceb897decb6c65f6e7ce49d4917e258b18",
+    "runtime_manifest_sha256": "46a9bfe3c0c7bff8de04b5207b97451670247ddb8189b8c83ac7210447af9d71"
+  },
+  "current_source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+  "compared_runtime_test_files": 318,
+  "unchanged_runtime_test_files": 317,
+  "changed_runtime_paths": [
+    "rust/stata_backend/qualify_linux_scc.sh"
+  ],
+  "rationale": "The only changed file in the prior 318-file runtime/test manifest is the Linux qualifier, which adds explicit installed-capability/centering checks. Rust production, Rust unit tests, dense Stata oracle, numerical tolerances, RNG fixtures and Mac qualifier are unchanged. New Windows driver and smoke tests do not participate in the prior Rust workspace or exact-oracle gates.",
+  "unchanged_additional_build_acceptance_identities": {
+    "rust/Cargo.toml": "1e7f1c08aca708a4d8939343024af3713c8e19f5b5a58156084e24614a5f0993",
+    "rust/Cargo.lock": "a8673017b84ab3508b7982252374536bd098f7aa25de9d44e8869a09dedf3357",
+    "rust/stata_backend/Cargo.toml": "19f5e9b0073f63039b20a769a2ac72e65d7ccc6a6170b02acdf7ea4d631bc6e5",
+    "rust/stata_backend/Cargo.lock": "9838a81f68d3af903a859160bf9961948ff0a716765d9577a81d594a5ac3e944",
+    "fevc/docs/development_acceptance_v1.json": "444576aded2ac035cae34f0e9c10f6339b3e55d67940001e2f20648115d9e74e",
+    "rust/stata_backend/stata-spi.sha256": "443ad177e1d8c368aaafa7d2c3b86eb9aad2346adb568fcad661c14c57813258",
+    "rust/crates/vckss-core/Cargo.toml": "197bc7b7c632fbfeb136ca1ccd139ddde4bc5873edbe25c373944fed9f8450dd",
+    "rust/crates/vckss-plugin/Cargo.toml": "1f2e460c7cf407fce5a9c9a92bbb6f706ab412282d909f3600269436089cfd33",
+    "rust/rust-toolchain.toml": "24e1453b4e314d5d4407c1da60e7c7eac3914e7483b5098efd436cdd5978fccd"
+  },
+  "claims_reused": [
+    "Rust workspace all-targets locked tests on Rust1.85.1",
+    "Rust formatting and strict Clippy",
+    "48-cell independent exact Mean-projection oracle, seed721946, declared tolerances"
+  ],
+  "claims_not_reused": [
+    "Prior dirty Mac native profile is not converted into clean qualification",
+    "No Windows success inferred",
+    "No fresh MC/inference coverage claim",
+    "No reuse for changed Linux or Windows harnesses"
+  ],
+  "new_checks": "886 Python tests, CMG assembly and component gates pass; integrated Stata and clean Mac/Linux native gates are recorded separately when complete.",
+  "prior_log_sha256": "4c8fcf2062cd042c27482ef797390c94db7821032ac91a37da406b7b57ce308e",
+  "limitations": [
+    "Prior exact evidence remains immutable and retains its original source identity.",
+    "Native platform acceptance depends on the fresh actual candidate checks."
+  ],
+  "unchanged_vendor_git_trees": {
+    "rust/vendor/cmg": "767bab72b3c2e6109ea088ab41593254ac560a8e"
+  },
+  "rust_test_toolchain": "1.85.1; explicit pinned prior Rust workspace/fmt/Clippy commands, unchanged corresponding source and dependency inputs",
+  "independent_review": "prerelease_source_review reproduced 317/318 unchanged source/test hashes, reviewed sole qualifier delta, verified prior Rust log digest/PASS, exact oracle evidence and build/dependency identities; supports narrow reuse only."
+}

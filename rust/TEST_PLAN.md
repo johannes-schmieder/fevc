@@ -375,10 +375,17 @@ inference posts econometric covariance under its documented assumptions;
 projection inference uses separate `e(projection_*)` returns. Probe dispersion
 is numerical Monte Carlo error, never an econometric standard error.
 
-## Deferred qualification
+## Qualification and release boundary
 
-Windows Stata/plugin qualification, native Intel hardware qualification, a
-command-surviving native cache, package distribution, tagging, and final
-release mathematical/license/provenance approval remain deferred. The alpha
-qualification packet includes the representative-scale RSS/performance,
-rendered benchmark report, and exact-source macOS/SCC/supply-chain receipts.
+Windows Stata/plugin qualification for the current candidate, native Intel
+hardware qualification, and a command-surviving native cache remain deferred.
+Current platform status is recorded in the
+[capability ledger](../fevc/docs/RUST_MATA_PARITY.md); historical qualification
+receipts retain their original tested sources and scope.
+
+The human package-boundary, corresponding-source, notice, provenance, and
+data-exclusion review was completed on August 29, 2026; see
+[the code license](../CODE_LICENSE.md). Tagging and release remain separate
+owner decisions, with a fresh review of the exact distribution, corresponding
+source, and notices required before conveyance. The
+[native payload guide](../fevc/docs/RC_BINARY_PAYLOAD.md) records those checks.

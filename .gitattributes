@@ -55,3 +55,7 @@ native/centering-20261007/evidence/windows-diagnostic-failure.json -text whitesp
 
 # Preserve the fixed-width scheduler accounting bound by the Linux receipt.
 rust/qualification/evidence/INFERENCE-LINUX-SCC/*/qacct.txt whitespace=-blank-at-eol
+
+# Preserve the current Windows controller receipt and scheduler accounting.
+native/prerelease-20261008/evidence/windows-smoke-receipt.json -text whitespace=cr-at-eol
+native/prerelease-20261008/evidence/linux-qacct.txt whitespace=-blank-at-eol

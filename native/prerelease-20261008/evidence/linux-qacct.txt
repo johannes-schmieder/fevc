@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-tb4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vckss_lnxq          
+jobnumber    7962808             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Thu Oct  8 11:41:26 2026
+start_time   Thu Oct  8 11:42:35 2026
+end_time     Thu Oct  8 12:18:39 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 2164         
+ru_utime     4861.753     
+ru_stime     162.140      
+ru_maxrss    1055376             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    5196390             
+ru_majflt    4293                
+ru_nswap     0                   
+ru_inblock   648952              
+ru_oublock   2307000             
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     2996716             
+ru_nivcsw    24397               
+cpu          5023.893     
+mem          8403.496          
+io           147.543           
+iow          0.000             
+maxvmem      8.694G
+arid         undefined

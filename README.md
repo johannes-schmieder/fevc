@@ -26,24 +26,24 @@ component inference requires explicit `centering(none)`. Corrected is not
 available with projection. See
 [the centering guide](fevc/docs/CENTERING.md).
 
-Mata supports these source options. Native active centering needs a matching
-centering API 1 build. This repository includes qualified Mac arm64,
-Rosetta x86-64, universal and Linux x86-64 plugins with this capability.
-The Windows centering build is included for owner manual testing. Its hosted
-build passes; automated runtime checks failed and manual qualification is
-pending. Mean projection additionally requires projection-centering API 1.
-Previously adopted point-centering payloads lack it; preserved local Mac
-development candidates expose it and pass native arm64/Rosetta runtime checks.
-Use current source with `backend(mata)` or a matching native build. The local
-checks do not constitute clean-source release qualification or qualify other
-platforms. See [native provenance](native/README.md).
+Mata supports these source options. Native point centering needs centering
+API 1; Mean projection additionally needs projection-centering API 1.
+The local Mac arm64, Rosetta x86-64 and universal candidates at source
+`24754269` pass clean build/runtime qualification and 24 installed-capability,
+point-centering and Mean-projection checks. Linux x86-64 also passes full
+qualification, installed point centering and
+Mean projection at the same source (SCC job `7962808`). Windows runtime
+qualification remains pending after another
+private smoke failure. The existing Windows payload retains its owner-approved
+manual-test status. This local candidate has not been published or tagged;
+see [native provenance](native/README.md) for exact artifacts and scope.
 
 ## Requirements
 
 - Stata 18 or 19.
 - Precompiled native backends for macOS (Apple Silicon and Intel), Linux
   x86-64, and Windows x86-64; no compiler or Rust installation is needed.
-- Native plugins pass source-bound build and Stata runtime checks; see
+- Qualification is specific to the platform and exact artifact; see
   [platform evidence and limitations](native/README.md).
 
 ## Installation
@@ -59,7 +59,8 @@ If you already use the Stata `github` command:
 github install johannes-schmieder/fevc
 ```
 
-Both routes install the command, help, and native backends for all three platforms.
+Both routes install the published command, help, and native backends for all
+three platforms. They do not yet deliver the October 8 local candidate.
 Restart Stata after updating. See [installation notes](INSTALLATION.md) if
 you have an older development installation.
 

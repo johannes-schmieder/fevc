@@ -7,37 +7,43 @@ publication and tagging remain separate owner decisions.
 
 ## Current checkpoint
 
+- Source is frozen at `24754269`. The two MC harnesses are tracked and their
+  68 focused Python tests pass. Integrated source validation passes: 886
+  Python tests, CMG checks, Stata quick/full, portable clean installation,
+  migration and harness checks. The pinned supply-chain audit also passes.
 - Removed 191 ignored compiler-cache/test-fixture paths (22.8 GiB of allocated
-  cache entries; APFS sharing means this is not a physical-space claim).
-  All 6,530 protected evidence files retain their hashes. MC results, the PDF
-  report, source snapshots, accepted receipts and native manifests remain.
-  The local inventory and receipt are in `.local/prerelease-20261008/`.
-- Reviewed the pending source and both MC harnesses. Their 68 focused Python
-  tests pass. The MC source is now tracked, resolving the conservative
-  dirty-bundle inventory issue without weakening its allowlist.
-- Mean is the point-estimate and projection default. Projection uses the
-  retained physical-frequency mean of the working outcome. Explicit None
-  remains available; Corrected projection and centered component inference
-  remain unsupported. Help and active documentation reflect this contract.
-- The project Windows driver now distinguishes a small smoke from the full
-  profile, preserves all full-profile assertions, and writes bounded failure
-  diagnostics plus a terminal FAIL status. Local harness checks pass; remote
-  PowerShell execution and Windows runtime remain unqualified. See
-  [the Windows harness guide](../rust/stata_backend/WINDOWS_CI.md).
-- The accepted Windows collector currently returns only its aggregate receipt.
-  A separately reviewed collector change would be needed to retrieve bounded
-  project failure diagnostics or privately built candidate bytes. Do not
-  bypass that boundary or infer a failing assertion from the aggregate error.
+  entries; APFS sharing prevents a physical-space claim). All 6,530 protected
+  evidence files retain their hashes. Results, reports, source snapshots,
+  accepted receipts and native manifests remain intact.
+- Mean remains the exact/JLA point and projection default. Projection uses
+  the retained physical-frequency mean of the working outcome. None remains
+  explicit; Corrected projection and centered component inference remain
+  unsupported. Statistical and numerical contracts are unchanged.
+- Clean Mac qualification passes at `24754269` for arm64, Rosetta x86-64 and
+  universal. A separate follow-on passes 24 installed-capability, explicit
+  point-centering and Mean-projection checks across thin/universal aliases.
+  Linux x86-64 also passes full qualification and installed point-centering
+  and Mean-projection checks at the same source (SCC job `7962808`).
+- Windows smoke `win-20261008T153726Z-59a2355d` fails with the aggregate
+  `STATA_DRIVER_FAILED` status. The project harness preserves all full-profile
+  assertions and writes bounded stage/return-code diagnostics, but the accepted
+  collector cannot retrieve them. No failing assertion is known. The reviewed
+  collector proposal awaits owner approval; no shared changes are deployed.
+  The existing Windows manual-test payload retains its original status.
+- The [candidate manifest](../native/prerelease-20261008/manifest.json) records
+  the local Mac/Linux candidate and pending Windows status. Historical evidence
+  remains immutable. This candidate has not been published or tagged.
 
 ## Remaining candidate gates
 
-Freeze the reviewed source, run the mandatory Python/CMG/Stata checks, and
-qualify the affected native platforms against that source. Start Windows with
-its bounded smoke. Linux needs the new Mean-projection capability and explicit
-installed-candidate checks. Bind each adopted payload to its actual build
-source, test scope and hash, then verify fresh/replacement installation of the
-final candidate bytes. Do not label an incomplete five-platform manifest as a
-qualified complete candidate.
+Resolve the Windows collection boundary after owner approval, then
+obtain bounded diagnostics and complete runtime qualification of the exact
+candidate. Bind final payloads to build sources, scope and hashes; record
+compatibility for later documentation/package commits. Verify fresh and
+replacement installation of final package bytes and review the exact
+corresponding-source archive and notices. An incomplete five-platform set
+must not be labelled a qualified complete candidate. Publication and tagging
+require a separate owner decision.
 
 ## Preserved development evidence
 

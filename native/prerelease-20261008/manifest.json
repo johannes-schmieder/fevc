@@ -1,0 +1,119 @@
+{
+  "schema": "FEVC-PRERELEASE-CANDIDATE-V1",
+  "status": "LOCAL_MAC_LINUX_QUALIFIED_WINDOWS_PENDING",
+  "version": "0.5.0-rc.1",
+  "source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+  "centering_api": 1,
+  "projection_centering_api": 1,
+  "binaries": [
+    {
+      "path": "fevc/fevc_rust_macos_arm64.plugin",
+      "bytes": 4945760,
+      "sha256": "0b66682195e4d8c97cb6a20653bac64f277f54e8f504ff90ac36290c07679edf",
+      "source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+      "status": "PASS",
+      "qualification": "evidence/macos-qualification.txt",
+      "qualification_sha256": "3637c8b9c1a22a419984d1dccdb01b613deeea44745df3cf9e4b4d3310a99286",
+      "installed_centering": "evidence/macos-installed-centering.json",
+      "installed_centering_sha256": "101c8736b320be597dc2a0ad24053e91d7157da680f4c7616395c1d34aa9468e"
+    },
+    {
+      "path": "fevc/fevc_rust_macos_x86_64.plugin",
+      "bytes": 5642336,
+      "sha256": "14c434bee77077e1b9e31bd17a1e1d837688db886a527c5d723bab647380ec52",
+      "source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+      "status": "PASS",
+      "qualification": "evidence/macos-qualification.txt",
+      "qualification_sha256": "3637c8b9c1a22a419984d1dccdb01b613deeea44745df3cf9e4b4d3310a99286",
+      "installed_centering": "evidence/macos-installed-centering.json",
+      "installed_centering_sha256": "101c8736b320be597dc2a0ad24053e91d7157da680f4c7616395c1d34aa9468e"
+    },
+    {
+      "path": "fevc/fevc_rust_macos.plugin",
+      "bytes": 10614624,
+      "sha256": "7144292e2e119a997039c05478417950794f0093d1aaf115ec5b35e42f87d059",
+      "source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+      "status": "PASS",
+      "qualification": "evidence/macos-qualification.txt",
+      "qualification_sha256": "3637c8b9c1a22a419984d1dccdb01b613deeea44745df3cf9e4b4d3310a99286",
+      "installed_centering": "evidence/macos-installed-centering.json",
+      "installed_centering_sha256": "101c8736b320be597dc2a0ad24053e91d7157da680f4c7616395c1d34aa9468e"
+    },
+    {
+      "path": "fevc/fevc_rust_linux_x64.plugin",
+      "bytes": 6043888,
+      "sha256": "512881be16bf320f4aceeec3ebfc09210d8ba725080e31694ce45ddf4e391ac7",
+      "source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+      "status": "PASS",
+      "qualification": "evidence/linux-qualification.txt",
+      "qualification_sha256": "ba12544340c24a1dfecc61c04b5d503e2b5379b4843937ee485b75d72d336bbd",
+      "scheduler_job_id": 7962808,
+      "installed_centering": "evidence/linux-validation.json",
+      "installed_centering_sha256": "27bca339e3b36e8c888c2dd29bbdfa9730631be4b323d8741bd683f3cd8b801a"
+    }
+  ],
+  "windows": {
+    "status": "UNQUALIFIED",
+    "retained_payload_sha256": "cff60c15ba4ca8dca2e3b343588dbf566c34e5fb07dd8d2f7ef092d8f7bd5397",
+    "retained_payload_record": "../centering-windows-manual-20261007.json",
+    "projection_centering_api": 0,
+    "latest_private_run": "win-20261008T153726Z-59a2355d",
+    "latest_scope": "DIRTY_SOURCE_SMOKE_NOT_FULL_QUALIFICATION",
+    "latest_status": "FAIL",
+    "error_code": "STATA_DRIVER_FAILED",
+    "receipt": "evidence/windows-smoke-receipt.json",
+    "cleanup": {
+      "instance_stopped": true,
+      "transient_objects_deleted": true,
+      "lock_released": true
+    },
+    "next_step": "The fixed collector hides the failing stage. A reviewed, 130-test collector proposal is prepared locally; explicit shared-backend approval is pending. No shared infrastructure has changed."
+  },
+  "source_validation": {
+    "pytest_passed": 886,
+    "mc_harness_tests_passed": 68,
+    "integrated_stata": "PASS quick/full, clean installation, migration and benchmark harnesses",
+    "evidence": "evidence/source-validation.json"
+  },
+  "mac_installed_centering_checks": 24,
+  "linux_job_id": 7962808,
+  "corresponding_source": {
+    "archive": "fevc-corresponding-source-24754269.tar.gz",
+    "sha256": "eaf02cc564f11da593509814a1310a12beaff2f280e8d221e1502fc6f92c70f5",
+    "scope": "Locally frozen complete Git source including Rust/build scripts/dependency locks/notices; portable archive alone is insufficient."
+  },
+  "supply_chain": "evidence/supply-chain.txt",
+  "publication": "LOCAL_CANDIDATE_PREPARATION_ONLY_NO_PUSH_TAG_OR_RELEASE",
+  "limitations": [
+    "A complete five-plugin candidate remains blocked by Windows runtime qualification.",
+    "Mac x86-64 execution is Rosetta, not native Intel hardware.",
+    "Engineering/runtime qualification does not extend statistical coverage or representative-scale claims; prior scientific failures remain unchanged.",
+    "Corrected JLA MCSE treats the increment as fixed and omits its numerical uncertainty.",
+    "Historical receipts and payloads retain their original source/hash scope."
+  ],
+  "evidence_sha256": {
+    "evidence/linux-collected.sha256": "19d6aaf9343fe17b8815b05ef80769ee594a16a2a09e4d7ae714d7b3eda651b0",
+    "evidence/linux-qacct.txt": "ef6246cee80321f44fea45f9a5e331afc4b57c9e28623e7179573c6a0bf21da0",
+    "evidence/linux-qualification.txt": "ba12544340c24a1dfecc61c04b5d503e2b5379b4843937ee485b75d72d336bbd",
+    "evidence/linux-source.sha256": "e8d9b6f4c9101e9772ca9bb0b9536af78272c8bc57ac6ad0fc31a02ceece2114",
+    "evidence/linux-validation.json": "27bca339e3b36e8c888c2dd29bbdfa9730631be4b323d8741bd683f3cd8b801a",
+    "evidence/linux-wrapper.txt": "59def25e579de449a807e9a7751e8113c8a22ec367c204e1d12294fed8cc37d5",
+    "evidence/macos-ci.json": "4e0ea6d32b60d9d4ab26c969740ae7e91c8c2434c1192f958d23b06e1a26e613",
+    "evidence/macos-installed-centering.json": "101c8736b320be597dc2a0ad24053e91d7157da680f4c7616395c1d34aa9468e",
+    "evidence/macos-qualification.txt": "3637c8b9c1a22a419984d1dccdb01b613deeea44745df3cf9e4b4d3310a99286",
+    "evidence/macos-source.sha256": "8cefd5ff0705eab6b0f866c77703ec683d276751a7e27fe83c834afdd02e55cc",
+    "evidence/sbom/LICENSE_INVENTORY.tsv": "424e1dc7acbd39bde94b3369aa30591f62eae6628d1a1b1f166fdb02b2cc3bc3",
+    "evidence/sbom/RUSTSEC_AUDIT_SUMMARY.json": "546c74753aa169b40b3ca4b04b46466d689f78ac5b625fb81b20e8e98df7d284",
+    "evidence/sbom/SBOM_MANIFEST.sha256": "740cd050e30a63e1a0211bfc7dcaf344458b553d6bbbcf91cf19379bea29ccb7",
+    "evidence/sbom/vckss-core.cdx.json": "5e0cf1fd2437e9b69ba42a631d032d2e300cd6376f90d2ac3d18c5ac442e7617",
+    "evidence/sbom/vckss-fuzz.cdx.json": "94ae82e62164e6adce92576032084f01aa2b76c262bcbadf9b455866ac8831c2",
+    "evidence/sbom/vckss-plugin.cdx.json": "dfa39991de0eb8390d8eb8433fab4ca40ee0adfacbd1de6bc6bf4103cbd84e77",
+    "evidence/sbom/vckss-stata.cdx.json": "a310d6aac657ff644550c1967f232753288c23a881a302604514c4b54e617ac6",
+    "evidence/source-evidence-compatibility.json": "364bbe805254c35cf449b617740e1296b800fd958843bb80e97eed7620bd3d4e",
+    "evidence/source-validation.json": "43f8745795f0af5c588e95afc405195a262f64d77847a4ad6947b718554d16d9",
+    "evidence/supply-chain.txt": "201b7f24c21392df7b6d391709622dbb6ee74f783b973bc09a7fcfbaa41106cc",
+    "evidence/windows-smoke-archive-verification.json": "c01b2c01762d05fa746080268fa23968316418d8494a3f9bedb904ed88babf4f",
+    "evidence/windows-smoke-receipt.json": "ab126e6fad984cf60e55ba1fc8aded1bb0a7eae57843fcffddd8440e43324535",
+    "evidence/windows-smoke-summary.json": "37103d68f9998c8aaea65f70c5c2cfde3fdbdc76f69b5c4ea7ff10f3e6b37e60"
+  }
+}

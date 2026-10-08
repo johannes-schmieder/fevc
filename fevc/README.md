@@ -131,14 +131,18 @@ Mean (the default) and None, using the same retained frequency-weighted
 working-outcome mean. Neither target nor projection weights redefine it.
 Corrected projection is unsupported; component `inference()` requires explicit
 `centering(none)`. Point centering works in Mata
-and a matching native build. The repository Mac and Linux plugins expose
-centering API 1. The Windows centering plugin is now included for owner manual
-testing; its build passes, but automated runtime checks failed and manual
-qualification is pending. Mean projection additionally requires native
-projection-centering API 1. Previously adopted point-centering payloads lack
-it; preserved local Mac development candidates expose it and pass arm64/Rosetta
-runtime checks. Those local checks do not qualify a release or other platforms.
-Use current Mata source or a matching native build for that request.
+and a matching native build. Native point centering requires centering API 1;
+Mean projection additionally requires projection-centering API 1. The local
+Mac arm64, Rosetta x86-64 and universal candidates at source `24754269` pass
+clean qualification and 24 installed-capability, point-centering and
+Mean-projection checks. Linux x86-64 also passes full qualification and
+installed point-centering
+and Mean-projection checks at the same source (SCC job `7962808`).
+Windows runtime qualification remains pending; its retained manual-test
+payload supports point centering but lacks the Mean-projection capability.
+The [current candidate record](../native/prerelease-20261008/manifest.json)
+binds local evidence; these candidates have not been published or tagged.
+Use current Mata source or a matching qualified native build.
 Automatic routing may use Mata when the capability is absent, while strict
 Rust/Counter-V1 requires the matching plugin. See [the centering guide](docs/CENTERING.md)
 for restrictions, stored assumptions, formulas and measured local costs.

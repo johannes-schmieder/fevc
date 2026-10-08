@@ -1,0 +1,12 @@
+{
+  "run_id": "win-20261008T153726Z-59a2355d",
+  "profile": "smoke",
+  "result": "FAIL",
+  "error": "STATA_DRIVER_FAILED",
+  "receipt_sha256": "ab126e6fad984cf60e55ba1fc8aded1bb0a7eae57843fcffddd8440e43324535",
+  "instance_stopped": true,
+  "transient_objects_deleted": true,
+  "lock_released": true,
+  "decision": "No further blind retry; aggregate collector cannot expose the failing stage. Prepare bounded shared collector proposal for explicit approval.",
+  "preflight_note": "An earlier wrapper start was interrupted after local manifest checks failed; no instance start, transient objects removed and lock released. Subsequent inspect confirmed stopped. The final exact archive passed all 1425 file hashes."
+}

@@ -145,18 +145,23 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   does not support active centering. Mean projection additionally requires
   projection-centering API 1, exposed as `r(projection_centering_api)`.
   None projection does not require this additional capability.
-- The repository includes qualified Mac arm64, Rosetta x86-64,
-  universal and Linux x86-64 centering plugins, with full platform and
-  explicit Rust centering checks. The Windows plugin now includes centering
-  API 1 for owner manual testing. Its hosted build passes, but automated runtime
-  checks failed and manual qualification is pending. Native Intel hardware is
-  not claimed. These previously adopted point-centering payloads do not expose
-  projection-centering API 1. Rebuilt local Mac development plugins expose it;
-  use current Mata source or a matching native build for Mean projection.
+- The local Mac arm64, Rosetta x86-64 and universal candidates at clean
+  source `24754269` expose both centering APIs and pass full qualification
+  plus 24 isolated-install capability, point-centering and Mean-projection
+  checks. Linux x86-64 also passes full qualification and installed point-centering
+  and Mean-projection checks at the same source (SCC job `7962808`).
+  Windows runtime qualification remains pending; the retained manual-test
+  payload has centering API 1 but lacks projection-centering API 1.
+  Native Intel hardware is not claimed. See the
+  [current candidate record](../../native/prerelease-20261008/manifest.json).
+  These local candidates have not been published or tagged.
+  Use current Mata source or a matching qualified native build for Mean projection.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit
   Counter-V1 requests require the matching native capability and fail
   preflight with `RUST_BACKEND_UNAVAILABLE` if it is absent.
+
+### Preserved October 7 development evidence
 
 The local Mean-projection checkpoint passes the 48-cell exact covariance
 oracle, eight-cell native projection tests, complete Stata quick suite,

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-07",
+  "updated": "2026-10-08",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Earlier deletion-unit mover semantics passed Mata/Rust regression and exact-artifact qualification for five recorded plugins: Mac arm64, Rosetta x86-64 and universal, Linux x86-64, and Windows x86-64. Build sources d6f5571d (Mac/Windows) and 31cf2ea7 (Linux), package source c3ab9e52, and explicit compatibility reviews are recorded in native/deletion-unit-movers-20260926. See DELETION_UNIT_MOVERS_2026-09-26.md for final public installer status. Qualification covers supported runtime routes and engineering checks; it does not extend statistical coverage, representative scale, native Intel hardware, or unsupported Windows routes. Earlier scientific confirmation failures and deferred features remain unchanged. The retained alpha_required field describes prior alpha gates, not authorization for a release tag. October 6 outcome centering is implemented in Mata/Rust. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks and are adopted with centering API 1; The updated Windows payload provides centering API 1 for owner manual testing; runtime qualification remains pending. The owner-authorized source/docs and four payloads are committed and pushed on October 7. The Windows hosted build and current-source CI pass, but full private runtime qualification and one focused diagnostic fail; the owner now explicitly adopts the exact Windows build for manual testing, with runtime qualification pending. native/centering-20261007/manifest.json records the failures and cleanup. native/centering-20261006/manifest.json binds the new dirty-source evidence. Historical payload records keep their original scope. See CENTERING.md for scope, MCSE assumptions and local evidence. Windows manual-test adoption: native/centering-windows-manual-20261007.json; historical passing Windows evidence applies to prior bytes. October 7 projection Mean is implemented in current Mata/Rust source using the retained frequency-weighted working-outcome mean; Corrected projection and centered component inference remain unsupported. Native Mean projection additionally requires projection_centering_api 1. Earlier distributed payload receipts do not qualify this source extension. Rebuilt local Mac development binaries expose projection-centering API 1 and pass separate/universal arm64/Rosetta runtime and isolated-install checks. The qualifier records LOCAL_CHECKPOINT_DIRTY_TREE; the outer CI clean-checkout gate remains failed. These tracked working-tree replacements are not a new distributed-payload adoption and do not qualify other platforms or statistical coverage.",
+  "qualification_scope": "Clean source 24754269 qualifies the local Mac arm64, Rosetta x86-64, universal and Linux x86-64 candidates, including point-centering API 1 and Mean-projection API 1. Exact candidate evidence is bound in native/prerelease-20261008/manifest.json. Mac passes full qualification plus 24 installed-capability/point-centering/Mean-projection checks; Linux SCC job 7962808 passes full and installed checks with scheduler failed=0 and exit_status=0. Windows remains unqualified after the bounded private smoke fails with STATA_DRIVER_FAILED; the retained October 7 payload is owner-approved for manual testing only and lacks Mean-projection API 1. A reviewed collector proposal awaits explicit shared-backend approval. No current candidate is published or tagged. Historical receipts qualify their recorded source and binary hashes only. Engineering qualification does not extend statistical coverage, representative scale, native Intel hardware, or unsupported routes; prior scientific confirmation failures remain unchanged. The retained alpha_required field describes prior alpha gates, not release authorization. Mean uses the retained frequency-weighted working-outcome mean; Corrected projection and centered component inference remain unsupported. See CENTERING.md for semantics and MCSE limitations.",
   "statuses": [
     "qualified",
     "implemented",
@@ -16,7 +16,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. CENTERING.md. Four local Mac/Linux native payloads pass explicit centering checks; Windows centering build is adopted for owner manual testing after failed automated runtime checks; runtime qualification is pending. native/centering-20261006/manifest.json."
+      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. The four local Mac/Linux candidates at clean source 24754269 pass full platform and explicit installed Rust centering checks. Windows runtime remains pending. native/prerelease-20261008/manifest.json; CENTERING.md."
     },
     {
       "id": "exact-corrected-centering",
@@ -24,7 +24,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows centering build is adopted for owner manual testing after failed automated runtime checks; runtime qualification is pending. native/centering-20261006/manifest.json. CENTERING.md."
+      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. The four local Mac/Linux candidates at clean source 24754269 pass full platform and explicit installed Rust centering checks. Windows runtime remains pending. native/prerelease-20261008/manifest.json; CENTERING.md."
     },
     {
       "id": "jla-corrected-centering",
@@ -32,7 +32,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. Four local Mac/Linux payloads pass full platform and explicit Rust centering checks; Windows centering build is adopted for owner manual testing after failed automated runtime checks; runtime qualification is pending. native/centering-20261006/manifest.json. CENTERING.md."
+      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. The four local Mac/Linux candidates at clean source 24754269 pass full platform and explicit installed Rust centering checks. Windows runtime remains pending. native/prerelease-20261008/manifest.json; CENTERING.md."
     },
     {
       "id": "parallel-deletion-blocks",
@@ -144,7 +144,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "exact Mata and sparse Rust generic-JLA routes; explicit diagonal or forced generic CMG; positive integer frequency weights match literal expansion; KSS Matlab weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates; automatic projection routing withheld; Mean support added October 7 with the retained frequency-weighted working-outcome mean before match scaling. Native Mean requires projection_centering_api 1; earlier None qualification remains source-specific."
+      "evidence": "exact Mata and sparse Rust generic-JLA routes; explicit diagonal or forced generic CMG; positive integer frequency weights match literal expansion; KSS Matlab weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates; automatic projection routing withheld; Mean support added October 7 with the retained frequency-weighted working-outcome mean before match scaling. Native Mean requires projection_centering_api 1; earlier None qualification remains source-specific. Current Mac arm64/Rosetta thin/universal and Linux candidates at 24754269 pass installed Mean-projection checks; Windows is pending. native/prerelease-20261008/manifest.json."
     },
     {
       "id": "macos-arm64-rosetta",
@@ -152,7 +152,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean source d6f5571d; thin arm64, thin Rosetta x86-64, universal on both architectures and isolated installs pass. Source manifest 888698f158bf7031647353bb4b83f12ee2177e032965fe884104fd89bcb8b09b; native/deletion-unit-movers-20260926/evidence/macos-qualification.txt."
+      "evidence": "Clean source 24754269; thin arm64, thin Rosetta x86-64, universal on both architectures and isolated installs pass full qualification. An additional 24 installed-capability, point-centering and Mean-projection checks pass. Source manifest 8cefd5ff0705eab6b0f866c77703ec683d276751a7e27fe83c834afdd02e55cc; native/prerelease-20261008/manifest.json."
     },
     {
       "id": "linux-scc",
@@ -160,7 +160,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean source 31cf2ea7; SCC job 7745342 full Stata suite and isolated install pass, scheduler failed=0 exit_status=0. native/deletion-unit-movers-20260926/evidence/linux-qualification.txt."
+      "evidence": "Clean source 24754269; SCC job 7962808 passes the full Stata suite, isolated install, staged/installed Mean projection and four installed explicit Rust centering tests. Scheduler failed=0, exit_status=0; all 38 collected hashes verified. native/prerelease-20261008/manifest.json."
     },
     {
       "id": "windows",
@@ -168,7 +168,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Current Windows centering binary is the exact c14fbcb6 hosted build (Rust tests/static CRT/144-export PE audit PASS), adopted at owner request for manual testing. Two automated private runtime attempts fail; manual runtime qualification is pending. Earlier passing Windows receipts qualify their original bytes only. native/centering-windows-manual-20261007.json; native/centering-20261007/manifest.json. Existing unsupported Windows routes remain."
+      "evidence": "Retained Windows centering binary is the exact c14fbcb6 hosted build (Rust tests/static CRT/144-export PE audit PASS), adopted at owner request for manual testing. It lacks Mean-projection API 1. Earlier private runtime attempts and the October 8 bounded source smoke fail; the latest aggregate error is STATA_DRIVER_FAILED and identifies no assertion. Windows runtime qualification remains pending; a reviewed bounded collector proposal awaits owner approval. Earlier passing receipts qualify their original bytes only. native/centering-windows-manual-20261007.json; native/prerelease-20261008/manifest.json. Existing unsupported routes remain."
     },
     {
       "id": "all-point-probe-numerical-mcse",

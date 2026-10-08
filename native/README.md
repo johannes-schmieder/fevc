@@ -1,6 +1,32 @@
 # Native package provenance
 
-## Local Mean-projection development checkpoint
+## Local October 8 prerelease candidate
+
+The current local candidate is built from clean source `24754269` and adds
+Mean projection through `projection_centering_api=1`. The
+[candidate manifest](prerelease-20261008/manifest.json) binds its platform
+status, exact build sources, plugin hashes and sanitized evidence.
+No candidate publication or release tag is authorized.
+
+Mac arm64, Rosetta x86-64 and universal candidates pass clean build/runtime
+qualification. A separate isolated-install follow-on passes 24 checks across
+thin arm64, thin x86-64 under Rosetta, and universal under both architectures:
+installed capabilities and hashes, four explicit Rust point-centering tests,
+and the eight-cell Mean-projection oracle. Linux x86-64 also passes full
+qualification, installed point centering and
+Mean projection at the same source (SCC job `7962808`). The four qualified
+Mac/Linux files remain separate from a complete
+five-platform qualification. Native Intel hardware is not
+claimed.
+
+The existing Windows binary retains its October 7 owner-approved manual-test
+status. The latest private smoke `win-20261008T153726Z-59a2355d` returns
+`STATA_DRIVER_FAILED`; the aggregate receipt does not identify an assertion.
+Windows is still unqualified for the current candidate. The bounded collector
+proposal awaits owner approval and has not been deployed. Historical Windows
+PASS receipts qualify only their recorded earlier binaries.
+
+## Preserved October 7 Mean-projection development checkpoint
 
 The October 7 projection extension uses Mean by default and adds
 `projection_centering_api=1`. Rebuilt local Mac arm64, x86-64 and universal
@@ -168,5 +194,6 @@ Add `--public` to test fresh and replacement installs through both advertised
 commands. The verifier checks every installed byte, reporting, the README
 example, caller restoration, help, decomposition, match q0/q1, the deletion-unit
 mover regression, and the idle registry. Licensed execution stays local or on
-private infrastructure. Publish to `main`; no `master` branch is maintained.
-This repository installation does not create a release tag or release archive.
+private infrastructure. After explicit owner authorization, package publication
+uses `main`; no `master` branch is maintained. This repository installation
+does not create a release tag or release archive.

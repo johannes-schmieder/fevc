@@ -6,6 +6,26 @@ x86_64. This authorizes local candidate preparation and private platform
 tests, not publication or tagging. No current platform success is implied
 by this preparation document.
 
+## October 8 local candidate status
+
+Clean build source `24754269` supplies the current candidate. Mac arm64,
+Rosetta x86-64 and universal plugins pass full clean qualification plus
+24 isolated-install capability, point-centering and Mean-projection checks.
+They expose centering API 1 and projection-centering API 1.
+Linux x86-64 also passes full qualification and installed point-centering
+and Mean-projection checks at the same source (SCC job `7962808`).
+The [compact candidate manifest](../../native/prerelease-20261008/manifest.json)
+records the four qualified Mac/Linux files and the separate pending Windows
+status; it must not represent an incomplete set as a qualified `complete`
+profile. Native Intel hardware is not claimed.
+
+Windows smoke `win-20261008T153726Z-59a2355d` fails with the aggregate
+`STATA_DRIVER_FAILED` status. No failing assertion is available from the
+accepted collector. The proposal for bounded diagnostics and validated
+artifact collection is reviewed locally but still awaits owner approval;
+no shared update is deployed. The existing Windows manual-test bytes retain
+their original status. No new publication, tag or release is authorized.
+
 ## October 7 Mean-projection development checkpoint
 
 Mean projection requires additive `projection_centering_api=1`. The rebuilt
@@ -46,7 +66,7 @@ invokes centering in Mata and does not establish native centering by itself.
 The independent three-pool map unit test remains a separate Rust gate.
 See [CENTERING.md](CENTERING.md) for methods and MCSE assumptions.
 
-## Current distribution scope
+## Previously authorized distribution scope
 
 On September 26 the owner authorized deletion-unit mover integration, all five
 plugins, and source then package publication to `main`. Use the `complete`
@@ -77,7 +97,10 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    and source/binary hashes. No scaling or Monte Carlo campaign is requested.
 3. For the complete profile,
    run the private Windows skill's accepted `stata-do` profile against
-   repository-root `windows-ci.do`. A supplied exact hosted candidate retains
+   repository-root `windows-ci.do`, starting with the bounded smoke before
+   the full profile. Both profiles require point and Mean-projection capability
+   checks; the full profile preserves the earlier runtime assertions.
+   A supplied exact hosted candidate retains
    its CI build/Rust-test provenance; the private driver audits x86-64 PE format
    and loads it from an isolated PLUS installation. The fallback build uses
    pinned Rust 1.85.1, authenticated SPI and static MSVC CRT.
@@ -90,8 +113,10 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    returns only a receipt. Build the Windows candidate in hosted CI, download
    it, and transfer those exact bytes with a hash-bound input manifest through
    the private runner. Its project receipt checks the installed candidate hash;
-   no binary retrieval or runner extension is needed. Record the transfer as
-   a snapshot, distinct from the clean source identity. Never bypass the runner,
+   this path does not require binary retrieval or a runner extension. A shared
+   collector change requires separate owner approval and runner reacceptance.
+   Record the transfer as a snapshot, distinct from the clean source identity.
+   Never bypass the runner,
    upload license material or collect raw Stata startup logs.
 5. Create an input manifest with schema `FEVC-BINARY-INPUTS-V1`, the exact
    `source_commit`, and the selected profile’s `binaries` rows. Each row names `name`, `sha256`,
@@ -106,9 +131,8 @@ PR refs: the owner explicitly accepted those deleted reviews remaining there.
    and actual notices alongside the binary artifact. Install the **final
    archive bytes** into empty PLUS directories on each platform and exercise
    q0/q1 and help; separately retain the portable-only missing-native test.
-   Distribution requires owner authorization; the September 26 request
-   authorizes all five plugins in the repository installation package. A tag
-   or GitHub release remains a separate decision.
+   Current authorization covers local preparation and private tests. Publishing
+   this candidate, a tag or a GitHub release requires a separate owner decision.
 
 The tracked `fevc/fevc.pkg` remains a portable development/source manifest.
 The native builder generates the complete manifest only after validating every binary in the selected profile. The public installation will use root `fevc.pkg` and
@@ -157,9 +181,9 @@ The final receipt binds the package source, native inputs, archive digest and
 every installed file. A later documentation/evidence commit must not be
 reported as the tested binary source. Preserve all accepted earlier records.
 
-For the current public prerelease, commit root `fevc.pkg` and `stata.toc`, all five
+A complete native prerelease needs root `fevc.pkg` and `stata.toc`, all five
 qualified `fevc/*.plugin` files, and a compact binary manifest linking exact
 build sources and sanitized qualification receipts. Keep the nested portable
-manifest unchanged. Push package updates to `main`. Verify actual
-HTTP installs after publication; building a staging directory alone is not an
-installer verification.
+manifest unchanged. Publish package updates to `main` only after explicit owner
+authorization. Verify actual HTTP installs after publication; building a
+staging directory alone is not an installer verification.

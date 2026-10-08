@@ -8,7 +8,8 @@ It does not require a separate Stata SDK.
 The plugin is the native backend for the one public `fevc` command. Omitted
 `backend()` and `backend(auto)` prefer a qualified plugin after complete
 preflight, while `backend(rust)` remains strict and `backend(mata)` remains
-explicit Mata. Native binaries are not shipped by the tracked source manifest.
+explicit Mata. The nested portable source manifest omits native binaries;
+the root repository installation manifest includes them.
 
 ## Boundary and lifecycle
 
@@ -77,12 +78,10 @@ Projection uses the same frequency-weighted retained working-outcome mean as
 point centering. Only the outcome factor in covariance contractions changes;
 projection coefficients and residual-squared naive covariance are unchanged.
 
-Numerical API 2 and centering API 1 are separate capabilities. The four repository
-Mac/Linux plugins pass full platform and explicit centering checks. Windows
-now ships centering API 1 for owner manual testing. The hosted build passes,
-but automated runtime checks failed; manual qualification is pending. See
-[the centering contract](../../fevc/docs/CENTERING.md) and
-[native provenance](../../native/README.md).
+Numerical API 2 and centering API 1 are separate capabilities. Point-centering
+and Mean-projection checks are required against the exact installed candidate;
+capability exposure alone is not runtime qualification. The local candidate
+status is recorded below and in [native provenance](../../native/README.md).
 
 ## Additive projection-centering API 1
 
@@ -94,14 +93,17 @@ from accepting a projection request whose covariance it cannot center. Missing
 capability is a structural preflight failure under the usual strict Rust and
 automatic-Mata routing rules, before preparation/RNG.
 
-The previously adopted Mac/Linux/Windows point-centering payloads lack this
-capability. Rebuilt local Mac development plugins expose it and pass the
-arm64/Rosetta separate/universal runtime and isolated-install checks. The
-qualifier records `LOCAL_CHECKPOINT_DIRTY_TREE`; the outer CI clean-checkout
-gate remains failed. Prior distribution receipts do not qualify Mean
-projection or these new bytes, and other platforms were not requalified.
-Use current Mata source or a matching native build. No existing ABI structure
-is changed.
+The local Mac arm64, Rosetta x86-64 and universal candidates built at clean
+source `24754269` expose this capability and pass full qualification plus
+24 isolated-install capability, point-centering and Mean-projection checks.
+Linux x86-64 also passes full qualification and installed point-centering
+and Mean-projection checks at the same source (SCC job `7962808`).
+Windows remains unqualified after the latest bounded private smoke failure;
+its retained manual-test payload lacks this capability. The
+[current candidate manifest](../../native/prerelease-20261008/manifest.json)
+binds exact artifacts and source identities. The local candidate is unpublished.
+Earlier receipts retain their original scope. Use current Mata source or a
+matching qualified native build. No existing ABI structure is changed.
 
 ## All-probe numerical attachment
 

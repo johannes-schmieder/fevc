@@ -1,0 +1,69 @@
+{
+  "schema": "FEVC-PRERELEASE-SOURCE-VALIDATION-V1",
+  "status": "PASS",
+  "source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+  "commands": [
+    {
+      "command": "./.venv/bin/python -m pytest -q",
+      "status": "PASS",
+      "passed": 886,
+      "log": "pytest.log"
+    },
+    {
+      "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "status": "PASS",
+      "log": "cmg-assembly.log"
+    },
+    {
+      "command": "./.venv/bin/python fevc/tools/run_checks.py",
+      "status": "PASS",
+      "log": "run-checks.log"
+    },
+    {
+      "command": "./.venv/bin/python -m pytest -q fevc/benchmarks/centering_mc_20261007/test_harness.py",
+      "status": "PASS",
+      "passed": 13,
+      "log": "mc-baseline-tests.log"
+    },
+    {
+      "command": "./.venv/bin/python -m pytest -q fevc/benchmarks/centering_hetero_mc_20261007",
+      "status": "PASS",
+      "passed": 55,
+      "log": "mc-hetero-tests.log"
+    }
+  ],
+  "integrated_gates": [
+    "public identity",
+    "license/provenance",
+    "generated parity",
+    "portable artifact",
+    "CMG assembly and component tests",
+    "886 Python tests",
+    "complete Stata quick",
+    "complete Stata full",
+    "clean portable installation",
+    "legacy-helper migration and repository/SSC install layouts",
+    "synthetic/paired benchmark harness smokes",
+    "retained-sample and bridge-audit smokes"
+  ],
+  "stata": "Stata/MP 19; macOS arm64",
+  "native_scope": "Integrated source tests do not qualify new native payloads; clean Mac/Linux candidates and explicit installed centering/projection tests are recorded separately. Windows smoke failed and remains unqualified.",
+  "earlier_local_diagnostics": [
+    "Combined MC pytest invocation encountered equal test_harness module names; separate 13/55-test invocations pass without a source change.",
+    "Mac native attempt 1 stopped before tests because sandbox DNS blocked the hash-verified SPI-header download; approved-network attempt is separate.",
+    "Supply-chain command initially did not find the pinned tools on PATH; explicit already-installed tool paths pass."
+  ],
+  "reused_evidence": "source-evidence-compatibility.json",
+  "supply_chain": "supply-chain.txt: PASS, three lockfiles, 1295-advisory database snapshot, zero vulnerabilities/warnings, four SBOMs and 53 component records. Legacy SPDX spelling mapping retained.",
+  "publication": "LOCAL_ONLY_NO_TAG_OR_RELEASE",
+  "evidence_sha256": {
+    "pytest.log": "efd04844d5bea5a401377b71871a5a23d64ae07aacf0a3337ab8f8a496ec4e20",
+    "cmg-assembly.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "run-checks.log": "44fa2e0eef997a87026162868976ffb0c6ae95a16e6b14de1ac729751fd804ca",
+    "mc-baseline-tests.log": "2a90d6320f5e5f95c7802671d4db2609c26fc7e489c78e76f20f334d9b4ee1c6",
+    "mc-hetero-tests.log": "2b9ed579b0a505e9db733dc618b09841f3525abfb5aac8bf430ed33c8c2ed687",
+    "source-evidence-compatibility.json": "364bbe805254c35cf449b617740e1296b800fd958843bb80e97eed7620bd3d4e",
+    "supply-chain.txt": "201b7f24c21392df7b6d391709622dbb6ee74f783b973bc09a7fcfbaa41106cc",
+    "corresponding-source.json": "706854117d48d04226c91824a1cb1d7ab6e08417f70ccb9b04b89421bbac8210"
+  }
+}

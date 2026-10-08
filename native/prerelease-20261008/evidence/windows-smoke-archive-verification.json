@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "included_files": 1425,
+  "source_revision": "dirty-555c857451d0a18686306cc53beeda737fdd2aeba82a3112e410da7348d8ab42",
+  "source_archive_sha256": "ca499341cd78544ad12d83533b152f3511d5d9c84019f553dff45faeedd3040f",
+  "source_archive_bytes": 17471429,
+  "dirty": true
+}

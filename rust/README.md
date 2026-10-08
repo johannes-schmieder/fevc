@@ -29,14 +29,16 @@ mean in its covariance proxy. Corrected projection and centered component
 inference are unsupported. Native Mean projection requires the separate
 additive projection-centering API 1 capability; None projection does not.
 
-The repository Mac arm64, Rosetta x86-64, universal and Linux x86-64 plugins pass
-full platform and explicit Rust centering checks. The Windows centering build
-is included for owner manual testing. Its hosted build passes, but automated
-runtime checks failed; manual qualification is pending. Those previously
-adopted point-centering payloads lack projection-centering API 1. Rebuilt local
-Mac development plugins expose it and pass arm64/Rosetta runtime checks;
-the dirty-tree checkpoint does not qualify a release or other platforms. See
-[the centering contract](../fevc/docs/CENTERING.md) and
+The local Mac arm64, Rosetta x86-64 and universal candidates at clean source
+`24754269` expose both centering APIs and pass full qualification plus
+24 isolated-install capability, point-centering and Mean-projection checks.
+Linux x86-64 also passes full qualification and installed point-centering
+and Mean-projection checks at the same source (SCC job `7962808`).
+Windows runtime qualification remains pending after the latest private smoke
+failure. Its retained manual-test payload has point-centering API 1 but lacks
+projection-centering API 1. The [current candidate record](../native/prerelease-20261008/manifest.json)
+binds the local evidence; no candidate publication or tag is authorized.
+See [the centering contract](../fevc/docs/CENTERING.md) and
 [the Stata boundary](stata_backend/README.md) for lifecycle and restrictions.
 
 ## Development

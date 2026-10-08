@@ -2,11 +2,10 @@
 
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
 for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
-compiler, Rust installation, or separate plugin download is needed. All five
-plugins have source-bound build evidence. Mac/Linux plugins pass Stata runtime
-checks; the updated Windows plugin is provided for owner manual testing after
-automated runtime failures. Intel Mac execution was tested through Rosetta;
-see [native provenance](native/README.md).
+compiler, Rust installation, or separate plugin download is needed. Native
+qualification is specific to the exact artifact and platform. Intel Mac
+execution uses Rosetta; Windows runtime qualification remains pending.
+See [native provenance](native/README.md).
 
 ## Installation
 
@@ -26,6 +25,8 @@ github install johannes-schmieder/fevc
 Both routes install the same runtime, help, licenses, and five plugin files
 (macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
 appropriate native backend. `main` is the development and installation branch.
+These URLs serve the published package; the October 8 local prerelease
+candidate has not been published.
 
 After installation:
 
@@ -38,7 +39,7 @@ The example uses simulated data and restores your data afterward. Restart
 Stata after updating a loaded native plugin. This is a prerelease package;
 see [inference support and limitations](fevc/docs/INFERENCE.md).
 
-## Windows installation check
+## Existing Windows manual-test payload
 
 Install with either command above, then restart Stata and run:
 
@@ -54,15 +55,21 @@ matrix list e(mcse)
 estat diagnostics
 ```
 
-The [Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/37571812326)
-provides a standalone ZIP with a local installer, test do-file, and build
-receipt. It uses the same Windows binary as the repository installer and is
-available as a GitHub Actions artifact for 14 days. The hosted build and binary
-audit pass, but two automated private runtime attempts failed. The owner
-requested this exact binary for manual testing; runtime qualification remains
-pending. The [manual-test adoption record](native/centering-windows-manual-20261007.json)
+The [October 7 Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/37571812326)
+produced a standalone ZIP with a local installer, test do-file and build
+receipt. It supplied the Windows binary retained in the repository installer.
+Its hosted build and binary audit pass; automated private runtime checks fail.
+The owner requested this exact binary for manual testing. The
+[manual-test adoption record](native/centering-windows-manual-20261007.json)
 binds its source and hash; earlier passing Windows records apply to earlier
-binary bytes.
+bytes.
+
+The October 8 bounded smoke `win-20261008T153726Z-59a2355d` also returned
+`STATA_DRIVER_FAILED`. The accepted collector supplies only an aggregate
+receipt, so the failing assertion is unknown. A reviewed proposal to collect
+bounded failure diagnostics and validated candidate artifacts awaits owner
+approval; it has not been deployed. Current Windows qualification remains
+pending. See the [current candidate record](native/prerelease-20261008/manifest.json).
 
 ## Local source installation
 
@@ -85,12 +92,14 @@ The current repository source implements `centering(none|mean|corrected)` in
 Mata and matching Rust builds. Omitted `centering()` selects `mean` for both
 exact and JLA. Use explicit `centering(none)` to reproduce the former default
 or request supported component inference. Projection supports Mean and None;
-Corrected remains unsupported. This repository contains qualified Mac
-arm64, Rosetta x86-64, universal and Linux x86-64 centering plugins. The
-Windows plugin now includes centering API 1 and is shipped for owner manual
-testing. Its hosted build passes, but automated runtime checks failed; manual
-qualification is pending. See the [adoption record](native/centering-windows-manual-20261007.json)
-and preserved [attempt record](native/centering-20261007/manifest.json).
+Corrected remains unsupported. The local Mac candidates at source `24754269`
+pass clean build/runtime qualification and 24 isolated-install capability,
+point-centering and Mean-projection checks. Linux x86-64 also passes full
+qualification, installed point centering and
+Mean projection at the same source (SCC job `7962808`). The existing Windows
+manual-test payload has centering API 1;
+its runtime qualification is pending and it lacks projection-centering API 1.
+See the [current candidate record](native/prerelease-20261008/manifest.json).
 
 A current source installation can use `backend(mata)` on every platform.
 For Rust, update to the matching repository plugin, restart Stata,
@@ -107,18 +116,16 @@ A missing or zero `r(centering_api)` means the plugin does not support active
 centering. Numerical API 2 for all-probe MCSE is independent of centering
 API 1: a plugin supporting MCSE can still lack centering. Mean projection
 requires the separate additive `r(projection_centering_api) == 1` capability.
-The previously adopted point-centering payloads lack this new capability.
-Preserved local Mac development candidates expose it and pass arm64/Rosetta runtime
-and isolated-install checks. This is a dirty-tree development checkpoint,
-not clean-source release qualification; other platforms were not requalified.
-Use current source with `backend(mata)` or a matching native build and inspect
-the probe result. None projection retains its existing capability contract.
+The local Mac candidates expose this capability. Earlier point-centering
+payloads, including the retained Windows manual-test binary, lack it.
+Use current source with `backend(mata)` or a matching qualified native build
+and inspect the probe result. None projection retains its existing capability contract.
 `backend(auto)` may use Mata before preparation/RNG if the centering
 capability is absent, subject to strict native-consent rules.
 `backend(rust)` or explicit `rng(counter_v1)` requires the matching build.
 
-The [centering adoption record](native/centering-20261006/manifest.json) binds
-the four updated plugins to full platform and explicit Rust centering
+The historical [centering adoption record](native/centering-20261006/manifest.json) binds
+the four October 6 plugins to full platform and explicit Rust centering
 checks. The owner authorized source publication on October 7. The Windows hosted
 build passes; the owner subsequently authorized its adoption for manual
 testing while runtime qualification remains pending.

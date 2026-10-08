@@ -36,6 +36,8 @@ The source-informed API-6 qualification remains recorded verbatim in
 numerical qualification. Current ownership and release status are in
 `STATUS.md`; mathematical, API, and provenance boundaries are in `docs/`.
 
-Public distribution remains disabled until the documented human
-license/provenance review of the exact package and corresponding-source
-boundary is complete.
+The human package-boundary, corresponding-source, notice, provenance, and
+data-exclusion review was completed on August 29, 2026; see
+[the code license](../../CODE_LICENSE.md). CMG ships only within FEVC.
+A FEVC release still requires a fresh review of the exact distribution and its
+corresponding source and notices, plus the owner's release decision.
