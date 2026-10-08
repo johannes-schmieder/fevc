@@ -1,0 +1,19 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -N fevc_hetero_mc
+#$ -l mem_per_core=3G
+#$ -j y
+#$ -m n
+set -euo pipefail
+run_dir=${1:?run directory required}
+profile=${2:?profile required}
+module purge
+module load python3/3.12.4
+module load stata-mp/19
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export STATATMP="$TMPDIR/centering-hetero"
+mkdir -p "$STATATMP"
+python3 "$run_dir/harness/run.py" "$run_dir" --profile "$profile" \
+    --stata "$SCC_STATA_MP_BIN/stata-mp" --workers "$NSLOTS"

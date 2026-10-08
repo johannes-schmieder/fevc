@@ -10,6 +10,12 @@ They are not installed by `net install` and are not needed to use `fevc`.
 - `five_way_scaling/`: the owner's multi-implementation scaling work.
 - `projection_scaling/` and `projection_akm_scaling/`: projection workloads.
 - `oracle/`: independent small-design reference calculations.
+- [Centering Monte Carlo](centering_mc_20261007/README.md): exact/JLA and
+  numerical MCSE on a fixed homoskedastic AKM design.
+- [Heteroskedastic centering Monte Carlo](centering_hetero_mc_20261007/README.md):
+  matched variance profiles, exact Gaussian oracles, and paired centering tests.
+  Its [academic PDF presentation](centering_hetero_mc_20261007/REPORT_PRESENTATION.md)
+  highlights paired Mean-minus-Corrected differences and numerical MCSE calibration.
 - `scc/`: private cluster launchers, collectors, and validators.
 
 Other subdirectories retain source and fixtures used by focused regression
