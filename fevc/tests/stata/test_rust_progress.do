@@ -212,7 +212,7 @@ foreach deletion in observation match {
     if "`deletion'"=="match" local nuisance nuisance(fixedoffset)
     local common worker(worker) firm(firm) deletion(`deletion') `nuisance' rng(counter_v1) ///
         stayers(movers) backend(rust) algorithm(jla) engine(generic) preconditioner(diagonal) ///
-        probes(200) targetweight(target) inference(highrank) inferencemodel(structured_common) ///
+        probes(200) targetweight(target) centering(none) inference(highrank) inferencemodel(structured_common) ///
         inferencesimulations(129) inferencegramprobes(513)
     quietly fevc y x, `common' nolog
     matrix reference = e(kss)

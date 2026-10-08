@@ -3,11 +3,15 @@
 Current applicability: `mcse(all)` is now the public default, as recorded
 in the September 30 interface/evidence documents. The historical derivation
 and work packages below describe the ordinary all-probe calculation.
-Under `centering(mean)` that calculation holds the observed mean fixed.
+Under the default `centering(mean)` that calculation holds the observed mean
+fixed.
 Under `centering(corrected)` it returns exactly Mean's covariance and also
 holds the added centering increment fixed; it does not estimate the
 increment's uncertainty. See [CENTERING.md](CENTERING.md) for the current
 scope and [FAILURES_AND_RETURNS.md](FAILURES_AND_RETURNS.md) for returns.
+With Mean projection, this diagnostic still covers only the four main point
+estimates, not projection coefficients or their covariance. Component inference
+continues to require explicit None.
 
 Issue [#7](https://github.com/johannes-schmieder/fevc/issues/7), revision
 September 29, 2026, is the prospective contract below. Review anchor and

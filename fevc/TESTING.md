@@ -133,7 +133,15 @@ The small implementation is covered by `test_centering_mean.do` (fixed-mean
 point/MCSE/covariance oracle), `test_centering_exact.do` (independent dense
 estimated-mean oracle), `test_centering_jla.do` (Corrected/Mean MCSE
 agreement), `test_centering_jla_map.do` (independent three-pool map) and
-`test_centering_options.do` (modes, restrictions, RNG/caller-state guards).
+`test_centering_options.do` (default Mean equivalence for point/MCSE/covariance
+and sample, explicit modes, restrictions, RNG/caller-state guards).
+`test_projection_mean.do` independently refits deleted samples in 48 exact
+projection cells, covering controls, both deletion/population modes, both
+effect dimensions, frequency/target projection weights, Mean/None, shifts
+and literal-copy expansion. `test_projection_mean_native.do` checks the
+explicit JLA projection attachment with the new native capability, including
+diagonal/CMG agreement and the same mean convention. Mean remains unsupported
+for component inference; Corrected remains unsupported for projection.
 The map oracle is Mata-specific; the other files accept package root and
 backend arguments. They are part of the ordinary Stata runner.
 

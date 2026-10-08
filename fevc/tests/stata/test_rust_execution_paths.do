@@ -159,7 +159,7 @@ generate double y = -4+.08*worker-.12*firm+.3*x+.25*sin((_n*17)/11)+.15*cos((_n*
 foreach solver in diagonal cmg {
     quietly fevc y x, worker(worker) firm(firm) deletion(observation) stayers(movers) ///
         algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-        probes(200) tolerance(1e-12) project(z) projecteffect(firm) nodisplay
+        probes(200) tolerance(1e-12) centering(none) project(z) projecteffect(firm) nodisplay
     assert e(rust_execution_receipt)[1,"projection"]==2
     assert e(rust_execution_receipt)[1,"logical"]==604
     if "`solver'"=="diagonal" {
@@ -193,7 +193,7 @@ foreach deletion in observation match {
         display "INFERENCE_ATTEMPT deletion=`deletion' solver=`solver' batch=auto heterogeneous_target=1"
         noisily fevc y x, worker(worker) firm(firm) stayers(movers) `options' ///
             algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-            probes(200) targetweight(target) inference(highrank) inferencemodel(structured_common) ///
+            probes(200) targetweight(target) centering(none) inference(highrank) inferencemodel(structured_common) ///
             inferencesimulations(129) inferencegramprobes(513) nodisplay
         matrix work = e(rust_execution_receipt)
         matrix inference_batch = e(rust_component_batch_receipt)

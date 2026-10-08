@@ -26,7 +26,7 @@ foreach backend in rust {
     foreach solver of local solvers {
         local common worker(worker) firm(firm) deletion(observation) stayers(movers) ///
             algorithm(jla) backend(`backend') rng(counter_v1) engine(generic) preconditioner(`solver') ///
-            probes(200) tolerance(1e-12) project(z) projecteffect(firm) nodisplay
+            probes(200) tolerance(1e-12) centering(none) project(z) projecteffect(firm) nodisplay
         quietly fevc y x, `common' mcse(off)
         matrix point=e(kss)
         matrix projected=e(projection_b)
@@ -62,7 +62,7 @@ foreach deletion in observation match {
         foreach reference in highrank q1 {
             local common worker(worker) firm(firm) stayers(movers) `options' ///
                 algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-                probes(200) targetweight(target) inference(`reference') inferencemodel(structured_common) ///
+                probes(200) targetweight(target) centering(none) inference(`reference') inferencemodel(structured_common) ///
                 inferencesimulations(129) inferencegramprobes(513) nodisplay
             quietly fevc y x, `common' mcse(off)
             matrix point=e(kss)

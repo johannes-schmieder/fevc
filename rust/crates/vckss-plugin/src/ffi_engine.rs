@@ -2373,6 +2373,28 @@ pub extern "C" fn vckss_rust_centering_schema_v1() -> u32 {
     1
 }
 
+/// Additive capability for Mean-centered projection covariance.
+#[no_mangle]
+pub extern "C" fn vckss_rust_projection_centering_schema_v1() -> u32 {
+    1
+}
+
+fn validate_attachment_centering(
+    mode: vckss_core::types::Centering,
+    projection: bool,
+    component: bool,
+) -> Result<()> {
+    use vckss_core::types::Centering;
+    if (component && mode != Centering::None) || (projection && mode == Centering::Corrected) {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "centering",
+            "component inference requires None; projection supports None or Mean centering",
+        ));
+    }
+    Ok(())
+}
+
 /// Configure only a prepared generation, before any estimator randomness.
 #[no_mangle]
 pub extern "C" fn vckss_rust_engine_centering_v1(generation: u64, mode: u32) -> i32 {
@@ -2387,15 +2409,11 @@ pub extern "C" fn vckss_rust_engine_centering_v1(generation: u64, mode: u32) -> 
         state
             .registry
             .augment_prepared(ContextHandle::from_generation(generation)?, |prepared| {
-                if mode != vckss_core::types::Centering::None
-                    && (prepared.projection.is_some() || prepared.component_inference.is_some())
-                {
-                    return Err(BackendError::new(
-                        ErrorCode::UnsupportedFeature,
-                        "centering",
-                        "active centering with inference is unsupported",
-                    ));
-                }
+                validate_attachment_centering(
+                    mode,
+                    prepared.projection.is_some(),
+                    prepared.component_inference.is_some(),
+                )?;
                 prepared.centering = mode;
                 Ok(())
             })
@@ -4687,15 +4705,11 @@ fn solve_engine_v4_with_numerical_attachment(
     let operation = move |prepared: &PreparedProblemWithMask,
                           interrupt: &mut dyn InterruptCheck|
           -> Result<EngineSolved> {
-        if prepared.centering != vckss_core::types::Centering::None
-            && (prepared.projection.is_some() || prepared.component_inference.is_some())
-        {
-            return Err(BackendError::new(
-                ErrorCode::UnsupportedFeature,
-                "centering",
-                "active centering with inference is unsupported",
-            ));
-        }
+        validate_attachment_centering(
+            prepared.centering,
+            prepared.projection.is_some(),
+            prepared.component_inference.is_some(),
+        )?;
         vckss_core::progress::report(
             vckss_core::progress::MEMORY_FLOOR,
             [

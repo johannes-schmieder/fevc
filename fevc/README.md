@@ -57,8 +57,8 @@ the chosen [centering convention](docs/CENTERING.md). Mean holds the observed
 mean fixed; Corrected also holds its added increment fixed. Use `mcse(off)`
 to skip the diagnostic's extra work and display. This diagnostic excludes
 finite-probe bias and sampling uncertainty; it is not an econometric standard
-error. With `centering(none)`, it can accompany supported projection or
-sampling-inference requests, but those additional results receive no MCSE.
+error. It can accompany supported projection or sampling-inference requests,
+but those additional results receive no MCSE.
 Exact MCSE is zero when enabled; `mcse(off)` returns missing diagnostics,
 including in exact mode.
 
@@ -96,15 +96,19 @@ Mata retains its current output.
 
 ## Outcome centering
 
-Choose explicitly; the default remains `centering(none)`.
+The default is `centering(mean)` for both exact and JLA. Use
+`centering(none)` to reproduce the former default, or choose
+`centering(corrected)` for the estimated-mean adjustment.
 
 | Option | Point estimate | MCSE convention |
 | --- | --- | --- |
 | `centering(none)` | Ordinary leave-out correction. | Ordinary numerical calculation. |
-| `centering(mean)` | Subtract the retained working-outcome mean only in the bias correction. | Treat that observed mean as fixed. |
+| `centering(mean)` (default) | Subtract the retained working-outcome mean only in the bias correction. | Treat that observed mean as fixed. |
 | `centering(corrected)` | Mean plus an adjustment for estimating the mean. | Treat both mean and additional increment as fixed. |
 
-The mean uses frequency weights, not `targetweight()`. With
+The mean is `sum(f_i*u_i)/sum(f_i)` over the retained working outcome, as in
+Stata's `summarize u if e(sample) [fw=f]`. Neither `targetweight()` nor
+`projectweight()` redefines it. With
 `nuisance(fixedoffset)`, subtract the fitted controls before taking the mean.
 The fit, plug-in components and retained sample are unchanged. Mean adds no
 solves or probes. Corrected exact adds one shared correction system;
@@ -122,12 +126,19 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
 ```
 
 Corrected JLA returns exactly Mean's MCSE/covariance for the same call,
-excluding numerical uncertainty in the extra increment. Active centering
-cannot accompany `inference()` or `project()`. Both modes work in Mata
+excluding numerical uncertainty in the extra increment. Projection supports
+Mean (the default) and None, using the same retained frequency-weighted
+working-outcome mean. Neither target nor projection weights redefine it.
+Corrected projection is unsupported; component `inference()` requires explicit
+`centering(none)`. Point centering works in Mata
 and a matching native build. The repository Mac and Linux plugins expose
 centering API 1. The Windows centering plugin is now included for owner manual
 testing; its build passes, but automated runtime checks failed and manual
-qualification is pending.
+qualification is pending. Mean projection additionally requires native
+projection-centering API 1. Previously adopted point-centering payloads lack
+it; preserved local Mac development candidates expose it and pass arm64/Rosetta
+runtime checks. Those local checks do not qualify a release or other platforms.
+Use current Mata source or a matching native build for that request.
 Automatic routing may use Mata when the capability is absent, while strict
 Rust/Counter-V1 requires the matching plugin. See [the centering guide](docs/CENTERING.md)
 for restrictions, stored assumptions, formulas and measured local costs.
@@ -146,8 +157,10 @@ and applicable diagnostics. Estimates and supporting results are also stored
 in `e()`; see `help fevc` for their names.
 
 Component inference and fixed-effect projection inference require explicit
-options and have different assumptions and supported combinations. Structured
-component inference imposes variance-model assumptions. Fixed-offset match
+options and have different assumptions and supported combinations. Component
+inference also requires `centering(none)`; projection accepts Mean and None.
+Structured component inference imposes variance-model
+assumptions. Fixed-offset match
 inference omits nuisance-control estimation uncertainty, and observation-q1
 calibration retains a documented limitation. Read the
 [inference guide](docs/INFERENCE.md) before requesting intervals or standard errors.

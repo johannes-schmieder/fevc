@@ -82,7 +82,10 @@ restart Stata or run `discard` to clear cached programs and Mata definitions.
 ## Outcome centering capability
 
 The current repository source implements `centering(none|mean|corrected)` in
-Mata and matching Rust builds. This repository contains qualified Mac
+Mata and matching Rust builds. Omitted `centering()` selects `mean` for both
+exact and JLA. Use explicit `centering(none)` to reproduce the former default
+or request supported component inference. Projection supports Mean and None;
+Corrected remains unsupported. This repository contains qualified Mac
 arm64, Rosetta x86-64, universal and Linux x86-64 centering plugins. The
 Windows plugin now includes centering API 1 and is shipped for owner manual
 testing. Its hosted build passes, but automated runtime checks failed; manual
@@ -97,11 +100,19 @@ and inspect its capability:
 fevc_rust probe
 return list
 * Active native centering requires r(centering_api) == 1
+* Mean projection also requires r(projection_centering_api) == 1
 ```
 
 A missing or zero `r(centering_api)` means the plugin does not support active
 centering. Numerical API 2 for all-probe MCSE is independent of centering
-API 1: a plugin supporting MCSE can still lack centering.
+API 1: a plugin supporting MCSE can still lack centering. Mean projection
+requires the separate additive `r(projection_centering_api) == 1` capability.
+The previously adopted point-centering payloads lack this new capability.
+Preserved local Mac development candidates expose it and pass arm64/Rosetta runtime
+and isolated-install checks. This is a dirty-tree development checkpoint,
+not clean-source release qualification; other platforms were not requalified.
+Use current source with `backend(mata)` or a matching native build and inspect
+the probe result. None projection retains its existing capability contract.
 `backend(auto)` may use Mata before preparation/RNG if the centering
 capability is absent, subject to strict native-consent rules.
 `backend(rust)` or explicit `rng(counter_v1)` requires the matching build.

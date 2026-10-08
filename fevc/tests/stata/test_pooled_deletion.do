@@ -19,13 +19,13 @@ egen long match=group(worker actualfirm)
 gen double y=.2*worker-.15*firm+sin(_n)/10
 gen double target=1/6
 replace target=1/4 if worker==99
-fevc y, worker(worker) firm(firm) deletion(match) deletionid(match) ///
+fevc y, centering(none) worker(worker) firm(firm) deletion(match) deletionid(match) ///
     stayers(movers) nuisance(joint) targetweight(target) algorithm(exact) ///
     backend(mata) rng(stata) nodisplay
 gen byte km=e(sample)
 assert km==1 if worker==99
 assert km==1 if worker!=99
-fevc y, worker(worker) firm(firm) deletion(match) deletionid(match) ///
+fevc y, centering(none) worker(worker) firm(firm) deletion(match) deletionid(match) ///
     stayers(both) nuisance(joint) targetweight(target) algorithm(exact) ///
     backend(mata) rng(stata) nodisplay
 assert e(sample)==1
@@ -168,7 +168,7 @@ quietly datasignature
 local signature `"`r(datasignature)'"'
 foreach nuisance in joint fixedoffset {
     foreach population in movers both {
-        quietly fevc y x [fw=frequency], worker(worker) firm(firm) ///
+        quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
             deletionid(match) targetweight(target) stayers(`population') ///
             nuisance(`nuisance') algorithm(exact) backend(mata) nodisplay
         display "POOLED_CASE `nuisance' `population' N=" e(N_retained) " stayers=" e(N_stayers) " blocks=" e(deletion_units)
@@ -194,7 +194,7 @@ foreach nuisance in joint fixedoffset {
         assert rowid==_n
         assert `"`c(rngstate)'"'==`"`state'"'
         assert `"`c(sortrngstate)'"'==`"`sortstate'"'
-        quietly fevc y x [fw=frequency], worker(worker) firm(firm) ///
+        quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
             deletionid(match) targetweight(target) stayers(`population') ///
             nuisance(`nuisance') algorithm(jla) engine(generic) ///
             probes(4096) seed(9252026) backend(mata) nodisplay
@@ -251,7 +251,7 @@ if `native_units' {
             mata: st_matrix("literal",pooled_oracle("x","`nuisance'","wanted_`population'","match","true_stayer"))
             quietly set sortrngstate `sortstate'
             foreach backend in rust auto {
-                quietly fevc y x [fw=frequency], worker(worker) firm(firm) ///
+                quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
                     deletionid(match) targetweight(target) stayers(`population') ///
                     nuisance(`nuisance') algorithm(exact) backend(`backend') nodisplay
                 assert "`e(backend_selected)'"=="rust"
@@ -263,7 +263,7 @@ if `native_units' {
             local solvers diagonal
             if "`c(os)'"!="Windows" local solvers diagonal cmg
             foreach solver of local solvers {
-                quietly fevc y x [fw=frequency], worker(worker) firm(firm) ///
+                quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
                     deletionid(match) targetweight(target) stayers(`population') ///
                     nuisance(`nuisance') algorithm(jla) engine(generic) ///
                     probes(4096) seed(9252026) backend(rust) rng(counter_v1) ///
@@ -307,7 +307,7 @@ if !`native_units' & `native_present' {
     capture noisily fevc y, worker(worker) firm(firm) deletionid(match) ///
         deletion(match) stayers(movers) nuisance(fixedoffset) algorithm(jla) engine(generic) ///
         backend(rust) rng(counter_v1) preconditioner(diagonal) ///
-        inference(highrank) inferencemodel(structured_common) nodisplay
+        centering(none) inference(highrank) inferencemodel(structured_common) nodisplay
     assert _rc==498
     assert "`e(withholding_status)'"=="RUST_PARALLEL_DELETION_UNSUPPORTED"
 }
@@ -375,7 +375,7 @@ foreach population in movers both {
     mata: st_matrix("literal",pooled_oracle("x","joint","wanted_`population'","match","true_stayer"))
     capture noisily fevc y x [fw=frequency], worker(worker) firm(firm) ///
         deletionid(match) targetweight(target) stayers(`population') algorithm(exact) ///
-        project(x) projecteffect(worker) projectweight(target) backend(mata) nodisplay
+        centering(none) project(x) projecteffect(worker) projectweight(target) backend(mata) nodisplay
     local projection_rc=_rc
     if scalar(projection_psd) {
         assert `projection_rc'==0
@@ -416,7 +416,7 @@ mata: st_matrix("literal",pooled_oracle("","joint","selected","match",""))
 assert scalar(projection_psd)==1
 quietly fevc y, worker(worker) firm(firm) deletionid(match) stayers(movers) ///
     targetweight(target) algorithm(exact) backend(mata) ///
-    project(x) projecteffect(worker) projectweight(target) nodisplay
+    centering(none) project(x) projecteffect(worker) projectweight(target) nodisplay
 assert e(sample)==1
 assert e(deletion_units)==240
 assert mreldif(e(projection_b),literal_projection_b)<1e-8
@@ -425,7 +425,7 @@ if `native_units' {
     quietly fevc y, worker(worker) firm(firm) deletionid(match) stayers(movers) ///
         targetweight(target) algorithm(jla) engine(generic) backend(rust) ///
         rng(counter_v1) preconditioner(diagonal) probes(8192) seed(9252026) ///
-        tolerance(1e-12) project(x) projecteffect(worker) projectweight(target) nodisplay
+        tolerance(1e-12) centering(none) project(x) projecteffect(worker) projectweight(target) nodisplay
     assert e(sample)==1
     assert e(deletion_units)==240
     assert mreldif(e(projection_b),literal_projection_b)<1e-8
@@ -465,7 +465,7 @@ if "`profile'"=="full" {
         quietly by match: replace blockshock=blockshock[1]
         quietly replace eps=.8*blockshock+.6*rnormal()
         quietly replace y=mean_y+eps
-        capture quietly fevc y x [fw=frequency], worker(worker) firm(firm) ///
+        capture quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
             deletionid(match) targetweight(target) stayers(movers) ///
             nuisance(joint) algorithm(exact) backend(mata) nodisplay
         local fit_rc=_rc

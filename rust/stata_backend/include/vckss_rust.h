@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 uint32_t vckss_rust_centering_schema_v1(void);
+uint32_t vckss_rust_projection_centering_schema_v1(void);
 int32_t vckss_rust_engine_centering_v1(uint64_t generation, uint32_t mode);
 
 #define VCKSS_RUST_ABI_VERSION_V1 1u

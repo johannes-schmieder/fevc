@@ -24,11 +24,18 @@ exact shares one coefficient-space system; Corrected JLA uses the existing
 full/two-half leverage pools. Its numerical covariance is Mean's with the
 increment fixed. Centering API 1 configures a prepared generation before
 solve independently of numerical API 2 and without changing old ABI layouts.
+Mean projection uses the same retained frequency-weighted working-outcome
+mean in its covariance proxy. Corrected projection and centered component
+inference are unsupported. Native Mean projection requires the separate
+additive projection-centering API 1 capability; None projection does not.
 
 The repository Mac arm64, Rosetta x86-64, universal and Linux x86-64 plugins pass
 full platform and explicit Rust centering checks. The Windows centering build
 is included for owner manual testing. Its hosted build passes, but automated
-runtime checks failed; manual qualification is pending. See
+runtime checks failed; manual qualification is pending. Those previously
+adopted point-centering payloads lack projection-centering API 1. Rebuilt local
+Mac development plugins expose it and pass arm64/Rosetta runtime checks;
+the dirty-tree checkpoint does not qualify a release or other platforms. See
 [the centering contract](../fevc/docs/CENTERING.md) and
 [the Stata boundary](stata_backend/README.md) for lifecycle and restrictions.
 

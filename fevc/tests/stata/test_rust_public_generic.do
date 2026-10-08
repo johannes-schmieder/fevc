@@ -31,7 +31,7 @@ local caller_sortedby : sortedby
 quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1)        ///
@@ -130,7 +130,7 @@ matrix `public_reference' = e(results)
 // Frozen native point transport retains its conditional developer row.
 matrix `private_expected' = `public_reference'
 matrix `private_expected'[4,1] = e(mcse_conditional)
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1)        ///
@@ -140,14 +140,14 @@ assert mreldif(`public_reference',`repeat_reference') == 0
 
 // Match IDs only label deletion blocks: the implicit cell partition and a
 // strictly increasing relabel preserve the same canonical block ordering.
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) nuisance(joint) algorithm(jla) backend(rust)        ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2)   ///
     probes(7) seed(81227) tolerance(1e-12) memory_gib(1)                ///
     targetweight(target_weight) stayers(movers) nodisplay
 assert mreldif(e(results),`public_reference') == 0
 generate double deletion_relabel = 1000000+17*deletion_id
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_relabel) nuisance(joint)       ///
     algorithm(jla) backend(rust) rng(counter_v1) engine(generic)       ///
     preconditioner(diagonal) batch(2) probes(7) seed(81227)            ///
@@ -230,7 +230,7 @@ local planned_state `"`c(rngstate)'"'
 local planned_sortedby : sortedby
 quietly _datasignature
 local planned_signature `"`r(datasignature)'"'
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
@@ -330,7 +330,7 @@ capture noisily _fevc_rust_generic_planned outcome worker firm deletion_id ///
     `auto_algorithm_ncomplete' 0 0 7 2 81227 1e-12 10000 1 auto generic  ///
     1 1 1 1 1 1 1 0 `auto_algorithm_core' `auto_algorithm_support'       ///
     "nodisplay" match joint 2 1e-10 1e-10 5000 50000000 control 1 1    ///
-    "fevc outcome control [fw=frequency], backend(rust) algorithm(auto) engine(generic)" ///
+    "fevc outcome control [fw=frequency], centering(none) backend(rust) algorithm(auto) engine(generic)" ///
     auto auto 1 60
 local auto_algorithm_rc = _rc
 if `auto_algorithm_rc' != 0 {
@@ -393,7 +393,7 @@ assert `"`r(datasignature)'"' == `"`auto_algorithm_signature'"'
 
 // The public router admits the same deferred algorithm/route tuple and must
 // expose the resolved queue receipt without changing its numerical result.
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(auto) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(auto) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
@@ -426,7 +426,7 @@ local forced_diagonal_state `"`c(rngstate)'"'
 local forced_diagonal_sortedby : sortedby
 quietly _datasignature
 local forced_diagonal_signature `"`r(datasignature)'"'
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
@@ -486,7 +486,7 @@ local engine_auto_state `"`c(rngstate)'"'
 local engine_auto_sortedby : sortedby
 quietly _datasignature
 local engine_auto_signature `"`r(datasignature)'"'
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
@@ -545,7 +545,7 @@ local forced_cmg_state `"`c(rngstate)'"'
 local forced_cmg_sortedby : sortedby
 quietly _datasignature
 local forced_cmg_signature `"`r(datasignature)'"'
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(cmg) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
@@ -1211,7 +1211,7 @@ assert _rc == 459 & `"`e(withholding_status)'"' == "MATCH_INPUT_MISSING"
 // Canonical row order makes storage permutation irrelevant.
 generate long original_order = _n
 gsort -cell -replicate
-quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome control [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///

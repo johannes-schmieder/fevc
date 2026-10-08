@@ -1,0 +1,106 @@
+version 18.0
+clear all
+set more off
+set processors 2
+set varabbrev off
+assert c(stata_version) == 19
+assert c(MP) == 1
+assert `"`c(os)'"' == "Windows"
+local rc_root `"`c(pwd)'"'
+capture confirm file "windows-ci.status"
+assert _rc == 601
+
+tempname rc_stage
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "build" _n
+file close `rc_stage'
+
+// The guarded controller owns the one licensed Stata process. Build tools
+// run as children, but every Stata assertion runs in this process.
+shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "rust/stata_backend/build_windows_ci.ps1"
+confirm file "windows-build.status"
+tempname rc_status
+file open `rc_status' using "windows-build.status", read text
+file read `rc_status' rc_line
+file close `rc_status'
+assert `"`rc_line'"' == "FEVC_WINDOWS_BUILD=PASS"
+file open `rc_status' using "windows-runtime.profile", read text
+file read `rc_status' rc_profile
+file close `rc_status'
+assert inlist(`"`rc_profile'"', "smoke", "full")
+
+// A fresh PLUS install must resolve the same staged plugin and public helpers.
+local rc_plus `"`rc_root'/windows-plus"'
+mkdir `"`rc_plus'"'
+sysdir set PLUS `"`rc_plus'"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "clean_install" _n
+file close `rc_stage'
+quietly net install fevc, from(`"`rc_root'/windows-package"') replace
+confirm file `"`rc_plus'/f/fevc_rust_windows_x64.plugin"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "lifecycle" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_rust_plugin.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "point_mean" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_windows_runtime_smoke.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "projection_mean" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_projection_mean_native.do" `"`rc_plus'/f"'
+if `"`rc_profile'"' == "full" {
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "observation_component" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_rust_component_inference.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "individual_component" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_rust_individual_inference.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "match_component" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_rust_match_component_inference.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "pooled_deletion" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_pooled_deletion.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "mcse_modes" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_mcse_modes.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "mcse_attachments" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_mcse_attachments.do" `"`rc_plus'/f"'
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_mean" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_mean.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_exact" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_exact.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_jla" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_jla.do" `"`rc_plus'/f"' rust
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "centering_options" _n
+file close `rc_stage'
+do "fevc/tests/stata/test_centering_options.do" `"`rc_plus'/f"' rust
+}
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "registry_idle" _n
+file close `rc_stage'
+quietly fevc_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+// Only this terminal script writes the bounded project receipt after assertions.
+file open `rc_stage' using "windows-ci.stage", write text replace
+file write `rc_stage' "project_receipt" _n
+file close `rc_stage'
+shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File "rust/stata_backend/write_windows_checks.ps1"
+confirm file "windows-project-checks.json"
+exit 0

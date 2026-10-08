@@ -18,7 +18,7 @@ forvalues row = 1/24 {
 generate double y = 1.5 + .3*worker - .2*firm + noise
 
 fevc y, worker(worker) firm(firm) deletion(observation) ///
-    inference(highrank) inferencesimulations(100) ///
+    centering(none) inference(highrank) inferencesimulations(100) ///
     inferenceseed(42) inferencebins(16) nodisplay
 matrix posted_b = e(b)
 matrix posted_V = e(V)

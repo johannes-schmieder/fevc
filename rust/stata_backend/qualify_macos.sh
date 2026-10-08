@@ -375,6 +375,8 @@ source_inputs=(
   "${package_dir}/tests/stata/test_centering_jla.do"
   "${package_dir}/tests/stata/test_centering_jla_map.do"
   "${package_dir}/tests/stata/test_centering_options.do"
+  "${package_dir}/tests/stata/test_projection_mean.do"
+  "${package_dir}/tests/stata/test_projection_mean_native.do"
   "${package_dir}/tests/stata/test_memory_policy.do"
   "${package_dir}/tests/stata/test_rust_plugin.do"
   "${package_dir}/tests/stata/test_rust_mata_diagnostic.do"
@@ -829,6 +831,9 @@ run_stata_case arm64 public-exact \
 run_stata_case arm64 public-generic \
   "${package_dir}/tests/stata/test_rust_public_generic.do" \
   'FEVC RUST PUBLIC GENERIC PASS' "${test_package_dir}"
+run_stata_case arm64 public-projection-mean \
+  "${package_dir}/tests/stata/test_projection_mean_native.do" \
+  'PASS test_projection_mean_native.do cells=8' "${test_package_dir}"
 run_stata_case arm64 public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${test_package_dir}"
@@ -907,6 +912,9 @@ run_stata_case arm64 universal-public-exact \
 run_stata_case arm64 universal-public-generic \
   "${package_dir}/tests/stata/test_rust_public_generic.do" \
   'FEVC RUST PUBLIC GENERIC PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-projection-mean \
+  "${package_dir}/tests/stata/test_projection_mean_native.do" \
+  'PASS test_projection_mean_native.do cells=8' "${universal_test_package_dir}"
 run_stata_case arm64 universal-public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
@@ -994,6 +1002,9 @@ run_stata_case x86_64 public-timer-ownership \
   run_stata_case x86_64 public-generic \
     "${package_dir}/tests/stata/test_rust_public_generic.do" \
     'FEVC RUST PUBLIC GENERIC PASS' "${test_package_dir}"
+  run_stata_case x86_64 public-projection-mean \
+    "${package_dir}/tests/stata/test_projection_mean_native.do" \
+    'PASS test_projection_mean_native.do cells=8' "${test_package_dir}"
   run_stata_case x86_64 public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${test_package_dir}"
@@ -1072,6 +1083,9 @@ run_stata_case x86_64 universal-public-timer-ownership \
   run_stata_case x86_64 universal-public-generic \
     "${package_dir}/tests/stata/test_rust_public_generic.do" \
     'FEVC RUST PUBLIC GENERIC PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-projection-mean \
+    "${package_dir}/tests/stata/test_projection_mean_native.do" \
+    'PASS test_projection_mean_native.do cells=8' "${universal_test_package_dir}"
   run_stata_case x86_64 universal-public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"

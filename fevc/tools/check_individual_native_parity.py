@@ -31,7 +31,7 @@ def check(build,plugin,out):
         deletion='deletion(observation)'if family=='observation'else'deletion(match) deletionid(deletion) nuisance(fixedoffset)'
         weights=''if family=='observation'else'[fw=frequency]'
         model=c['variance_model'];reference='q1'if q1 else'highrank'
-        options=f'worker(worker) firm(firm) {deletion} stayers(movers) backend(rust) engine(generic) rng(counter_v1) algorithm(jla) preconditioner(diagonal) batch(16) targetweight(target) inferencemodel({model}) inference({reference})'
+        options=f'worker(worker) firm(firm) {deletion} stayers(movers) backend(rust) engine(generic) rng(counter_v1) algorithm(jla) preconditioner(diagonal) batch(16) targetweight(target) centering(none) inferencemodel({model}) inference({reference})'
         lines=['version 18.0','clear all','set more off','set type double','set processors 1',f'adopath ++ "{ROOT}/fevc"',f'adopath ++ "{plugin}"',
                f'quietly run "{ROOT}/fevc/fevc.ado"',f'import delimited using "{fixture}", clear asdouble',f'quietly fevc outcome {controls} {weights}, {options}',
                'assert e(probes)==200','assert e(inference_simulations)==1000',

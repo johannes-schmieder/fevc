@@ -1,9 +1,12 @@
 # Point-estimator contract
 
-The ordinary formulas below describe the default `centering(none)`.
-The active outcome-centering modes change only the bias-correction outcome
-factor and its estimated-mean adjustment; they retain the model, plug-in
-targets, retained sample, weighting and deletion contract.
+The ordinary formulas below describe explicit `centering(none)`. The
+default for exact and JLA is `centering(mean)`, as specified in the
+[outcome-centering section](#outcome-centering).
+The active outcome-centering modes change the bias-correction outcome factor
+and its estimated-mean adjustment; Mean also changes the requested projection
+covariance proxy. They retain the model, plug-in targets, retained sample,
+weighting and deletion contract.
 
 ## Model, quotient, and target
 
@@ -164,9 +167,11 @@ gates.
 
 ## Outcome centering
 
-`centering(mean)` replaces the working outcome in bias-correction terms by
-`z = u - ubar`. The observed mean is weighted by retained frequency mass,
-independent of `targetweight()`. Here `u=y` for joint nuisance estimation;
+`centering(mean)`, the exact/JLA default, replaces the working outcome in
+bias-correction terms by `z = u - ubar`. The observed mean is weighted by retained frequency mass,
+independent of `targetweight()` and `projectweight()`. It is
+`ubar = sum(f_i*u_i)/sum(f_i)`, calculated before match collapse or scaling,
+as in Stata's frequency-weighted observation mean. Here `u=y` for joint nuisance estimation;
 fixedoffset first forms `u=y-Z gammahat`. The original fit and residuals,
 plug-in targets, sample and deletion units are retained.
 
@@ -179,9 +184,11 @@ block-local correction-system right-hand side.
 
 Mean's numerical MCSE treats the observed mean as fixed. Corrected uses
 exactly Mean's numerical MCSE/covariance, also treating its added increment
-as fixed. Enabled exact MCSE is zero; off is unavailable. Neither mode
-supports active `inference()` or `project()`. None retains the inference
-and projection support described below.
+as fixed. Enabled exact MCSE is zero; off is unavailable. Projection accepts
+Mean and None, using the same mean in its symmetrized block covariance proxy;
+projection coefficients and naive covariance are unchanged. Corrected
+projection is unsupported. Component `inference()` requires explicit
+`centering(none)`, including when combined with projection.
 
 ## Sample and dependence contract
 
@@ -266,8 +273,8 @@ selection is explicit in `e(stayers)` and `e(stayer_option_schema)`.
 
 ## Scope of the result
 
-These formulas define the ordinary point estimates and remain the default
-command contract. The inference and projection routes in this section require
+These formulas define the ordinary point estimates; the Mean default modifies
+the correction as specified above. Component inference requires
 `centering(none)`. Component `inference(highrank|q1)` defaults to the observation-only
 exact Mata target-specific variance approximation; supported
 explicit `inferencemodel(structured_common|structured_leverage)` attaches
@@ -281,7 +288,10 @@ Fixed-effect `project()` instead inherits the point estimator's effective
 deletion and population contract: omitted `deletion()` means declared mover
 matches plus eligible-stayer observation units. Its block cross-fit covariance
 permits unrestricted covariance within each mover match and independence
-across deletion units. Point-only calls still post no `e(V)`, and JLA probe
+across deletion units. Mean projection subtracts the retained frequency-weighted
+working-outcome mean in that proxy. Unlike None, this estimated-mean proxy
+need not be exactly unbiased under heteroskedasticity. Point-only calls still
+post no `e(V)`, and JLA probe
 dispersion remains numerical error rather than a sampling standard error. See
 [`INFERENCE.md`](INFERENCE.md) for the derivation and normalization contract.
 

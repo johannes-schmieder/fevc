@@ -6,14 +6,20 @@ program define fevc__centering, eclass
     if "`action'"=="request" {
         args centering inference project
     local centering = lower(strtrim("`centering'"))
-    if "`centering'"=="" local centering none
+    if "`centering'"=="" local centering mean
     if !inlist("`centering'","none","mean","corrected") {
         global VCKSS_CENTER_ERROR "INVALID_CENTERING"
         exit 198
     }
     global VCKSS_CENTERING `centering'
-    if "`centering'"!="none" & (!inlist(lower(strtrim("`inference'")),"","none") | "`project'"!="") {
+    if "`centering'"!="none" & !inlist(lower(strtrim("`inference'")),"","none") {
         global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
+        di as error "inference() requires centering(none)"
+        exit 498
+    }
+    if "`centering'"=="corrected" & "`project'"!="" {
+        global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
+        di as error "project() supports centering(none) or centering(mean)"
         exit 498
     }
         exit

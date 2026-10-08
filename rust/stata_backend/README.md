@@ -52,9 +52,11 @@ int32_t vckss_rust_engine_centering_v1(uint64_t generation, uint32_t mode);
 ```
 
 The schema function returns 1. Modes are 0=None, 1=Mean and 2=Corrected.
-A newly prepared generation defaults to None. Configuration is tied to that
-generation, occurs before solve/RNG, rejects conflicts with active attachments,
-and is rechecked during V4 solve. Stale generations and invalid configurations
+A newly prepared internal generation defaults to None; the public `fevc`
+frontend explicitly configures Mean when `centering()` is omitted.
+Configuration is tied to that
+generation, occurs before solve/RNG, rejects conflicts with unsupported
+attachments, and is rechecked during V4 solve. Stale generations and invalid configurations
 fail through the existing typed-error path.
 
 The shim exposes `centeringv1 generation mode` for the internal wrapper and
@@ -69,7 +71,11 @@ Exact, generic/compressed JLA and existing hybrid point executors receive
 the configured mode. Corrected JLA requires even probes of at least four
 and uses the existing full/two-half leverage pools. Mean MCSE fixes the
 observed mean; Corrected fixes the added increment too and returns Mean's
-MCSE/covariance. Active inference/projection is rejected by the frontend.
+MCSE/covariance. Mean projection is supported; Corrected projection and
+centered component inference are rejected by the frontend and native boundary.
+Projection uses the same frequency-weighted retained working-outcome mean as
+point centering. Only the outcome factor in covariance contractions changes;
+projection coefficients and residual-squared naive covariance are unchanged.
 
 Numerical API 2 and centering API 1 are separate capabilities. The four repository
 Mac/Linux plugins pass full platform and explicit centering checks. Windows
@@ -77,6 +83,25 @@ now ships centering API 1 for owner manual testing. The hosted build passes,
 but automated runtime checks failed; manual qualification is pending. See
 [the centering contract](../../fevc/docs/CENTERING.md) and
 [native provenance](../../native/README.md).
+
+## Additive projection-centering API 1
+
+The native probe exposes `projection_centering_api`; the Stata wrapper returns
+`r(projection_centering_api)`. Mean plus projection requires this capability to
+equal 1 in addition to centering API 1. None projection does not require it.
+This separate capability prevents an older plugin with point-centering support
+from accepting a projection request whose covariance it cannot center. Missing
+capability is a structural preflight failure under the usual strict Rust and
+automatic-Mata routing rules, before preparation/RNG.
+
+The previously adopted Mac/Linux/Windows point-centering payloads lack this
+capability. Rebuilt local Mac development plugins expose it and pass the
+arm64/Rosetta separate/universal runtime and isolated-install checks. The
+qualifier records `LOCAL_CHECKPOINT_DIRTY_TREE`; the outer CI clean-checkout
+gate remains failed. Prior distribution receipts do not qualify Mean
+projection or these new bytes, and other platforms were not requalified.
+Use current Mata source or a matching native build. No existing ABI structure
+is changed.
 
 ## All-probe numerical attachment
 
@@ -262,6 +287,15 @@ representative-scale, production, inference, or public-release claim. Linux is
 qualified separately on SCC. Current all-platform build/runtime qualification
 and repository distribution are recorded in [`native/README.md`](../../native/README.md);
 release tags and archives remain separate owner decisions.
+
+The Linux qualifier requires centering API 1 and projection-centering API 1
+unconditionally on both the staged candidate and its isolated installation.
+It runs the existing eight-cell Mean-projection test against both copies,
+checks the installed plugin hash, and runs the four point-centering tests
+with explicit `rust` against the installed package. These checks supplement
+the full suite, whose ordinary point-centering tests use Mata. The receipt
+records their results separately; adding a gate does not qualify an older
+Linux payload for Mean projection.
 
 ## Runtime reporting
 

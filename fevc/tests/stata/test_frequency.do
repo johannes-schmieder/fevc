@@ -23,7 +23,7 @@ generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 generate long freq = cond(mod(_n-1,3)==0,2,1)
 generate double target = .5 + (_n-1)/24
 
-fevc y c1 c2 [fw=freq], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=freq], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target) ///
     algorithm(exact) nodisplay
 matrix weighted_plugin = e(plugin)
@@ -32,7 +32,7 @@ assert e(N_physical) == 32
 assert abs(el(e(plugin),1,1) - .23071509091874573) < 2e-10
 assert abs(el(e(correction),1,1) + .031321804369551273) < 2e-10
 
-fevc y c1 c2 [fw=freq], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=freq], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target) ///
     algorithm(jla) probes(4000) batch(13) seed(20260818) ///
     tolerance(1e-12) nodisplay
@@ -65,7 +65,7 @@ generate long source_row = _n
 expand 2 if source_row == 1, generate(split_copy)
 replace freq = 1 if source_row == 1
 replace target = target/2 if source_row == 1
-fevc y c1 c2 [fw=freq], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=freq], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target) ///
     algorithm(jla) probes(4000) batch(13) seed(20260818) ///
     tolerance(1e-12) nodisplay
@@ -80,12 +80,12 @@ expand freq
 bysort worker firm match time noise: generate long copy = _n
 bysort worker firm match time noise: generate long copies = _N
 generate double expanded_target = target/copies
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) targetweight(expanded_target) algorithm(exact) nodisplay
 assert mreldif(weighted_plugin,e(plugin)) < 2e-10
 assert mreldif(weighted_correction,e(correction)) < 2e-9
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) targetweight(expanded_target) algorithm(jla) ///
     probes(4000) batch(13) seed(20260818) tolerance(1e-12) nodisplay
 assert mreldif(weighted_match_jla,e(results)) < 2e-9

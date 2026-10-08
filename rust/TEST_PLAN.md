@@ -212,6 +212,20 @@ release.
 
 ## Focused scalable-projection gate
 
+The public default is Mean; the internal prepared-generation default remains
+None until configured by the frontend. Mean projection requires
+`projection_centering_api=1`. `test_projection_mean.do` supplies the independent
+48-cell exact deleted-refit oracle, and `test_projection_mean_native.do`
+compares eight weighted native cells with exact Mata and diagonal/CMG routes.
+They check default/explicit Mean equality, original None behavior, outcome
+translation invariance, unchanged coefficients and naive covariance, and
+caller-state restoration. The native test runs for separate and universal
+Mac binaries under arm64 and Rosetta. Core/FFI tests separately exercise the
+centering guards and capability; stale-capability frontend tests must reject
+before native preparation or RNG. Corrected projection and active component
+inference with Mean remain unsupported. Historical None comparator gates
+below explicitly select None and keep their original scope.
+
 The sparse `project()` route is deliberately bounded to explicit Rust generic
 JLA, Counter-V1, observation or match deletion, the registered mover/stayer
 partition, positive integer frequency weights interpreted as literal physical copies, and explicit

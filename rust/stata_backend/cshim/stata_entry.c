@@ -913,6 +913,7 @@ static int vckss_probe(void)
         (status = vckss_save_u64("__vckss_rust_progress_api", 2u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_execution_api", 3u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_centering_api", vckss_rust_centering_schema_v1())) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_proj_center_api", vckss_rust_projection_centering_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_numerical_api", vckss_rust_numerical_schema_v2())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_api", vckss_rust_exact_execution_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_resolved_api", vckss_rust_exact_resolved_execution_schema_v2())) != 0 ||

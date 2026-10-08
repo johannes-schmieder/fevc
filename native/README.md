@@ -1,6 +1,21 @@
 # Native package provenance
 
-## Current centering payloads
+## Local Mean-projection development checkpoint
+
+The October 7 projection extension uses Mean by default and adds
+`projection_centering_api=1`. Rebuilt local Mac arm64, x86-64 and universal
+development candidates expose it and pass native arm64/Rosetta runtime and
+isolated-install checks. They are preserved outside the package while the
+prerelease source and new platform qualifications are prepared. The tracked
+payload retains the previously adopted bytes. The qualifier records
+`LOCAL_CHECKPOINT_DIRTY_TREE`; the outer CI receipt fails its clean-checkout
+requirement despite passing build/runtime checks. Linux, Windows and native
+Intel hardware were not requalified for this extension. Prior manifests below
+retain their exact bytes and do not qualify Mean projection or the rebuilt
+Mac files. See the [current checkpoint](../fevc/PLAN.md) and
+[centering contract](../fevc/docs/CENTERING.md).
+
+## Previously adopted point-centering payloads
 
 The October 6 source adds outcome centering API 1 independently of
 numerical API 2. Four qualified repository payloads are adopted: Mac arm64, Mac

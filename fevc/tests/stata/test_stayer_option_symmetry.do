@@ -108,18 +108,18 @@ assert e(N_stayer_option_dropped)==6
 foreach backend in mata rust {
     local opts algorithm(exact) backend(mata)
     if "`backend'"=="rust" local opts algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) batch(16) probes(33)
-    fevc y, worker(worker) firm(firm) deletion(observation) `opts' project(z) projecteffect(firm) nodisplay
+    fevc y, worker(worker) firm(firm) deletion(observation) `opts' centering(none) project(z) projecteffect(firm) nodisplay
     matrix projection_both_b = e(projection_b)
     matrix projection_both_V = e(projection_V)
     assert e(N_retained)==54 & "`e(stayers)'"=="both"
-    fevc y, worker(worker) firm(firm) deletion(observation) stayers(both) `opts' project(z) projecteffect(firm) nodisplay
+    fevc y, worker(worker) firm(firm) deletion(observation) stayers(both) `opts' centering(none) project(z) projecteffect(firm) nodisplay
     assert mreldif(projection_both_b,e(projection_b))<1e-8
     assert mreldif(projection_both_V,e(projection_V))<1e-8
-    fevc y, worker(worker) firm(firm) deletion(observation) stayers(movers) `opts' project(z) projecteffect(firm) nodisplay
+    fevc y, worker(worker) firm(firm) deletion(observation) stayers(movers) `opts' centering(none) project(z) projecteffect(firm) nodisplay
     matrix projection_movers_b = e(projection_b)
     matrix projection_movers_V = e(projection_V)
     assert e(sample)==mover
-    fevc y if mover, worker(worker) firm(firm) deletion(observation) stayers(both) `opts' project(z) projecteffect(firm) nodisplay
+    fevc y if mover, worker(worker) firm(firm) deletion(observation) stayers(both) `opts' centering(none) project(z) projecteffect(firm) nodisplay
     assert mreldif(projection_movers_b,e(projection_b))<1e-8
     assert mreldif(projection_movers_V,e(projection_V))<1e-8
 }

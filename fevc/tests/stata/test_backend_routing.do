@@ -25,11 +25,26 @@ program define fevc_rust, rclass
     }
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "probe" {
-        // Unrelated fault modes must advertise the new exact transports so
+        // Unrelated fault modes must advertise centering and exact transports so
         // they still reach the specific capability under test.
+        return scalar centering_api = 1
+        if "$VCKSS_ROUTING_PROXY_MODE"!="stale_projection_missing" {
+            return scalar projection_centering_api = ///
+                cond("$VCKSS_ROUTING_PROXY_MODE"=="stale_projection_zero",0,1)
+        }
         return scalar exact_api = 1
         return scalar exact_resolved_api = 2
         return scalar exact_legacy_api = 1
+        if inlist("$VCKSS_ROUTING_PROXY_MODE", ///
+            "stale_projection_missing","stale_projection_zero") {
+            return scalar abi_compiled = 1
+            return scalar abi_runtime = 1
+            return scalar core_ready_flags = 65535
+            return scalar support_flags = 38
+            return scalar deterministic_parallelism = 1
+            return scalar execution_api = 3
+            exit 0
+        }
         if "$VCKSS_ROUTING_PROXY_MODE"=="stale_deletion_units" {
             return scalar abi_compiled = 1
             return scalar abi_runtime = 1
@@ -636,6 +651,22 @@ foreach route in automatic strict counter {
 }
 restore
 
+// Point-centering support alone must not admit a centered projection on an
+// older native plugin; the new attachment capability is required pre-RNG.
+foreach capability_mode in stale_projection_missing stale_projection_zero {
+    global VCKSS_ROUTING_PROXY_MODE `capability_mode'
+    global VCKSS_ROUTING_PREPARE_CALLED 0
+    capture quietly fevc y, worker(worker) firm(firm) ///
+        deletion(observation) stayers(movers) algorithm(jla) ///
+        backend(rust) rng(counter_v1) engine(generic) ///
+        preconditioner(diagonal) batch(2) probes(4) ///
+        project(c1) projecteffect(firm) nodisplay
+    assert _rc==498
+    assert "`e(withholding_status)'"=="RUST_BACKEND_UNAVAILABLE"
+    assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"
+    assert `"`c(rngstate)'"'==`"`caller_rngstate'"'
+}
+
 // The successful and typed-failure routes cumulatively preserve caller state.
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_rngstream'
@@ -671,11 +702,20 @@ program define fevc__rust_plugin_call, rclass
     scalar __vckss_rust_abi_runtime=1
     scalar __vckss_rust_support_flags=38
     scalar __vckss_rust_deterministic=1
+    if "$VCKSS_ROUTING_PROXY_MODE"=="stale_projection_scalar" {
+        scalar __vckss_rust_core_flags=65535
+    }
 end
 scalar __vckss_rust_core_flags=65535
 capture quietly fevc_rust probe
 assert _rc!=0
 capture confirm scalar __vckss_rust_core_flags
+assert _rc!=0
+global VCKSS_ROUTING_PROXY_MODE stale_projection_scalar
+scalar __vckss_rust_proj_center_api=1
+quietly fevc_rust probe
+assert r(projection_centering_api)==0
+capture confirm scalar __vckss_rust_proj_center_api
 assert _rc!=0
 capture program drop fevc__rust_plugin_call
 foreach field in abi_compiled abi_runtime support_flags deterministic {

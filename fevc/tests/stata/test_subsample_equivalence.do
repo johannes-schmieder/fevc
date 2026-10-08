@@ -178,7 +178,7 @@ foreach route of local routes {
         if inlist("`population'","observation_both","projection") local stayers both
         local opts worker(worker) firm(firm) deletion(`deletion') stayers(`stayers') ///
             targetweight(target) seed(9262026) nodisplay
-        if "`population'"=="projection" local opts `opts' project(y) projecteffect(firm)
+        if "`population'"=="projection" local opts `opts' centering(none) project(y) projecteffect(firm)
         if substr("`route'",1,4)=="mata" local opts `opts' backend(mata) rng(stata) probeorder(rowid)
         else local opts `opts' backend(rust) rng(counter_v1)
         if strpos("`route'","exact") local opts `opts' algorithm(exact)

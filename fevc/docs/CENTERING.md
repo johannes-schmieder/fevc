@@ -1,8 +1,9 @@
 # Outcome centering
 
 `centering(none|mean|corrected)` selects the outcome factor in the leave-out
-bias correction. The default is `none`. All three modes work in exact and JLA
-point estimation in Mata and in a matching Rust build.
+bias correction. The default is `mean` for both exact and JLA. All three
+modes work in exact and JLA point estimation in Mata and in a matching Rust
+build.
 
 Centering leaves the fitted coefficients, full-sample residuals, plug-in
 components, retained sample, target weights and deletion units unchanged.
@@ -14,7 +15,7 @@ estimate; it does not imply that `centering(corrected)` was requested.
 | Mode | Bias-correction outcome factor | Additional point work |
 | --- | --- | --- |
 | `none` | Original retained working outcome `u`. | Ordinary estimator. |
-| `mean` | `z = u - ubar`. | One weighted mean and subtraction; no additional solves or random directions. |
+| `mean` (default) | `z = u - ubar`. | One weighted mean and subtraction; no additional solves or random directions. |
 | `corrected` | The Mean correction plus an adjustment for estimating `ubar`. | Exact: one shared correction system. JLA: correction systems using the existing full leverage pool and its two halves. |
 
 The observed mean is
@@ -34,6 +35,50 @@ Centering supports the existing point-estimation combinations of controls,
 frequency and target weights, match or observation deletion, and
 `stayers(movers|both)`. Match deletion with `stayers(both)` retains its hybrid
 correction: mover match blocks and separate stayer observation copies.
+
+## Projection and the mean convention
+
+`project()` supports Mean (the default) and None. Mean replaces `u_g` by
+`z_g = u_g - ubar 1_g` only in the symmetrized block covariance proxy,
+\[
+\widehat\Sigma_g^{\mathrm{mean}}
+=\tfrac12\{z_g\widehat e_{g,-g}' + \widehat e_{g,-g}z_g'\}.
+\]
+The fitted projection coefficients, leave-out residuals, score loadings and
+residual-squared naive covariance are unchanged. Corrected projection is not
+implemented. A combined `project()` and component `inference()` request must
+use None because component inference remains None-only.
+
+The mean uses Stata's frequency-weight convention on the retained working
+outcome: `sum(f_i*u_i)/sum(f_i)`, as in `summarize u if e(sample) [fw=f]`.
+The unweighted case is the ordinary observation mean. Neither `targetweight()`
+nor `projectweight()` changes this centering mean; those options retain their
+separate population/loading roles. With `nuisance(fixedoffset)`, summarize the
+working outcome after subtracting the fitted nuisance index, not raw `y`.
+See Stata's [summarize methods and formulas](https://www.stata.com/manuals/rsummarize.pdf)
+for the frequency-weighted mean.
+
+This differs from the main mover-match proxy in the KSS Matlab package. At
+pinned commit `8b957ffe`, its main interface first forms
+`v_g = sqrt(n_g) * ubar_g`, then subtracts the unweighted mean of those
+transformed match values, `a = sum_g(v_g)/G`. FEVC instead uses the transformed
+factor `sqrt(n_g) * (ubar_g - ubar)`, with `ubar` calculated over the retained
+physical observations. On the same mover-only sample these agree when match
+sizes are equal, but generally differ when sizes vary. The KSS main interface
+uses a separate person-year proxy for eligible stayers; the mover formula is
+not a description of every retained unit. See the pinned
+[match transformation and centering](https://github.com/rsaggio87/LeaveOutTwoWay/blob/8b957ffeb10b8465a3584fceb0265cccc48379e1/codes/leave_out_KSS.m#L489-L542).
+
+FEVC's convention is invariant to adding a common constant to the working
+outcome: both `u_i` and `ubar` shift by that constant. Centering transformed
+matches by their unweighted mean lacks that property when match sizes differ.
+This makes the physical-observation convention easier to interpret alongside
+Stata frequency weights. It does not establish uniform bias, variance or MSE
+superiority. Both sample means depend on the estimation errors; under
+heteroskedasticity, subtracting them can destroy the exact unbiasedness of the
+uncentered leave-out variance proxy. Mean projection does not correct that
+estimated-mean bias and does not carry a universal finite-sample unbiasedness
+or coverage guarantee.
 
 ## MCSE and choosing a mode
 
@@ -55,13 +100,15 @@ Corrected point estimate. Its calculation does not differentiate or replay
 the increment. `mcse(off)` skips diagnostic work, but still calculates the
 requested Corrected point estimate.
 
+Omitting `centering()` selects Mean for both exact and JLA. Explicit
+`centering(none)` reproduces the former default.
 For small exact problems, `centering(corrected)` is a practical choice when
 an adjustment for estimated-mean bias is wanted. For JLA, `centering(mean)`
 with the default `mcse(all)` gives the inexpensive centered estimate and a
 diagnostic under the fixed observed mean convention. Corrected JLA is also
-available when its additional point adjustment is wanted. The package does
-not choose between these conventions automatically, and small fixtures do
-not establish that the Corrected increment is negligible in every large sample.
+available when its additional point adjustment is wanted. The default is
+fixed rather than selected from the data; small fixtures do not establish
+that the Corrected increment is negligible in every large sample.
 
 With worker–firm data already loaded:
 
@@ -84,27 +131,43 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
 - Only Corrected JLA requires an even `probes()` budget of at least four.
   Mean and None keep the ordinary probe rules. Exact Corrected does not
   require an even budget; probes are not used by exact estimation.
-- Active centering (`mean` or `corrected`) cannot accompany `inference()`
-  or `project()`. The command rejects these combinations before estimator
-  RNG with `CENTERING_INFERENCE_UNSUPPORTED` (return code 498).
-  None retains the existing inference and projection support.
+- Component `inference()` requires explicit `centering(none)`, including
+  requests that also specify `project()`. Projection alone accepts Mean
+  (the default) and None; Corrected projection is unsupported. Rejected
+  combinations return `CENTERING_INFERENCE_UNSUPPORTED` (return code 498)
+  before estimator RNG. The command does not silently switch to None.
 - An unknown mode returns `INVALID_CENTERING` (return code 198).
   Additional correction-system failures return a typed error; the command
   does not substitute None or Mean or fall back after RNG.
 - Mata needs the current source. Rust active centering additionally needs
   centering API 1. Native numerical API 2 is a separate capability.
   `fevc_rust probe` exposes `r(centering_api)`; a missing/zero capability
-  does not support active centering.
+  does not support active centering. Mean projection additionally requires
+  projection-centering API 1, exposed as `r(projection_centering_api)`.
+  None projection does not require this additional capability.
 - The repository includes qualified Mac arm64, Rosetta x86-64,
   universal and Linux x86-64 centering plugins, with full platform and
   explicit Rust centering checks. The Windows plugin now includes centering
   API 1 for owner manual testing. Its hosted build passes, but automated runtime
   checks failed and manual qualification is pending. Native Intel hardware is
-  not claimed.
+  not claimed. These previously adopted point-centering payloads do not expose
+  projection-centering API 1. Rebuilt local Mac development plugins expose it;
+  use current Mata source or a matching native build for Mean projection.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit
   Counter-V1 requests require the matching native capability and fail
   preflight with `RUST_BACKEND_UNAVAILABLE` if it is absent.
+
+The local Mean-projection checkpoint passes the 48-cell exact covariance
+oracle, eight-cell native projection tests, complete Stata quick suite,
+Rust workspace checks, and Mac arm64/Rosetta separate/universal runtime and
+isolated-install checks. The native qualifier records
+`LOCAL_CHECKPOINT_DIRTY_TREE`: its tests pass, but the outer CI clean-checkout
+gate remains failed. The rebuilt Mac package binaries are tracked working-tree
+changes; prior distributed manifests and receipts keep their original bytes
+and scope. Linux, Windows and native Intel hardware were not requalified for
+Mean projection. This is local development evidence, not release qualification
+or a new coverage/MSE campaign. See the [current checkpoint](../PLAN.md).
 
 See [installation](../../INSTALLATION.md), [memory](MEMORY.md) and
 [native provenance](../../native/README.md). The package version remains
@@ -121,7 +184,7 @@ pending; no failing assertion is available from the private collector.
 
 | Return | Value |
 | --- | --- |
-| `e(centering)` | `none`, `mean` or `corrected`. |
+| `e(centering)` | `none`, `mean` or `corrected`; `mean` when omitted. |
 | `e(mcse_centering)` for None | `uncentered` |
 | `e(mcse_centering)` for Mean | `fixed observed mean` |
 | `e(mcse_centering)` for Corrected | `fixed observed mean and fixed centering increment` |

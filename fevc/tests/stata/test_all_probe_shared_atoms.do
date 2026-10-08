@@ -6,6 +6,7 @@ if `"`package_dir'"'=="" exit 198
 adopath ++ `"`package_dir'"'
 // Frozen Counter-V1 atoms from the independent 13-copy fixture; equal
 // numeric seeds from the two production RNGs are never a parity oracle.
+// The directly injected Mata atoms use the ordinary uncentered formula.
 input long(source_row worker firm deletion) double(outcome frequency target)
 1 1 1 11  1 1 1
 2 1 1 12  3 2 2
@@ -17,7 +18,7 @@ input long(source_row worker firm deletion) double(outcome frequency target)
 8 2 2 42 -2 1 4
 end
 local state `"`c(rngstate)'"'
-quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc outcome [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion) targetweight(target) probeorder(source_row) ///
     stayers(movers) backend(rust) engine(auto) algorithm(jla) preconditioner(diagonal) ///
     probes(5) batch(2) seed(8675309) tolerance(1e-13) numericalmcse(all) nodisplay

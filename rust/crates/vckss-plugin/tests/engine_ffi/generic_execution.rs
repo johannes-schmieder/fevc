@@ -1143,3 +1143,165 @@ fn numerical_work(generation: u64, probes: u64) {
         ErrorCode::AbiMismatch as i32
     );
 }
+
+#[test]
+fn projection_mean_capability_lifecycle_and_execution_routes() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    assert_eq!(vckss_rust_centering_schema_v1(), 1);
+    assert_eq!(vckss_rust_projection_centering_schema_v1(), 1);
+    let mut columns = OwnedColumns {
+        worker: vec![],
+        firm: vec![],
+        deletion: vec![],
+        outcome: vec![],
+        frequency: vec![],
+        target_weight: vec![],
+    };
+    let mut controls = vec![vec![]];
+    let mut projects = [vec![]];
+    for worker in 0..8 {
+        for firm in 0..6 {
+            for repeat in 0..(2 + (worker + firm) % 3) {
+                let row = columns.outcome.len();
+                let control = 1.5 + ((row * 7) % 13) as f64 / 5.0 + repeat as f64 / 3.0;
+                columns.worker.push((10 + worker) as f64);
+                columns.firm.push((100 + firm) as f64);
+                columns.deletion.push((1000 + worker * 6 + firm) as f64);
+                columns.frequency.push((1 + row % 3) as f64);
+                columns.target_weight.push(0.5 + (row % 7) as f64 / 5.0);
+                columns.outcome.push(
+                    2.3 + 0.4 * control + 0.07 * worker as f64 - 0.09 * firm as f64
+                        + 2.0 * ((row * 11 + 5) as f64).sin(),
+                );
+                controls[0].push(control);
+                projects[0]
+                    .push((firm as f64 / 2.0).sin() + worker as f64 / 30.0 + row as f64 / 700.0);
+            }
+        }
+    }
+    let pointers = projects.each_ref().map(|column| column.as_ptr());
+    let rows = columns.worker.len() as u64;
+    let mut augmentation = VckssProjectionAugmentationRequestInterruptV1::default();
+    augmentation.options.rows = rows;
+    augmentation.options.project_count = 1;
+    augmentation.options.effect = VCKSS_PROJECTION_EFFECT_FIRM;
+    augmentation.options.weight = VCKSS_PROJECTION_WEIGHT_TARGET;
+    augmentation.options.caller_copy_bytes = rows * 8;
+    let descriptor = VckssProjectionColumnsV1 {
+        struct_size: bytes::<VckssProjectionColumnsV1>(),
+        reserved: 0,
+        rows,
+        project: pointers.as_ptr(),
+        project_count: 1,
+        reserved_2: 0,
+    };
+    for deletion in [VCKSS_DELETION_OBSERVATION, VCKSS_DELETION_MATCH] {
+        for nuisance in [VCKSS_NUISANCE_JOINT, VCKSS_NUISANCE_FIXED_OFFSET] {
+            let mut mean_reference: Option<Vec<f64>> = None;
+            for (executor, threads, numerical, configure_first) in [
+                (1, 0, false, false),
+                (1, 1, false, true),
+                (2, 1, false, false),
+                (1, 1, true, false),
+                (2, 1, true, true),
+            ] {
+                reset();
+                let generation =
+                    prepare_with_controls_memory(&columns, &controls, deletion, 1 << 30);
+                if configure_first {
+                    ok(vckss_rust_engine_centering_v1(generation, 1));
+                }
+                ok(vckss_rust_engine_augment_projection_interrupt_v1(
+                    generation,
+                    &augmentation,
+                    &descriptor,
+                ));
+                if !configure_first {
+                    ok(vckss_rust_engine_centering_v1(generation, 1));
+                }
+                let mut request = request(deletion, nuisance, 1, executor, threads, false);
+                request.v4.v3.v2.v1.probes = 200;
+                let mut attached = VckssNumericalRequestV2::default();
+                attached.v1.point = request.v4;
+                attached.v1.point.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV4>();
+                attached.v1.threads = threads;
+                attached.v1.controls_count = 1;
+                attached.v1.projection_requested = 1;
+                attached.execution_mode = executor;
+                let status = if numerical {
+                    vckss_rust_engine_solve_numerical_interrupt_v2(
+                        generation,
+                        &attached,
+                        None,
+                        ptr::null_mut(),
+                        0,
+                    )
+                } else if threads == 0 {
+                    vckss_rust_engine_solve_v4(generation, &request.v4)
+                } else {
+                    vckss_rust_engine_solve_v6(generation, &request)
+                };
+                ok(status);
+                let mut beta = [0.0; 2];
+                let mut covariance = [0.0; 4];
+                let mut naive = [0.0; 4];
+                let mut receipt = VckssProjectionResultReceiptV1::default();
+                ok(vckss_rust_engine_projection_result_v1(
+                    generation,
+                    beta.as_mut_ptr(),
+                    2,
+                    covariance.as_mut_ptr(),
+                    4,
+                    naive.as_mut_ptr(),
+                    4,
+                    &mut receipt,
+                    bytes::<VckssProjectionResultReceiptV1>(),
+                ));
+                let actual: Vec<_> = beta.into_iter().chain(covariance).chain(naive).collect();
+                if let Some(reference) = &mean_reference {
+                    close(&actual, reference);
+                } else {
+                    mean_reference = Some(actual);
+                }
+                assert!(receipt.maximum_complete_residual <= receipt.full_residual_tolerance);
+                assert_eq!(
+                    vckss_rust_engine_centering_v1(generation, 1),
+                    ErrorCode::ContextPoisoned as i32
+                );
+                ok(vckss_rust_engine_release_v1(generation));
+            }
+        }
+    }
+    for configure_first in [false, true] {
+        reset();
+        let generation =
+            prepare_with_controls_memory(&columns, &controls, VCKSS_DELETION_OBSERVATION, 1 << 30);
+        if configure_first {
+            ok(vckss_rust_engine_centering_v1(generation, 2));
+        }
+        ok(vckss_rust_engine_augment_projection_interrupt_v1(
+            generation,
+            &augmentation,
+            &descriptor,
+        ));
+        let status = if configure_first {
+            let mut request = request(
+                VCKSS_DELETION_OBSERVATION,
+                VCKSS_NUISANCE_JOINT,
+                1,
+                1,
+                1,
+                false,
+            );
+            request.v4.v3.v2.v1.probes = 200;
+            vckss_rust_engine_solve_v6(generation, &request)
+        } else {
+            vckss_rust_engine_centering_v1(generation, 2)
+        };
+        assert_eq!(status, ErrorCode::UnsupportedFeature as i32);
+        assert!(unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }
+            .to_string_lossy()
+            .contains("centering"));
+        ok(vckss_rust_engine_release_v1(generation));
+    }
+}

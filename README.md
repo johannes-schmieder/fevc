@@ -13,24 +13,30 @@ requests. Point estimation is the default; inference is available for
 
 The default `mcse(all)` reports approximate numerical MCSE for the four main
 point estimates. Use `mcse(off)` to skip its additional calculation and display.
-With `centering(none)`, MCSE can accompany supported projection and
-sampling-inference requests; it
+MCSE can accompany supported projection and sampling-inference requests; it
 does not describe those additional outputs. See [usage](fevc/README.md).
 
 Outcome centering is available in the current repository source through
-`centering(none|mean|corrected)`, with None as the default. Mean adds only a
-frequency-weighted mean and subtraction. Corrected adjusts for estimating
+`centering(none|mean|corrected)`, with Mean as the default for both exact and
+JLA. Mean adds only a frequency-weighted mean and subtraction. Corrected adjusts for estimating
 that mean, using a shared exact system or the existing JLA full/two-half
 leverage pools. MCSE holds the mean fixed and, for Corrected, also holds its
-extra increment fixed. Active centering cannot accompany inference or
-projection. See [the centering guide](fevc/docs/CENTERING.md).
+extra increment fixed. Projection supports Mean (the default) and None;
+component inference requires explicit `centering(none)`. Corrected is not
+available with projection. See
+[the centering guide](fevc/docs/CENTERING.md).
 
 Mata supports these source options. Native active centering needs a matching
 centering API 1 build. This repository includes qualified Mac arm64,
 Rosetta x86-64, universal and Linux x86-64 plugins with this capability.
 The Windows centering build is included for owner manual testing. Its hosted
 build passes; automated runtime checks failed and manual qualification is
-pending. See [native provenance](native/README.md).
+pending. Mean projection additionally requires projection-centering API 1.
+Previously adopted point-centering payloads lack it; preserved local Mac
+development candidates expose it and pass native arm64/Rosetta runtime checks.
+Use current source with `backend(mata)` or a matching native build. The local
+checks do not constitute clean-source release qualification or qualify other
+platforms. See [native provenance](native/README.md).
 
 ## Requirements
 

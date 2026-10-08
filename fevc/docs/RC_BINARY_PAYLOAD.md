@@ -6,6 +6,18 @@ x86_64. This authorizes local candidate preparation and private platform
 tests, not publication or tagging. No current platform success is implied
 by this preparation document.
 
+## October 7 Mean-projection development checkpoint
+
+Mean projection requires additive `projection_centering_api=1`. The rebuilt
+local Mac development candidates expose it and pass arm64/Rosetta separate/universal
+runtime and isolated-install checks. They are preserved outside the package
+while the tracked payload retains its previously adopted bytes; no new
+distributed-payload adoption is recorded. The qualifier completed with
+`LOCAL_CHECKPOINT_DIRTY_TREE`, so its outer CI clean-checkout gate remains
+failed. Linux, Windows and native Intel hardware were not requalified for this
+extension. The earlier adoption records below retain their original bytes
+and scope. See [CENTERING.md](CENTERING.md) and the [checkpoint](../PLAN.md).
+
 ## October 6 centering refresh
 
 The owner requested updated plugins for the smaller None/Mean/Corrected

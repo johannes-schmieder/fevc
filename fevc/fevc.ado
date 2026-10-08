@@ -66,7 +66,7 @@ program define _fevc_command, eclass
     // any runtime work so an interrupted earlier command cannot leak into a
     // later typed failure.
     quietly _vckss_route_context_clear
-    global VCKSS_CENTERING none
+    global VCKSS_CENTERING mean
     foreach key in ACTIVE PRESENT CHECK MODE ADVISORY BYTES FORECAST {
         capture macro drop VCKSS_MEMORY_`key'
     }
@@ -4846,6 +4846,9 @@ program define _vckss_impl, eclass sortpreserve
         if !`rust_probe_rc' & "$VCKSS_CENTERING"!="none" {
             if r(centering_api)!=1 local rust_probe_rc=498
         }
+        if !`rust_probe_rc' & "$VCKSS_CENTERING"=="mean" & "`project'"!="" {
+            if r(projection_centering_api)!=1 local rust_probe_rc=498
+        }
         if !`rust_probe_rc' & `rust_full_cmg_platform' & inlist("`algorithm'","auto","exact") {
             if r(exact_api)!=1 | ("`algorithm'"=="auto" & r(exact_resolved_api)!=2) | ///
                 ("`algorithm'"=="exact" & r(exact_legacy_api)!=1) ///
@@ -6960,7 +6963,7 @@ program define _vckss_impl, eclass sortpreserve
         if !_rc local inference_runtime_loaded = 1
         capture mata: assert(vckss_inference__api_level() == 2 & ///
             vckss_inference__build_id() ==                       ///
-            "vckss-inference-api2-q1-target-status")
+            "vckss-inference-api2-q1-target-status-projection-mean1")
         if _rc {
             if `inference_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
@@ -6978,7 +6981,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_inference__api_level() == 2 & ///
                 vckss_inference__build_id() ==                   ///
-                "vckss-inference-api2-q1-target-status")
+                "vckss-inference-api2-q1-target-status-projection-mean1")
             if _rc {
                 quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
                     "The installed fevc inference runtime is incompatible with this command."

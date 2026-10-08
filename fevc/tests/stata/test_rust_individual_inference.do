@@ -30,7 +30,7 @@ foreach deletion in observation match {
     local options deletion(`deletion')
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
     foreach reference in highrank q1 {
-        noisily fevc outcome control, `common' `options' inference(`reference')
+        noisily fevc outcome control, `common' `options' centering(none) inference(`reference')
         assert e(probes)==200
         assert e(inference_simulations)==1000
         assert e(component_inference_receipt)[1,"schema"]==5
@@ -75,13 +75,13 @@ foreach deletion in observation match {
 foreach deletion in observation match {
     local options deletion(`deletion')
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
-    quietly fevc outcome control, `common' `options' inference(highrank)
+    quietly fevc outcome control, `common' `options' centering(none) inference(highrank)
     matrix default_b = e(b)
     matrix default_ci = e(component_inference)
     scalar default_atoms = e(inference_counter_atoms)
     scalar units = e(inference_independent_units)
     foreach count in 2048 512 1024 {
-        quietly fevc outcome control, `common' `options' inference(highrank) inferencegramprobes(`count')
+        quietly fevc outcome control, `common' `options' centering(none) inference(highrank) inferencegramprobes(`count')
         assert e(inference_gram_probes)==`count'
         assert mreldif(e(b),default_b)==0
         assert e(inference_counter_atoms)==default_atoms+units*(`count'-2048)
@@ -90,12 +90,12 @@ foreach deletion in observation match {
     }
 }
 foreach count in 0 511 1.5 2147483648 . nope {
-    capture noisily fevc outcome control, `common' deletion(observation) inference(highrank) inferencegramprobes(`count')
+    capture noisily fevc outcome control, `common' deletion(observation) centering(none) inference(highrank) inferencegramprobes(`count')
     assert _rc==198
     assert `"`c(rngstate)'"'==`"`rng_before'"'
 }
 foreach options in "" "inference(highrank) algorithm(exact)" "project(control) projecteffect(firm)" {
-    capture noisily fevc outcome control, worker(worker) firm(firm) deletion(observation) `options' inferencegramprobes(2048)
+    capture noisily fevc outcome control, worker(worker) firm(firm) deletion(observation) centering(none) `options' inferencegramprobes(2048)
     assert _rc==498
     assert "`e(withholding_status)'"=="INFERENCE_GRAM_TUPLE_REQUIRED"
     assert `"`c(rngstate)'"'==`"`rng_before'"'
@@ -142,7 +142,7 @@ program define fevc__rust_public_call, rclass
 end
 global FEVC_TEST_INDIVIDUAL_FAULT joint
 foreach reference in highrank q1 {
-    quietly fevc outcome control, `common' deletion(observation) inference(`reference')
+    quietly fevc outcome control, `common' deletion(observation) centering(none) inference(`reference')
     assert e(inference_joint_available)==0
     assert e(inference_joint_posted)==0
     assert e(inference_computed_targets)==4
@@ -155,7 +155,7 @@ foreach reference in highrank q1 {
 foreach fault in count gram gramcount target spectrum version {
     display "INDIVIDUAL RECEIPT FAULT: `fault'"
     global FEVC_TEST_INDIVIDUAL_FAULT `fault'
-    capture noisily fevc outcome control, `common' deletion(observation) inference(q1)
+    capture noisily fevc outcome control, `common' deletion(observation) centering(none) inference(q1)
     assert _rc==498
     local returned_matrices : e(matrices)
     assert !strpos(" `returned_matrices' "," V ")
@@ -183,7 +183,7 @@ foreach solver in diagonal cmg {
         deletionid(match) nuisance(fixedoffset) stayers(movers) ///
         backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///
         preconditioner(`solver') batch(16) targetweight(target) ///
-        inferencemodel(structured_common) inference(highrank) ///
+        inferencemodel(structured_common) centering(none) inference(highrank) ///
         inferenceseed(8675309)
     assert e(probes)==200
     assert e(inference_spectrum_iterations)==512

@@ -12,11 +12,18 @@ if ($installedHash -ne $build.sha256) { throw 'Installed plugin differs from the
 if (($identity.PSObject.Properties.Name -contains 'candidate_sha256') -and
     $installedHash -ne $identity.candidate_sha256) { throw 'Installed plugin differs from CI artifact' }
 $gates = @{}
-foreach ($gate in @('pe_import_export','clean_install','lifecycle','observation_component','individual_component','match_component','pooled_deletion','mcse_modes','mcse_attachments','centering_mean','centering_exact','centering_jla','centering_options','registry_idle')) { $gates[$gate] = 'PASS' }
-if ($build.rust_test_scope -notin @('HOSTED_CI_PASS','PRIVATE_BUILD_AND_TEST_PASS')) { throw 'Missing Rust test provenance' }
+if ($build.runtime_profile -notin @('smoke', 'full')) { throw 'Missing runtime profile' }
+foreach ($gate in @('pe_import_export','clean_install','lifecycle','point_mean','projection_mean','registry_idle')) { $gates[$gate] = 'PASS' }
+if ($build.runtime_profile -eq 'full') {
+    foreach ($gate in @('observation_component','individual_component','match_component','pooled_deletion','mcse_modes','mcse_attachments','centering_mean','centering_exact','centering_jla','centering_options')) { $gates[$gate] = 'PASS' }
+    if ($build.rust_test_scope -notin @('HOSTED_CI_PASS','PRIVATE_BUILD_AND_TEST_PASS')) { throw 'Missing Rust test provenance' }
+} elseif ($build.rust_test_scope -notin @('HOSTED_CI_PASS','PRIVATE_BUILD_ONLY_SMOKE')) {
+    throw 'Invalid smoke Rust test provenance'
+}
 $gates['rust_workspace'] = $build.rust_test_scope
 $gates['rust_backend'] = $build.rust_test_scope
-@{schema='FEVC-WINDOWS-CHECKS-V2'; gates=$gates; stata_version='19'; stata_flavor='MP';
+@{schema='FEVC-WINDOWS-CHECKS-V3'; gates=$gates; stata_version='19'; stata_flavor='MP';
+  runtime_profile=$build.runtime_profile;
   production_commit=$identity.production_commit; harness_sha256=$identity.harness_sha256;
   binary_sha256=$installedHash; status='PASS'} |
   ConvertTo-Json -Depth 4 | Set-Content -Encoding ASCII (Join-Path $root 'windows-project-checks.json')

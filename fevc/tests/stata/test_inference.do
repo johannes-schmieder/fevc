@@ -22,7 +22,7 @@ generate double z = worker + time/10
 generate double target = 1 + time/10
 
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) algorithm(exact) targetweight(target) nodisplay
+    deletion(observation) algorithm(exact) centering(none) targetweight(target) nodisplay
 matrix point = e(b)
 capture matrix list e(V)
 assert _rc != 0
@@ -31,7 +31,7 @@ assert "`e(inference)'" == "not implemented"
 set seed 456789
 local rng_before `"`c(rngstate)'"'
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) inference(highrank) ///
+    deletion(observation) centering(none) inference(highrank) ///
     inferencesimulations(100) inferenceseed(42) inferencebins(16) ///
     targetweight(target) nodisplay
 local rng_after `"`c(rngstate)'"'
@@ -54,13 +54,13 @@ assert colsof(e(component_inference)) == 4
 matrix highrank_V = e(V)
 
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) inference(highrank) ///
+    deletion(observation) centering(none) inference(highrank) ///
     inferencesimulations(100) inferenceseed(42) inferencebins(16) ///
     targetweight(target) nodisplay
 assert mreldif(highrank_V,e(V)) < 1e-14
 
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) inference(q1) ///
+    deletion(observation) centering(none) inference(q1) ///
     inferencesimulations(100) inferenceseed(42) inferencebins(16)
 assert "`e(status)'" == "KSS_Q1_INFERENCE"
 assert rowsof(e(q1_inference)) == 4
@@ -88,7 +88,7 @@ generate double y_rescaled = y
 foreach scale in .01 .1 1 10 100 {
     quietly replace y_rescaled = `scale'*y
     quietly fevc y_rescaled c1 c2, worker(worker) firm(firm) ///
-        deletion(observation) inference(q1) inferencesimulations(100) ///
+        deletion(observation) centering(none) inference(q1) inferencesimulations(100) ///
         inferenceseed(42) inferencebins(16) nodisplay
     assert e(q1_computed_targets) == 4
     forvalues row = 1/4 {
@@ -102,7 +102,7 @@ foreach scale in .01 .1 1 10 100 {
 }
 
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) project(z) projecteffect(worker) nodisplay
+    deletion(observation) centering(none) project(z) projecteffect(worker) nodisplay
 assert "`e(inference)'" == "none"
 assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"
 capture matrix list e(V)
@@ -110,30 +110,30 @@ assert _rc != 0
 assert rowsof(e(projection_V)) == 2
 
 capture noisily fevc y, worker(worker) firm(firm) ///
-    deletion(match) inference(highrank) nodisplay
+    deletion(match) centering(none) inference(highrank) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "INFERENCE_DELETION_UNSUPPORTED"
 capture noisily fevc y, worker(worker) firm(firm) ///
-    deletion(observation) algorithm(jla) inference(highrank) nodisplay
+    deletion(observation) algorithm(jla) centering(none) inference(highrank) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "JLA_INFERENCE_UNSUPPORTED"
 capture noisily fevc y, worker(worker) firm(firm) ///
-    deletion(observation) backend(rust) inference(highrank) nodisplay
+    deletion(observation) backend(rust) centering(none) inference(highrank) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "RUST_INFERENCE_UNSUPPORTED"
 capture noisily fevc y, worker(worker) firm(firm) ///
-    deletion(observation) rng(counter_v1) inference(highrank) nodisplay
+    deletion(observation) rng(counter_v1) centering(none) inference(highrank) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "COUNTER_INFERENCE_UNSUPPORTED"
 generate byte copies = 2
 capture noisily fevc y [fw=copies], worker(worker) firm(firm) ///
-    deletion(observation) inference(highrank) ///
+    deletion(observation) centering(none) inference(highrank) ///
     inferencesimulations(100) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "INFERENCE_FREQUENCY_UNSUPPORTED"
 generate double ycentered = y - 1.5
 quietly fevc ycentered [fw=copies], worker(worker) firm(firm) ///
-    deletion(observation) project(z) projecteffect(worker) nodisplay
+    deletion(observation) centering(none) project(z) projecteffect(worker) nodisplay
 assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"
 assert rowsof(e(projection_V)) == 2
 
@@ -152,7 +152,7 @@ generate double ymatch = .08*worker - .12*firm + .3*c1 + ///
 generate double target = 1 + mod(time,3)/4
 
 fevc yproj c1, worker(worker) firm(firm) deletion(observation) ///
-    inference(highrank) inferencesimulations(200) inferenceseed(42) ///
+    centering(none) inference(highrank) inferencesimulations(200) inferenceseed(42) ///
     inferencebins(64) project(z) projecteffect(firm) nodisplay
 assert "`e(status)'" == "KSS_HIGHRANK_AND_PROJECTION_INFERENCE"
 assert rowsof(e(projection_results)) == 2
@@ -216,7 +216,7 @@ assert mreldif(e(projection_b),projection_b_oracle) < 1e-11
 assert mreldif(e(projection_V),projection_V_oracle) < 1e-11
 
 fevc ymatch c1, worker(worker) firm(firm) ///
-    project(z) projecteffect(firm) nodisplay
+    centering(none) project(z) projecteffect(firm) nodisplay
 assert "`e(deletion)'" == "match"
 assert "`e(stayers)'" == "both"
 assert "`e(inference_deletion)'" == "exact match deletion; stayers both"
@@ -224,26 +224,26 @@ assert mreldif(e(projection_b),projection_match_b_oracle) < 1e-11
 assert mreldif(e(projection_V),projection_match_V_oracle) < 2e-10
 
 fevc yproj c1, worker(worker) firm(firm) deletion(observation) ///
-    inference(highrank) inferencesimulations(200) inferenceseed(42) ///
+    centering(none) inference(highrank) inferencesimulations(200) inferenceseed(42) ///
     inferencebins(64) project(z) projecteffect(firm) nodisplay
 assert mreldif(projection_first,e(projection_results)) < 1e-14
 assert mreldif(projection_V_first,e(projection_V)) < 1e-14
 
 fevc yproj c1, worker(worker) firm(firm) deletion(observation) ///
-    targetweight(target) project(z) projecteffect(firm) ///
+    targetweight(target) centering(none) project(z) projecteffect(firm) ///
     projectweight(target) nodisplay
 assert "`e(projection_weight)'" == "target"
 assert rowsof(e(projection_results)) == 2
 
 fevc y c1, worker(worker) firm(firm) deletion(observation) ///
-    nuisance(fixedoffset) inference(highrank) ///
+    nuisance(fixedoffset) centering(none) inference(highrank) ///
     inferencesimulations(100) inferenceseed(43) inferencebins(64) nodisplay
 assert "`e(inference)'" == "highrank"
 
 capture mata: vckss_inference__api_level()
 assert _rc == 0
 mata: assert(vckss_inference__api_level() == 2)
-mata: assert(vckss_inference__build_id() == "vckss-inference-api2-q1-target-status")
+mata: assert(vckss_inference__build_id() == "vckss-inference-api2-q1-target-status-projection-mean1")
 tempname critical
 mata: st_numscalar("`critical'",vckss_inf__critical(.5,.95,100000,12345))
 assert scalar(`critical') > 2.11 & scalar(`critical') < 2.17

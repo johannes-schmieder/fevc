@@ -308,9 +308,11 @@ See the [default/interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md), [the
 
 ## Outcome-centering execution
 
-`centering(none)` preserves the ordinary executors. Mean calculates the
-frequency-weighted retained working-outcome mean and subtracts it only in
-the correction factor; fixedoffset first subtracts the fitted nuisance index.
+Omitted `centering()` resolves to Mean before capability and inference
+checks for exact and JLA. Explicit `centering(none)` preserves the ordinary
+executors. Mean calculates the frequency-weighted retained working-outcome mean and subtracts it only in
+the point-correction factor and, when requested, projection covariance proxy;
+fixedoffset first subtracts the fitted nuisance index.
 It adds no fit, target/leverage directions, or inverse-action solves. The
 ordinary numerical attachment consumes that factor and holds its mean fixed.
 
@@ -328,12 +330,18 @@ target solves are added. Its MCSE/covariance is the ordinary Mean calculation
 with this increment held fixed; there are no increment derivatives or replay.
 
 Mean and Corrected support existing exact, generic, compressed and hybrid
-point routes. Active inference/projection is rejected before RNG.
+point routes. Mean also supports projection through the same working-outcome
+factor in observation, match and eligible-stayer covariance contractions.
+Projection coefficients, full residuals, score loadings and naive covariance
+remain unchanged. Corrected projection and all active centering with component
+inference are rejected before RNG.
 Correction scratch is forecast and admitted before stochastic work.
 Extra-system failures are typed errors and cannot trigger post-RNG fallback.
 The additive native centering API configures a prepared generation before
 solve without altering the established ABI structures; numerical API 2
-remains independent. See [CENTERING.md](CENTERING.md), [MEMORY.md](MEMORY.md)
+remains independent. Native Mean projection additionally requires the additive
+projection-centering API 1 capability, checked before preparation/RNG; None
+projection retains its existing native contract. See [CENTERING.md](CENTERING.md), [MEMORY.md](MEMORY.md)
 and [the native boundary](../../rust/stata_backend/README.md).
 
 ## Memory and runtime boundary

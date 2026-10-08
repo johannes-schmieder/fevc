@@ -4,6 +4,7 @@ import gzip
 import hashlib
 import importlib.util
 import io
+import json
 import os
 import subprocess
 import sys
@@ -132,6 +133,72 @@ def test_scc_wrapper_preserves_pinned_stata_and_rust_tools() -> None:
     assert '--stata "${stata_binary}"' in wrapper
     assert "export PATH=${rust_toolchain}/bin:/usr/bin:/bin" not in wrapper
     assert "SOURCE_SNAPSHOT_KIND.txt" in wrapper
+
+
+@pytest.mark.parametrize("failure", ["", "centering-capability",
+    "installed-centering-capability", "installed-mean-projection", "installed-hash"])
+def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, failure):
+    source = QUALIFIER.read_text(encoding="utf-8")
+    runner = source.split("last_run_directory=\n", 1)[1].split("\nenvironment_do=", 1)[0]
+    staged = source.split("centering_capability_do=", 1)[1].split("\nrun_stata_case lifecycle", 1)[0]
+    installed = source.split("installed_package_dir=", 1)[1].split("\nsource_after=", 1)[0]
+    package = tmp_path / "package"
+    install = tmp_path / "install"
+    (install / "f").mkdir(parents=True)
+    (package / "tests/stata").mkdir(parents=True)
+    candidate = b"candidate"
+    (install / "f/fevc_rust_linux_x64.plugin").write_bytes(
+        b"corrupt" if failure == "installed-hash" else candidate)
+    fake_stata = tmp_path / "stata"
+    fake_stata.write_text(
+        f"#!{sys.executable}\n"
+        "import json, os, pathlib, sys\n"
+        "label = pathlib.Path.cwd().name.removeprefix('stata-')\n"
+        "with open(os.environ['CALLS'], 'a') as f: f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+        "if label == os.environ['FAILURE']: sys.exit(0)\n"
+        "name = pathlib.Path(sys.argv[4]).name\n"
+        "markers = {'centering-capability.do': 'FEVC LINUX CENTERING CAPABILITY PASS',\n"
+        " 'test_projection_mean_native.do': 'PASS test_projection_mean_native.do cells=8',\n"
+        " 'test_centering_mean.do': 'SIMPLE_MEAN_PASS',\n"
+        " 'test_centering_exact.do': 'SIMPLE_EXACT_ORACLE_PASS',\n"
+        " 'test_centering_jla.do': 'SIMPLE_CORRECTED_MCSE_PASS',\n"
+        " 'test_centering_options.do': 'SIMPLE_CENTERING_OPTIONS_PASS'}\n"
+        "print(markers[name])\n"
+    )
+    fake_stata.chmod(0o755)
+    driver = tmp_path / "driver.sh"
+    driver.write_text(
+        "set -euo pipefail\n"
+        "fail() { echo \"$*\" >&2; exit 1; }\n"
+        "hash_file() { shasum -a 256 \"$1\" | awk '{print $1}'; }\n"
+        f'temporary_root="{tmp_path}"\n'
+        f'test_package_dir="{package}"\n'
+        f'install_root="{install}"\n'
+        f'stata_binary="{fake_stata}"\n'
+        f'candidate_sha256={hashlib.sha256(candidate).hexdigest()}\n'
+        + runner + "\ncentering_capability_do=" + staged
+        + "\ninstalled_package_dir=" + installed
+    )
+    env = dict(os.environ, CALLS=str(tmp_path / "calls.jsonl"), FAILURE=failure)
+    result = subprocess.run(["bash", str(driver)], env=env, capture_output=True, text=True)
+    if failure:
+        assert result.returncode != 0
+        assert ("artifact hash mismatch" if failure == "installed-hash"
+                else "omitted PASS marker") in result.stderr
+        return
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line) for line in (tmp_path / "calls.jsonl").read_text().splitlines()]
+    assert len(calls) == 8
+    assert [call[4] for call in calls[:2]] == [str(package)] * 2
+    assert [call[4] for call in calls[2:]] == [str(install / "f")] * 6
+    assert [Path(call[3]).name for call in calls[4:]] == [
+        "test_centering_mean.do", "test_centering_exact.do",
+        "test_centering_jla.do", "test_centering_options.do"]
+    assert all(call[5] == "rust" for call in calls[4:])
+    capability = (tmp_path / "centering-capability.do").read_text()
+    assert "assert r(centering_api)==1" in capability
+    assert "assert r(projection_centering_api)==1" in capability
+    assert "assert r(numerical_api)==2" in capability
 
 
 def test_clean_install_distinguishes_macos_from_unix_linux() -> None:

@@ -1204,6 +1204,15 @@ fn run_generic_jla_with_execution_interrupt(
     let mut options = execution_options.estimator;
     options.solver = routing.solver;
     let mut options = options.validate()?;
+    if (component_inference.is_some() && options.centering != crate::types::Centering::None)
+        || (projection.is_some() && options.centering == crate::types::Centering::Corrected)
+    {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "centering",
+            "component inference requires None; projection supports None or Mean centering",
+        ));
+    }
     validate_problem(problem)?;
     let target_probes = probe_plan.map_or(options.probes, |p| p.target_probes);
     let point_probe_rhs = (options.probes as usize)

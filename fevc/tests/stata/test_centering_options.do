@@ -20,6 +20,12 @@ capture noisily fevc y, `common' centering(mean) inference(observation)
 assert _rc==498
 capture noisily fevc y, `common' centering(corrected) project(x)
 assert _rc==498
+capture noisily fevc y, `common' inference(highrank)
+assert _rc==498
+assert "`e(withholding_status)'"=="CENTERING_INFERENCE_UNSUPPORTED"
+capture noisily fevc y, `common' project(x) inference(highrank)
+assert _rc==498
+assert "`e(withholding_status)'"=="CENTERING_INFERENCE_UNSUPPORTED"
 capture noisily fevc y, `common' algorithm(jla) centering(corrected) probes(3) mcse(off)
 assert _rc!=0
 assert `"`c(rngstate)'"'==`"`before'"'
@@ -28,6 +34,23 @@ quietly fevc y, `common' algorithm(exact) centering(corrected) probes(3) mcse(of
 assert "`e(centering)'"=="corrected"
 assert el(e(mcse),1,1)==0 | missing(el(e(mcse),1,1))
 foreach algorithm in exact jla {
+ quietly fevc y x, `common' algorithm(`algorithm') probes(32) seed(1234) mcse(all)
+ assert "`e(centering)'"=="mean"
+ assert "`e(mcse_centering)'"=="fixed observed mean"
+ matrix default_point=e(kss)
+ matrix default_se=e(mcse)
+ matrix default_cov=e(mcse_cov)
+ gen byte default_sample=e(sample)
+ quietly fevc y x, `common' algorithm(`algorithm') centering(mean) probes(32) seed(1234) mcse(all)
+ assert mreldif(default_point,e(kss))<1e-12
+ assert mreldif(default_se,e(mcse))<1e-12
+ assert mreldif(default_cov,e(mcse_cov))<1e-12
+ assert default_sample==e(sample)
+ drop default_sample
+ quietly fevc y x, `common' algorithm(`algorithm') centering(none) probes(32) seed(1234) mcse(all)
+ assert "`e(centering)'"=="none"
+ assert "`e(mcse_centering)'"=="uncentered"
+ assert mreldif(default_point,e(kss))>1e-7
  foreach mode in mean corrected {
   quietly fevc y x, `common' algorithm(`algorithm') centering(`mode') probes(32) seed(1234) mcse(off)
   matrix expected=e(kss)

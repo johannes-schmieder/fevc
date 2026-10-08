@@ -28,7 +28,7 @@ generate byte copies = 2
 local common_options worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1)     ///
     preconditioner(diagonal) probes(160) tolerance(1e-11)            ///
-    inference(highrank) inferencemodel(structured_common)            ///
+    centering(none) inference(highrank) inferencemodel(structured_common)            ///
     inferencesimulations(100) inferenceseed(24681357) nodisplay
 
 // The estimator is unchanged, but design-only probe ordering may change the
@@ -36,7 +36,7 @@ local common_options worker(worker) firm(firm) deletion(observation) ///
 quietly fevc outcome control, worker(worker) firm(firm)              ///
     deletion(observation) algorithm(jla) engine(generic)             ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)            ///
-    probes(160) batch(8) tolerance(1e-11) nodisplay
+    probes(160) batch(8) tolerance(1e-11) centering(none) nodisplay
 matrix baseline_results = e(results)
 matrix baseline_b = e(b)
 
@@ -132,7 +132,7 @@ assert mreldif(q0_fit,e(residual_moment_diagnostics)) == 0
 quietly fevc outcome_leverage control, worker(worker) firm(firm)    ///
     deletion(observation) algorithm(jla) engine(generic)            ///
     backend(rust) rng(counter_v1) preconditioner(diagonal) batch(8) ///
-    probes(160) tolerance(1e-11) inference(q1)                      ///
+    probes(160) tolerance(1e-11) centering(none) inference(q1)                      ///
     inferencemodel(structured_leverage) inferencesimulations(100)   ///
     inferenceseed(97531)
 assert `"`e(status)'"' == "FEVC_STRUCTURED_Q1_INFERENCE"
@@ -200,7 +200,7 @@ forvalues row = 1/24 {
 replace outcome = 1.5+.3*worker-.2*firm+.4*control-.15*exact_c2+exact_noise
 quietly fevc outcome control exact_c2, worker(worker) firm(firm)  ///
     deletion(observation) algorithm(exact) backend(mata) rng(stata) ///
-    inference(highrank) inferencesimulations(100) inferenceseed(86420) ///
+    centering(none) inference(highrank) inferencesimulations(100) inferenceseed(86420) ///
     inferencebins(16) targetweight(exact_target) nodisplay
 assert `"`e(status)'"' == "KSS_HIGHRANK_INFERENCE"
 assert `"`e(backend_requested)'"' == "mata"
@@ -213,21 +213,21 @@ restore
 
 // Every unsupported request fails closed before returning a substitute.
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(observation) inference(highrank)                      ///
+    deletion(observation) centering(none) inference(highrank)                      ///
     inferencemodel(structured_common) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
 
 capture noisily fevc outcome control [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic) backend(rust)    ///
-    rng(counter_v1) preconditioner(diagonal) inference(highrank)          ///
+    rng(counter_v1) preconditioner(diagonal) centering(none) inference(highrank)          ///
     inferencemodel(structured_common) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "STRUCTURED_FREQUENCY_UNSUPPORTED"
 
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
     deletion(match) algorithm(jla) engine(generic) backend(rust)    ///
-    rng(counter_v1) preconditioner(diagonal) inference(highrank)     ///
+    rng(counter_v1) preconditioner(diagonal) centering(none) inference(highrank)     ///
     inferencemodel(structured_common) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
@@ -242,7 +242,7 @@ assert mreldif(q0_V,e(V))<1e-8
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
     deletion(observation) nuisance(fixedoffset) algorithm(jla) engine(generic) ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)          ///
-    inference(highrank) inferencemodel(structured_common) nodisplay
+    centering(none) inference(highrank) inferencemodel(structured_common) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
 
@@ -250,7 +250,7 @@ assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
 // replaced by another estimator/reference family.
 capture noisily fevc outcome_null control, worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic) backend(rust) ///
-    rng(counter_v1) preconditioner(diagonal) inference(q1)          ///
+    rng(counter_v1) preconditioner(diagonal) centering(none) inference(q1)          ///
     inferencemodel(structured_common) inferencesimulations(100)     ///
     inferenceseed(13579) nodisplay
 assert _rc == 498
@@ -260,7 +260,7 @@ capture matrix list e(component_spectrum)
 assert _rc != 0
 
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(observation) inference(highrank)                      ///
+    deletion(observation) centering(none) inference(highrank)                      ///
     inferencemodel(unrestricted_kss) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "INVALID_INFERENCE_MODEL"

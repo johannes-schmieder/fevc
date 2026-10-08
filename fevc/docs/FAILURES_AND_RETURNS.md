@@ -20,7 +20,8 @@ exact Mata family's posting contract is unchanged.
 
 ## Outcome-centering metadata
 
-`e(centering)` records `none`, `mean` or `corrected`. `e(mcse_centering)` is
+`e(centering)` records `none`, `mean` or `corrected`; omitted `centering()`
+records `mean` for both exact and JLA. `e(mcse_centering)` is
 `uncentered`, `fixed observed mean`, or
 `fixed observed mean and fixed centering increment`, respectively.
 Both macros are posted in exact mode and with MCSE off. They describe the
@@ -73,8 +74,7 @@ sensitivity/maker margins, replay time and failed zero-based probe.
 `e(numerical_replay_rhs)` stores certified phase/probe/complete-residual rows.
 The status, matrix dimensions, conditional contraction, every count and
 residual gate are reconciled before posting. Exact enabled MCSE returns zeros and performs
-no probe/replay work. With `centering(none)`, supported
-projection/sampling-inference requests retain
+no probe/replay work. Supported projection/sampling-inference requests retain
 this diagnostic for the main point estimates; no MCSE is attached to those
 additional results. Their estimates, covariance, intervals, simulations and
 scientific gates retain their existing contracts.
@@ -103,6 +103,9 @@ API 2. A plugin lacking it fails strict native preflight with
 `RUST_BACKEND_UNAVAILABLE`; automatic routing may use Mata before
 preparation/RNG under the ordinary consent rules. This capability failure
 is distinct from `STALE_NUMERICAL_RUNTIME` for explicit all-probe MCSE.
+Mean projection additionally requires native projection-centering API 1
+(`r(projection_centering_api)`); None projection does not require it. The same
+preflight/fallback rules apply when that capability is absent.
 
 ## Opt-in inference matrices
 
@@ -360,8 +363,11 @@ but never silently alter the deletion assumption, tolerance, sample, or
 estimand. The catalog includes:
 
 - `INVALID_CENTERING` (return code 198) for an unknown centering mode;
-- `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) for active centering
-  with `inference()` or `project()`, rejected before estimator RNG;
+- `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) for Mean or Corrected
+  with active component `inference()`, or Corrected with `project()`, rejected
+  before estimator RNG. Component inference requires explicit
+  `centering(none)`, including combined inference/projection requests.
+  Projection alone permits Mean (the default) and None;
 - `INVALID_FREQUENCY`, `PHYSICAL_TOTAL_LIMIT` when the exact literal count
   exceeds `2^53`, and `INVALID_TARGET_WEIGHT`;
 - `INVALID_DEPVAR`, `INVALID_CONTROLS`, `INVALID_INPUT`, `NONFINITE_INPUT`,

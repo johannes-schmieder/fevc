@@ -1,8 +1,38 @@
 # Current decisions
 
+## October 7, 2026: Mean projection covariance
+
+The owner requests Mean support for `project()`, using the same retained
+frequency-weighted working-outcome mean as point centering. Mean is the
+default; None remains available and Corrected projection is unsupported.
+Target/projection weights keep their separate roles and do not redefine this
+mean. Only the outcome factor in the symmetric leave-out covariance proxy
+changes; fitted coefficients, residuals and naive covariance are unchanged.
+Component inference remains None-only, including combined requests.
+
+This convention is translation invariant and follows Stata frequency weights.
+It differs from the KSS Matlab main mover-match mean after square-root-mass
+transformation. Estimated-mean bias is not corrected, and no uniform MSE or
+finite-sample coverage advantage is claimed. Native Mean projection requires
+separate projection-centering API 1. Previously adopted point-centering
+payloads lack it. Rebuilt local Mac plugins pass development runtime checks;
+historical distribution receipts do not qualify these new bytes or Mean
+projection. See [CENTERING.md](CENTERING.md).
+
+## October 7, 2026: Mean centering by default
+
+The owner requests `centering(mean)` as the default for both exact and JLA.
+Explicit `centering(none)` retains the former default; Corrected remains
+opt-in. This changes option resolution, not the three estimators or their
+MCSE conventions. At this checkpoint, active inference and projection required
+explicit `centering(none)`; Mean projection is extended by the decision above.
+An omitted option is not a fallback to None. Historical
+receipts and Monte Carlo reports retain their original explicit modes.
+
 ## October 6, 2026: small outcome-centering scope
 
-Expose only `centering(none|mean|corrected)`, with None as the default.
+The initial implementation exposes only `centering(none|mean|corrected)`,
+with None as its original default, superseded by the October 7 decision above.
 Mean changes the correction factor with a retained frequency-weighted mean,
 adds no solves/probes and uses ordinary MCSE with that observed mean fixed.
 Corrected exact shares the existing inverse/deletion work and one correction
@@ -10,8 +40,10 @@ system. Corrected JLA uses the existing full/two-half leverage pools, requiring
 even probes of at least four. Its MCSE is Mean's with the increment also fixed;
 full numerical uncertainty for the increment is outside this implementation.
 
-Active centering with inference/projection is unsupported and rejected before
-RNG. Failures do not silently substitute a mode. There are no comparison
+In this initial scope, active centering with inference/projection was
+unsupported and rejected before RNG; the October 7 projection decision above
+extends that scope. Failures do not silently substitute a mode. There are no
+comparison
 options, extra random pools, derivative/adjoint/replay machinery for the
 increment, or automatic centering choices. Native centering API 1 is additive
 and separate from numerical API 2. Source checks and exact-artifact Mac/Linux
@@ -104,11 +136,14 @@ records the method, assumptions, local timings and evidence.
 - `project()` is a separate fixed-effect linear-projection surface. Its KSS
   covariance and naive residual-squared comparison are stored under
   `e(projection_*)`; projection alone never populates component `e(V)`.
-- Projection covariance uses uncentered cross fitting. For observation units,
+- None projection covariance uses uncentered cross fitting. For observation units,
   `E[y_i ehat_{i,-i}|X]=sigma_i^2`. For declared match blocks it uses the
   symmetrized identity
   `.5*(y_g ehat_{g,-g}' + ehat_{g,-g} y_g')`, allowing unrestricted
-  within-match covariance. The formerly centered proxy is not an estimator.
+  within-match covariance. The October 7 Mean option substitutes the
+  frequency-centered working outcome in that proxy, with estimated-mean bias
+  uncorrected. The exact unbiasedness identity is retained only for None under
+  its stated assumptions.
 - The explicit Rust/JLA sparse projection route accepts positive integer
   frequency weights as literal physical-copy counts. Frequency projection
   mass and the KSS/naive covariance are physical-copy weighted; explicit

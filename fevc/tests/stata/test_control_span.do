@@ -35,7 +35,7 @@ foreach population in movers both {
  foreach weight in native earnings {
   foreach nuisance in joint fixedoffset {
    local label=cond("`nuisance'"=="joint","joint","offset")
-   local opts worker(worker) firm(firm) deletionid(match) deletion(match) stayers(`population') nuisance(`nuisance') targetweight(`weight') nodisplay
+   local opts centering(none) worker(worker) firm(firm) deletionid(match) deletion(match) stayers(`population') nuisance(`nuisance') targetweight(`weight') nodisplay
    foreach backend in rust mata {
     quietly fevc y `controls', `opts' backend(`backend') algorithm(exact)
     mata: a=st_matrix("e(kss)");b=st_matrix("o_`population'_`weight'_`label'");assert(all(abs(a-b):<=1e-8:*rowmax((J(4,1,1),abs(a'),abs(b')))' ))

@@ -1,4 +1,5 @@
 version 18.0
+// The ordinary uncentered reference/oracle in this test requires centering(none).
 clear
 set obs 24
 
@@ -23,7 +24,7 @@ forvalues row = 1/24 {
 }
 generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) nuisance(joint) stayers(movers) nodisplay
 
 assert "`e(cmd)'" == "fevc"
@@ -79,7 +80,7 @@ matrix define expanded_results = e(results)
 assert mreldif(frequency_results,expanded_results) < 2e-11
 restore
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) nuisance(fixedoffset) nodisplay
 assert e(full_parameters) == 11
 assert e(correction_parameters) == 9
@@ -90,7 +91,7 @@ assert abs(el(e(correction),1,2) - .00105611329461117) < 2e-10
 assert abs(el(e(correction),1,3) + .00744004087996870) < 2e-10
 assert abs(el(e(correction),1,4) + .01849902060699364) < 2e-10
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(observation) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) nuisance(joint) nodisplay
 assert e(deletion_units) == 24
 assert abs(e(max_leverage) - .60288021133431635) < 2e-10

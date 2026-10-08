@@ -1,10 +1,35 @@
 # Pending changes
 
+## October 7, 2026 — Mean projection covariance
+
+- Permit Mean (the default) and None with `project()`; Corrected remains
+  unsupported. Component inference still requires explicit None, including
+  combined inference/projection requests.
+- Center only the projection variance-proxy outcome factor using the retained
+  working-outcome mean weighted by frequency mass. Target/projection weights
+  do not redefine this mean. Projection coefficients and naive covariance
+  remain unchanged. Mean does not correct estimated-mean bias.
+- Add native projection-centering API 1 to distinguish matching development
+  builds from previously adopted point-centering plugins. Previous native
+  receipts do not qualify Mean projection.
+
+## October 7, 2026 — Mean centering by default
+
+- Make `centering(mean)` the default for both exact and JLA. Explicit
+  `centering(none)` reproduces the former default; Corrected remains opt-in.
+- At this checkpoint, keep active inference/projection unsupported with
+  Mean or Corrected (projection support is extended above). These requests
+  need explicit `centering(none)`; omitted centering does
+  not select an inference-specific exception. Update help and examples.
+- Preserve estimator formulas, MCSE conventions, native interfaces and
+  historical source-bound evidence.
+
 ## October 6, 2026 — small outcome-centering implementation
 
 - Add `centering(none|mean|corrected)` to exact/JLA point estimation in Mata
-  and matching Rust builds. None remains the default. Mean changes only the
-  bias-correction outcome factor using the retained frequency-weighted mean.
+  and matching Rust builds. None is the initial default, superseded by the
+  October 7 change above. Mean changes only the bias-correction outcome factor
+  using the retained frequency-weighted mean.
 - Corrected exact reuses fit/inverse/deletion work and adds one shared system.
   Corrected JLA reuses the full leverage pool and two equal halves, requiring
   even probes of at least four. No additional random pool or target solves.

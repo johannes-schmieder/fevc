@@ -7,8 +7,14 @@ $statusPath = Join-Path $projectRoot 'windows-build.status'
 if (Test-Path $statusPath) { throw 'Build status already exists' }
 $identityPath = Join-Path $projectRoot 'windows-input-identity.json'
 $identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+$runtimeProfile = 'full'
+if ($identity.PSObject.Properties.Name -contains 'runtime_profile') {
+    $runtimeProfile = [string]$identity.runtime_profile
+}
+if ($runtimeProfile -notin @('smoke', 'full')) { throw 'Invalid runtime profile' }
 $providedCandidate = $identity.PSObject.Properties.Name -contains 'candidate_sha256'
 $rustTestScope = 'PRIVATE_BUILD_AND_TEST_PASS'
+if ($runtimeProfile -eq 'smoke') { $rustTestScope = 'PRIVATE_BUILD_ONLY_SMOKE' }
 if ($providedCandidate) {
     if ($identity.candidate_sha256 -notmatch '^[a-f0-9]{64}$' -or
         $identity.hosted_build_run_id -notmatch '^[0-9]+$' -or
@@ -67,7 +73,7 @@ foreach ($line in $environment) {
     }
 }
 $audit = & ./rust/stata_backend/audit_windows_plugin.ps1 -Binary $candidate
-if (-not $providedCandidate) {
+if (-not $providedCandidate -and $runtimeProfile -eq 'full') {
     foreach ($test in @(@('rust_workspace','rust/Cargo.toml'), @('rust_backend','rust/stata_backend/Cargo.toml'))) {
         $test[0] | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
         $testCommand = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 test --workspace --all-targets --locked --manifest-path {1}"' -f $devcmd, $test[1]
@@ -91,12 +97,17 @@ foreach ($line in $manifest) {
 }
 Copy-Item (Join-Path $projectRoot 'fevc/stata.toc') $stage
 Copy-Item $candidate (Join-Path $stage $plugin)
-$manifest + "f $plugin" | Set-Content -Encoding ASCII (Join-Path $stage 'fevc.pkg')
+$manifest = @($manifest | ForEach-Object {
+    if ($_ -eq 'f LICENSE' -or $_ -eq 'f THIRD_PARTY_NOTICES.txt') { 'F ' + $_.Substring(2) }
+    else { $_ }
+}) + @("f $plugin")
+$manifest | Set-Content -Encoding ASCII (Join-Path $stage 'fevc.pkg')
 $digest = (Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
 @{schema='FEVC-WINDOWS-BUILD-V1'; target='x86_64-pc-windows-msvc';
   binary=$plugin; sha256=$digest; crt='static'; pe_audit='PASS';
   toolchain='1.85.1'; exports=$audit.exports; dependencies=$audit.dependencies;
-  rust_test_scope=$rustTestScope;
+  rust_test_scope=$rustTestScope; runtime_profile=$runtimeProfile;
   status='BUILD_ONLY_NOT_QUALIFICATION'} |
   ConvertTo-Json | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-build.json')
+$runtimeProfile | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-runtime.profile')
 'FEVC_WINDOWS_BUILD=PASS' | Set-Content -Encoding ASCII $statusPath

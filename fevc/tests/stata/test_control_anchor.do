@@ -78,7 +78,7 @@ foreach backend of local backends {
                     }
                     local options "deletion(`deletion_mode')"
                     if "`deletion_mode'"=="match" local options "`options' deletionid(`match')"
-                    capture noisily fevc y order_`basis'1 order_`basis'2, ///
+                    capture noisily fevc y order_`basis'1 order_`basis'2, centering(none) ///
                         worker(`worker') firm(`firm') `options' ///
                         algorithm(`selected_algorithm') nuisance(`nuisance_mode') ///
                         backend(`backend') nodisplay

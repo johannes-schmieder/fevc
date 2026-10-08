@@ -619,13 +619,15 @@ population label without changing the default observation sample or formula:
 ```text
 backend(rust) rng(counter_v1) algorithm(jla)
 deletion(observation) stayers(both|movers)
-preconditioner(diagonal|cmg)
+preconditioner(diagonal|cmg) centering(none)
 inference(highrank|q1)
 inferencemodel(structured_common|structured_leverage)
 ```
 
-The nuisance mode must be `joint`, frequency weights are rejected, and
-`project()` cannot share the generation. `structured_common` is the primary
+Explicit `centering(none)` is required; the Mean default does not support
+active component inference. Mean support for standalone `project()` does not
+extend this component-inference attachment. The nuisance mode must be `joint`, frequency weights are
+rejected, and `project()` cannot share the generation. `structured_common` is the primary
 15-term model; `structured_leverage` selects the three-term sensitivity model
 as the covariance input. Both fits and their discrepancy diagnostics are
 returned in either case.

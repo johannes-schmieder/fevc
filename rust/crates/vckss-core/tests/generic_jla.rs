@@ -48,6 +48,9 @@ mod direct_component;
 #[path = "generic_jla/numerical_attachment.rs"]
 mod numerical_attachment;
 
+#[path = "generic_jla/projection_centering.rs"]
+mod projection_centering;
+
 fn fixture(controls: bool) -> CompressedProblem {
     let mut worker = Vec::new();
     let mut firm = Vec::new();

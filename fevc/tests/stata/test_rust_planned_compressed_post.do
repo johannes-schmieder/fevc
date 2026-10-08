@@ -642,7 +642,7 @@ assert `"`r(datasignature)'"' == `"`exact_signature'"'
 // The public boundary admits only explicit Rust/counter consent with the
 // frozen algorithm(auto), engine(auto), preconditioner(auto), batch(auto)
 // tuple.  The native V4/V7 plan selects the exact result family before RNG.
-quietly fevc outcome [fw=frequency], worker(worker) firm(firm)     ///
+quietly fevc outcome [fw=frequency], centering(none) worker(worker) firm(firm)     ///
     deletion(match) deletionid(deletion_id)                         ///
     targetweight(target_weight) backend(rust) rng(counter_v1)       ///
     algorithm(auto) engine(auto) tolerance(1e-12) maxiter(10000)    ///

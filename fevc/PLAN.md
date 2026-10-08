@@ -1,49 +1,65 @@
-# Simple centering — October 6, 2026
+# Prerelease preparation and Windows runtime — October 8, 2026
 
-Approved scope replaces the abandoned uncommitted centering effort. Baseline
-`f9d3f2e27ba329d865731eeb8399b88dfcef4fd4` restored; remote main already matches.
-Recovery source archive is outside the checkout in
-`~/research/Variance_Components/fevc-centering-simple-2026-10-06/`.
+The owner requests repository cleanup, a reviewable `0.5.0-rc.1` candidate,
+and working Windows runtime checks. Work stays on `main`. Local source
+checkpoints, candidate builds and private platform tests are in scope;
+publication and tagging remain separate owner decisions.
 
-Milestones with Astra/high review: A None/Mean; B Corrected exact;
-C Corrected JLA; final focused/integrated validation, small complete-command
-timings and docs. Exact/JLA in Mata/Rust, both deletion populations, controls,
-fixedoffset and existing weights. Mean changes only the outcome factor and
-uses fixed-mean ordinary MCSE. Corrected JLA uses existing full/two-half
-leverage probes and reports exactly Mean MCSE with increment uncertainty
-excluded. Enabled exact MCSE is zero; off is unavailable/missing.
-Active inference/project is rejected before RNG.
+## Current checkpoint
 
-Preserve baseline numerical/resource/caller-state safeguards and exact hybrid
-routing. No comparecentering, extra pools, adjoints, correction derivatives or
-posterior point proofs. The initial implementation and Mac/Linux refresh
-were local. The October 7 instruction authorizes commit/push of the reviewed
-implementation, documentation and qualified payloads, providing the source
-needed for the existing Windows hosted build and private qualification. No
-tag, release, global installation or unrelated campaign is authorized.
+- Removed 191 ignored compiler-cache/test-fixture paths (22.8 GiB of allocated
+  cache entries; APFS sharing means this is not a physical-space claim).
+  All 6,530 protected evidence files retain their hashes. MC results, the PDF
+  report, source snapshots, accepted receipts and native manifests remain.
+  The local inventory and receipt are in `.local/prerelease-20261008/`.
+- Reviewed the pending source and both MC harnesses. Their 68 focused Python
+  tests pass. The MC source is now tracked, resolving the conservative
+  dirty-bundle inventory issue without weakening its allowlist.
+- Mean is the point-estimate and projection default. Projection uses the
+  retained physical-frequency mean of the working outcome. Explicit None
+  remains available; Corrected projection and centered component inference
+  remain unsupported. Help and active documentation reflect this contract.
+- The project Windows driver now distinguishes a small smoke from the full
+  profile, preserves all full-profile assertions, and writes bounded failure
+  diagnostics plus a terminal FAIL status. Local harness checks pass; remote
+  PowerShell execution and Windows runtime remain unqualified. See
+  [the Windows harness guide](../rust/stata_backend/WINDOWS_CI.md).
+- The accepted Windows collector currently returns only its aggregate receipt.
+  A separately reviewed collector change would be needed to retrieve bounded
+  project failure diagnostics or privately built candidate bytes. Do not
+  bypass that boundary or infer a failing assertion from the aggregate error.
 
-Current: reset and milestones A/B/C accepted by Astra/high. Both-backend
-focused checks, independent dense oracles, full Rust workspace, strict fmt/clippy,
-and the full integrated Python/Stata/install checks pass (Python 879).
-The unchanged quiet timing repeat passes all 24 Mean gates and all eight exact
-Corrected gates. Mean adds at most 1 ms; exact Corrected adds at most 1.9% in
-Rust and 6 ms in Mata on these small fixtures. Corrected JLA adds up to 2 ms in
-Rust and 51 ms in Mata. These are local checks, not representative-scale proof.
-The first nonquiet run (23/24 Mean gates) is preserved alongside the quiet run,
-reviews, verified source snapshot and local native build in
-`~/research/Variance_Components/fevc-centering-simple-2026-10-06/final-local/`.
-Final Astra/high review accepts the source, checks and quiet timing repeat.
-All planned work is complete locally.
+## Remaining candidate gates
 
-The active documentation now includes [CENTERING.md](docs/CENTERING.md),
-the installed help, usage/installation, return/method/resource contracts and
-the capability ledger. Dated qualification reports and binary receipts retain
-their original scope. The subsequent native refresh qualifies and adopts four
-Mac/Linux plugins, now committed and pushed with the reviewed source/docs.
-The Windows hosted build and current-source CI pass, but full private runtime
-qualification and one focused diagnostic fail without a reported assertion.
-The owner subsequently requests adoption of that exact Windows candidate for
-manual testing and commit/push. The plugin is updated; runtime qualification
-remains pending the owner's test. No further private-machine run is requested. See [native provenance](../native/README.md).
+Freeze the reviewed source, run the mandatory Python/CMG/Stata checks, and
+qualify the affected native platforms against that source. Start Windows with
+its bounded smoke. Linux needs the new Mean-projection capability and explicit
+installed-candidate checks. Bind each adopted payload to its actual build
+source, test scope and hash, then verify fresh/replacement installation of the
+final candidate bytes. Do not label an incomplete five-platform manifest as a
+qualified complete candidate.
 
-Routine validation follows [development_acceptance_v1.json](docs/development_acceptance_v1.json).
+## Preserved development evidence
+
+The Mean-projection implementation passed the 48-cell independent exact
+oracle, eight-cell native projection oracle, full Stata quick suite, Rust
+workspace tests, formatting and strict Clippy. Mac arm64/Rosetta thin and
+universal build/runtime/isolated-install checks also passed internally; their
+outer CI receipt failed the clean-source gate because the development tree
+was dirty. This is development evidence, not a clean-source qualification.
+The three tested Mac candidates are preserved separately under
+`.local/prerelease-20261008/macos-development-candidates/`; the tracked payload
+was reset to the previously published bytes for the clean source checkpoint.
+No candidate bytes were discarded.
+
+The detailed development record is
+`.local/projection-mean-20261007/development-validation.json`; the subsequent
+documentation-only compatibility audit is in
+`.local/projection-mean-docs-20261007/validation.json`. Earlier Mean-default and
+MC evidence retain their original scope. The prior public `net install`
+check verified all 61 published payload hashes and fresh/replacement installs
+at `283d2524`; it does not qualify this unpublished candidate.
+
+Current scientific contracts live in [CENTERING.md](docs/CENTERING.md),
+[INFERENCE.md](docs/INFERENCE.md) and [DECISIONS.md](docs/DECISIONS.md).
+Validation follows [development_acceptance_v1.json](docs/development_acceptance_v1.json).

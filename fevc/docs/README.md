@@ -8,6 +8,7 @@ and the installed `help fevc`.
 - [Estimator and sample](ESTIMATOR_CONTRACT.md): targets, controls, weighting,
   deletion, and retained population.
 - [Outcome centering](CENTERING.md): None/Mean/Corrected, exact/JLA,
+  Mean projection, Stata's frequency-weighted mean, the KSS mean distinction,
   fixed-mean MCSE, native availability and local timing evidence.
 - [Inference](INFERENCE.md): supported requests, assumptions, and limitations.
 - [Memory](MEMORY.md): optional budgets, forecasts, and returned diagnostics.

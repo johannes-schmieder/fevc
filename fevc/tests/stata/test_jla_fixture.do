@@ -1,4 +1,5 @@
 version 18.0
+// The ordinary uncentered reference/oracle in this test requires centering(none).
 clear
 set obs 24
 generate long worker = floor((_n-1)/4)
@@ -23,7 +24,7 @@ generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 
 // Frozen Stata-RNG/Mata numerical fixture. Native Counter-V1 public-result
 // qualification is intentionally separate in test_rust_public_generic.do.
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
     probes(2000) seed(20260814) tolerance(1e-12) ///
     backend(mata) rng(stata) nodisplay
@@ -61,26 +62,26 @@ assert abs(el(e(correction),1,4) - ///
     2*el(e(correction),1,3))) < 2e-12
 matrix jla_reference = e(results)
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
     probes(2000) batch(1) seed(20260814) tolerance(1e-12) ///
     backend(mata) rng(stata) nodisplay
 assert mreldif(jla_reference,e(results)) < 1e-14
 
 gsort -worker -time
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
     probes(2000) batch(17) seed(20260814) tolerance(1e-12) ///
     backend(mata) rng(stata) nodisplay
 assert mreldif(jla_reference,e(results)) < 1e-14
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
     probes(2000) seed(20260815) tolerance(1e-12) ///
     backend(mata) rng(stata) nodisplay
 assert mreldif(jla_reference,e(results)) > 1e-8
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(fixedoffset) ///
     probes(2000) seed(20260814) tolerance(1e-12) ///
     backend(mata) rng(stata) nodisplay
@@ -95,7 +96,7 @@ assert abs(el(e(correction),1,1) + .00467505214166742) < ///
 assert abs(el(e(correction),1,4) + .01849902060699364) < ///
     5*el(e(mcse_conditional),1,4) + 3e-4
 
-fevc y c1 c2, worker(worker) firm(firm) deletion(observation) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) nuisance(joint) probes(2000) seed(20260814) ///
     tolerance(1e-12) backend(mata) rng(stata) nodisplay
 assert abs(el(e(correction),1,1) - .017319153327137557) < ///

@@ -13,7 +13,7 @@ real scalar vckss_inference__api_level()
 
 string scalar vckss_inference__build_id()
 {
-    return("vckss-inference-api2-q1-target-status")
+    return("vckss-inference-api2-q1-target-status-projection-mean1")
 }
 
 real colvector vckss_inf__mover(
@@ -389,7 +389,7 @@ void vckss_inference__stata(
     real colvector y, worker, firm, frequency, target_weight, deletion_id
     real colvector stayer, row_order, index, block_frequency
     real colvector working_y, beta, residual, leverage, leaveout_residual
-    real colvector raw_variance, projection_raw_variance, mover
+    real colvector raw_variance, projection_raw_variance, projection_y, mover
     real colvector transformed_residual, deleted_residual
     real colvector diagonal_j, sigma_j, W_j
     real colvector eigenvalues, mode, qsim2, projection_weight_vector
@@ -559,14 +559,22 @@ void vckss_inference__stata(
     }
     raw_variance = J(n,1,.)
     if (inference != "none") raw_variance = working_y:*leaveout_residual
+    // Keep projection coefficients and deleted fits on the original outcome.
+    // Center only the variance proxy, using literal physical-copy mass on
+    // the retained working sample, independently of projection target weights.
+    projection_y = working_y
+    if (st_global("VCKSS_CENTERING") == "mean") {
+        projection_y = working_y :-
+            vckss_nmc__center_mean(working_y,frequency)
+    }
     projection_raw_variance = J(n,1,.)
     if (deletion_mode == "observation") {
-        projection_raw_variance = working_y:*leaveout_residual
+        projection_raw_variance = projection_y:*leaveout_residual
     }
     else if (sum(stayer) > 0) {
         index = selectindex(stayer :== 1)
         projection_raw_variance[index] =
-            working_y[index]:*leaveout_residual[index]
+            projection_y[index]:*leaveout_residual[index]
     }
     mover = vckss_inf__mover(worker,firm)
     targets = vckss__targets(worker,firm,target_weight,
@@ -956,10 +964,10 @@ void vckss_inference__stata(
                     }
                 }
                 deleted_residual = reduced_maker.actions
-                projection_raw_variance[index] = working_y[index]:*
+                projection_raw_variance[index] = projection_y[index]:*
                     deleted_residual:/block_frequency
                 projection_y_score = colsum(
-                    (frequency[index]:*working_y[index]):*
+                    (frequency[index]:*projection_y[index]):*
                     projection_score[index,.])
                 projection_deleted_score = colsum(
                     (block_frequency:*deleted_residual):*

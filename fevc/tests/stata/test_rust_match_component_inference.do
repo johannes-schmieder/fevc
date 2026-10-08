@@ -26,7 +26,7 @@ local caller_rng `"`c(rngstate)'"'
 quietly datasignature
 local caller_data `"`r(datasignature)'"'
 
-local point worker(worker) firm(firm) deletion(match) deletionid(match) ///
+local point centering(none) worker(worker) firm(firm) deletion(match) deletionid(match) ///
     nuisance(fixedoffset) stayers(movers) backend(rust) rng(counter_v1) ///
     algorithm(jla) engine(generic) preconditioner(diagonal) probes(256) ///
     batch(8) tolerance(1e-11) targetweight(target) nodisplay

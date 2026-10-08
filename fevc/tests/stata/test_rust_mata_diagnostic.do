@@ -29,7 +29,8 @@ fevc_rust result `handle'
 matrix rust_result = r(result)
 fevc_rust release `handle'
 
-fevc outcome [fw=frequency], worker(worker) firm(firm)            ///
+// Match the uncentered correction used by the direct native solve above.
+fevc outcome [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion) algorithm(jla) probes(200)      ///
     batch(8) seed(91827) preconditioner(diagonal)                        ///
     targetweight(target_weight) nodisplay

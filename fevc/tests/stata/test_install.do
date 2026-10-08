@@ -39,7 +39,7 @@ capture findfile fevc_scale_engine.mata
 assert _rc == 0
 capture findfile fevc_scale_runtime.mata
 assert _rc == 0
-foreach helper in fevc__numerical.ado fevc__rust_numerical.ado {
+foreach helper in fevc__numerical.ado fevc__rust_numerical.ado fevc__centering.ado {
     quietly findfile `helper'
     assert strpos(`"`r(fn)'"',`"`install_root'"') == 1
 }
@@ -98,6 +98,8 @@ quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 fevc_run exact_controls using fevc.sthlp
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(centering)'" == "mean"
+assert "`e(mcse_centering)'" == "fixed observed mean"
 assert "`e(mcse_mode)'"=="all" & "`e(mcse_status)'"=="exact_zero"
 assert e(mcse_available)==1
 mata: assert(all(st_matrix("e(mcse)"):==0))
@@ -111,6 +113,13 @@ assert "`e(rng_requested)'" == "auto"
 assert "`e(rng_selected)'" == "stata"
 capture noisily estat decomposition
 assert _rc == 0
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
+fevc_run projection_inference using fevc.sthlp
+assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"
+assert "`e(centering)'" == "mean"
+assert rowsof(e(projection_V)) == 2
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
@@ -153,7 +162,7 @@ forvalues row = 1/24 {
 }
 generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) inference(highrank) ///
+    deletion(observation) centering(none) inference(highrank) ///
     inferencesimulations(100) inferenceseed(42) inferencebins(16) nodisplay
 assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
 assert rowsof(e(V)) == 4
@@ -173,6 +182,8 @@ fevc y, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) preconditioner(cmg) probes(4) batch(4) ///
     memory_gib(4) seed(8675309) tolerance(1e-10) nodisplay
 assert "`e(status)'" == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+assert "`e(centering)'" == "mean"
+assert "`e(mcse_centering)'" == "fixed observed mean"
 assert "`e(engine_selected)'" == "compressed"
 assert "`e(preconditioner_selected)'" == "CMG"
 assert e(route_hierarchy_levels) >= 1

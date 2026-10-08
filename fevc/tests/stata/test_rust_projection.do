@@ -23,14 +23,14 @@ generate double y = -4 + .08*worker - .12*firm + .3*c1 + noise
 generate double target_mass = 1 + mod(_n,5)/10
 
 quietly fevc y c1, worker(worker) firm(firm) deletion(observation) ///
-    algorithm(exact) backend(mata) project(z) projecteffect(firm) nodisplay
+    algorithm(exact) backend(mata) centering(none) project(z) projecteffect(firm) nodisplay
 matrix exact_b = e(projection_b)
 matrix exact_V = e(projection_V)
 
 quietly fevc y c1, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
     preconditioner(diagonal) batch(8) probes(400) tolerance(1e-12) ///
-    project(z) projecteffect(firm) nodisplay
+    centering(none) project(z) projecteffect(firm) nodisplay
 matrix diagonal_b = e(projection_b)
 matrix diagonal_V = e(projection_V)
 
@@ -66,7 +66,7 @@ assert rhs[rowsof(rhs),2] == 1
 quietly fevc y c1, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
     preconditioner(cmg) batch(8) probes(400) tolerance(1e-12) ///
-    project(z) projecteffect(firm) nodisplay
+    centering(none) project(z) projecteffect(firm) nodisplay
 assert `"`e(preconditioner_requested)'"' == "cmg"
 assert `"`e(preconditioner_selected)'"' == "CMG"
 assert `"`e(fallback_status)'"' == "NOT_NEEDED"
@@ -79,13 +79,13 @@ assert mreldif(diagonal_V,e(projection_V)) < 1e-9
 
 quietly fevc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) backend(mata) targetweight(target_mass) ///
-    project(z) projecteffect(worker) projectweight(target) nodisplay
+    centering(none) project(z) projecteffect(worker) projectweight(target) nodisplay
 matrix exact_worker_b = e(projection_b)
 
 quietly fevc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
     preconditioner(diagonal) batch(8) probes(200) tolerance(1e-12) ///
-    targetweight(target_mass) project(z) projecteffect(worker) ///
+    targetweight(target_mass) centering(none) project(z) projecteffect(worker) ///
     projectweight(target) nodisplay
 assert `"`e(projection_effect)'"' == "worker"
 assert `"`e(projection_weight)'"' == "target"
@@ -100,14 +100,14 @@ generate long stored_row = _n
 
 quietly fevc y c1 [fw=copies], worker(worker) firm(firm)       ///
     deletion(observation) algorithm(exact) backend(mata)        ///
-    project(z) projecteffect(firm) projectweight(frequency) nodisplay
+    centering(none) project(z) projecteffect(firm) projectweight(frequency) nodisplay
 matrix weighted_exact_frequency_b = e(projection_b)
 matrix weighted_exact_frequency_V = e(projection_V)
 matrix weighted_exact_frequency_naive = e(projection_V_naive)
 
 quietly fevc y c1 [fw=copies], worker(worker) firm(firm)       ///
     deletion(observation) algorithm(exact) backend(mata)        ///
-    targetweight(target_mass) project(z) projecteffect(worker)  ///
+    targetweight(target_mass) centering(none) project(z) projecteffect(worker)  ///
     projectweight(target) nodisplay
 matrix weighted_exact_target_b = e(projection_b)
 matrix weighted_exact_target_V = e(projection_V)
@@ -116,7 +116,7 @@ matrix weighted_exact_target_naive = e(projection_V_naive)
 quietly fevc y c1 [fw=copies], worker(worker) firm(firm)       ///
     deletion(observation) algorithm(jla) engine(generic)        ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)      ///
-    batch(8) probes(600) tolerance(1e-12) project(z)            ///
+    batch(8) probes(600) tolerance(1e-12) centering(none) project(z)            ///
     projecteffect(firm) projectweight(frequency) nodisplay
 matrix weighted_rust_frequency_b = e(projection_b)
 matrix weighted_rust_frequency_V = e(projection_V)
@@ -126,7 +126,7 @@ assert e(projection_solver_max_complete) <= e(residual_acceptance_tolerance)
 quietly fevc y c1 [fw=copies], worker(worker) firm(firm)       ///
     deletion(observation) algorithm(jla) engine(generic)        ///
     backend(rust) rng(counter_v1) preconditioner(cmg)           ///
-    batch(8) probes(600) tolerance(1e-12) project(z)            ///
+    batch(8) probes(600) tolerance(1e-12) centering(none) project(z)            ///
     projecteffect(firm) projectweight(frequency) nodisplay
 assert `"`e(preconditioner_selected)'"' == "CMG"
 assert e(N_physical) == 480
@@ -138,7 +138,7 @@ quietly fevc y c1 [fw=copies], worker(worker) firm(firm)       ///
     deletion(observation) algorithm(jla) engine(generic)        ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)      ///
     batch(8) probes(600) tolerance(1e-12)                       ///
-    targetweight(target_mass) project(z) projecteffect(worker)  ///
+    targetweight(target_mass) centering(none) project(z) projecteffect(worker)  ///
     projectweight(target) nodisplay
 matrix weighted_rust_target_b = e(projection_b)
 matrix weighted_rust_target_V = e(projection_V)
@@ -153,7 +153,7 @@ preserve
 
     quietly fevc y c1, worker(worker) firm(firm)                ///
         deletion(observation) algorithm(exact) backend(mata)     ///
-        project(z) projecteffect(firm) projectweight(frequency) nodisplay
+        centering(none) project(z) projecteffect(firm) projectweight(frequency) nodisplay
     assert mreldif(weighted_exact_frequency_b,e(projection_b)) < 1e-10
     assert mreldif(weighted_exact_frequency_V,e(projection_V)) < 1e-10
     assert mreldif(weighted_exact_frequency_naive,               ///
@@ -161,7 +161,7 @@ preserve
 
     quietly fevc y c1, worker(worker) firm(firm)                ///
         deletion(observation) algorithm(exact) backend(mata)     ///
-        targetweight(target_copy) project(z) projecteffect(worker) ///
+        targetweight(target_copy) centering(none) project(z) projecteffect(worker) ///
         projectweight(target) nodisplay
     assert mreldif(weighted_exact_target_b,e(projection_b)) < 1e-10
     assert mreldif(weighted_exact_target_V,e(projection_V)) < 1e-10
@@ -171,7 +171,7 @@ preserve
     quietly fevc y c1, worker(worker) firm(firm)                ///
         deletion(observation) algorithm(jla) engine(generic)     ///
         backend(rust) rng(counter_v1) preconditioner(diagonal)   ///
-        batch(8) probes(600) tolerance(1e-12) project(z)         ///
+        batch(8) probes(600) tolerance(1e-12) centering(none) project(z)         ///
         projecteffect(firm) projectweight(frequency) nodisplay
     assert mreldif(weighted_rust_frequency_b,e(projection_b)) < 2e-8
     assert mreldif(weighted_rust_frequency_V,e(projection_V)) < 2e-8
@@ -180,7 +180,7 @@ preserve
         deletion(observation) algorithm(jla) engine(generic)     ///
         backend(rust) rng(counter_v1) preconditioner(diagonal)   ///
         batch(8) probes(600) tolerance(1e-12)                    ///
-        targetweight(target_copy) project(z) projecteffect(worker) ///
+        targetweight(target_copy) centering(none) project(z) projecteffect(worker) ///
         projectweight(target) nodisplay
     assert mreldif(weighted_rust_target_b,e(projection_b)) < 2e-8
     assert mreldif(weighted_rust_target_V,e(projection_V)) < 2e-8
@@ -196,7 +196,7 @@ capture noisily fevc y c1 [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic)          ///
     backend(rust) rng(counter_v1) preconditioner(cmg)             ///
     batch(8) probes(600) tolerance(1e-12) memory_gib(.00001) memorycheck(error)     ///
-    project(z) projecteffect(firm) projectweight(frequency) nodisplay
+    centering(none) project(z) projecteffect(firm) projectweight(frequency) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',                         ///
     "PROJECTION_MEMORY_LIMIT", "GENERIC_RESOURCE_ADMISSION_FAILED", ///
@@ -210,7 +210,7 @@ capture noisily fevc y c1 [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic)          ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)        ///
     batch(8) probes(600) tolerance(1e-12) memory_gib(.00001) memorycheck(error)     ///
-    project(z) projecteffect(firm) projectweight(frequency) nodisplay
+    centering(none) project(z) projecteffect(firm) projectweight(frequency) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',                         ///
     "PROJECTION_MEMORY_LIMIT", "GENERIC_RESOURCE_ADMISSION_FAILED", ///
@@ -223,7 +223,7 @@ assert r(state) == 0
 // strict Rust requests must fail before native preparation.
 capture noisily fevc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1)        ///
-    project(z) projecteffect(worker) nodisplay
+    centering(none) project(z) projecteffect(worker) nodisplay
 assert _rc == 498
 assert `"`e(status)'"' == "WITHHELD"
 assert `"`e(withholding_status)'"' == "RUST_INFERENCE_UNSUPPORTED"

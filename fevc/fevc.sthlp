@@ -78,7 +78,7 @@ Only frequency weights ({cmd:[fw=}{it:frequency}{cmd:]}) are supported.
     {cmd:deletionid(}{it:varname}{cmd:)}{col 40}optional match identifier
     {cmd:stayers(both|movers)}{col 40}include eligible stayers or movers only
     {cmd:probes(}{it:#}{cmd:)}{col 40}approximation precision; default 200
-    {cmd:centering(none|mean|corrected)}{col 40}outcome centering; default none
+    {cmd:centering(none|mean|corrected)}{col 40}outcome centering; default mean
     {cmd:mcse(all|off)}{col 40}numerical MCSE; default all
     {cmd:seed(}{it:#}{cmd:)}{col 40}estimation seed; default 8675309
     {cmd:nolog}{col 40}suppress progress messages
@@ -159,7 +159,7 @@ an error. The developer-only {cmd:mcse(conditional)} retains the earlier MCSE
 conditional on the realized leverage sketch and performs no leverage replay.
 
 {phang}
-With {cmd:centering(none)}, MCSE may accompany any otherwise supported
+MCSE may accompany any otherwise supported
 {cmd:project()} or sampling-inference request. It describes the main point estimates only. No MCSE is computed for
 projection coefficients, their covariance, sampling covariance, confidence
 intervals or their additional simulations. Numerical covariance is never
@@ -240,19 +240,21 @@ intervals require an explicit {help fevc##inference:inference request}.
 
 {pstd}
 Use {cmd:centering(none|mean|corrected)} in exact or JLA point estimation.
-The default is {cmd:none}. The modes change only the bias-correction outcome
-factor and, for Corrected, its estimated-mean adjustment. Fitted coefficients,
+The default is {cmd:mean} for both exact and JLA. In point estimation, the modes
+change the bias-correction outcome factor and, for Corrected, its estimated-mean
+adjustment. Mean also changes the covariance proxy when {cmd:project()} is requested. Fitted coefficients,
 full-sample residuals, plug-in components, sample, target weights and deletion
 units are unchanged. The {cmd:corrected} result row always means the final
 leave-out estimate, whichever centering mode is selected.
 
 {phang}
-{cmd:centering(none)} preserves the ordinary estimator and its MCSE calculation.
+{cmd:centering(none)} selects the ordinary estimator and its MCSE calculation,
+reproducing the former default.
 
 {phang}
-{cmd:centering(mean)} subtracts the frequency-weighted mean of the retained
-working outcome in bias-correction terms. This mean uses literal-copy frequency
-mass, {bf:not} {cmd:targetweight()}. Under {cmd:nuisance(fixedoffset)}, first
+{cmd:centering(mean)}, the default, subtracts the frequency-weighted mean of
+the retained working outcome in bias-correction terms. This mean uses literal-copy frequency
+mass, {bf:not} {cmd:targetweight()} or {cmd:projectweight()}. Under {cmd:nuisance(fixedoffset)}, first
 subtract the full fitted nuisance index, then take its mean. Mean adds only
 a mean calculation and subtraction; it adds no solves or random directions.
 Its numerical MCSE holds that observed mean fixed.
@@ -275,17 +277,18 @@ convention. Exact MCSE is zero when enabled. With {cmd:mcse(off)}, diagnostics
 are unavailable/missing even in exact mode; Corrected point work is still done.
 
 {pstd}
+Both exact and JLA use {cmd:centering(mean)} when the option is omitted.
 For a small exact problem, use {cmd:algorithm(exact) centering(corrected)}
-when the estimated-mean adjustment is wanted. For JLA, {cmd:centering(mean)}
-with the default {cmd:mcse(all)} gives inexpensive centering and a numerical
-diagnostic with the observed mean fixed. These are explicit choices; the
-command does not automatically select a centering mode.
+when the estimated-mean adjustment is wanted. For JLA, the default
+{cmd:centering(mean) mcse(all)} gives inexpensive centering and a numerical
+diagnostic with the observed mean fixed.
 
 {pstd}
-Active centering ({cmd:mean} or {cmd:corrected}) cannot accompany
-{cmd:inference()} or {cmd:project()}. The command rejects these combinations
-before estimator RNG. A failed correction solve returns a typed error.
-It does not substitute an uncentered or Mean result.
+Component {cmd:inference()} requires explicit {cmd:centering(none)}, including
+when combined with {cmd:project()}. Projection alone accepts Mean (the default)
+and None; Corrected projection is unsupported. Unsupported combinations are
+rejected before estimator RNG. A failed correction solve returns a typed error
+and does not substitute another centering mode.
 
 {pstd}
 Mata supports active centering with the current source. Rust additionally
@@ -298,6 +301,12 @@ for owner manual testing. An older plugin may lead
 rules. Strict {cmd:backend(rust)} or explicit {cmd:rng(counter_v1)} requires a
 matching plugin. The Windows build provides centering API 1; its hosted build
 passes, but automated runtime checks failed and manual qualification is pending.
+Mean projection additionally requires {cmd:r(projection_centering_api)} equal
+to 1. The previously adopted point-centering payloads lack this capability.
+The rebuilt local Mac development plugins expose it and pass native arm64
+and Rosetta runtime checks; those checks do not constitute a clean-source
+release qualification or qualify other platforms. Use current source with
+{cmd:backend(mata)} or a matching native build, and check its probe result.
 Repository publication does not imply a release.
 
 {pstd}
@@ -366,6 +375,7 @@ dropped. See the
   {hline 76}
 
 {pstd}
+Include {cmd:centering(none)} with any active inference request.
 {cmd:inference(highrank)} requests Gaussian component intervals;
 {cmd:inference(q1)} requests intervals allowing one dominant weakly
 identified mode. These require different identification conditions; q1
@@ -394,6 +404,8 @@ An {help fevc##component_example:illustrative example} appears below.
   {hline 76}
 
 {pstd}
+Projection uses {cmd:centering(mean)} by default; explicit {cmd:centering(none)}
+retains the uncentered covariance proxy. Corrected projection is unsupported.
 These options estimate relationships between fixed effects and observed
 characteristics, such as firm wage premiums and firm size. An intercept is
 included automatically. Slopes are invariant to the fixed-effect
@@ -402,6 +414,31 @@ suited to small designs. See the {help fevc##projection_example:example}
 and the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
 for the explicit scalable alternative. Projection results are stored
 separately; Stata's {cmd:lincom} does not operate directly on these rows.
+
+{pstd}
+Mean projection uses {cmd:mu = sum(f_i*u_i)/sum(f_i)} over the retained sample,
+where {cmd:f_i} is the positive integer frequency weight and {cmd:u_i} is the
+working outcome. This is the Stata mean from
+{cmd:summarize u if e(sample) [fw=f]}; without frequency weights it is the
+ordinary observation mean. Joint nuisance handling uses the retained outcome;
+fixedoffset first subtracts the full fitted nuisance index. Centering occurs
+before match collapse or square-root scaling. Neither {cmd:targetweight()}
+nor {cmd:projectweight()} redefines the mean. Only the outcome factor in the
+leave-out covariance proxy changes; coefficients, residuals and the naive
+residual-squared covariance are unchanged.
+
+{pstd}
+For mover match {cmd:g} with {cmd:n_g} observations and mean {cmd:ubar_g},
+FEVC uses {cmd:sqrt(n_g)*(ubar_g-mu)}. The KSS Matlab main mover-match path
+instead uses {cmd:sqrt(n_g)*ubar_g-a}, where {cmd:a} is the unweighted mean
+of the transformed match outcomes. On the same mover-only sample these
+agree when match sizes are equal, but generally differ otherwise. KSS uses a
+separate proxy for eligible stayers. FEVC's convention respects literal
+frequency copies and makes the covariance invariant to adding a constant
+to the outcome. Neither convention uniformly dominates in MSE or coverage.
+The estimated mean can induce finite-sample bias under heteroskedasticity;
+Mean projection does not apply an estimated-mean correction or guarantee
+exact unbiasedness. See the {help fevc##centering:centering guide} for details.
 
 {dlgtab:Computation and reproducibility}
 
@@ -532,14 +569,15 @@ components. This example also illustrates holding the control index fixed.
 {pstd}
 Firm size is average annual employment. The true firm effect is
 {cmd:0.5*ln(firm_size)}, so the estimated projection slope should be near 0.5.
-The projection weights firms by worker-year observations.
+The projection weights firms by worker-year observations and uses Mean
+centering by default. Omitted {cmd:centering()} in this example selects Mean.
 
 {cmd}{...}
         preserve
 {* example_start - projection_inference}{...}
         fevc, simulate_data(ex4) clear
         fevc log_wage, worker(worker_id) firm(firm_id) algorithm(exact) ///
-            project(log_firm_size) projecteffect(firm)
+            backend(mata) project(log_firm_size) projecteffect(firm)
 {* example_end}{...}
         restore
 {txt}{...}
@@ -559,7 +597,7 @@ coverage. This example uses observation deletion and exact inference.
         fevc, simulate_data(ex5) clear
         fevc log_wage productivity policy, ///
             worker(worker_id) firm(firm_id) ///
-            deletion(observation) inference(highrank) ///
+            deletion(observation) centering(none) inference(highrank) ///
             inferencesimulations(100) inferenceseed(42) inferencebins(16)
         lincom worker_variance+firm_variance+2*worker_firm_covariance
 {* example_end}{...}

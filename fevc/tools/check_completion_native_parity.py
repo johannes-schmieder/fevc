@@ -39,7 +39,7 @@ def check(replay, plugin, output):
         lines = ['version 18.0', 'clear all', 'set more off', 'set type double', 'set processors 1',
             f'adopath ++ "{ROOT}/fevc"', f'adopath ++ "{plugin}"', f'quietly run "{ROOT}/fevc/fevc.ado"',
             f'import delimited using "{source}/fixture.csv", clear asdouble',
-            f'quietly fevc outcome {weight}, worker(worker) firm(firm) {deletion} stayers(movers) backend(rust) engine(generic) rng(counter_v1) algorithm(jla) preconditioner(diagonal) batch(16) targetweight(target) inferencemodel(structured_common) inference({reference})',
+            f'quietly fevc outcome {weight}, worker(worker) firm(firm) {deletion} stayers(movers) backend(rust) engine(generic) rng(counter_v1) algorithm(jla) preconditioner(diagonal) batch(16) targetweight(target) centering(none) inferencemodel(structured_common) inference({reference})',
             'assert e(probes)==200', 'assert e(inference_gram_probes)==2048',
             'assert "`e(inference_gram_method)\'"=="direct_residual_covariance"',
             f'assert e(inference_joint_status)=={call["joint"]}',

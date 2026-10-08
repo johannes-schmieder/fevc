@@ -86,7 +86,7 @@ foreach solver in diagonal cmg {
  foreach threads in 4 `upper' {
   quietly fevc y x, worker(worker) firm(firm) deletion(observation) stayers(movers) ///
    algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-   probes(200) tolerance(1e-12) project(z) projecteffect(firm) nodisplay nativethreads(`threads')
+   probes(200) tolerance(1e-12) centering(none) project(z) projecteffect(firm) nodisplay nativethreads(`threads')
   assert e(rust_execution_receipt)[1,"threads"]==`threads'
   assert c(processors)==4
   if `threads'==4 matrix base=e(projection_b)
@@ -106,7 +106,7 @@ foreach solver in diagonal cmg {
  foreach threads in 4 `upper' {
   quietly fevc y x, worker(worker) firm(firm) stayers(movers) deletion(observation) ///
    algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-   probes(200) targetweight(target) inference(highrank) inferencemodel(structured_common) ///
+   probes(200) targetweight(target) centering(none) inference(highrank) inferencemodel(structured_common) ///
    inferencesimulations(129) inferencegramprobes(513) nodisplay nativethreads(`threads')
   assert e(rust_execution_receipt)[1,"threads"]==`threads'
   assert e(rust_component_batch_receipt)[1,"threads"]==`threads'

@@ -1,4 +1,5 @@
 version 18.0
+// The ordinary uncentered reference/oracle in this test requires centering(none).
 clear
 set more off
 set varabbrev off
@@ -67,7 +68,7 @@ capture quietly fevc_rust probe
 local rust_available = (_rc==0)
 if `rust_available' capture quietly fevc_rust clear
 local caller_rng `"`c(rngstate)'"'
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
     nuisance(joint) targetweight(target_mass) stayers(movers) ///
     backend(mata) rng(stata) nodisplay
@@ -85,7 +86,7 @@ matrix mover_graph = (e(N_retained),e(N_physical),e(N_mover_input), ///
     e(graph_bridge_rows_removed),e(graph_final_bridge_units))
 generate byte mover_sample = e(sample)
 
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
     nuisance(joint) targetweight(target_mass) stayers(both)   ///
     backend(mata) rng(stata) nodisplay
@@ -130,7 +131,7 @@ matrix mata_hybrid_source = e(stayer_hybrid_correction_source)
 matrix mata_hybrid_account = e(stayer_hybrid_sample_accounting)
 
 // Match deletion defaults to the current MATLAB population convention.
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)            ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm)            ///
     deletion(match) deletionid(match_id) algorithm(exact)         ///
     nuisance(joint) targetweight(target_mass) backend(mata)       ///
     rng(stata) nodisplay
@@ -144,7 +145,7 @@ generate double projection_y = y - 50
 generate double projection_z = sin(_n/3)
 fevc projection_y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
     deletionid(match_id) algorithm(exact) nuisance(joint)        ///
-    targetweight(target_mass) project(projection_z)              ///
+    targetweight(target_mass) centering(none) project(projection_z)              ///
     projecteffect(firm) nodisplay
 assert "`e(deletion)'" == "match"
 assert "`e(stayers)'" == "both"
@@ -180,7 +181,7 @@ if `rust_available' {
                 backend(rust) rng(counter_v1) seed(`projection_seed')        ///
                 probes(`projection_probes') batch(8) preconditioner(diagonal) ///
                 tolerance(1e-12) nuisance(joint) targetweight(target_mass)   ///
-                project(projection_z) projecteffect(firm) nodisplay
+                centering(none) project(projection_z) projecteffect(firm) nodisplay
             if _rc {
                 assert _rc == 498
                 assert "`e(withholding_status)'" == "JLA_CONSTRAINT_FAILED"
@@ -237,7 +238,7 @@ if `rust_available' {
         }
     }
 
-    fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+    fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
         deletion(match) deletionid(match_id) algorithm(exact)    ///
         nuisance(joint) targetweight(target_mass) stayers(both)   ///
         backend(rust) rng(counter_v1) nodisplay
@@ -269,7 +270,7 @@ else {
     // The projection comparison above changes e(); restore the saved Mata
     // point-estimation design before the literal-refit oracle when no local
     // developer plugin is available to exercise the Rust branch.
-    quietly fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+    quietly fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
         deletion(match) deletionid(match_id) algorithm(exact)    ///
         nuisance(joint) targetweight(target_mass) stayers(both)   ///
         backend(mata) rng(stata) nodisplay
@@ -457,14 +458,14 @@ assert mreldif(hybrid_source,hybrid_oracle_source) < 2e-9
 
 // Arbitrary deletion-ID relabeling cannot change the deletion partition.
 generate long match_relabel = 900000-17*match_id
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_relabel) algorithm(exact) ///
     nuisance(joint) targetweight(target_mass) stayers(both) nodisplay
 assert mreldif(hybrid_joint,e(stayer_hybrid_results)) < 2e-10
 assert original_order == _n
 
 // Explicit target mass is stored-row mass, not frequency-scaled mass.
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
     nuisance(joint) stayers(both) nodisplay
 assert e(stayer_hybrid_target_mass) == 30
@@ -472,14 +473,14 @@ assert mreldif(hybrid_joint,e(stayer_hybrid_results)) > 1e-8
 
 // The fixed-offset convention uses the combined full-fit control index but
 // excludes controls from every deletion correction design.
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
     nuisance(fixedoffset) targetweight(target_mass) stayers(both) ///
     backend(mata) rng(stata) nodisplay
 matrix mata_hybrid_fixed = e(stayer_hybrid_results)
 matrix mata_hybrid_fixed_source = e(stayer_hybrid_correction_source)
 if `rust_available' {
-    fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+    fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
         deletion(match) deletionid(match_id) algorithm(exact)    ///
         nuisance(fixedoffset) targetweight(target_mass) stayers(both) ///
         backend(rust) rng(counter_v1) nodisplay
@@ -510,7 +511,7 @@ generate long copies = frequency
 generate double copy_target = target_mass/copies
 expand copies
 replace frequency = 1
-fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+fevc y c1 c2, centering(none) worker(worker) firm(firm) deletion(match) ///
     deletionid(match_id) algorithm(exact) nuisance(joint)     ///
     targetweight(copy_target) stayers(both) nodisplay
 matrix hybrid_expanded = e(stayer_hybrid_results)
@@ -536,11 +537,11 @@ assert `"`c(rngstate)'"' == `"`caller_rng'"'
 // A request with no eligible stayers reduces exactly to the mover result.
 preserve
 keep in 1/24
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
     nuisance(joint) targetweight(target_mass) stayers(movers) nodisplay
 matrix no_stayer_headline = e(results)
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
     nuisance(joint) targetweight(target_mass) stayers(both) nodisplay
 assert "`e(stayer_hybrid_status)'" == "CONVERGED"
@@ -553,13 +554,13 @@ forvalues component=1/4 {
     assert no_stayer_source[2,`component'] == 0
 }
 if `rust_available' {
-    fevc y [fw=frequency], worker(worker) firm(firm)             ///
+    fevc y [fw=frequency], centering(none) worker(worker) firm(firm)             ///
         deletion(match) deletionid(match_id) algorithm(jla)     ///
         engine(auto) probes(64) batch(7) seed(20260831)          ///
         backend(rust) rng(counter_v1) stayers(movers) nodisplay
     matrix no_stayer_rust_mover = e(results)
     assert "`e(engine_selected)'" == "compressed"
-    fevc y [fw=frequency], worker(worker) firm(firm)             ///
+    fevc y [fw=frequency], centering(none) worker(worker) firm(firm)             ///
         deletion(match) deletionid(match_id) algorithm(jla)     ///
         engine(auto) probes(64) batch(7) seed(20260831)          ///
         backend(rust) rng(counter_v1) stayers(both) nodisplay
@@ -590,7 +591,7 @@ assert "`e(deletion)'" == "observation"
 assert e(N_retained) == 28
 // The Mata and Rust generic JLA implementations estimate the same combined
 // target; exact parity is assessed against each estimator's reported MCSE.
-fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)            ///
+fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm)            ///
     deletion(match) deletionid(match_id) algorithm(jla)           ///
     engine(generic) preconditioner(diagonal) probes(1024) batch(31) ///
     seed(20260831) nuisance(joint) targetweight(target_mass)       ///
@@ -609,7 +610,7 @@ if `rust_available' {
     assert _rc == 0
     assert "`e(backend_selected)'" == "rust"
     assert "`e(stayer_hybrid_status)'" == "CONVERGED"
-    fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)        ///
+    fevc y c1 c2 [fw=frequency], centering(none) worker(worker) firm(firm)        ///
         deletion(match) deletionid(match_id) algorithm(jla)       ///
         engine(generic) preconditioner(diagonal) probes(1024) batch(31) ///
         seed(20260831) nuisance(joint) targetweight(target_mass)   ///

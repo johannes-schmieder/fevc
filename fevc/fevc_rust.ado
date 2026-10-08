@@ -64,6 +64,7 @@ program define fevc_rust, rclass
         capture scalar drop __vckss_rust_execution_api
         capture scalar drop __vckss_rust_numerical_api
         capture scalar drop __vckss_rust_centering_api
+        capture scalar drop __vckss_rust_proj_center_api
         capture scalar drop __vckss_rust_exact_api
         capture scalar drop __vckss_rust_exact_resolved_api
         capture scalar drop __vckss_rust_exact_legacy_api
@@ -82,6 +83,10 @@ program define fevc_rust, rclass
             capture confirm scalar __vckss_rust_`name'
             if !_rc local `name' = scalar(__vckss_rust_`name')
         }
+        local projection_centering_api = 0
+        capture confirm scalar __vckss_rust_proj_center_api
+        if !_rc local projection_centering_api = scalar(__vckss_rust_proj_center_api)
+        capture scalar drop __vckss_rust_proj_center_api
         return scalar abi_compiled = scalar(__vckss_rust_abi_compiled)
         return scalar abi_runtime = scalar(__vckss_rust_abi_runtime)
         return scalar core_ready_flags = scalar(__vckss_rust_core_flags)
@@ -90,6 +95,7 @@ program define fevc_rust, rclass
         return scalar execution_api = `execution_api'
         return scalar numerical_api = `numerical_api'
         return scalar centering_api = `centering_api'
+        return scalar projection_centering_api = `projection_centering_api'
         return scalar exact_api = `exact_api'
         return scalar exact_resolved_api = `exact_resolved_api'
         return scalar exact_legacy_api = `exact_legacy_api'

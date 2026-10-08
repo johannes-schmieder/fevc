@@ -1,8 +1,9 @@
 # Inference
 
-All component-inference and fixed-effect-projection routes in this guide
-require `centering(none)`, the default. `centering(mean|corrected)` with
-active `inference()` or `project()` is rejected before estimator RNG.
+Component-inference routes in this guide require explicit `centering(none)`,
+including combined inference/projection requests. Projection alone supports
+Mean (the exact/JLA default) and None. Corrected projection and centered
+component inference are rejected before estimator RNG.
 The centered point estimator's numerical MCSE is a separate diagnostic,
 with the fixed-mean/increment conventions in [CENTERING.md](CENTERING.md).
 
@@ -238,7 +239,7 @@ Request this calculation with
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) inference(highrank)
+    deletion(observation) centering(none) inference(highrank)
 ```
 
 `e(component_inference)` contains the four estimates, standard errors, and
@@ -311,7 +312,7 @@ empirical critical value.
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) inference(q1) level(95)
+    deletion(observation) centering(none) inference(q1) level(95)
 ```
 
 The Anderson--Rubin-style endpoints and all diagnostics are stored in
@@ -360,8 +361,8 @@ deleted fit,
 E[y_g\widehat e_{g,-g}'\mid X]=\Sigma_g.
 \]
 
-The raw cross product need not be symmetric in a realized sample, so FEVC
-uses the auditable symmetric block estimate
+The raw cross product need not be symmetric in a realized sample. With
+`centering(none)`, FEVC uses the auditable symmetric block estimate
 
 \[
 \widehat\Sigma_g=\tfrac12\{y_g\widehat e_{g,-g}'
@@ -380,17 +381,26 @@ Consequently,
 
 This formula permits unrestricted covariance within a declared match and
 independence across matches. It does not replace \(\Sigma_g\) by a diagonal
-matrix. For observation deletion it reduces to the uncentered identity
-\(y_i\widehat e_{i,-i}\). Subtracting a sample mean from \(y_i\) is not
-valid under unrestricted heteroskedasticity and is not part of the FEVC
-estimator. A separately isolated test diagnostic reproduces the centered
-expression in the KSS Matlab pipeline when comparator attribution
-requires it. The KSS Matlab Econometrica replication code (`lincom_KSS`) instead used this same
-uncentered, symmetrized block identity.
+matrix. For observation deletion, None reduces to
+\(y_i\widehat e_{i,-i}\). Mean, the default, substitutes the centered working
+outcome \(z_i=u_i-\bar u\) for the outcome factor in this symmetric proxy,
+where \(\bar u=\sum_i f_i u_i/\sum_i f_i\). The working outcome is raw `y`
+under joint nuisance handling and `y-Z gammahat` under fixedoffset. The fit,
+residuals and projection coefficients are unchanged. Neither target nor
+projection weights change this centering mean.
+
+Estimating the mean from the same sample generally removes the exact
+unbiasedness identity under heteroskedasticity; no estimated-mean correction
+or universal finite-sample coverage guarantee is claimed for Mean projection.
+None retains the ordinary cross-fit identity under the assumptions above.
+The KSS Matlab main mover-match pipeline instead subtracts a mean after its
+square-root match-size transformation. The difference, the separate KSS stayer
+proxy and FEVC's translation-invariant frequency convention are documented in
+[CENTERING.md](CENTERING.md#projection-and-the-mean-convention).
 
 For stored row \(i\) representing positive integer frequency \(f_i\), define
 the score row \(s_i=x_i'A\). A mover-match block is accumulated without
-physical expansion as
+physical expansion under None as
 
 \[
 a_g=\sum_{i\in g}f_i s_i y_i,\qquad
@@ -402,7 +412,10 @@ Each eligible stayer remains a literal observation-deletion population, so a
 stored stayer row contributes \(f_i y_i\widehat e_{i,-i}s_is_i'\). This is
 the same mover-match/eligible-stayer partition, retained sample, pooled target,
 regression mass, target mass, and nuisance convention as the point estimator.
-Every declared match deletion ID must stay within one worker--firm coordinate;
+Under Mean, replace the outcome factor by `z_i` in both the mover and stayer
+contractions above, retaining their original residuals. Corrected projection
+is unsupported. Every declared match deletion ID must stay within one
+worker--firm coordinate;
 cross-coordinate IDs fail with `CROSS_COORDINATE_MATCH`.
 
 A residual-squared plug-in covariance is returned separately as a descriptive
@@ -411,7 +424,8 @@ naive comparison. Projection inference does not populate the component
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) project(education experience)    ///
+    deletion(observation) backend(mata)                      ///
+    project(education experience)                            ///
     projecteffect(firm) projectweight(frequency)
 ```
 
@@ -440,10 +454,19 @@ route is opt-in and requires the complete tuple
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)              ///
-    deletion(observation) project(education experience)           ///
+    deletion(observation)                                       ///
+    project(education experience)                                ///
     projecteffect(firm) backend(rust) rng(counter_v1)              ///
     algorithm(jla) engine(generic) preconditioner(cmg)
 ```
+
+The example uses Mean by default and requires a matching native build exposing
+`r(projection_centering_api) == 1`. Rebuilt local Mac development plugins pass
+the Mean-projection runtime checks; the previously adopted point-centering
+payloads lack this capability and their receipts do not cover Mean projection.
+Explicit `centering(none)` retains the earlier uncentered native route.
+See [native availability](CENTERING.md#restrictions-availability-and-failure)
+for development and platform limits.
 
 The capability remains intentionally explicit: positive integer frequency
 weights, observation or match deletion, the Rust backend, Counter-V1, generic
@@ -474,7 +497,7 @@ The native runtime reuses the prepared generic-JLA solver and its retained
 canonical observation map. It:
 
 1. takes the completed JLA block-deleted residual approximation and applies
-   the same symmetrized uncentered block formula as exact Mata;
+   the same symmetrized None or Mean block formula as exact Mata;
 2. reuses the full-model fixed-effect solve already required by JLA;
 3. constructs only the small projection Gram and coefficient-space loading
    vectors, then performs one solver inverse action per automatic-constant or

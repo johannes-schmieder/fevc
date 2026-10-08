@@ -37,7 +37,8 @@ local caller_sortedby : sortedby
 quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 
-quietly fevc y if eligible in 1/48 [fw=frequency],       ///
+// The direct developer lifecycle below uses the uncentered correction.
+quietly fevc y if eligible in 1/48 [fw=frequency], centering(none) ///
     worker(worker) firm(firm) deletion(match) deletionid(match) ///
     targetweight(target) algorithm(jla) engine(compressed)      ///
     stayers(movers)                                             ///
@@ -160,7 +161,7 @@ matrix `public_memory' = e(rust_memory_receipt)
 generate byte public_sample = e(sample)
 
 // Match deletion and the worker-firm deletion ID are the public defaults.
-quietly fevc y [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc y [fw=frequency], centering(none) worker(worker) firm(firm) ///
     targetweight(target) algorithm(jla) engine(compressed)      ///
     stayers(movers)                                             ///
     preconditioner(diagonal) batch(3) probes(6) seed(91827)     ///
@@ -220,7 +221,7 @@ gsort -obsid
 // preserve the caller state it actually received.
 mata: VCKSS_RUST_PUBLIC_BEFORE = vckss_rng__capture_full()
 mata: assert(VCKSS_RUST_PUBLIC_BEFORE.status == "OK")
-quietly fevc y [fw=frequency], worker(worker) firm(firm) ///
+quietly fevc y [fw=frequency], centering(none) worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)      ///
     algorithm(jla) engine(auto) preconditioner(diagonal)        ///
     batch(2) probes(6) seed(91827) tolerance(1e-10)             ///
