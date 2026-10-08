@@ -1,0 +1,58 @@
+{
+  "schema": "FEVC-LOCAL-PACKAGE-VALIDATION-V1",
+  "status": "PASS_MACOS_INSTALL_WINDOWS_RUNTIME_PENDING",
+  "package_source_commit": "623b156d1128ba19e862dba7e4f730146ae082fb",
+  "native_build_source_commit": "24754269b7de3d9823146a671772b6031d93397e",
+  "qualification_manifest": "manifest.json",
+  "qualification_manifest_sha256": "d357066fa0fbd549baa3294c6afe76dec055b3acf8b36d382740bc916bea9a8c",
+  "compatibility": "packaging-compatibility.json",
+  "compatibility_sha256": "33c8ac932fc6df10c55d2b42a598dea03cef46c81f00b3eec0b1371480d42299",
+  "installer": {
+    "evidence": "evidence/net-install-verification.json",
+    "sha256": "5be65d1c57d1cdc5a594b89ca102531acfa06488ab2a3e99fcdb19820627f2fd",
+    "modes": [
+      "fresh",
+      "replace"
+    ],
+    "installed_file_count_each": 61,
+    "platform": "Darwin arm64",
+    "scope": "Real Stata net install from frozen localhost HTTP catalog. All five binary hashes verified; runtime claims are macOS only. Replacement test overwrites a deliberately changed helpfile."
+  },
+  "portable_artifact": {
+    "archive": "fevc-0.5.0-rc.1.tar.gz",
+    "sha256": "7bd7009a66aee42958059295581689e8a6039b8a22d4ba463121a935f5860acf",
+    "files": 58,
+    "receipt": "evidence/portable-package-receipt.json",
+    "receipt_sha256": "4c1f9fe883c716eed2789540d16aa0140256f456cbed8f4acd5bb68f8da4498e",
+    "scope": "Portable runtime package, not the complete Rust corresponding source."
+  },
+  "corresponding_source": {
+    "source_commit": "623b156d1128ba19e862dba7e4f730146ae082fb",
+    "archive": "fevc-corresponding-source-623b156d.tar.gz",
+    "sha256": "9c0ab9cebf14c873284f75abc45c757fc2ac53f4569907266666c1e10c7ace4a",
+    "files": 1443,
+    "scope": "Complete corresponding Git source for local packaging candidate; binaries excluded by export-ignore. Rust build source remains 24754269 and compatibility is separately recorded."
+  },
+  "final_checks": {
+    "focused_python_tests_passed": 61,
+    "license_audit": "PASS",
+    "cmg_assembly": "PASS",
+    "capability_ledger": "PASS",
+    "git_whitespace": "PASS",
+    "portable_archive_determinism": "PASS",
+    "independent_artifact_and_compatibility_review": "PASS"
+  },
+  "cleanup": {
+    "removed_ignored_paths": 191,
+    "protected_evidence_files_hash_verified": 6530,
+    "scope": "Old compiler caches and completed synthetic test fixtures. Protected results, source snapshots, accepted receipts and native provenance were preserved. Allocated-size estimates are not physical disk-space savings."
+  },
+  "publication": "LOCAL_PREPARATION_ONLY_NO_PUSH_TAG_OR_RELEASE",
+  "limitations": [
+    "Windows runtime remains unqualified and its retained binary lacks projection-centering API 1.",
+    "A bounded collector update is prepared and reviewed, but requires explicit shared-backend approval before deployment.",
+    "No complete five-plugin qualified native release archive is staged.",
+    "This bookkeeping record and companion PLAN/native README edits do not change installed package bytes.",
+    "Tagging/publication and human review of the exact final distribution remain separate owner decisions."
+  ]
+}

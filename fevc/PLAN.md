@@ -7,7 +7,8 @@ publication and tagging remain separate owner decisions.
 
 ## Current checkpoint
 
-- Source is frozen at `24754269`. The two MC harnesses are tracked and their
+- Runtime/build source is frozen at `24754269`; packaging is committed at
+  `623b156d`. The two MC harnesses are tracked and their
   68 focused Python tests pass. Integrated source validation passes: 886
   Python tests, CMG checks, Stata quick/full, portable clean installation,
   migration and harness checks. The pinned supply-chain audit also passes.
@@ -30,6 +31,12 @@ publication and tagging remain separate owner decisions.
   collector cannot retrieve them. No failing assertion is known. The reviewed
   collector proposal awaits owner approval; no shared changes are deployed.
   The existing Windows manual-test payload retains its original status.
+- Fresh and replacement local HTTP `net install` pass on macOS, each verifying
+  all 61 installed files. The final portable archive (58 members) and complete
+  corresponding-source archive (1,443 files) pass independent hash review.
+  [Package validation](../native/prerelease-20261008/package-validation.json)
+  records the exact artifacts and source compatibility. Windows runtime is
+  outside these installation claims.
 - The [candidate manifest](../native/prerelease-20261008/manifest.json) records
   the local Mac/Linux candidate and pending Windows status. Historical evidence
   remains immutable. This candidate has not been published or tagged.
@@ -38,10 +45,9 @@ publication and tagging remain separate owner decisions.
 
 Resolve the Windows collection boundary after owner approval, then
 obtain bounded diagnostics and complete runtime qualification of the exact
-candidate. Bind final payloads to build sources, scope and hashes; record
-compatibility for later documentation/package commits. Verify fresh and
-replacement installation of final package bytes and review the exact
-corresponding-source archive and notices. An incomplete five-platform set
+candidate. After Windows succeeds, assemble and test the complete native
+package and review its exact corresponding source and notices. Recheck any
+package bytes changed by that work. An incomplete five-platform set
 must not be labelled a qualified complete candidate. Publication and tagging
 require a separate owner decision.
 

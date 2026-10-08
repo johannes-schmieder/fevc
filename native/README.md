@@ -8,6 +8,14 @@ Mean projection through `projection_centering_api=1`. The
 status, exact build sources, plugin hashes and sanitized evidence.
 No candidate publication or release tag is authorized.
 
+The package checkpoint is `623b156d`; its runtime/build code is unchanged
+from `24754269`. [Compatibility](prerelease-20261008/packaging-compatibility.json)
+records every changed path and retained source identity. Fresh and replacement
+local HTTP `net install` pass on macOS, verifying all 61 installed files each.
+[Package validation](prerelease-20261008/package-validation.json) binds those
+checks and the portable and complete corresponding-source archives. The
+Windows file hash check does not establish Windows runtime qualification.
+
 Mac arm64, Rosetta x86-64 and universal candidates pass clean build/runtime
 qualification. A separate isolated-install follow-on passes 24 checks across
 thin arm64, thin x86-64 under Rosetta, and universal under both architectures:
