@@ -29,14 +29,17 @@ terminal status file. This lets the fixed controller stop waiting promptly.
 It never copies arbitrary exceptions, paths, environment values, or raw
 Stata logs. A missing or malformed stage becomes `unknown`.
 
-The currently documented fixed collector retrieves only its aggregate
-`receipt.json`. It does not retrieve the project's failure/build/check JSON
-or candidate binary. Therefore local project diagnostics do not by
-themselves make a remote failure stage observable. Do not bypass that
-boundary with cloud commands or infer which assertion failed from an
-aggregate `STATA_DRIVER_FAILED`. A source-bound passing smoke establishes
-only its declared smoke scope. Controller diagnostics or artifact collection
-require a separately approved infrastructure change.
+The fixed collector accepted on October 8, 2026 returns the allowlisted
+failure stage and numeric Stata return code in its `receipt.json`; missing
+or malformed diagnostics remain `unknown`/unavailable. Failed runs return
+no artifacts. A passing FEVC run returns exactly the Windows plugin,
+`windows-build.json`, and `windows-project-checks.json`, after source identity,
+profile gates, PE imports/exports, and file hashes are verified. It does not
+return raw Stata or build logs. Ordinary smoke, deliberate failure, concurrency,
+valid/malformed diagnostic canaries, source restoration, cleanup, and stopped
+state passed reacceptance. These checks qualify the unchanged collector;
+a source-bound passing FEVC smoke establishes only its declared smoke scope.
+Do not bypass this collection boundary with cloud commands.
 
 The older accepted-controller source uses a 15-minute deadline for Stata and
 waits for the terminal status file, even if Stata has already exited. A

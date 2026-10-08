@@ -47,7 +47,7 @@ $devcmd = Join-Path $vs 'Common7/Tools/VsDevCmd.bat'
 $env:RUSTFLAGS = '-C target-feature=+crt-static'
 $env:CARGO_BUILD_JOBS = '2'
 $env:VCKSS_STATA_SPI_DIR = $spi
-$buildLog = Join-Path $projectRoot 'windows-build.log'
+. (Join-Path $PSScriptRoot 'invoke_windows_native.ps1')
 if ($providedCandidate) {
     $candidate = Join-Path $projectRoot 'windows-candidate/fevc_rust_windows_x64.plugin'
     if ((Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant() -ne $identity.candidate_sha256) {
@@ -56,12 +56,15 @@ if ($providedCandidate) {
 } else {
     # Install only the project's pinned public compiler, never licensed tools.
     'build_toolchain' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
-    & rustup toolchain install 1.85.1 --profile minimal --no-self-update *> $buildLog
-    if ($LASTEXITCODE -ne 0) { throw 'Pinned Rust toolchain unavailable' }
+    & (Join-Path $PSScriptRoot 'test_windows_native.ps1')
+    Invoke-FevcWindowsNative -FilePath 'rustup' `
+        -ArgumentList @('toolchain', 'install', '1.85.1', '--profile', 'minimal', '--no-self-update') `
+        -LogPrefix (Join-Path $projectRoot 'windows-build-toolchain')
     $command = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 build --release --locked --manifest-path rust/stata_backend/Cargo.toml"' -f $devcmd
     'build_native' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
-    & cmd.exe /d /s /c $command *>> $buildLog
-    if ($LASTEXITCODE -ne 0) { throw 'Native build failed; preserve bounded compiler diagnostics' }
+    Invoke-FevcWindowsNative -FilePath $env:ComSpec `
+        -ArgumentList @('/d', '/s', '/c', $command) `
+        -LogPrefix (Join-Path $projectRoot 'windows-build-native')
     $candidate = Join-Path $backend 'target/release/vckss_stata.dll'
 }
 'pe_import_export' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
@@ -77,8 +80,9 @@ if (-not $providedCandidate -and $runtimeProfile -eq 'full') {
     foreach ($test in @(@('rust_workspace','rust/Cargo.toml'), @('rust_backend','rust/stata_backend/Cargo.toml'))) {
         $test[0] | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
         $testCommand = '""{0}" -arch=x64 -host_arch=x64 && cargo +1.85.1 test --workspace --all-targets --locked --manifest-path {1}"' -f $devcmd, $test[1]
-        & cmd.exe /d /s /c $testCommand *>> $buildLog
-        if ($LASTEXITCODE -ne 0) { throw 'Locked Rust test gate failed' }
+        Invoke-FevcWindowsNative -FilePath $env:ComSpec `
+            -ArgumentList @('/d', '/s', '/c', $testCommand) `
+            -LogPrefix (Join-Path $projectRoot ('windows-build-' + $test[0]))
     }
 }
 'build_package' | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')
