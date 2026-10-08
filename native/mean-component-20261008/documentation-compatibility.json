@@ -1,0 +1,481 @@
+{
+  "schema": "FEVC-MEAN-COMPONENT-DOCUMENTATION-COMPATIBILITY-V1",
+  "status": "PASS_WITH_ORIGINAL_EVIDENCE_LIMITS",
+  "from_source": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+  "to_documentation_source": "0a10e17eeb135e0e4f0011bd4edc4f94a43c4e77",
+  "from_tree": "db3f67a6aa63448a85e04a7ef94e1cb381952b62",
+  "to_tree": "89ee66d31e338ed0cc0070717132b4c004d0cb22",
+  "scope": "Exact committed diff: 17 documentation/help/attribute paths modified, 50 evidence/report/archive paths added; no runtime, test, harness, registered threshold, build script or shipped payload change. This file is a subsequent evidence-only addition and carries no new execution claim.",
+  "changed_paths": [
+    {
+      "path": ".gitattributes",
+      "old_git_blob": "68a36fea3f046b0bb3d0f3fdf97df78a67a1599a",
+      "new_git_blob": "230a374e49ebde9382985cedf27f26f015355bb3",
+      "sha256": "a220639a5cb035aee5b36db1c25e11351b40b112549edb1d758908c47ade6d6f"
+    },
+    {
+      "path": "INSTALLATION.md",
+      "old_git_blob": "72cb6a3668880d965003461fc078433c551c6001",
+      "new_git_blob": "972ca277e556ea7faf49f180359bfb2b3ac300b8",
+      "sha256": "eb50ca143488d93fc7554c91bc3b4a474f548c4c03f23485e36751782089c1f6"
+    },
+    {
+      "path": "README.md",
+      "old_git_blob": "6ddbb71ef43df54b601aaf71049dc73107f3acc1",
+      "new_git_blob": "62e2a9d107db0dc59b65d24a701508720b5d15b8",
+      "sha256": "eac80f160aec4feab52e6125fc83eaba716af543cbb7075ece879099384cb43f"
+    },
+    {
+      "path": "fevc/CHANGELOG.md",
+      "old_git_blob": "b0d25759b04a169b022890d4bf449374dc0cdf59",
+      "new_git_blob": "dbc738d026e42d1690bb2b7ca520fac0b0dda6f5",
+      "sha256": "9271aaf208a001f1d5d3ad2de489edb46391f2a2f0bdc785bee87bb05fc59eb2"
+    },
+    {
+      "path": "fevc/PLAN.md",
+      "old_git_blob": "55dd477cb2b4aed99e4e4b13a8423d463eb69df1",
+      "new_git_blob": "6b09b186a45acb3b069be77e528cf4ead1cb9a38",
+      "sha256": "807ea37368cec4c2edc77d2102de88bba055711623534f994f7edbd6e9e69488"
+    },
+    {
+      "path": "fevc/README.md",
+      "old_git_blob": "0a0bee6399e04aa7b108a4c5441a277b3b72bef0",
+      "new_git_blob": "e991e4abd0440f9ad2ab782fdbf9300b44e9b9cc",
+      "sha256": "0ada8bb7ef2401e74f8324e71d1cd520ac539f3c9ca24388c6b83bc48bae254c"
+    },
+    {
+      "path": "fevc/TESTING.md",
+      "old_git_blob": "6d133305e088ecda5cf774c9ef00635eaaece912",
+      "new_git_blob": "56df331043295e8661574c4820ed1e932d272f2e",
+      "sha256": "a085d242e1ea1e928f58eec1ffe576cbfddde125fe1e1e95d7831999e4748599"
+    },
+    {
+      "path": "fevc/docs/CENTERING.md",
+      "old_git_blob": "f86c029006f328e5849d5cdc8a7a7a9d10b90636",
+      "new_git_blob": "c9407de88a0e280fd86df02555ab69493c701d34",
+      "sha256": "7f481f27bb6a1a95e8a88337caa28dda5f27480ceb647dc16f366070c038a123"
+    },
+    {
+      "path": "fevc/docs/INFERENCE.md",
+      "old_git_blob": "5f4042a0dee20ab491055326c1307daef97def76",
+      "new_git_blob": "8fc04df4421089f88430aa49046396e6f2b9013c",
+      "sha256": "5513ebe1ba1c5f554b3531129b2ef9fb1702068745887a6719d6eed489352f32"
+    },
+    {
+      "path": "fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md",
+      "old_git_blob": null,
+      "new_git_blob": "86d5f31b58b28b9cc3a6c8039d02ee2b621e28f8",
+      "sha256": "673729dfb5ed75fe6e6b989a23b5f7c905f48135a9bba2f047b3709f1a9c3912"
+    },
+    {
+      "path": "fevc/docs/README.md",
+      "old_git_blob": "4e340a23d83c86720355ea4f5f4b6fd56ab7e360",
+      "new_git_blob": "bb6bb8be2d5e71f257dd17f81ecf31be62810915",
+      "sha256": "ae4494ef14e8d68e3aa0071f962d322fbae24d729888d92c19f258ea54ce41ee"
+    },
+    {
+      "path": "fevc/docs/RUST_MATA_PARITY.md",
+      "old_git_blob": "7d7c48ebdcda4478579b43bdd4c375e7317e520d",
+      "new_git_blob": "f259a1de985e4778910ca358a7141bcbe7324ab2",
+      "sha256": "78bee69b48eaf6c4db027889e186b1b0f06f8099fa42eaece8dab8f0b3c9a8c6"
+    },
+    {
+      "path": "fevc/docs/rust_mata_parity.json",
+      "old_git_blob": "628bf176829e13e50487dafb5ab7c4db5359806a",
+      "new_git_blob": "601495b6f4dbbba707c7c447d342121b571cf710",
+      "sha256": "b81085e67c43a680cc99203d4a28f40539b9867fa2620b766916f540a6c3a607"
+    },
+    {
+      "path": "fevc/fevc.sthlp",
+      "old_git_blob": "03d2f3ee98834dfefe28da69224248b6baefa460",
+      "new_git_blob": "53896218b41ff8fbc15890ee2d7ccfba32261e4b",
+      "sha256": "88f2d87515ce9addb004555cad510fb314a83a6c7628f65f50b9e46d71c99784"
+    },
+    {
+      "path": "native/README.md",
+      "old_git_blob": "0fc27e6fcc185d2510e0dd39563734b9320efd23",
+      "new_git_blob": "54718b0f5f78a90fb9cb1b95607a9fdd9cc27bd0",
+      "sha256": "6d92a87a6b8a3659459af9223ac9221c358be5882241af6f68a628c152e3f0ec"
+    },
+    {
+      "path": "native/mean-component-20261008/README.md",
+      "old_git_blob": null,
+      "new_git_blob": "077edc46070a660903421cfd5df4a238b57019ae",
+      "sha256": "5e58657bac9c7b56cfe78ad53a06d44c6dbd81eb2c9fa67fdce96714df53c1b2"
+    },
+    {
+      "path": "native/mean-component-20261008/checkpoint.json",
+      "old_git_blob": null,
+      "new_git_blob": "cb8963c1e58a539c563a19773c0f51b4d08c5276",
+      "sha256": "ac4ab85d94c588cdfd70e0fe8b5dcbea5ab03ebe8bf778936bf06e40bf70541e"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/development/checkpoint.json",
+      "old_git_blob": null,
+      "new_git_blob": "9e01e221238715f8e57a14abf31d36a00f3ff871",
+      "sha256": "acc79843d5113d515c2fe3375a68f94cd9a86f3bef45705f3e9e2afc0d1f7dbb"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/development/exact-validation.json",
+      "old_git_blob": null,
+      "new_git_blob": "baaaf59e25fc1ab7cbc064a44633e2ae95a5df8a",
+      "sha256": "8af5384a63fa6b282be220b41178b7263d1a5a749edc87056829fe950cad2356"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/development/integrated-source-checks.json",
+      "old_git_blob": null,
+      "new_git_blob": "e7e747eba609e9556ca3b8e2d1cc12ebd878ca45",
+      "sha256": "087d97da03f7a946d55f886330f54594d20fb3053149fc64928a992876943ca5"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/development/rust-development-gates.json",
+      "old_git_blob": null,
+      "new_git_blob": "b1447bfaca14104d2d07240e5441ac00bc6707d8",
+      "sha256": "77986d106740cdeeecd2e3d244e21abcbeb2df42ee21caab64c0334784417b5e"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/development/source-compatibility.json",
+      "old_git_blob": null,
+      "new_git_blob": "f3665029e28540d260d569eb403c7b7ee74fc554",
+      "sha256": "b0f52d30f2e341043a10f09f74b13923c677fe20f1507f52dca5a0042e1c8150"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/harness/final-harness-pytest.txt",
+      "old_git_blob": null,
+      "new_git_blob": "46069d609175d8995139fe56a7e52fd298c48bc6",
+      "sha256": "0b43f7b1daacc664a21f6d6dc0eb45c27ddf23f44750638da975502713758586"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/harness/final-harness-tests-b9f80ce9.json",
+      "old_git_blob": null,
+      "new_git_blob": "72a0b4706b9f2aec53873f8092678d0cd6769cfe",
+      "sha256": "1fd4d8da94a7e870a5fc82a24528b226e9395b4568886c8ef1007c026b475b34"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/linux/qacct.txt",
+      "old_git_blob": null,
+      "new_git_blob": "b3b492464fe77e462e205263bb5faa860b98ec45",
+      "sha256": "0b2e583fd9297bca58d37405cbe21c784c2b4bda15be7d7d8b91a198db6a0fd0"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/linux/qualification-source.sha256",
+      "old_git_blob": null,
+      "new_git_blob": "2a1851515990aad29f3d24623a32a38d1b01a719",
+      "sha256": "a54f29a87c6a5730b8f43b1081fddf3eba3182148c5e884017cf307f960a207c"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/linux/qualification.txt",
+      "old_git_blob": null,
+      "new_git_blob": "489ff1aac53c3b11c40e68e05c7c7ddc60658af8",
+      "sha256": "213005cb39c0b974b3be7d78cd1b837e59a0a8739b8382d8448aaa82cbf79bfe"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/linux/remote-hashes.txt",
+      "old_git_blob": null,
+      "new_git_blob": "17811b1e1f9995a5e6aeae36d3a19f4b0f234d8a",
+      "sha256": "267724e9bf5be7a2da4c60208efe947c6a3f7b1216108b4c046fda7700bb2cfb"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/linux/validation.json",
+      "old_git_blob": null,
+      "new_git_blob": "6b39e665ea60621025044e881d0ab977457b7e67",
+      "sha256": "6a9aa7c5186d8f018890d0915b2c2d21c79b87b1d8515c2073d6013b2afb381c"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/linux/wrapper.txt",
+      "old_git_blob": null,
+      "new_git_blob": "d265911f07e11f665dc7eee80f609fb2af2b1a42",
+      "sha256": "18928957671732488318eaa5e29a43109856a4d7bfc92f577d9797ff1565f4af"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/macos/ci.json",
+      "old_git_blob": null,
+      "new_git_blob": "01d485d96734fea7ce1e9c03420a4f8c3eab01d1",
+      "sha256": "211d2ea66ac522cded428ae8b4fc9989d8a0fade9cc80e2f88477d5195da4599"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/macos/installed-mean-component.json",
+      "old_git_blob": null,
+      "new_git_blob": "57ab6e669b4ee0e1f497308d1f32996601ee1aca",
+      "sha256": "8ee83ffd0d8d9a9d08e81be2ed45d4ff75b1eae956a5926d0c27d26d0e094363"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/macos/qualification.txt",
+      "old_git_blob": null,
+      "new_git_blob": "33e071f1e5a350309176737ea28a292567080196",
+      "sha256": "a305b19cd023ea3ea55780cba252dcc7eed29e65a9254577194186ff654df3e0"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/macos/source-manifest.sha256",
+      "old_git_blob": null,
+      "new_git_blob": "6467bbfebd36051f392b59510eaba48a0714bae3",
+      "sha256": "149a4c5b03adc9b8f97b000fe096a4f5701be3ec4d6bb861f56f23ed6d35ff65"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/q1/dense_audit.json",
+      "old_git_blob": null,
+      "new_git_blob": "5fecbf96a7ab212bc6e6ac6ee9418ecc1691a143",
+      "sha256": "d8f374d6b99e83e871be62afac9704faf8ff68a712052bd92155689e3d9ddb38"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/q1/overhead-comparison.json",
+      "old_git_blob": null,
+      "new_git_blob": "a6813d4df3fc6b859697c6c0f4b5de0ba60c9ade",
+      "sha256": "e2149f586508b1d88855b398c6f281616a5950b75d738f97aa03bd21e34785ce"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/q1/pilot-classification-review.json",
+      "old_git_blob": null,
+      "new_git_blob": "c62a8c4d77c295fd83a323e7076479ebaa25ff1a",
+      "sha256": "e8492f9577027946f2fcae4af94e19b2967f20ad0aca9b054de39c03685b7077"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/q1/receipt.json",
+      "old_git_blob": null,
+      "new_git_blob": "0059425c9f36adb7cd8fe6e5e2151c3037fddeae",
+      "sha256": "b8840e0599f1c10f035fea677bb2f45c942302c8f531140abfa3ad922a0de94a"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/assessment.json",
+      "old_git_blob": null,
+      "new_git_blob": "52695be32fd7f5fa7a7c319294d3c08fd6d70e2c",
+      "sha256": "322e9b5c23178906b2708487ecc9423c37f2eab953541588c1e01f68cf485525"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/availability-diagnosis.json",
+      "old_git_blob": null,
+      "new_git_blob": "1232bc7d55f92642e09688336406376a9428fae1",
+      "sha256": "a70972e83b1385c488b961183525a7a1ef114823122daea673dac2f4deb45f84"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/compact-summary.json",
+      "old_git_blob": null,
+      "new_git_blob": "2e3afc90b9c66138b917077d32fa2e8acae1304f",
+      "sha256": "65d2760a65a7e1535f814eeb5b840781549726d38f569498081f508e7be36241"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/manifest.json",
+      "old_git_blob": null,
+      "new_git_blob": "cf0076ec594fc9e09d18737a004d8a92b58c92c6",
+      "sha256": "ff0dc2043601f04df4e0589a41eca505d8d0347c7f668d141b844c79586cacc3"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/source-verification.json",
+      "old_git_blob": null,
+      "new_git_blob": "91b7285cf2cd236722d76f0d7183f302f5f4883a",
+      "sha256": "8f3afcf46ebea2e135a789f3c15c3172159e3bbd52dee2e3cbb370c75f524f90"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/assessment.json",
+      "old_git_blob": null,
+      "new_git_blob": "9f5f9a69a2bb39baa57c4cc0c60388ff7ec79456",
+      "sha256": "f025b481b681164417f50b3f0622402de0c93a1a95d4e6652f3508b11b88f32c"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/manifest.json",
+      "old_git_blob": null,
+      "new_git_blob": "9399e52f71c5eb0c658c174ba9ddb55bffede4d7",
+      "sha256": "c77ccf09ffea0b1e10464f6fa14a9a3183206ebee9d43bc65222fafaa1e31292"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/source-verification.json",
+      "old_git_blob": null,
+      "new_git_blob": "0876c70f0b773755a901c6672bd1074ce648f99f",
+      "sha256": "099aebb76e9992943d017d81c02223701e82c0ffb78a6662d1ed3ba357cb6249"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/assessment.json",
+      "old_git_blob": null,
+      "new_git_blob": "c86094f97a2154867e45fe9691e9e1808abcba79",
+      "sha256": "6e0b806d3b0418ab4a335bbe670b30e97201ca48ea7575d8b237e97ca59dd50b"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/compact-summary.json",
+      "old_git_blob": null,
+      "new_git_blob": "b791ea2faed8375e15e66ee7b4f0c528b1359df0",
+      "sha256": "7323b0a78ba1892345fd3c4056e3de87a5b528b5e3bfb9b46cf45988aba93864"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/manifest.json",
+      "old_git_blob": null,
+      "new_git_blob": "d8775297887155189d1132e38dd5b06532cf03f4",
+      "sha256": "18f75cb80eb8493390a3acd3ab593d775442789ea7ea44c3a3cf15bdf841bfe1"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/paired-availability.json",
+      "old_git_blob": null,
+      "new_git_blob": "a3f50832417c01bf85c5592114aa1f3508ac8dbc",
+      "sha256": "114143d4cd40f89a7ade0236ed7210401f06f469390f07ed4421d298fb78a562"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/source-verification.json",
+      "old_git_blob": null,
+      "new_git_blob": "718cc415516389e101a26ce6e0cbcee58392d016",
+      "sha256": "282741949893432a2d10df839fe4d625e21c4e6aaa2bb125c105c7b79ca8350a"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/assessment.json",
+      "old_git_blob": null,
+      "new_git_blob": "55ebc24e64948063c388835fe46ad64b433c8b13",
+      "sha256": "438873c45f5d2221187455a1f828d2d34c91661bffd1024163cd8bfc5b2aafb9"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/compact-summary.json",
+      "old_git_blob": null,
+      "new_git_blob": "1f5f4718cd2ed74bd1b6b2fac01608d6713eb9d0",
+      "sha256": "7652fe913d2a9020695a0c9ccd11435d40c69fe436ffa34f0cc8a1c4e96a9c6f"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/manifest.json",
+      "old_git_blob": null,
+      "new_git_blob": "a85edd6a9ff4c9dd9198c17c09828e9fb4d6d42f",
+      "sha256": "43a22a1457e19e07fce016b16f85da858cef2f2ccb7faf7d51149ac89e043f0b"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/source-verification.json",
+      "old_git_blob": null,
+      "new_git_blob": "4ee2753f6d1a90dd80844e6aef6f7b30f2753b57",
+      "sha256": "e3ab278a8fdd7e280841f11c53ddea74b2f6bc08c1a6643f3022f71ddc1af901"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/primary-compact-summary.json",
+      "old_git_blob": null,
+      "new_git_blob": "be5a036a3da00cd9fcefaa04c62ce388723790b4",
+      "sha256": "e85335d2314d73abfba974e557b3d2847a1420b426f37777d29605175884cb72"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/scientific/primary-union-audit.json",
+      "old_git_blob": null,
+      "new_git_blob": "30b7f9e83ec23f980d02a8d43c5332f4e14227ec",
+      "sha256": "44616a155ebf1f7a5e769242a7e52228c730296ecbe165eee023612cc7c179c4"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/source/corresponding-source-validation.json",
+      "old_git_blob": null,
+      "new_git_blob": "17289f7f71c8951d24a82ef044570d13ccaf5839",
+      "sha256": "97c19e70a549aeaeb7060a096fbcacc6fcdeb2b285203ec179bccd21aa77e715"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/source/source-gates-63757839.json",
+      "old_git_blob": null,
+      "new_git_blob": "016780a37c5a11dca19f2d4cdd60bc62d4d81671",
+      "sha256": "56a3503f887b7b42d5083ced66d2ef3276f7b328f7752533241bad89cc008474"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/windows/hosted-proposal-review.json",
+      "old_git_blob": null,
+      "new_git_blob": "2110d6290f0f795ba9c37d70fb1272d82f0d820c",
+      "sha256": "50a8873578e72eec2cca7c48164f2f972c8c43d86de5b8f2289b9f2c3a562db9"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/windows/source-smoke-1.json",
+      "old_git_blob": null,
+      "new_git_blob": "e44529a05139a4a1eb501dba36d86e320d09b974",
+      "sha256": "f17ce917fc48a99eef873d8bd553dc77df6ea81dbdb7bde75b6af999c86fbfbd"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/windows/source-smoke-2.json",
+      "old_git_blob": null,
+      "new_git_blob": "9f75b067129597f1f0b9832ec06533639eb000ea",
+      "sha256": "776f44dbb07aa19db87307b4adefd8a71dc7d2e78d44c2f3502b4355b2dbe6d3"
+    },
+    {
+      "path": "native/mean-component-20261008/fevc-corresponding-source-63757839.tar.gz",
+      "old_git_blob": null,
+      "new_git_blob": "e113d0a7641797e2810663f7a2e3465b0a26d075",
+      "sha256": "bed7b8bdfd596a210ffd0ee7a2d6b81b3e99b9cb7d4f5b47ec47670fed8aac9c"
+    },
+    {
+      "path": "native/mean-component-20261008/fevc-corresponding-source-b9f80ce9.tar.gz",
+      "old_git_blob": null,
+      "new_git_blob": "14d3eee54c94fbeb97256b162fa37eb79c2ab048",
+      "sha256": "03fa90502a740da19eda75cfa38f79c655bc5824d2f7336f8f346ac621688db6"
+    },
+    {
+      "path": "rust/README.md",
+      "old_git_blob": "f29d77a58437676d15630785ca460ca40711e56f",
+      "new_git_blob": "f9a19bda86537d6bf9189ffaa9fdb8df4d643b7e",
+      "sha256": "342cfd330d7e659b0283c6a14da7c51896b9da1b53645123c280e7f638c84305"
+    },
+    {
+      "path": "rust/TEST_PLAN.md",
+      "old_git_blob": "1b1734625e3d3af2e0ebf1a03c60d9562ad7336c",
+      "new_git_blob": "4d3ca3e00a675110e85b448855590be388b46ada",
+      "sha256": "0e9695c7d9973ada94ac964ba74b1e402d583e9f3826d621a3b78bed3b6419d8"
+    },
+    {
+      "path": "rust/stata_backend/README.md",
+      "old_git_blob": "815f065899b88b6f3e80ed7b18d7bd00b7027b61",
+      "new_git_blob": "88485184e35fdbf2b47e7c2f7b82e54281a81dbb",
+      "sha256": "b2ec9f73ee640c6a63ad9e306c56fed40d99e8f37a0e81a7f2a463eb3e66a372"
+    }
+  ],
+  "unchanged_existing_git_blobs": {
+    "count": 1450,
+    "inventory_sha256": "0f7281ebd4b0bf1c3337434b56e6d9abf58c334d9e0fe0d320e06c9729837229"
+  },
+  "affected_surfaces": [
+    "Help and active feature/platform documentation",
+    "Assessment and preserved qualification evidence",
+    "Byte-preserving scheduler accounting and omission of new corresponding-source archives from later source archives"
+  ],
+  "unchanged_identities": [
+    "All Stata/Mata/Rust/C estimator and ABI source",
+    "All build scripts, Cargo manifests and lockfiles, pinned toolchains",
+    "All tests, assessment harnesses, DGP/seed/input manifests and acceptance registrations",
+    "All five shipped native payloads",
+    "All earlier qualification records and archives"
+  ],
+  "checks": [
+    {
+      "command": "./.venv/bin/python -m pytest -q fevc/tests/python/test_native_release.py fevc/tests/python/test_native_installers.py fevc/tests/python/test_release_artifact.py fevc/tests/python/test_license_audit.py fevc/tests/python/test_match_documentation.py fevc/tests/python/test_package_layout.py",
+      "result": "75 passed in 1.32s"
+    },
+    {
+      "command": "./.venv/bin/python fevc/tools/license_audit.py",
+      "result": "PASS"
+    },
+    {
+      "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "result": "PASS"
+    },
+    {
+      "command": "./.venv/bin/python fevc/tools/render_rust_mata_parity.py --check",
+      "result": "PASS"
+    },
+    {
+      "command": "git diff --cached --check before documentation commit",
+      "result": "PASS"
+    },
+    {
+      "command": "Independent read-only exact evidence/archive and scientific-table review",
+      "result": "47 evidence hashes and 1460/1462 archive members verified; 22 failed exact screens and 38090 unavailable rows retained; no blocking finding"
+    },
+    {
+      "command": "Exact Git diff and unchanged-blob inventory from b9f80ce9 to documentation commit",
+      "result": "PASS; all 67 changed paths enumerated; all other existing blobs identical"
+    }
+  ],
+  "check_runtime": {
+    "python": "3.13.0 (main, Oct  7 2024, 05:02:14) [Clang 15.0.0 (clang-1500.3.9.4)]",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  },
+  "reused_claims": [
+    "Clean Rust source gates remain bound to 63757839, with the recorded four-file Windows-only compatibility through b9f80ce9.",
+    "Mac qualification and installed Mean checks retain b9f80ce9 and their exact candidate bytes; Linux remains bound to 63757839 and its exact candidate.",
+    "Sampling counts and outcomes remain bound to the frozen 637/b9 manifests and signed Mac sampling binary.",
+    "The integrated checker retains its staged-development scope and is not a clean-source qualification at this documentation commit."
+  ],
+  "limitations": [
+    "Windows source smokes remain failed; the hosted-build alternative has only offline validation and awaits owner sequencing approval.",
+    "No new native payload adopted, source pushed, full Windows qualification run, tag or release created.",
+    "No general statistical coverage or representative-scale performance claim; all 22 exact availability-screen failures and earlier calibration failures remain failed.",
+    "Help/documentation changes do not re-execute platform qualification, alter runtime bytes, or qualify a complete distribution."
+  ],
+  "checkpoint": {
+    "path": "native/mean-component-20261008/checkpoint.json",
+    "sha256": "ac4ab85d94c588cdfd70e0fe8b5dcbea5ab03ebe8bf778936bf06e40bf70541e"
+  },
+  "paper_commit": "674717538cddc698d45dd8adbed6371e3b0c2a17",
+  "outgoing_ancestor_audit": "Earlier four-ancestor review was reported in the task conversation. No separate saved receipt was located; this record does not substitute for or extend that audit."
+}
