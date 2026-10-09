@@ -195,14 +195,6 @@ real scalar vckss__propagate_error(
     return(forward_error/(reciprocal_margin-forward_error))
 }
 
-real scalar vckss__timer_seconds(real scalar identifier)
-{
-    real matrix value
-
-    value = timer_value(identifier)
-    return(value[1,1])
-}
-
 struct vckss_inverse_result
 {
     string scalar status

@@ -181,6 +181,31 @@
 - Add Mata and versioned native request/result/RHS/work transport, typed diagnostic unavailability, memory charging and caller-state checks. No numerical covariance is posted in `e(V)`.
 - Qualification remains in progress; see `docs/ALL_PROBE_MCSE_STATUS.md`. Distributed binaries, releases and CI policy are unchanged.
 
+## Installation, timer and interrupt-check repairs — 2026-09-29
+
+- Add `fevc__native_threads.ado` and `fevc__control_failure_post.ado` to the
+  repository-root install catalog. From `08c51adc` until this repair, a fresh
+  `net install` from `main` omitted them and every estimation stopped with
+  `INVALID_NATIVE_THREADS`. The root catalog is now rendered from the portable
+  manifest, and a test compares the two byte for byte.
+- Stop clearing or reusing Stata timers that are in use; the Mata routes
+  previously reset timers 85–99. Profiling borrows only idle timers and
+  releases them on success, error and Break. Without a free timer, estimation
+  continues and the affected timing fields, such as `e(fit_seconds)`, are
+  missing. A session with the previous Mata runtime loaded must run `discard`
+  or restart Stata.
+- Reject an excess marked row in the native C transport before writing it.
+  Rust model-operator loops check for interruption once per 4,096 elements
+  instead of testing every element; results are bitwise identical, and the
+  recorded command screen took 4.2–26.6% less time. The current payloads,
+  built from `eec825d6`, include both changes.
+- Run Rust CI's stable jobs on stable Rust and select 1.85.1 in documented
+  local commands. Tests no longer depend on the checkout's branch, and
+  history-bound audits skip on shallow clones unless `FEVC_REQUIRE_HISTORY=1`,
+  which source CI sets. See [the repair record](docs/REVIEW_FIXES_2026-09-29.md)
+  and [interrupt chunks](docs/INTERRUPT_CHUNKS_2026-09-29.md).
+- October 9 follow-up: remove the unused `vckss__timer_seconds` Mata helper.
+  Two Stata test harnesses read their own timers with `timer_value()`.
 
 ## Direct control-basis certification — 2026-09-27
 

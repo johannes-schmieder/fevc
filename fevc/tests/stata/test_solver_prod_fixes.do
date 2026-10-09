@@ -86,8 +86,8 @@ timer_on(83)
 hierarchy = vckss_solver__hierarchy(
     design,worker_key,firm_key,0.65*4*1024^3,121)
 timer_off(83)
-st_numscalar("solver_cells_reused",vckss__timer_seconds(82))
-st_numscalar("solver_cells_wrapper",vckss__timer_seconds(83))
+st_numscalar("solver_cells_reused",timer_value(82)[1])
+st_numscalar("solver_cells_wrapper",timer_value(83)[1])
 assert(hierarchy.status == "CONVERGED")
 assert(hierarchy_reused.status == "CONVERGED")
 assert(hierarchy_reused.n_level == hierarchy.n_level)
@@ -121,8 +121,8 @@ for (repetition=1; repetition<=40; repetition++) {
     reused = vckss_solver__cmg_apply_ws(context,rhs)
 }
 timer_off(81)
-st_numscalar("solver_ws_ordinary",vckss__timer_seconds(80))
-st_numscalar("solver_ws_reused",vckss__timer_seconds(81))
+st_numscalar("solver_ws_ordinary",timer_value(80)[1])
+st_numscalar("solver_ws_reused",timer_value(81)[1])
 }
 test_solver_prod_fixes()
 end

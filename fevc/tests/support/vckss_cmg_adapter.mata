@@ -210,7 +210,7 @@ struct vckss_cmg_estimator_result scalar vckss__jla_cmg(
     hierarchy = vckss__cmg_hierarchy(
         base,worker_key,firm_key,memory_envelope_bytes,planned_rhs)
     timer_off(70)
-    setup_seconds = vckss__timer_seconds(70)
+    setup_seconds = timer_value(70)[1]
     out.cmg_status = hierarchy.status
     out.cmg_message = hierarchy.message
     hybrid_vertices = .
