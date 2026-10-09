@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "runtime_sha256": "39573eb20c3b747137151270a02e02471d72c7e728a980e143ea2fc53fe74bf0",
+  "hosted_proof_sha256": "4546fbfb9eea7b254cd64809ba02dba3d9ceed350b510b72bcc7f65feb0dd5ad",
+  "candidate_sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4",
+  "input_identity_sha256": "e29155d507011e1ecbea9f65353c89795e77cc53c3b53cde9336cd333422ce4c",
+  "receipt_sha256": "00127c2ee246686b10c32e63362cbf7510c5b92437d452fc007884bb090e2be7",
+  "offline_validator_pins": {
+    ".local/mean-component-inference-20261008/windows-log-cleanup-proposal-v3/runtime/hosted.py": "5147d9e55ff70c913c2f7768e3df793977a906cf3bcb10fbfa1557bb3f459c9b",
+    ".local/mean-component-inference-20261008/windows-log-cleanup-proposal-v3/runtime/hosted_source.py": "62f29ce83c6c4585d736ddc1ff5093c1fbbc3b2a059405af5197822d7ec87284",
+    ".local/mean-component-inference-20261008/windows-log-cleanup-proposal-v3/runtime/support.py": "be961e2306395c0f4eb553fb2281e4cc70f7e2b3032f76053da65a1964ab4f85",
+    ".local/mean-component-inference-20261008/windows-log-cleanup-proposal-v3/runtime/run_prebuilt.py": "8b35f7b6b33ee6078f2adc5f7456f5f7fc29008c3510a1737e369433ad17b072",
+    ".local/mean-component-inference-20261008/windows-log-cleanup-proposal-v3/reacceptance/reaccept.py": "eb0ba0e0794b4bcd545f902a31354e42fdd5a27088f1afc83a9112c487a04583"
+  },
+  "acceptance_reuse_scope": "unchanged pinned shared backend only"
+}

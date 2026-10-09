@@ -1,5 +1,23 @@
 # Pending changes
 
+## October 9, 2026 — CMG replay, refinement and stayer reporting
+
+- Reviewed/pushed `a8617882` aligns CMG_FULL_V2 replay with its posted phase
+  gate and distinguishes original and included stayers in `estat sample`.
+  Existing native payload identities are unaffected by A.
+- Reviewed/pushed `eec825d6` uses an absolute warm-start refinement target
+  matching the residual acceptance norm, with full-system certification
+  unchanged. Add stopping-option and weighted-grid/hub regressions.
+- Rebuild, qualify and locally adopt all five payloads from B. Registered
+  Mac arm64/Rosetta thin/universal, SCC Linux job `7981653`, hosted Windows
+  and private smoke/full checks pass; Windows cleanup and stopped state verify.
+- Complete-profile validation, exact corresponding source and HTTP local
+  fresh/replacement checks pass: 61 files, five hashes, new regressions,
+  Mean-component checks and public Veneto automatic-batch projection per case.
+  [The manifest](../native/cmg-defects-20261009/manifest.json) retains exact
+  sources and every failure. Payload publication/public HTTP checks remain
+  the separate owner-controlled step. No tag or release is created.
+
 ## October 9, 2026 (UTC) — Mean component native adoption
 
 - Adopt and publish five qualified payloads at `66d0278b`: Mac at `b9f80ce9`,

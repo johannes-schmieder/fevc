@@ -1,0 +1,23 @@
+{
+  "schema": "FEVC-CMG-ADOPTION-VALIDATION-V1",
+  "status": "PASS",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "manifest_sha256": "7b9918dbbbc6cb7403132afd4c3aea37bc3c774a4c1c62e9b5f54e33f82b3422",
+  "binaries": 5,
+  "installed_files_per_case": 61,
+  "local_http_cases": 2,
+  "checked_evidence_files": 34,
+  "corresponding_source_sha256": "e119dbcb138fca624df7c75355184ca9c8298cd6c3e76a256a9886add5cfec09",
+  "checks": [
+    "Every adopted binary byte, size, actual build source and qualification evidence hash",
+    "Every manifest-bound evidence file",
+    "All local fresh/replacement installed file hashes equal current root package",
+    "Complete staged repository inventory equals checkout",
+    "Corresponding source archive unchanged from its full exact-Git validation",
+    "Scoped attributes preserve original CRLF Windows receipts and terminal refinement-log bytes"
+  ],
+  "limitations": [
+    "Public HTTP checks require separately authorized publication."
+  ],
+  "staged_blobs_match_manifest": "PASS after forced attribute reapplication"
+}

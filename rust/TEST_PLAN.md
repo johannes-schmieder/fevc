@@ -1,5 +1,17 @@
 # Rust backend test plan
 
+## Current CMG repair qualification
+
+All five CMG repair payloads are rebuilt from `eec825d6` and qualified and
+adopted locally. The [manifest](../native/cmg-defects-20261009/manifest.json) binds exact bytes, original platform
+receipts and the common corresponding-source archive. Registered Mac
+arm64/Rosetta thin/universal, SCC Linux and hosted/private Windows gates pass.
+Local HTTP fresh/replacement checks verify 61 files, five hashes, both new
+regressions, installed Mean cells and public Veneto automatic-batch projection.
+Payload publication and public HTTP checks remain separate owner-controlled
+steps. Earlier dated receipts retain their original identities and limitations.
+No tag or release is created.
+
 This is the active native test plan. Dated implementation and CI snapshots are
 kept under [`progress/`](https://github.com/johannes-schmieder/fevc/tree/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/rust/progress) and must not be treated as current
 instructions. The authoritative milestone order is

@@ -1,0 +1,86 @@
+{
+  "schema": "FEVC-CMG-HOSTED-GATES-V1",
+  "status": "PASS",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "full_job_inventory_sha256": "064abcd65537902747685dfd11ef7232fba1a75af8c3b5ab99f3b02903a68fcd",
+  "runs": {
+    "windows": {
+      "databaseId": 37938556177,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37938556177",
+      "event": "workflow_dispatch",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7"
+    },
+    "rust": {
+      "databaseId": 37938525123,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37938525123",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7"
+    },
+    "source": {
+      "databaseId": 37938525129,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37938525129",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7"
+    }
+  },
+  "jobs": {
+    "windows": [
+      {
+        "name": "build",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "rust": [
+      {
+        "name": "Standalone dependency policy",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "ubuntu-latest / Rust 1.85.1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "windows-latest / Rust stable",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "macos-latest / Rust 1.85.1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "macos-latest / Rust stable",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "windows-latest / Rust 1.85.1",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "name": "ubuntu-latest / Rust stable",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "source": [
+      {
+        "name": "test",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "authorization": "Owner explicitly approved pushing both source commits and dispatching the hosted Windows package after the preserved initial auto-review rejection."
+}

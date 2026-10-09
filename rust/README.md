@@ -1,5 +1,17 @@
 # Native backend
 
+## Current CMG repair qualification
+
+All five CMG repair payloads are rebuilt from `eec825d6` and qualified and
+adopted locally. The [manifest](../native/cmg-defects-20261009/manifest.json) binds exact bytes, original platform
+receipts and the common corresponding-source archive. Registered Mac
+arm64/Rosetta thin/universal, SCC Linux and hosted/private Windows gates pass.
+Local HTTP fresh/replacement checks verify 61 files, five hashes, both new
+regressions, installed Mean cells and public Veneto automatic-batch projection.
+Payload publication and public HTTP checks remain separate owner-controlled
+steps. Earlier dated receipts retain their original identities and limitations.
+No tag or release is created.
+
 This directory contains the Rust backend for `fevc`. Users of the complete
 binary distribution will not need Rust or a compiler. For installation, see
 [the package instructions](../INSTALLATION.md).
@@ -38,7 +50,7 @@ None needs neither attachment-centering capability for its separately
 supported requests. Existing supported tuples and ABI
 request/result layouts remain.
 
-Five qualified payloads are published at `66d0278b`. Mac builds at `b9f80ce9` retain
+At the preceding Mean checkpoint, five qualified payloads were published at `66d0278b`. Mac builds at `b9f80ce9` retain
 full arm64/Rosetta thin/universal and four-alias installed Mean checks; Linux
 at `63757839` retains full and staged/installed Mean checks (SCC job `7969972`).
 Windows at `240ad74d` passes hosted checks and private smoke/full qualification,

@@ -1,5 +1,17 @@
 # Stata plugin boundary
 
+## Current CMG repair qualification
+
+All five CMG repair payloads are rebuilt from `eec825d6` and qualified and
+adopted locally. The [manifest](../../native/cmg-defects-20261009/manifest.json) binds exact bytes, original platform
+receipts and the common corresponding-source archive. Registered Mac
+arm64/Rosetta thin/universal, SCC Linux and hosted/private Windows gates pass.
+Local HTTP fresh/replacement checks verify 61 files, five hashes, both new
+regressions, installed Mean cells and public Veneto automatic-batch projection.
+Payload publication and public HTTP checks remain separate owner-controlled
+steps. Earlier dated receipts retain their original identities and limitations.
+No tag or release is created.
+
 This crate builds the package-owned `vckss` Rust backend for `fevc` as an
 ordinary Stata C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
 `stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
@@ -94,7 +106,7 @@ from accepting a projection request whose covariance it cannot center. Missing
 capability is a structural preflight failure under the usual strict Rust and
 automatic-Mata routing rules, before preparation/RNG.
 
-The five payloads published at `66d0278b` support all three centering capabilities.
+The preceding five payloads published at `66d0278b` support all three centering capabilities.
 Mac builds retain full and installed Mean qualification at `b9f80ce9`; Linux
 retains it at `63757839`. Windows at `240ad74d` passes hosted checks and private
 smoke/full qualification, including installed Mean and Corrected exact tests.

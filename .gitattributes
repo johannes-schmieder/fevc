@@ -63,3 +63,7 @@ native/prerelease-20261008/evidence/linux-qacct.txt whitespace=-blank-at-eol
 # Preserve fixed-width accounting and avoid nesting corresponding-source bundles.
 native/mean-component-20261008/evidence/linux/qacct.txt whitespace=-blank-at-eol
 native/mean-component-20261008/*.tar.gz export-ignore
+native/cmg-defects-20261009/*.tar.gz export-ignore
+native/cmg-defects-20261009/evidence/linux/qacct.txt whitespace=-blank-at-eol
+native/cmg-defects-20261009/evidence/windows/*-receipt.json -text whitespace=cr-at-eol
+native/cmg-defects-20261009/evidence/development/refinement-tests.txt whitespace=-blank-at-eof

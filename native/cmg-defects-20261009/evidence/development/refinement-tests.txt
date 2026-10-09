@@ -1,0 +1,83 @@
+   Compiling vckss-core v0.4.0-alpha.1 (/Users/johannes/Git/varcomp_hdfe/fevc/rust/crates/vckss-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.22s
+     Running unittests src/lib.rs (rust/target/debug/deps/vckss_core-188cf24ef8d91a74)
+
+running 3 tests
+test full_cmg::tests::refinement_targets_the_acceptance_norm ... ok
+test full_cmg::tests::refinement_schedule_and_column_gate_are_frozen ... ok
+test full_cmg::tests::refinement_certifies_columns_with_small_rhs_relative_to_solution ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 293 filtered out; finished in 0.56s
+
+     Running tests/compressed_jla_memory.rs (rust/target/debug/deps/compressed_jla_memory-8dbe13984edfc145)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/deletion_unit_graph.rs (rust/target/debug/deps/deletion_unit_graph-819d12926321f85c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/execution_planning.rs (rust/target/debug/deps/execution_planning-03abcc9b0d762277)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/executor_invariance.rs (rust/target/debug/deps/executor_invariance-bfaeb6ba80a9536e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/generic_jla.rs (rust/target/debug/deps/generic_jla-91b23d0ca942232d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 75 filtered out; finished in 0.00s
+
+     Running tests/generic_jla_memory.rs (rust/target/debug/deps/generic_jla_memory-cde8d50acdba7616)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/generic_model.rs (rust/target/debug/deps/generic_model-847d6cef78c55c88)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.00s
+
+     Running tests/grouped_component_inference.rs (rust/target/debug/deps/grouped_component_inference-5afe0bb1a4356edd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/individual_component_inference.rs (rust/target/debug/deps/individual_component_inference-1270964a48f64970)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/numerical_mc.rs (rust/target/debug/deps/numerical_mc-8a4082f657e15804)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/parallel_reductions.rs (rust/target/debug/deps/parallel_reductions-2ea59380accad82e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/rust_mata_shared_atoms.rs (rust/target/debug/deps/rust_mata_shared_atoms-aeb5ec9b0a484c1e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+

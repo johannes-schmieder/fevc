@@ -1,0 +1,62 @@
+{
+  "acceptance_proofs": {
+    "infrastructure": {
+      "sha256": "7bb3145603f87317d2f11a48145696f15edc88036e96007a2411c49577f05ea0"
+    },
+    "malformed": {
+      "sha256": "841c0639f134fd4fe012ea89dc4253415e4fdea9d10407bc4271fc7e872b8b1a"
+    },
+    "valid": {
+      "sha256": "824356905e7bec9cd295c26b699b48ce36b5f79c970223aab7e1448436d2c918"
+    }
+  },
+  "acceptance_reuse_scope": "unchanged_pinned_collector_only_not_runtime_source_qualification",
+  "acceptance_source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+  "all_started_wrappers_terminal": true,
+  "archive_verification": "fixed_wrapper_transport_hash_and_remote_source_hash_check",
+  "cleanup_verified": true,
+  "harness_sha256": "36f9817e1cfcc6cf350109619fe6ff0dcd6ec2506ca05079a4fb24fbf511858d",
+  "hosted_proof_sha256": "4546fbfb9eea7b254cd64809ba02dba3d9ceed350b510b72bcc7f65feb0dd5ad",
+  "identity_cleanup": {
+    "identity": "owned_candidate_and_identity_removed",
+    "status": "PASS"
+  },
+  "input_identity_sha256": "a57af69eda3fbdc353010b6883f37b08a562a79a02d6a512092cea423e67be8c",
+  "prior_smoke_proof_sha256": null,
+  "profile": "smoke",
+  "proposal_manifest_sha256": "1c20afe2e4664943a570fb2a9f68f85f80a1a424b3ab5822e66171aa16ba5c82",
+  "qualification": "SMOKE_ONLY_NOT_QUALIFICATION",
+  "run": {
+    "artifacts": [
+      {
+        "bytes": 5619200,
+        "name": "fevc_rust_windows_x64.plugin",
+        "sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4"
+      },
+      {
+        "bytes": 6801,
+        "name": "windows-build.json",
+        "sha256": "d701e61158137fbb6bacf2d9ddd36e080bf6f8a9a1f05fe5f1ba945374218629"
+      },
+      {
+        "bytes": 561,
+        "name": "windows-project-checks.json",
+        "sha256": "0f15a7150fee87a189dc36e528db677ad1ebc8468384f824bfe4eba40e9b5ccd"
+      }
+    ],
+    "error_code": null,
+    "failure_stage": "complete",
+    "input_identity_sha256": "a57af69eda3fbdc353010b6883f37b08a562a79a02d6a512092cea423e67be8c",
+    "receipt_sha256": "36fcdce49449ea9e937c89f209c231a59144db9624c0accc55a791fb1fbbeda4",
+    "run_id": "win-20261009T135537Z-6d364439",
+    "source_archive_sha256": "5f710f7aef62a21bd5a8cef838e01a86232af5e6658ed6b2e2d0c7f45c71b96e",
+    "source_revision": "dirty-1ed44e9bc5dabc7e1c53d14bff6596a2403652c4d490c087c891fed22b75188e",
+    "stata_rc": null,
+    "status": "PASS",
+    "wrapper_exit": 0
+  },
+  "schema": "FEVC-WINDOWS-RUNTIME-V1",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "source_transport": "exact_clean_commit_plus_owned_candidate_and_identity",
+  "status": "PASS"
+}

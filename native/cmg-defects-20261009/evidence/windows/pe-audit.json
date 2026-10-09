@@ -1,0 +1,17 @@
+{
+  "architecture": "x86_64",
+  "dll": true,
+  "dynamic_msvc_crt": false,
+  "export_count": 148,
+  "format": "PE32+",
+  "import_symbol_count": 95,
+  "imports": [
+    "api-ms-win-core-synch-l1-2-0.dll",
+    "kernel32.dll",
+    "ntdll.dll"
+  ],
+  "required_export_count": 145,
+  "sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4",
+  "size_bytes": 5619200,
+  "status": "PASS"
+}

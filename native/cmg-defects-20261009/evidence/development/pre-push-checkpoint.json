@@ -1,0 +1,153 @@
+{
+  "schema": "FEVC-CMG-DEFECT-QUALIFICATION-CHECKPOINT-V1",
+  "status": "INCOMPLETE_WINDOWS_SOURCE_PUSH_PENDING",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "ado_commit": "a8617882d4072fa35d6b272b5a8986bd1fb6571f",
+  "macos": {
+    "status": "PASS",
+    "classification": "CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION",
+    "installed_cases": 4,
+    "public_veneto_default": "PASS",
+    "public_veneto_automatic_batch_projection": "PASS",
+    "payloads": [
+      {
+        "name": "fevc_rust_macos_arm64.plugin",
+        "sha256": "6c9bc784f638e7c9225889c53742323f026703c0008f79d3068741fe3c950625",
+        "status": "QUALIFIED_NOT_ADOPTED"
+      },
+      {
+        "name": "fevc_rust_macos_x86_64.plugin",
+        "sha256": "f56417e05877ffd2ef702381d7de58615b260632622d5be7e82d45cd06998dd6",
+        "status": "QUALIFIED_NOT_ADOPTED"
+      },
+      {
+        "name": "fevc_rust_macos.plugin",
+        "sha256": "e8652b341c6c405ae7100b4e63c30097d20fb3c9690b1b5bfcc4f1e9c72891ad",
+        "status": "QUALIFIED_NOT_ADOPTED"
+      }
+    ]
+  },
+  "linux": {
+    "schema": "FEVC-CMG-LINUX-QUALIFICATION-VALIDATION-V1",
+    "status": "PASS",
+    "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+    "job_id": "7981653",
+    "slots": 4,
+    "bundle_sha256": "347f8137d999c5169fdac903795e0002dd776588e483d2149221e31d83f0e330",
+    "candidate_sha256": "77b6beec06a58bc274ab0cfd67a4c0e76d92ba43a3cc09befd4df709844b7333",
+    "qualification_receipt_sha256": "936989d226fb5152e83a9204bd68ad2b9092f56a9953b295aab336ae04acb199",
+    "qacct_sha256": "02a69a603455e277be4c3844544ff5ec49e6fdf9099280aab32e6cc6c2134357",
+    "scheduler_failed": 0,
+    "scheduler_exit_status": 0,
+    "wall_seconds": 2252,
+    "maxvmem": "8.531G",
+    "full_suite": "PASS",
+    "clean_install": "PASS",
+    "source_manifest_files": 1529,
+    "source_manifest_matches_git_corresponding_source_plus_commit_identity": true,
+    "all_collected_remote_sha256_verified": 46,
+    "component_centering_api": 1,
+    "component_centering": "PASS staged and installed exact/native",
+    "mean_projection": "PASS staged and installed cells=8",
+    "collection_warning": "Initial rsync -a copied bytes but emitted macOS directory-mode warnings. Re-collected using -rt --no-perms; every file verified against remote SHA-256. No qualification failure.",
+    "scope": "Linux x86-64 SCC Stata/MP19, source and exact artifact. No Windows, native Intel Mac hardware, performance, coverage or release claim."
+  },
+  "windows": {
+    "status": "NOT_STARTED",
+    "instance": "stopped",
+    "blocker": "Specific source push and hosted dispatch approval requested after automatic review rejection"
+  },
+  "source_gates": {
+    "pytest": "890 passed",
+    "cmg_assembly": "PASS",
+    "license_audit": "PASS",
+    "integrated": "FEVC LOCAL QUALIFICATION PASS; quick and full Stata",
+    "focused_refinement": "3 passed",
+    "checkpoint_focused_pytest": "75 passed in 1.45s"
+  },
+  "failed_attempts": [
+    {
+      "command": "cargo test -p vckss-core refinement_ using rustup only",
+      "status": "FAIL",
+      "reason": "rustc executable not found; pinned sibling bin was then added to PATH"
+    },
+    {
+      "command": "pytest during committing source",
+      "status": "FAIL",
+      "result": "889 passed, one deterministic dirty bundle check failed",
+      "diagnosis": "The current source commit changed during snapshot construction. Frozen-source rerun follows."
+    },
+    {
+      "command": "Windows inspect inside sandbox",
+      "status": "AUTH_REQUIRED",
+      "diagnosis": "Restricted sandbox cannot access credential helper. Same accepted inspect passes with required sandbox access."
+    },
+    {
+      "command": "ssh scc inside sandbox",
+      "status": "FAIL",
+      "diagnosis": "Sandbox denied socket/DNS. Same read-only inspection passes outside sandbox."
+    },
+    {
+      "command": "git push origin main and hosted workflow dispatch",
+      "status": "AUTO_REVIEW_REJECTED",
+      "reason": "Specific source push authorization requested; no push occurred"
+    },
+    {
+      "command": "Initial SCC evidence collection with rsync -a",
+      "status": "COLLECTION_MODE_WARNING",
+      "reason": "Initial rsync -a copied bytes but emitted macOS directory-mode warnings. Re-collected using -rt --no-perms; every file verified against remote SHA-256. No qualification failure."
+    }
+  ],
+  "limitations": [
+    "No all-five qualification, adoption, final HTTP fresh/replacement check, push, tag or release",
+    "Mac qualification invoked directly through registered qualify_macos.sh; common CI receipt formatted/validated separately and supervisor timing unavailable",
+    "Integrated checks use the unchanged shipped payloads; rebuilt Mac qualification and installed defects use their separate exact-byte records",
+    "Original adopted plugins restored after the qualifier staged Mac candidates; no partial adoption",
+    "Native Intel hardware, scale performance and statistical coverage not claimed",
+    "Earlier failed evidence and qualification/adoption records remain unchanged"
+  ],
+  "evidence_sha256": {
+    "fevc-corresponding-source-eec825d6.tar.gz": "e119dbcb138fca624df7c75355184ca9c8298cd6c3e76a256a9886add5cfec09",
+    "README.md": "04c930c1c66f9d5addf17ac8e0d93f61fc35ec0912911febb632adfa5516dbf3",
+    "evidence/macos/ci.json": "f3d979ac93fefacac41b3565d64a31bcf291bb12bcb0d2b765677e589c970673",
+    "evidence/macos/source-manifest.sha256": "4835579cdee3f7dd2b6e607941a5a561be35d701872d1a6658fe44d7f7a04ad2",
+    "evidence/macos/qualification.txt": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c",
+    "evidence/macos/installed-defects.json": "339cd23b932755db03ab99a749bc8f0d0c974d837fd9adaa61162899f9105c22",
+    "evidence/development/refinement-tests.txt": "2f44ce21fa2c7efa512ef9a29941639c994c931b9549f2d3e05049ee72b53311",
+    "evidence/source/corresponding-source-validation.json": "de72e99a955d6d93ef52c2c46e0674f12fcf0249436880926ce17e261ed38692",
+    "evidence/source/compatibility-A.json": "ad2847a6929b41f0d54719e8ca24ddca6e055f4c2a083bae00c2dce6558aa9e2",
+    "evidence/linux/wrapper.txt": "7fc090648008202028c755a4ad83f662585f3e46d66ee419be177fc5f2dfa104",
+    "evidence/linux/remote-hashes.txt": "449e6720ec54478850dbeef0a72841f5baa7eed01ea527efda592e16ceabfcc1",
+    "evidence/linux/validation.json": "b1da8fae28b70cc0faffceddd4547c437cd9154b0b60e93624f6f7e5a0a7f6d2",
+    "evidence/linux/qualification-source.sha256": "767d7fd168bad5d675d6c02b84908b118c3e937e0138f9ed789e1b3da9e9ff13",
+    "evidence/linux/qacct.txt": "02a69a603455e277be4c3844544ff5ec49e6fdf9099280aab32e6cc6c2134357",
+    "evidence/linux/qualification.txt": "936989d226fb5152e83a9204bd68ad2b9092f56a9953b295aab336ae04acb199"
+  },
+  "owner_reported_reproductions": {
+    "source_commit": "7d75328f7aa9959596475c18aecd54fd0a254d1a",
+    "platform": "M2 Ultra, Stata 19 MP, set processors 4",
+    "record_kind": "Owner-reported baseline failures; not newly executed or source-bound qualification receipts",
+    "default_replay": {
+      "status": "FAIL",
+      "inputs": [
+        "simulate_data(ex1)",
+        "public Veneto file"
+      ],
+      "failure": "NUMERICAL_TRANSPORT_FAILED",
+      "route": "CMG_FULL_V2",
+      "route_gate": 1e-05,
+      "old_mcse_gate": 1e-09,
+      "reported_replay_residual_order": 1e-06
+    },
+    "automatic_batch_projection": {
+      "status": "FAIL",
+      "tuple": "backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(cmg), automatic batch",
+      "failure": "FULL_RESIDUAL_FAILED",
+      "stage": "cmg_full_v2_refinement"
+    },
+    "sample_display": {
+      "status": "DEFECT",
+      "finding": "Original stayer history counts labelled Included; included counts are the stayer_hybrid records"
+    }
+  }
+}

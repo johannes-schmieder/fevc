@@ -1,3 +1,69 @@
+# CMG replay, refinement and sample reporting — October 9, 2026
+
+Commit A `a8617882` and Commit B `eec825d6` were reviewed, committed and pushed
+on `main` after the owner's explicit source-push/hosted-dispatch approval.
+All five payloads are rebuilt from B, qualified and adopted locally. No tag or
+release is authorized. Publication of the replacement payload/checkpoint and
+post-publication HTTP checks are the remaining owner-controlled step.
+
+[The adoption manifest](../native/cmg-defects-20261009/manifest.json) binds the
+five actual B build sources, hashes, corresponding source and installation
+receipts. [The checkpoint](../native/cmg-defects-20261009/checkpoint.json)
+preserves every failed attempt; preceding accepted records remain unchanged.
+
+- A aligns CMG_FULL_V2 replay validation with the posted phase gate and
+  distinguishes original histories, singleton/unattached exclusions and
+  included hybrid stayers in `estat sample`. Both Stata regressions are
+  registered. [Compatibility](../native/cmg-defects-20261009/evidence/source/compatibility-A.json)
+  records unchanged native/build/input/acceptance identities and all five
+  preceding adopted payload hashes; their original qualification limits remain.
+- B targets warm-start refinement to `factor*gate*min||b||` with relative
+  tolerance zero for a valid positive target. Complete-system certification
+  remains mandatory. The stopping-option, weighted-grid/hub and existing
+  refinement-schedule tests pass. No estimator, sample or acceptance cutoff changes.
+- Frozen-source pytest passes 890 tests; assembly, license audit and integrated
+  quick/full Stata checks pass. The earlier staged-tree quick receipt remains
+  bound to `7d75328f`, rather than being relabelled as clean B evidence.
+- The registered Mac qualifier passes thin arm64, x86-64 under Rosetta and
+  universal builds. Four installed defect cases pass. Public Veneto default
+  and automatic-batch projection calls pass on installed arm64 bytes.
+- SCC Linux job `7981653` passes full and installed qualification at B;
+  scheduler failed/exit status are zero and all 46 collected hashes verify.
+  The exact bundle hash and 1,529 source identities remain in its receipt.
+- Hosted Windows build `37938556177`, Rust matrix `37938525123` (all jobs),
+  and source checks `37938525129` pass at B. Exact-artifact private smoke
+  `win-20261009T135537Z-6d364439` and full
+  `win-20261009T140221Z-834b89b4` pass. Input/source restoration, transient
+  cleanup, lock release and stopped state are verified. Only the unchanged
+  pinned shared backend acceptance is reused; native qualification is new.
+- Complete-profile package validation and local HTTP fresh/replacement checks
+  pass. Each case verifies 61 installed files and five plugin hashes, existing
+  installed regressions, both new tests, eight Mean-component cells and the
+  public Veneto projection with automatic batch. Execution is on Mac arm64;
+  all platform runtime claims retain their separate qualification receipts.
+- The common B corresponding-source archive verifies all 1,528 exported Git
+  blobs and modes, including source, locks, build scripts, generated CMG and
+  notices. SHA-256 `e119dbcb138fca624df7c75355184ca9c8298cd6c3e76a256a9886add5cfec09`.
+  Public row-level fixtures remain outside the repository and are hash-pinned.
+- Preserve missing-rustc PATH, concurrent-snapshot pytest (889 pass/one failure),
+  sandbox SSH/credential failures, rejected initial push/dispatch and SCC
+  collection-mode warnings. Frozen reruns and explicit approval resolved their
+  respective blockers without relabelling the failures. Optional local process
+  inspection was unavailable; terminal install receipts remain authoritative.
+
+Native Intel hardware, representative-scale performance and general coverage
+are not claimed. Mac qualifier supervisor timing is unavailable and recorded
+truthfully. Historical scientific failures below are unchanged.
+
+## Remaining sequence
+
+Review the qualified payload/checkpoint commit, obtain explicit publication
+authorization under `docs/RC_BINARY_PAYLOAD.md`, push it, run actual public
+`net`/`github` fresh/replacement HTTP checks including the Veneto automatic-batch
+projection, and record the exact published-source binding. No tag or release.
+
+## Preserved preceding checkpoint
+
 # Mean-centered component inference — October 8, 2026
 
 The owner accepted all five recommendations in

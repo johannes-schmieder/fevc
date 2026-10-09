@@ -1,0 +1,47 @@
+{
+  "schema": "FEVC-BINARY-INPUTS-V1",
+  "profile": "complete",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "binaries": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "status": "PASS",
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "sha256": "6c9bc784f638e7c9225889c53742323f026703c0008f79d3068741fe3c950625",
+      "evidence": "evidence/macos-qualification.txt",
+      "evidence_sha256": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "status": "PASS",
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "sha256": "f56417e05877ffd2ef702381d7de58615b260632622d5be7e82d45cd06998dd6",
+      "evidence": "evidence/macos-qualification.txt",
+      "evidence_sha256": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "status": "PASS",
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "sha256": "e8652b341c6c405ae7100b4e63c30097d20fb3c9690b1b5bfcc4f1e9c72891ad",
+      "evidence": "evidence/macos-qualification.txt",
+      "evidence_sha256": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "status": "PASS",
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "sha256": "77b6beec06a58bc274ab0cfd67a4c0e76d92ba43a3cc09befd4df709844b7333",
+      "evidence": "evidence/linux-qualification.txt",
+      "evidence_sha256": "936989d226fb5152e83a9204bd68ad2b9092f56a9953b295aab336ae04acb199"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "status": "PASS",
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4",
+      "evidence": "evidence/windows-runtime.json",
+      "evidence_sha256": "39573eb20c3b747137151270a02e02471d72c7e728a980e143ea2fc53fe74bf0"
+    }
+  ]
+}

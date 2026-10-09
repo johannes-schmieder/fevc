@@ -1,0 +1,125 @@
+{
+  "schema": "FEVC-CMG-DEFECT-ADOPTION-V1",
+  "status": "FIVE_PAYLOADS_ADOPTED",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "ado_commit": "a8617882d4072fa35d6b272b5a8986bd1fb6571f",
+  "binaries": [
+    {
+      "path": "fevc/fevc_rust_macos_arm64.plugin",
+      "sha256": "6c9bc784f638e7c9225889c53742323f026703c0008f79d3068741fe3c950625",
+      "bytes": 4963008,
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "status": "PASS",
+      "qualification_evidence": [
+        {
+          "path": "evidence/macos/qualification.txt",
+          "sha256": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c"
+        }
+      ]
+    },
+    {
+      "path": "fevc/fevc_rust_macos_x86_64.plugin",
+      "sha256": "f56417e05877ffd2ef702381d7de58615b260632622d5be7e82d45cd06998dd6",
+      "bytes": 5641904,
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "status": "PASS",
+      "qualification_evidence": [
+        {
+          "path": "evidence/macos/qualification.txt",
+          "sha256": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c"
+        }
+      ]
+    },
+    {
+      "path": "fevc/fevc_rust_macos.plugin",
+      "sha256": "e8652b341c6c405ae7100b4e63c30097d20fb3c9690b1b5bfcc4f1e9c72891ad",
+      "bytes": 10631872,
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "status": "PASS",
+      "qualification_evidence": [
+        {
+          "path": "evidence/macos/qualification.txt",
+          "sha256": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c"
+        }
+      ]
+    },
+    {
+      "path": "fevc/fevc_rust_linux_x64.plugin",
+      "sha256": "77b6beec06a58bc274ab0cfd67a4c0e76d92ba43a3cc09befd4df709844b7333",
+      "bytes": 6049096,
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "status": "PASS",
+      "qualification_evidence": [
+        {
+          "path": "evidence/linux/qualification.txt",
+          "sha256": "936989d226fb5152e83a9204bd68ad2b9092f56a9953b295aab336ae04acb199"
+        }
+      ]
+    },
+    {
+      "path": "fevc/fevc_rust_windows_x64.plugin",
+      "sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4",
+      "bytes": 5619200,
+      "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+      "status": "PASS",
+      "qualification_evidence": [
+        {
+          "path": "evidence/windows/qualification.json",
+          "sha256": "d767c61745caad1584a2ba0a30b4a7d648102fc65a474781373dda0ed6bcebad"
+        }
+      ]
+    }
+  ],
+  "corresponding_source": {
+    "path": "fevc-corresponding-source-eec825d6.tar.gz",
+    "sha256": "e119dbcb138fca624df7c75355184ca9c8298cd6c3e76a256a9886add5cfec09",
+    "validation": "evidence/source/corresponding-source-validation.json"
+  },
+  "component_centering_api": 1,
+  "local_packaging_evidence": "evidence/packaging/local-http.json",
+  "package_receipt": "evidence/packaging/staged-package.json",
+  "evidence_sha256": {
+    "checkpoint.json": "dc1b921d0cfe5322805bbcac3df0420762782d716fccda52ab6032fec0042b0e",
+    "fevc-corresponding-source-eec825d6.tar.gz": "e119dbcb138fca624df7c75355184ca9c8298cd6c3e76a256a9886add5cfec09",
+    "README.md": "57fc999da49ac37bc7f9f48db248cc5d2a004056e429a78e180129eba7c866c4",
+    "evidence/packaging/binary-inputs.json": "895abdbc6a5fa503b3f11b85ee5e5c80e0270e3d753a64418bb95200a5aea4f2",
+    "evidence/packaging/local-http.json": "d41095711ed7cc67fccd0a51f671205495e919beded3de400aa73d82362758fb",
+    "evidence/packaging/staged-package.json": "0820972916f14ddd143b45167f947576d8dc0585bd727ee7834616fa7586d9d1",
+    "evidence/macos/ci.json": "f3d979ac93fefacac41b3565d64a31bcf291bb12bcb0d2b765677e589c970673",
+    "evidence/macos/source-manifest.sha256": "4835579cdee3f7dd2b6e607941a5a561be35d701872d1a6658fe44d7f7a04ad2",
+    "evidence/macos/qualification.txt": "e9b108114b69fcecca68e6731fdbac309a176195c763d1f7ff9ac92661d5ca2c",
+    "evidence/macos/installed-defects.json": "339cd23b932755db03ab99a749bc8f0d0c974d837fd9adaa61162899f9105c22",
+    "evidence/development/refinement-tests.txt": "2f44ce21fa2c7efa512ef9a29941639c994c931b9549f2d3e05049ee72b53311",
+    "evidence/development/pre-push-checkpoint.json": "a439f66a42d40178e456efa63dd4cc617baa92531d2b072453804735000d2773",
+    "evidence/source/corresponding-source-validation.json": "de72e99a955d6d93ef52c2c46e0674f12fcf0249436880926ce17e261ed38692",
+    "evidence/source/compatibility-A.json": "ad2847a6929b41f0d54719e8ca24ddca6e055f4c2a083bae00c2dce6558aa9e2",
+    "evidence/linux/wrapper.txt": "7fc090648008202028c755a4ad83f662585f3e46d66ee419be177fc5f2dfa104",
+    "evidence/linux/remote-hashes.txt": "449e6720ec54478850dbeef0a72841f5baa7eed01ea527efda592e16ceabfcc1",
+    "evidence/linux/validation.json": "b1da8fae28b70cc0faffceddd4547c437cd9154b0b60e93624f6f7e5a0a7f6d2",
+    "evidence/linux/qualification-source.sha256": "767d7fd168bad5d675d6c02b84908b118c3e937e0138f9ed789e1b3da9e9ff13",
+    "evidence/linux/qacct.txt": "02a69a603455e277be4c3844544ff5ec49e6fdf9099280aab32e6cc6c2134357",
+    "evidence/linux/qualification.txt": "936989d226fb5152e83a9204bd68ad2b9092f56a9953b295aab336ae04acb199",
+    "evidence/windows/qualification.json": "d767c61745caad1584a2ba0a30b4a7d648102fc65a474781373dda0ed6bcebad",
+    "evidence/windows/offline-validation.json": "b6a4dc31bff58c0d8b55fc699f43a99e884acc16b125a8edaf3fc7771fd9ab2c",
+    "evidence/windows/smoke-runtime.json": "33d1a3f031d9ee85757e374b48a5dd14f2ac3cdd80aaf02ce8fe5ce83dea46f4",
+    "evidence/windows/pe-audit.json": "2859dd33ea7096b90ec80a651c4f78e991f26c675aa80535e46afb9ee3e354d3",
+    "evidence/windows/full-receipt.json": "00127c2ee246686b10c32e63362cbf7510c5b92437d452fc007884bb090e2be7",
+    "evidence/windows/project-checks.json": "5890ddee449b04a79a21650610a3060bad2b2c01844d80bd2f99a6f1baaf2418",
+    "evidence/windows/full-input-identity.json": "e29155d507011e1ecbea9f65353c89795e77cc53c3b53cde9336cd333422ce4c",
+    "evidence/windows/full-runtime.json": "39573eb20c3b747137151270a02e02471d72c7e728a980e143ea2fc53fe74bf0",
+    "evidence/windows/hosted-proof.json": "4546fbfb9eea7b254cd64809ba02dba3d9ceed350b510b72bcc7f65feb0dd5ad",
+    "evidence/windows/smoke-receipt.json": "36fcdce49449ea9e937c89f209c231a59144db9624c0accc55a791fb1fbbeda4",
+    "evidence/windows/hosted-gates.json": "9f4a5ab2fd544d182530ddcd4aa723b76de8129516c799d39f166223171d7e49",
+    "evidence/windows/build.json": "663b9c5d45b2a39908cd7540e80136fb319b67d6687310de603218717a33a7fc",
+    "evidence/packaging/pytest.txt": "cd21f0570c16f8bc0b2a92343c303a19cfbbc0f68f9a76bc546ff36baec06186",
+    "evidence/packaging/evidence-format-pytest.txt": "822400f93932a821caba6f5fc2912ee4cf572afd0992dd08243f1bb3795d201d"
+  },
+  "public_installation": "Separate post-publication gate; not claimed by this manifest.",
+  "publication_scope": "Local adoption of five source-bound qualified payloads; no tag, native release archive or hosted release.",
+  "limitations": [
+    "Public HTTP installation and payload publication remain separate owner-authorized gates.",
+    "Mac x86-64 qualification uses Rosetta; no native Intel hardware, representative-scale performance or general statistical coverage claim.",
+    "Original failed attempts and prior qualification/adoption records are preserved unchanged.",
+    "Mac qualification uses the registered direct qualifier; common CI receipt formatted separately with unavailable supervisor timing recorded truthfully."
+  ]
+}

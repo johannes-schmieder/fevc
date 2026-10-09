@@ -1,6 +1,18 @@
 # Native binary payload
 
-## Current Mean-component status and provenance
+## Current CMG repair qualification
+
+All five CMG repair payloads are rebuilt from `eec825d6` and qualified and
+adopted locally. The [manifest](../../native/cmg-defects-20261009/manifest.json) binds exact bytes, original platform
+receipts and the common corresponding-source archive. Registered Mac
+arm64/Rosetta thin/universal, SCC Linux and hosted/private Windows gates pass.
+Local HTTP fresh/replacement checks verify 61 files, five hashes, both new
+regressions, installed Mean cells and public Veneto automatic-batch projection.
+Payload publication and public HTTP checks remain separate owner-controlled
+steps. Earlier dated receipts retain their original identities and limitations.
+No tag or release is created.
+
+## Historical Mean-component status and provenance
 
 The [Mean-component manifest](../../native/mean-component-20261008/manifest.json)
 records the five qualified payloads published at `66d0278b`, exact hashes, build

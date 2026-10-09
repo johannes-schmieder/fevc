@@ -1,0 +1,53 @@
+{
+  "schema": "FEVC-CMG-WINDOWS-QUALIFICATION-V1",
+  "status": "PASS",
+  "source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "hosted_build_run": "37938556177",
+  "hosted_rust_run": "37938525123",
+  "binary_sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4",
+  "binary_bytes": 5619200,
+  "smoke_run": "win-20261009T135537Z-6d364439",
+  "full_run": "win-20261009T140221Z-834b89b4",
+  "full_qualification": "FULL_HOSTED_BUILD_PRIVATE_RUNTIME_PASS",
+  "cleanup_verified": true,
+  "source_restoration": "PASS",
+  "machine_final_state": "stopped",
+  "collector_acceptance_reuse": "Only unchanged pinned shared backend, not project qualification",
+  "gates": {
+    "centering_exact": "PASS",
+    "centering_jla": "PASS",
+    "centering_mean": "PASS",
+    "centering_options": "PASS",
+    "clean_install": "PASS",
+    "individual_component": "PASS",
+    "lifecycle": "PASS",
+    "match_component": "PASS",
+    "mcse_attachments": "PASS",
+    "mcse_modes": "PASS",
+    "observation_component": "PASS",
+    "pe_import_export": "PASS",
+    "point_mean": "PASS",
+    "pooled_deletion": "PASS",
+    "projection_mean": "PASS",
+    "registry_idle": "PASS",
+    "rust_backend": "HOSTED_CI_PASS",
+    "rust_workspace": "HOSTED_CI_PASS"
+  },
+  "evidence_sha256": {
+    "offline-validation.json": "b6a4dc31bff58c0d8b55fc699f43a99e884acc16b125a8edaf3fc7771fd9ab2c",
+    "smoke-runtime.json": "33d1a3f031d9ee85757e374b48a5dd14f2ac3cdd80aaf02ce8fe5ce83dea46f4",
+    "pe-audit.json": "2859dd33ea7096b90ec80a651c4f78e991f26c675aa80535e46afb9ee3e354d3",
+    "full-receipt.json": "00127c2ee246686b10c32e63362cbf7510c5b92437d452fc007884bb090e2be7",
+    "project-checks.json": "5890ddee449b04a79a21650610a3060bad2b2c01844d80bd2f99a6f1baaf2418",
+    "full-input-identity.json": "e29155d507011e1ecbea9f65353c89795e77cc53c3b53cde9336cd333422ce4c",
+    "full-runtime.json": "39573eb20c3b747137151270a02e02471d72c7e728a980e143ea2fc53fe74bf0",
+    "hosted-proof.json": "4546fbfb9eea7b254cd64809ba02dba3d9ceed350b510b72bcc7f65feb0dd5ad",
+    "smoke-receipt.json": "36fcdce49449ea9e937c89f209c231a59144db9624c0accc55a791fb1fbbeda4",
+    "hosted-gates.json": "9f4a5ab2fd544d182530ddcd4aa723b76de8129516c799d39f166223171d7e49",
+    "build.json": "663b9c5d45b2a39908cd7540e80136fb319b67d6687310de603218717a33a7fc"
+  },
+  "limitations": [
+    "Registered Windows profile, Stata/MP19 with two processors; public Veneto installed execution is recorded separately on Mac arm64.",
+    "No performance, statistical coverage, native Intel hardware, tag or release claim."
+  ]
+}
