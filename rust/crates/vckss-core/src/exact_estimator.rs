@@ -32,6 +32,8 @@ use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkRec
 pub const EXACT_EXECUTION_SCHEMA_VERSION: u32 = 1;
 
 mod centering;
+#[cfg(test)]
+mod centering_tests;
 #[doc(hidden)]
 pub mod parallel;
 
@@ -1166,6 +1168,9 @@ fn run_exact_estimator_internal(
         (deletion_units, correction_sources)
     };
     if let Some(center) = centering {
+        // Serial accumulation stores only primitive targets. Materialize its
+        // derived total before the checked centering-increment addition.
+        correction.total = correction.worker + correction.firm + 2.0 * correction.covariance;
         let increment = center.finish(
             &information,
             &working_inverse,
