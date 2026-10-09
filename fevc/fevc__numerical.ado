@@ -175,9 +175,16 @@ program define fevc__numerical, eclass
         mata: st_matrix(st_global("VCKSS_NMC_RHS"),J(0,3,.))
         global VCKSS_NMC_STATUS exact_zero
     }
-    tempname valid
+    tempname valid gate
+    scalar `gate' = max(1e-11,10*e(tolerance))
+    // Replay reuses the selected point route and must pass that route's own
+    // complete-residual gate. CMG_FULL_V2 registers 10*max(fit,probe) phase
+    // tolerances, which exceed 10*tolerance() for its default probe phase.
+    if "`e(cmg_backend)'"=="CMG_FULL_V2" & !missing(e(residual_acceptance_tolerance)) {
+        scalar `gate' = max(scalar(`gate'),e(residual_acceptance_tolerance))
+    }
     capture mata: st_numscalar("`valid'",vckss_nmc__stata_validate( ///
-        st_numscalar("e(probes)"),max((1e-11,10*st_numscalar("e(tolerance)")))))
+        st_numscalar("e(probes)"),st_numscalar("`gate'")))
     if _rc {
         quietly _fevc_numerical_failure "NUMERICAL_TRANSPORT_FAILED" ///
             "The numerical attachment could not be validated."

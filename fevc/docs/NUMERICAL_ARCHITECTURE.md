@@ -158,8 +158,13 @@ The algebraic JLA derivation refers to the exact orthogonal FE projection.
 Matrix-free inverse actions are numerical approximations to that projection,
 and each nonzero right-hand side is accepted only when its scale-relative
 recomputed full-system residual is at most
-`max(1e-11,10*tolerance())`. Solver error is reported separately
-from probe MCSE. The implementation does not infer a forward-error or
+`max(1e-11,10*tolerance())`. The automatic no-control `CMG_FULL_V2` route
+instead registers `max(1e-11,10*max(fit,probe))` phase tolerances and posts
+that gate as `e(residual_acceptance_tolerance)`; all-probe replay reuses the
+route and is validated against the same gate. Its warm-start refinement stops
+on `||r|| <= factor*gate*||b||` rather than CMG's operator-scaled relative
+test, which can stall above the gate when `||A|| ||x||` dominates `||b||`.
+Solver error is reported separately from probe MCSE. The implementation does not infer a forward-error or
 uniform-theorem bound from a residual alone; dense overlap tests and SCC
 qualification are numerical evidence at the registered tolerance.
 

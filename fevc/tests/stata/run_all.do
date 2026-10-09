@@ -43,6 +43,7 @@ do `"`pkgroot'/tests/stata/test_centering_jla_map.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_timer_ownership.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
 do `"`pkgroot'/tests/stata/test_stayers_hybrid.do"'
+do `"`pkgroot'/tests/stata/test_estat_sample_stayers.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_subsample_equivalence.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_backend_routing.do"' `"`pkgroot'"'
 capture quietly fevc_rust probe
@@ -50,6 +51,7 @@ if !_rc {
     if r(numerical_api)==2 {
         do `"`pkgroot'/tests/stata/test_all_probe_native_frontend.do"' `"`pkgroot'"'
         do `"`pkgroot'/tests/stata/test_mcse_attachments.do"' `"`pkgroot'"'
+        do `"`pkgroot'/tests/stata/test_full_cmg_default_mcse.do"' `"`pkgroot'"'
         do `"`pkgroot'/tests/stata/test_all_probe_shared_atoms.do"' `"`pkgroot'"'
     }
     quietly fevc_rust probe

@@ -91,11 +91,23 @@ program define _fevc_estat_sample
         %20.0fc e(N_graph_dropped)
 
     if "`e(deletion)'" == "match" & "`e(stayers)'" == "both" {
+        // e(N_stayers) and e(N_stayer_rows) count original one-unit
+        // histories; the included population is the stayer_hybrid record.
         di as txt _newline "Combined mover-stayer population"
-        di as txt %-38s "Included stayer workers" as result      ///
+        di as txt %-38s "Original stayer workers" as result      ///
             %20.0fc e(N_stayers)
-        di as txt %-38s "Included stayer stored rows" as result ///
+        di as txt %-38s "Original stayer stored rows" as result ///
             %20.0fc e(N_stayer_rows)
+        if !missing(e(stayer_hybrid_N_stayers)) {
+            di as txt %-38s "Stayers with one physical row" as result ///
+                %20.0fc e(stayer_hybrid_N_singleton_drop)
+            di as txt %-38s "Stayers outside retained firms" as result ///
+                %20.0fc e(stayer_hybrid_N_unattached)
+            di as txt %-38s "Included stayer workers" as result  ///
+                %20.0fc e(stayer_hybrid_N_stayers)
+            di as txt %-38s "Included stayer stored rows" as result ///
+                %20.0fc e(stayer_hybrid_N_stayer_rows)
+        }
         di as txt "Deletion convention: " as result             ///
             "`e(stayer_hybrid_deletion)'"
         di as txt "Assumption: " as result                       ///
