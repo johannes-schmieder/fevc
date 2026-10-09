@@ -2,9 +2,10 @@
 
 Commit A `a8617882` and Commit B `eec825d6` were reviewed, committed and pushed
 on `main` after the owner's explicit source-push/hosted-dispatch approval.
-All five payloads are rebuilt from B, qualified and adopted locally. No tag or
-release is authorized. Publication of the replacement payload/checkpoint and
-post-publication HTTP checks are the remaining owner-controlled step.
+All five payloads are rebuilt from B, qualified and published at `13a98492`
+after explicit owner approval. Public installation checks pass. The final
+receipt update changes documentation/evidence only; all 61 installed files
+retain their tested bytes. No tag or release is authorized.
 
 [The adoption manifest](../native/cmg-defects-20261009/manifest.json) binds the
 five actual B build sources, hashes, corresponding source and installation
@@ -55,12 +56,34 @@ Native Intel hardware, representative-scale performance and general coverage
 are not claimed. Mac qualifier supervisor timing is unavailable and recorded
 truthfully. Historical scientific failures below are unchanged.
 
-## Remaining sequence
+## Completed publication checkpoint
 
-Review the qualified payload/checkpoint commit, obtain explicit publication
-authorization under `docs/RC_BINARY_PAYLOAD.md`, push it, run actual public
-`net`/`github` fresh/replacement HTTP checks including the Veneto automatic-batch
-projection, and record the exact published-source binding. No tag or release.
+The owner approved publication of the reviewed `13a98492` payload/checkpoint,
+public installation checks and the receipt push. Source checks pass at the
+published package source. Actual HTTP preflight verifies 65 files, including
+all five binaries, the adoption manifest and the B source archive.
+
+All four public `net`/`github` fresh/replacement cases pass on Mac arm64. Each
+verifies 61 installed files and five binary hashes, both new regressions,
+existing runtime/caller-state checks, eight Mean-component cells and the public
+Veneto automatic-batch projection. [The receipt](../native/cmg-defects-20261009/evidence/packaging/public-install-13a98492.json)
+and [exact binding](../native/cmg-defects-20261009/evidence/packaging/public-install-binding-13a98492.json)
+retain the actual published source and execution scope.
+
+[Compatibility](../native/cmg-defects-20261009/evidence/source/package-compatibility-13a98492.json)
+compares B with `13a98492`: all 1,521 other tracked blobs/modes are unchanged,
+including production/build/test/input/acceptance sources. All 63 staged
+repository files match the published checkout. Actual qualified B binaries
+retain their original hashes; the previous binaries checked into B are not
+relabelled as repaired builds. Frozen campaign receipts, manifest and earlier
+failed attempts remain unchanged. The final broad source check first returned
+889 passed / one failure because the dirty-source bundle guard rejected the new
+untracked public receipt; its original log is preserved. After staging the
+reviewed evidence, all 890 tests pass. The 77 focused packaging/documentation
+checks, CMG assembly check and parity renderer check also pass. A scoped
+whitespace attribute preserves the failed log byte for byte. The append-only
+[publication checkpoint](../native/cmg-defects-20261009/public-checkpoint.json)
+records these final checks and diagnostic attempts. No tag or release.
 
 ## Preserved preceding checkpoint
 

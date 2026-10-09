@@ -1,0 +1,47 @@
+{
+  "schema": "FEVC-CMG-PUBLIC-INSTALL-BINDING-V1",
+  "status": "PASS",
+  "published_package_commit": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+  "actual_build_source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "public_main_head_before_and_after": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+  "owner_authorization": "I approve (publication, public fresh/replacement tests and receipt push)",
+  "adoption_manifest_sha256": "7b9918dbbbc6cb7403132afd4c3aea37bc3c774a4c1c62e9b5f54e33f82b3422",
+  "public_install_receipt_sha256": "054ee09508a7bcc95c834ea5b01325834b57ce26dc57673af58973615fb28720",
+  "public_preflight_sha256": "c76c070a3d536b15fde3bec150e01b05dbbccb294055ba6b273a7499a44e4a89",
+  "source_compatibility_sha256": "c77c36d404abcc40aed3fe9374026a322237856e0dcff514cabf062c9e79328f",
+  "source_archive_sha256": "e119dbcb138fca624df7c75355184ca9c8298cd6c3e76a256a9886add5cfec09",
+  "cases": 4,
+  "installed_files_per_case": 61,
+  "binaries": {
+    "fevc/fevc_rust_macos_arm64.plugin": "6c9bc784f638e7c9225889c53742323f026703c0008f79d3068741fe3c950625",
+    "fevc/fevc_rust_macos_x86_64.plugin": "f56417e05877ffd2ef702381d7de58615b260632622d5be7e82d45cd06998dd6",
+    "fevc/fevc_rust_macos.plugin": "e8652b341c6c405ae7100b4e63c30097d20fb3c9690b1b5bfcc4f1e9c72891ad",
+    "fevc/fevc_rust_linux_x64.plugin": "77b6beec06a58bc274ab0cfd67a4c0e76d92ba43a3cc09befd4df709844b7333",
+    "fevc/fevc_rust_windows_x64.plugin": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4"
+  },
+  "public_veneto_automatic_batch_projection": "PASS all four installed cases; no explicit batch option",
+  "execution_platform": {
+    "os": "Darwin",
+    "architecture": "arm64",
+    "stata": "19 MP",
+    "processors": 4
+  },
+  "test_identities": {
+    "fevc/tests/stata/test_rust_match_component_inference.do": "2d1b11c3cc451e04467ef12af6cff27ee516fe446931d6712539bc8ef680663d",
+    "fevc/tests/stata/test_pooled_deletion.do": "c134b194d40cd7f4044458dbe2af031a9d37ab1e74bb71cac12ca5290ae2d6c7",
+    "fevc/tests/stata/test_subsample_equivalence.do": "9386dc6b82f4461e85bd7d87340440f4241a14ac32d7c9342c408aefaf86e95d",
+    "fevc/tests/stata/test_timer_ownership.do": "e6f388665f6bbfe1fe9dfc02301e74d0b5ae193cca53b10347ab198697990d68",
+    "fevc/tests/stata/test_full_cmg_default_mcse.do": "6e3c216e9ab6036605d7dcfc3a6490c16bac054d1a8a0c62e9ec901ad9ad31c1",
+    "fevc/tests/stata/test_estat_sample_stayers.do": "79f44eb0f9652cddd24760163cc72503ad3573e4a3292af93857c4d04733a201",
+    "fevc/tests/stata/test_component_centering_native.do": "7f1d7fcc7c4881b9373f560c3e0edf35c428a6d3c1a0fd10bda68189d8afb909"
+  },
+  "verifier_sha256": "4faca386733703e663c1298d30f54845c7ef4628572a7a25b94405dfcba22eb1",
+  "public_fixture_sha256": "bb95f0f7d5ff9d903d3fc92e533660f2221a3922343fb6319632e0754d7cba21",
+  "frozen_C_campaign_evidence": "All existing manifest-bound evidence and adoption validation hashes verify unchanged",
+  "limitations": [
+    "Runtime of these public installation cases is Mac arm64 only; the other four payload runtime identities retain separate B qualification.",
+    "Mac x86-64 is Rosetta qualified, not native Intel hardware.",
+    "No scale-performance, statistical coverage, tag, native release archive or hosted release claim."
+  ],
+  "published_source_gate_receipt_sha256": "5e58d65062aaf4eb43fcd2c0056f4ace48ec87e2cb57b899f84a939bd450f924"
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "FEVC-CMG-PUBLIC-CHECKPOINT-V1",
+  "status": "PASS",
+  "checked_at_utc": "2026-10-09T15:23:00.870521+00:00",
+  "published_package_commit": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+  "actual_build_source_commit": "eec825d67c09fd1e2c845a51f2eca6379eb9ccb7",
+  "receipt_commit_parent": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+  "owner_authorization": "I approve (publication, public installed checks and receipt push)",
+  "checks": [
+    "All four public net/github fresh/replacement cases PASS; each verifies 61 files, five payload hashes and public Veneto automatic-batch projection on Mac arm64",
+    "65 public preflight downloads match exact published Git blobs",
+    "All 36 original C campaign files and every manifest-bound hash remain unchanged",
+    "All 61 installed files, native/test/build/input/acceptance identities remain unchanged by this receipt update",
+    "./.venv/bin/python -m pytest -q: 890 passed in 81.95s after staging; original untracked-evidence failure preserved",
+    "Focused packaging/documentation pytest: 77 passed in 1.37s",
+    "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check: PASS",
+    "./.venv/bin/python fevc/tools/render_rust_mata_parity.py --check: PASS",
+    "Historical parity qualification and scientific assessment text unchanged",
+    "./.venv/bin/python -m pytest -q fevc/tests/python/test_linux_scc_qualifier.py::test_dirty_bundle_binds_current_source_without_private_veneto: 1 passed in 3.62s after staging final metadata"
+  ],
+  "attempts": [
+    {
+      "kind": "source gate",
+      "status": "FAIL",
+      "detail": "Dirty-bundle guard rejected untracked public receipt: 889 passed, one failed. No production/source fix; staging the reviewed files followed by the full rerun passes.",
+      "log": "evidence/packaging/public-checkpoint-pytest-untracked-failed.txt"
+    },
+    {
+      "kind": "read-only audit diagnostic",
+      "status": "FAIL_THEN_PASS",
+      "detail": "First parity audit assumed key surfaces and raised KeyError; next assumed row IDs macos/linux and failed the ID assertion. Corrected to schema key rows and IDs macos-arm64-rosetta/linux-scc/windows; historical text and all hash checks pass."
+    },
+    {
+      "kind": "read-only lookup diagnostic",
+      "status": "FAILED_PATH",
+      "detail": "One rg invocation included nonexistent test_development_acceptance.py; no source mutation or qualification claim."
+    },
+    {
+      "kind": "evidence-format check",
+      "status": "FAIL_THEN_PASS",
+      "detail": "git diff --cached --check found three original trailing-space lines in the preserved failed pytest log. Added a whitespace=-blank-at-eol attribute scoped to that exact log; raw bytes remain unchanged."
+    }
+  ],
+  "receipt_update_scope": "Documentation, append-only evidence and one narrowly scoped raw-log whitespace attribute only. No runtime/build/native payload changes. Full pytest ran before the final raw-log attribute and checkpoint text were added; the dirty-bundle focused regression is rechecked after staging these metadata additions.",
+  "new_evidence_sha256": {
+    "evidence/packaging/public-checkpoint-focused-pytest.txt": "cd21f0570c16f8bc0b2a92343c303a19cfbbc0f68f9a76bc546ff36baec06186",
+    "evidence/packaging/public-checkpoint-pytest-passed.txt": "6b0e13142c9d729fb16b542447d5f7d369d72b173f5a8b0428c3e43fdf14fd87",
+    "evidence/packaging/public-checkpoint-pytest-untracked-failed.txt": "97e3e81a135ffa7da3f05af80143684c67efce1f9023bcb8a914a5d6afe10ae2",
+    "evidence/packaging/public-install-13a98492.json": "054ee09508a7bcc95c834ea5b01325834b57ce26dc57673af58973615fb28720",
+    "evidence/packaging/public-install-binding-13a98492.json": "ca2bf6f17b3312187899b0fc12c8ed9f392a32a29e45f3bde917c0daeeba3267",
+    "evidence/packaging/public-preflight-13a98492.json": "c76c070a3d536b15fde3bec150e01b05dbbccb294055ba6b273a7499a44e4a89",
+    "evidence/packaging/published-source-gates-13a98492.json": "5e58d65062aaf4eb43fcd2c0056f4ace48ec87e2cb57b899f84a939bd450f924",
+    "evidence/source/package-compatibility-13a98492.json": "c77c36d404abcc40aed3fe9374026a322237856e0dcff514cabf062c9e79328f"
+  },
+  "limitations": [
+    "Public installed runtime is Mac arm64 Stata 19 MP, processors 4 only; other payload runtimes retain separate B qualification",
+    "Mac x86-64 is Rosetta qualified, not native Intel hardware",
+    "No scale-performance, general coverage, tag, native release archive or hosted release claim"
+  ]
+}

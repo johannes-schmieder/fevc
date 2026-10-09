@@ -2,15 +2,19 @@
 
 ## Current CMG repair qualification
 
-All five CMG repair payloads are rebuilt from `eec825d6` and qualified and
-adopted locally. The [manifest](../native/cmg-defects-20261009/manifest.json) binds exact bytes, original platform
-receipts and the common corresponding-source archive. Registered Mac
-arm64/Rosetta thin/universal, SCC Linux and hosted/private Windows gates pass.
-Local HTTP fresh/replacement checks verify 61 files, five hashes, both new
-regressions, installed Mean cells and public Veneto automatic-batch projection.
-Payload publication and public HTTP checks remain separate owner-controlled
-steps. Earlier dated receipts retain their original identities and limitations.
-No tag or release is created.
+All five CMG repair payloads are rebuilt from `eec825d6` and published at
+`13a98492` after registered platform qualification and explicit owner approval.
+The [manifest](../native/cmg-defects-20261009/manifest.json) binds exact bytes,
+original platform receipts and the common B corresponding-source archive.
+Mac arm64/Rosetta thin/universal, SCC Linux and hosted/private Windows gates pass.
+Local HTTP fresh/replacement checks and all four public `net`/`github`
+fresh/replacement cases pass. Each public case verifies 61 installed files,
+five hashes, both new regressions, eight Mean-component cells and public Veneto
+automatic-batch projection on Mac arm64. The [public receipt](../native/cmg-defects-20261009/evidence/packaging/public-install-13a98492.json)
+and [exact binding](../native/cmg-defects-20261009/evidence/packaging/public-install-binding-13a98492.json)
+record this scope separately from other platform qualification. Earlier dated
+receipts retain their original identities and limitations. No tag or release
+is created.
 
 This directory contains the Rust backend for `fevc`. Users of the complete
 binary distribution will not need Rust or a compiler. For installation, see

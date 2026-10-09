@@ -1,0 +1,68 @@
+{
+  "schema": "FEVC-CMG-PUBLISHED-SOURCE-GATES-V1",
+  "status": "PASS",
+  "published_source_commit": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+  "runs": {
+    "source": {
+      "run_id": 37947809418,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37947809418",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+      "jobs": [
+        {
+          "name": "test",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "rust": {
+      "run_id": 37947809371,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/37947809371",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "13a98492256a39cfa01b84335a35d14d3c868d7d",
+      "jobs": [
+        {
+          "name": "Standalone dependency policy",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "windows-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "macos-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ubuntu-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ubuntu-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "macos-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "windows-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  },
+  "scope": "C source checks and automatic Rust matrix. Actual five native builds remain source B; no C native rebuild claim."
+}

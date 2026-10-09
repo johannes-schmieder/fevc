@@ -15,8 +15,14 @@
   fresh/replacement checks pass: 61 files, five hashes, new regressions,
   Mean-component checks and public Veneto automatic-batch projection per case.
   [The manifest](../native/cmg-defects-20261009/manifest.json) retains exact
-  sources and every failure. Payload publication/public HTTP checks remain
-  the separate owner-controlled step. No tag or release is created.
+  sources and qualification failures. Publish the qualified payloads at `13a98492`
+  after owner approval. All four public `net`/`github` fresh/replacement cases
+  pass on Mac arm64 with 61 files, five hashes, eight Mean cells and the public
+  Veneto automatic-batch projection per case. The [exact public binding](../native/cmg-defects-20261009/evidence/packaging/public-install-binding-13a98492.json)
+  records the published package source and unchanged B build identities.
+  Frozen prior evidence remains unchanged. The [publication checkpoint](../native/cmg-defects-20261009/public-checkpoint.json)
+  preserves the final source-check failure and successful 890-test rerun.
+  No tag or release is created.
 
 ## October 9, 2026 (UTC) — Mean component native adoption
 

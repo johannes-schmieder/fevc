@@ -1,0 +1,50 @@
+........................................................................ [  8%]
+........................................................................ [ 16%]
+........................................................................ [ 24%]
+.................................................................F...... [ 32%]
+........................................................................ [ 40%]
+........................................................................ [ 48%]
+........................................................................ [ 56%]
+........................................................................ [ 64%]
+........................................................................ [ 72%]
+........................................................................ [ 80%]
+........................................................................ [ 88%]
+........................................................................ [ 97%]
+..........................                                               [100%]
+=================================== FAILURES ===================================
+________ test_dirty_bundle_binds_current_source_without_private_veneto _________
+
+    def test_dirty_bundle_binds_current_source_without_private_veneto() -> None:
+        commit = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        builder = load_builder(DIRTY_BUILDER)
+>       first, digest, count = builder.build(ROOT, commit)
+
+fevc/tests/python/test_linux_scc_qualifier.py:291: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+rust/experiments/optimization_parity_20260913/build_dirty_linux_bundle.py:85: in build
+    rows = source_rows(root)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+root = PosixPath('/Users/johannes/Git/varcomp_hdfe/fevc')
+
+    def source_rows(root: Path) -> list[tuple[PurePosixPath, bytes, int]]:
+        tracked = git_paths(root, "--cached")
+        untracked = git_paths(root, "--others", "--exclude-standard")
+        paths = tracked + untracked
+        if any(not path.parts or path.is_absolute() or ".." in path.parts for path in paths):
+            raise ValueError("working tree has an unsafe source path")
+        unexpected = [
+            path for path in untracked
+            if path.parts[0] != "KSS_Veneto_replication" and not permitted_untracked(path)
+        ]
+        if unexpected:
+>           raise ValueError(f"unexpected untracked source path: {unexpected[0]}")
+E           ValueError: unexpected untracked source path: native/cmg-defects-20261009/evidence/packaging/public-install-13a98492.json
+
+rust/experiments/optimization_parity_20260913/build_dirty_linux_bundle.py:62: ValueError
+=========================== short test summary info ============================
+FAILED fevc/tests/python/test_linux_scc_qualifier.py::test_dirty_bundle_binds_current_source_without_private_veneto
+1 failed, 889 passed in 81.85s (0:01:21)
