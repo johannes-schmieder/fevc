@@ -303,12 +303,12 @@ Mean projection additionally requires {cmd:r(projection_centering_api)} equal
 to 1; Mean component inference requires {cmd:r(component_centering_api)} equal
 to 1. These are separate native attachment capabilities; native combined
 component/projection requests remain unsupported for both Mean and None.
-New Mac candidates at source b9f80ce9 pass full qualification and installed
-Mean-component checks for thin arm64, thin Rosetta x86-64 and universal on both
-architectures. Linux passes full and installed checks at source 63757839.
-These candidates remain unadopted while Windows qualification is blocked.
-Retained package payloads lack component-centering API 1; the Windows
-manual-test payload also lacks projection-centering API 1.
+The included native set provides all three capabilities on its qualified
+routes: Mac builds at b9f80ce9, Linux at 63757839 and Windows at 240ad74d.
+Mac x86-64 qualification uses Rosetta. The older Mac/Linux builds retain their
+public-route scope and do not contain the lower-level serial exact Corrected
+repair in 240ad74d. Exact artifacts and limits are recorded in the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/native/mean-component-20261008/manifest.json":adoption manifest}.
 An older plugin may lead {cmd:backend(auto)} to Mata before preparation/RNG
 under the ordinary consent rules. Strict {cmd:backend(rust)} or explicit
 {cmd:rng(counter_v1)} requires a matching plugin. Use current source with

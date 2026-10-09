@@ -104,11 +104,14 @@ including point-budget endpoint changes up to 1.15 dense-oracle SD. These
 results separate mean-approximation error from other inference limitations;
 they establish no general coverage guarantee.
 
-New Mac and Linux candidates pass source-bound qualification and installed
-Mean-component tests, but remain unadopted while Windows qualification is
-blocked. See [native provenance](../../native/mean-component-20261008/checkpoint.json).
-Historical None confirmations, calibration failures and platform receipts
-retain their original scope.
+The five included native payloads are qualified: Mac at `b9f80ce9`,
+Linux at `63757839` and Windows at `240ad74d`. The exact Windows hosted artifact
+passes private full qualification and installed Mean tests. Original
+Mac/Linux bytes retain only their reviewed unchanged public-route scope and
+do not contain the lower-level serial Corrected repair in `240ad74d`.
+See [native provenance](../../native/mean-component-20261008/manifest.json).
+Historical None confirmations, calibration failures and platform receipts retain their
+original scope; engineering qualification does not imply general coverage.
 
 ## Variance proxy and smoothing
 

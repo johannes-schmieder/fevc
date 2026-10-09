@@ -33,15 +33,13 @@ API 1; Mean projection additionally needs projection-centering API 1, and
 Mean component inference needs component-centering API 1. Existing combined
 exact-Mata requests support Mean; native combined component/projection
 requests remain unsupported.
-New Mac candidates at `b9f80ce9` pass full qualification and installed Mean
-component checks for thin arm64, thin Rosetta x86-64 and universal on both
-architectures. Linux passes full and installed Mean checks at `63757839`.
-These candidates are preserved but not adopted: Windows remains blocked after
-two private source-build smoke failures. The owner approved the GitHub-hosted
-Windows build, source publication before all five payloads qualify, and a
-bounded private retry. Preparation is underway; Windows remains unqualified.
-Shipped binaries retain their preceding capabilities. See
-[native provenance](native/README.md) for exact artifacts and status.
+The five included native payloads are qualified: Mac at `b9f80ce9`,
+Linux at `63757839` and Windows at `240ad74d`. Mac x86-64 checks use Rosetta.
+Original Mac/Linux bytes are reused only on unchanged public routes; they do
+not contain the lower-level serial exact Corrected repair in the Windows
+source. See the
+[adoption manifest](native/mean-component-20261008/manifest.json) for exact
+artifacts, source compatibility and tested scopes.
 
 The [completed bounded assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures. All eight native primary

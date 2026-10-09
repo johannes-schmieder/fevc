@@ -23,16 +23,15 @@ Work stays on `main`; tags and hosted releases remain separate decisions.
   signed normal-equation residuals at unchanged tolerances. Public raw
   remainder discrepancies, estimator values and solver gates remain intact.
   The preserved failing draw and independent dense checks pass after repair.
-- Mac thin arm64, thin x86-64 under Rosetta and universal candidates pass full
-  clean-source qualification at `b9f80ce9` and separate exact-byte installed
-  Mean checks across all four architecture aliases. Linux passes full and
-  staged/installed Mean qualification at `63757839` (SCC job `7969972`). These
-  candidates are preserved and **not adopted**; shipped payloads retain their
-  preceding identities. Reuse after the Windows serial-path repair is
-  limited to the unchanged public routes and requires a recorded compatibility
-  review. The retained binaries do not contain that lower-level repair and must
-  not be described as builds of the repaired source. See
-  [the candidate checkpoint](../native/mean-component-20261008/checkpoint.json).
+- All five qualified payloads are adopted locally. Mac thin arm64, thin
+  x86-64 under Rosetta and universal builds retain full qualification at
+  `b9f80ce9` and installed Mean checks across all four aliases. Linux retains
+  full and staged/installed Mean qualification at `63757839` (SCC job
+  `7969972`). Their original bytes and corresponding-source archives are
+  retained under an affected-route compatibility review limited to unchanged
+  public routes. They do not contain the lower-level serial exact Corrected
+  repair in `240ad74d`. The [adoption manifest](../native/mean-component-20261008/manifest.json)
+  binds their original identities and the new Windows candidate.
 - The [completed assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
   accounts for all 48,000 primary calls and 192,000 target rows. **All 22 failed
   primary screen entries are exact-Mata availability failures**, affecting
@@ -41,23 +40,28 @@ Work stays on `main`; tags and hosted releases remain separate decisions.
   fixed-outcome numerical profiles are complete; material numerical
   sensitivity and historical calibration failures remain limitations. There
   is no general coverage claim and no changed cutoff or discarded attempt.
-- Source `f8d74504` is pushed. Its GitHub Windows build (`37859073572`), Rust
-  checks (`37859048705`) and source checks (`37859048711`) pass. After four
-  infrastructure repair cycles, the private Windows smoke
-  `win-20261009T014353Z-e95b12a1` passes on the exact hosted artifact. The full
-  run `win-20261009T015013Z-79411bd4` fails at `centering_exact` with return code
-  498. Cleanup and source restoration pass; Windows remains unqualified.
+- Reviewed source `240ad74d` is pushed. Its hosted Windows build, Rust and
+  source checks pass. The identical Windows artifact passes private smoke and
+  full qualification; full run `win-20261009T023703Z-209dc9ed` includes installed
+  Mean component and Corrected exact checks. Cleanup/source restoration pass
+  and the machine is stopped. The [Windows summary](../native/mean-component-20261008/evidence/windows/qualification-240ad74d.json)
+  records four of the 15 authorized infrastructure repair cycles and retains
+  all prior failed attempts.
 - Local forced-Windows-serial execution reproduces the first Corrected cell's
   `CORRECTION_NONFINITE` failure (native status 71, `exact_stayer_hybrid`). The
-  candidate repair materializes the scalar total before checked Corrected
+  repair at `240ad74d` materializes the scalar total before checked Corrected
   addition, preserving final reconstruction and numerical gates. Focused
   checks pass: 890 Python tests, CMG assembly, 23 existing exact-core tests,
   15 exact FFI tests, a 36-cell serial/parallel accounting regression, strict
   core Clippy and formatting, and the unchanged official 12 Corrected and
   12 Mean-component cells under serial emulation. The new regression fails
   when the three-line repair is removed. Final independent source review
-  passes; a rebuilt Windows artifact and runtime qualification are still
-  required before adoption.
+  passes, followed by actual Windows qualification of the rebuilt artifact.
+- [Local staging and HTTP fresh/replacement checks](../native/mean-component-20261008/evidence/packaging/local-install-240ad74d.json)
+  pass at `240ad74d` on Mac arm64: both cases verify all 61 files and five
+  plugin hashes and run eight installed Mean-component cells. These receipts
+  retain the help bytes at that source. Publication and final public `net` and
+  `github` checks of the updated package bytes remain pending.
 - The companion technical note in
   `technical-memos/centering/mean_centered_component_inference.tex` is complete,
   with a compiled and visually reviewed 13-page PDF, independent moment checks,
@@ -66,27 +70,22 @@ Work stays on `main`; tags and hosted releases remain separate decisions.
 
 ## Approved continuation
 
-The owner approved the source-first GitHub build and private Windows sequence,
-then authorized up to 15 repair cycles. Four infrastructure cycles have been
-consumed. This later authority supersedes the earlier single-retry stopping
-instruction. Source and paper pushes are complete through the checkpoint above;
-the source repair has passed independent review and focused checks. Windows
-qualification and all five new payload adoptions remain incomplete. No tag or
-hosted release has been made.
+The owner approved the source-first GitHub build/private Windows sequence and
+up to 15 infrastructure repair cycles. Four were used before successful final
+qualification; the serial Corrected repair was a separate project source
+change. The later authority superseded the earlier single-retry stopping
+instruction. Source and paper pushes are complete. All five native payloads,
+source archives and reviewed local installation evidence are adopted locally.
+No tag, native release archive or hosted release has been made.
 
-Commit and push the reviewed source repair, then build
-and verify its exact hosted Windows artifact and run the applicable private
-smoke and full gates within the remaining authorized cycles. Preserve every
-failed attempt. Record the scope-based compatibility review for the retained
-Mac/Linux candidates, including their original source and payload identities
-and the serial repair they do not contain. Complete five-payload provenance,
-source archives, staged installation and final public HTTP fresh/replacement
-checks against the actual adopted package bytes. The final 16-path active-docs
-update remains held until qualification and local installation checks pass.
-Commit only intended records
-and changes, and push within the approved sequence. The outgoing four-ancestor
-audit found no blocker within its recorded scope; it does not replace review
-of new changes.
+Complete the active documentation/package review, commit the adopted bytes and
+intended records, and push within the approved sequence. Then run final public
+`net` and `github` fresh/replacement checks against the actual committed package,
+including the updated help bytes, and record a separate source-bound follow-up.
+Earlier staged-install receipts do not verify future package bytes. Preserve
+all previous failures and the original Mac/Linux build identities and reuse
+limits. The outgoing four-ancestor audit found no blocker within its recorded
+scope; it does not replace review of new changes.
 
 ## Preserved previous evidence
 
@@ -97,7 +96,10 @@ both with cleanup and the machine stopped. The hosted-build alternative passed
 `win-20261008T235353Z-856fd74e` failed artifact collection with zero accepted
 artifacts despite positive controller Stata/project-test flags; cleanup and
 shutdown passed. Subsequent repairs and the passing smoke do not relabel these
-attempts or the later full-run Corrected failure.
+attempts. At `f8d74504`, smoke `win-20261009T014353Z-e95b12a1` passed,
+but full run `win-20261009T015013Z-79411bd4` failed at `centering_exact` with
+return code 498. That failure remains unchanged after the repaired-source
+Windows retest passed.
 
 `native/prerelease-20261008/manifest.json` retains its original Mac/Linux
 point/Mean-projection claims at `24754269` (packaging `623b156d`, follow-up

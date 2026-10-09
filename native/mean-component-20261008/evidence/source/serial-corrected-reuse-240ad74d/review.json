@@ -1,0 +1,65 @@
+{
+  "checkpoint": {
+    "bytes": 10727,
+    "path": "native/mean-component-20261008/checkpoint.json",
+    "sha256": "ac4ab85d94c588cdfd70e0fe8b5dcbea5ab03ebe8bf778936bf06e40bf70541e"
+  },
+  "checkpoint_source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+  "files": {
+    "compatibility-63757839-to-240ad74d.json": "307dcedeac215fb80d408c1d0daf9dbdda891c49cf89f21b9a4fc6d687c6076c",
+    "compatibility-b9f80ce9-to-240ad74d.json": "8693821334b6e70ef9d8d76a6c492ed9a53629c389cf9ca4e04f6ec54eb27862",
+    "source-review-f8d74504-to-240ad74d.json": "870a6334f1c651f19d71713b8b724f3884834e6f0706ef2b6f49e27a9694b928",
+    "unchanged-source-63757839.json": "89bbec304cbdd3c5dc5b06e46da53cc424ea4fb0db0f9b16dfe80112b190ef86",
+    "unchanged-source-b9f80ce9.json": "2c0147f8a790afaf1308cad19191adf0d42412bebff1ffa504ab21074075837c",
+    "unchanged-source-f8d74504.json": "4e7fd9dd431d6290a4aee6665e3612cbc84b04a58d1eff00a001a714ffe0ebb8"
+  },
+  "findings": [],
+  "fresh_hash_checks": {
+    "checkpoint_evidence_and_archives": 47,
+    "retained_candidates": 4
+  },
+  "limitations": [
+    "The four retained payloads remain builds of their original 63757839 or b9f80ce9 commits, not S. Native source at S has changed; no complete native-source/build-input identity or all-source-fixed claim is made.",
+    "The retained payloads still contain the old lower-level scalar serial Corrected accounting bug. Direct low-level fevc_rust/FFI serial Corrected entrypoints are excluded from this carry-forward claim.",
+    "Reuse is restricted to the unchanged public fevc Mac/Unix dispatch and already qualified routes, with exactly these binaries, runtime/input bytes and acceptance semantics.",
+    "Mac x86_64 evidence is under Rosetta, not native Intel hardware. No new statistical coverage, representative-scale performance or resource claim is made.",
+    "Windows f8 full run remains failed. A new Windows artifact built from S and successful S-bound smoke/full gates are required; local Mac route emulation is not Windows qualification.",
+    "Final five-payload staging and fresh/replacement local/public HTTP installation remain separate gates. These records do not adopt payloads, tag, create a release archive or publish a release.",
+    "Any future relevant runtime/dispatch/ABI/binary/source/fixture/acceptance change invalidates automatic reuse and requires a new affected-surface review; direct scalar Corrected use requires repaired binaries.",
+    "Historical development/integrated/Monte Carlo evidence retains its original source identities and failures; this record does not upgrade staged development evidence to clean-S evidence or alter the 22 exact availability failures."
+  ],
+  "live_operations": false,
+  "package_source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+  "required_followup": "Final adoption documentation must explicitly disclose affected-route reuse despite the scalar source repair, preserve actual per-platform build identities and corresponding-source archives, and exclude retained lower-level serial Corrected entrypoints. New Windows S qualification and actual final installations remain required.",
+  "retained_binary_rows": [
+    {
+      "bytes": 6047488,
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "19efb7ba9aabfec3a7a8414bde84257b87a73b1c81a5d71fd5204ed8c824d64b",
+      "source_commit": "63757839e168170a658bf78c4fcf5487d26ab6bf"
+    },
+    {
+      "bytes": 4945776,
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "a2d599ce727f74d579c0cd315288413ac3980cb795258759537e560b00e89e5d",
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe"
+    },
+    {
+      "bytes": 5642352,
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "555f8e221288fd1d4c6391161c10b6a6db7a0f35f2bbbd79ae76b02d9ef8a75e",
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe"
+    },
+    {
+      "bytes": 10614640,
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "52e72091a646591d79c6bd717546bd5302eb90ebf7e3ff9eefb1cb0330375202",
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe"
+    }
+  ],
+  "reviewed_at_utc": "2026-10-09T02:20:27.378940+00:00",
+  "schema": "FEVC-SERIAL-CORRECTED-AFFECTED-ROUTE-REVIEW-V1",
+  "status": "PASS_RETAINED_FOUR_PUBLIC_ROUTES_ONLY",
+  "tests_rerun": false,
+  "tracked_mutations": false
+}

@@ -94,17 +94,18 @@ from accepting a projection request whose covariance it cannot center. Missing
 capability is a structural preflight failure under the usual strict Rust and
 automatic-Mata routing rules, before preparation/RNG.
 
-The retained Mac/Linux point/projection payloads keep their `24754269`
-qualification. New Mac candidates at `b9f80ce9` and Linux at `63757839` also
-pass component-centering qualification and installed Mean tests, but are
-preserved without adoption while Windows is blocked. The retained Windows
-manual-test payload lacks both attachment-centering capabilities. The
-[new candidate record](../../native/mean-component-20261008/checkpoint.json)
-binds source identities, exact artifacts and the earlier blocked state. The
-owner approved the GitHub-hosted build, source-first publication and bounded
-private retry; preparation is underway. Windows remains unqualified, and the
-new candidates remain unadopted. Use current Mata source
-or a matching qualified native build. No existing ABI structure is changed.
+The five locally adopted payloads support all three centering capabilities.
+Mac builds retain full and installed Mean qualification at `b9f80ce9`; Linux
+retains it at `63757839`. Windows at `240ad74d` passes hosted checks and private
+smoke/full qualification, including installed Mean and Corrected exact tests.
+The original Mac/Linux binaries and source archives retain their identities;
+reuse is limited to unchanged public routes and excludes the unrepaired
+lower-level serial exact Corrected path. The new Windows binary contains that
+repair. The [adoption manifest](../../native/mean-component-20261008/manifest.json)
+binds sources, tested routes and compatibility. Local installation checks
+pass at `240ad74d`; publication and final public checks of the updated package
+remain pending. Earlier failures and receipts are preserved. Existing ABI
+structures are unchanged.
 
 ## Additive component-centering API 1
 

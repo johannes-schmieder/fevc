@@ -140,13 +140,12 @@ Point centering works in Mata and a matching native build. Native point
 centering requires centering API 1; Mean projection additionally requires
 projection-centering API 1 and Mean component inference requires
 component-centering API 1. Existing combined exact-Mata requests support Mean;
-native combined component/projection requests remain unsupported. New Mac
-candidates at `b9f80ce9` and Linux at `63757839` pass full qualification and
-installed Mean-component checks. They remain unadopted while Windows blocks
-the complete update. The retained payloads lack component-centering API 1;
-the Windows manual-test payload also lacks Mean-projection support. See the
-[current candidate record](../native/mean-component-20261008/checkpoint.json).
-Use current Mata source or a matching qualified native build.
+native combined component/projection requests remain unsupported. The five
+included payloads are qualified: Mac at `b9f80ce9`, Linux at `63757839`
+and Windows at `240ad74d`. Original Mac/Linux bytes retain their source and
+qualified public-route scope; they do not contain the lower-level serial exact
+Corrected repair in `240ad74d`. See the
+[adoption manifest](../native/mean-component-20261008/manifest.json).
 
 The [completed assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures across three cells. Eight

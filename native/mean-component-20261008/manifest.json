@@ -1,0 +1,190 @@
+{
+  "binaries": [
+    {
+      "bytes": 4945776,
+      "path": "fevc/fevc_rust_macos_arm64.plugin",
+      "qualification_evidence": [
+        {
+          "path": "evidence/macos/qualification.txt",
+          "sha256": "a305b19cd023ea3ea55780cba252dcc7eed29e65a9254577194186ff654df3e0"
+        },
+        {
+          "path": "evidence/macos/installed-mean-component.json",
+          "sha256": "8ee83ffd0d8d9a9d08e81be2ed45d4ff75b1eae956a5926d0c27d26d0e094363"
+        },
+        {
+          "path": "evidence/source/serial-corrected-reuse-240ad74d/compatibility-b9f80ce9-to-240ad74d.json",
+          "sha256": "8693821334b6e70ef9d8d76a6c492ed9a53629c389cf9ca4e04f6ec54eb27862"
+        }
+      ],
+      "sha256": "a2d599ce727f74d579c0cd315288413ac3980cb795258759537e560b00e89e5d",
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+      "status": "PASS"
+    },
+    {
+      "bytes": 5642352,
+      "path": "fevc/fevc_rust_macos_x86_64.plugin",
+      "qualification_evidence": [
+        {
+          "path": "evidence/macos/qualification.txt",
+          "sha256": "a305b19cd023ea3ea55780cba252dcc7eed29e65a9254577194186ff654df3e0"
+        },
+        {
+          "path": "evidence/macos/installed-mean-component.json",
+          "sha256": "8ee83ffd0d8d9a9d08e81be2ed45d4ff75b1eae956a5926d0c27d26d0e094363"
+        },
+        {
+          "path": "evidence/source/serial-corrected-reuse-240ad74d/compatibility-b9f80ce9-to-240ad74d.json",
+          "sha256": "8693821334b6e70ef9d8d76a6c492ed9a53629c389cf9ca4e04f6ec54eb27862"
+        }
+      ],
+      "sha256": "555f8e221288fd1d4c6391161c10b6a6db7a0f35f2bbbd79ae76b02d9ef8a75e",
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+      "status": "PASS"
+    },
+    {
+      "bytes": 10614640,
+      "path": "fevc/fevc_rust_macos.plugin",
+      "qualification_evidence": [
+        {
+          "path": "evidence/macos/qualification.txt",
+          "sha256": "a305b19cd023ea3ea55780cba252dcc7eed29e65a9254577194186ff654df3e0"
+        },
+        {
+          "path": "evidence/macos/installed-mean-component.json",
+          "sha256": "8ee83ffd0d8d9a9d08e81be2ed45d4ff75b1eae956a5926d0c27d26d0e094363"
+        },
+        {
+          "path": "evidence/source/serial-corrected-reuse-240ad74d/compatibility-b9f80ce9-to-240ad74d.json",
+          "sha256": "8693821334b6e70ef9d8d76a6c492ed9a53629c389cf9ca4e04f6ec54eb27862"
+        }
+      ],
+      "sha256": "52e72091a646591d79c6bd717546bd5302eb90ebf7e3ff9eefb1cb0330375202",
+      "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+      "status": "PASS"
+    },
+    {
+      "bytes": 6047488,
+      "path": "fevc/fevc_rust_linux_x64.plugin",
+      "qualification_evidence": [
+        {
+          "path": "evidence/linux/qualification.txt",
+          "sha256": "213005cb39c0b974b3be7d78cd1b837e59a0a8739b8382d8448aaa82cbf79bfe"
+        },
+        {
+          "path": "evidence/linux/validation.json",
+          "sha256": "6a9aa7c5186d8f018890d0915b2c2d21c79b87b1d8515c2073d6013b2afb381c"
+        },
+        {
+          "path": "evidence/source/serial-corrected-reuse-240ad74d/compatibility-63757839-to-240ad74d.json",
+          "sha256": "307dcedeac215fb80d408c1d0daf9dbdda891c49cf89f21b9a4fc6d687c6076c"
+        }
+      ],
+      "sha256": "19efb7ba9aabfec3a7a8414bde84257b87a73b1c81a5d71fd5204ed8c824d64b",
+      "source_commit": "63757839e168170a658bf78c4fcf5487d26ab6bf",
+      "status": "PASS"
+    },
+    {
+      "bytes": 5621248,
+      "path": "fevc/fevc_rust_windows_x64.plugin",
+      "qualification_evidence": [
+        {
+          "path": "evidence/windows/qualification-240ad74d.json",
+          "sha256": "48cee571d3680346bf11a1202ec3023332eec8ad165829dcbde2279cdc8e0dfd"
+        },
+        {
+          "path": "evidence/source/serial-corrected-public-validation.json",
+          "sha256": "8b23c13fdb6dca519f8d084799f41f54f359d12a130a735b7e01a20e490f195c"
+        }
+      ],
+      "sha256": "fb06c85fd88a8c415afbd8f80e203401aded33a2409d8a3f13b9d7cfe5609d05",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "status": "PASS"
+    }
+  ],
+  "component_centering_api": 1,
+  "evidence_sha256": {
+    "checkpoint.json": "ac4ab85d94c588cdfd70e0fe8b5dcbea5ab03ebe8bf778936bf06e40bf70541e",
+    "evidence/development/checkpoint.json": "acc79843d5113d515c2fe3375a68f94cd9a86f3bef45705f3e9e2afc0d1f7dbb",
+    "evidence/development/exact-validation.json": "8af5384a63fa6b282be220b41178b7263d1a5a749edc87056829fe950cad2356",
+    "evidence/development/integrated-source-checks.json": "087d97da03f7a946d55f886330f54594d20fb3053149fc64928a992876943ca5",
+    "evidence/development/rust-development-gates.json": "77986d106740cdeeecd2e3d244e21abcbeb2df42ee21caab64c0334784417b5e",
+    "evidence/development/source-compatibility.json": "b0f52d30f2e341043a10f09f74b13923c677fe20f1507f52dca5a0042e1c8150",
+    "evidence/harness/final-harness-pytest.txt": "0b43f7b1daacc664a21f6d6dc0eb45c27ddf23f44750638da975502713758586",
+    "evidence/harness/final-harness-tests-b9f80ce9.json": "1fd4d8da94a7e870a5fc82a24528b226e9395b4568886c8ef1007c026b475b34",
+    "evidence/linux/qacct.txt": "0b2e583fd9297bca58d37405cbe21c784c2b4bda15be7d7d8b91a198db6a0fd0",
+    "evidence/linux/qualification-source.sha256": "a54f29a87c6a5730b8f43b1081fddf3eba3182148c5e884017cf307f960a207c",
+    "evidence/linux/qualification.txt": "213005cb39c0b974b3be7d78cd1b837e59a0a8739b8382d8448aaa82cbf79bfe",
+    "evidence/linux/remote-hashes.txt": "267724e9bf5be7a2da4c60208efe947c6a3f7b1216108b4c046fda7700bb2cfb",
+    "evidence/linux/validation.json": "6a9aa7c5186d8f018890d0915b2c2d21c79b87b1d8515c2073d6013b2afb381c",
+    "evidence/linux/wrapper.txt": "18928957671732488318eaa5e29a43109856a4d7bfc92f577d9797ff1565f4af",
+    "evidence/macos/ci.json": "211d2ea66ac522cded428ae8b4fc9989d8a0fade9cc80e2f88477d5195da4599",
+    "evidence/macos/installed-mean-component.json": "8ee83ffd0d8d9a9d08e81be2ed45d4ff75b1eae956a5926d0c27d26d0e094363",
+    "evidence/macos/qualification.txt": "a305b19cd023ea3ea55780cba252dcc7eed29e65a9254577194186ff654df3e0",
+    "evidence/macos/source-manifest.sha256": "149a4c5b03adc9b8f97b000fe096a4f5701be3ec4d6bb861f56f23ed6d35ff65",
+    "evidence/packaging/local-install-240ad74d.json": "c3def2c53de722a2c5ae81dfb5719256909bd4c0ce8516f8c2447ced6115cb6c",
+    "evidence/q1/dense_audit.json": "d8f374d6b99e83e871be62afac9704faf8ff68a712052bd92155689e3d9ddb38",
+    "evidence/q1/overhead-comparison.json": "e2149f586508b1d88855b398c6f281616a5950b75d738f97aa03bd21e34785ce",
+    "evidence/q1/pilot-classification-review.json": "e8492f9577027946f2fcae4af94e19b2967f20ad0aca9b054de39c03685b7077",
+    "evidence/q1/receipt.json": "b8840e0599f1c10f035fea677bb2f45c942302c8f531140abfa3ad922a0de94a",
+    "evidence/scientific/assessment-mata-63757839/assessment.json": "322e9b5c23178906b2708487ecc9423c37f2eab953541588c1e01f68cf485525",
+    "evidence/scientific/assessment-mata-63757839/availability-diagnosis.json": "a70972e83b1385c488b961183525a7a1ef114823122daea673dac2f4deb45f84",
+    "evidence/scientific/assessment-mata-63757839/compact-summary.json": "65d2760a65a7e1535f814eeb5b840781549726d38f569498081f508e7be36241",
+    "evidence/scientific/assessment-mata-63757839/manifest.json": "ff0dc2043601f04df4e0589a41eca505d8d0347c7f668d141b844c79586cacc3",
+    "evidence/scientific/assessment-mata-63757839/source-verification.json": "8f3afcf46ebea2e135a789f3c15c3172159e3bbd52dee2e3cbb370c75f524f90",
+    "evidence/scientific/assessment-native-b9f80ce9/assessment.json": "f025b481b681164417f50b3f0622402de0c93a1a95d4e6652f3508b11b88f32c",
+    "evidence/scientific/assessment-native-b9f80ce9/manifest.json": "c77ccf09ffea0b1e10464f6fa14a9a3183206ebee9d43bc65222fafaa1e31292",
+    "evidence/scientific/assessment-native-b9f80ce9/source-verification.json": "099aebb76e9992943d017d81c02223701e82c0ffb78a6662d1ed3ba357cb6249",
+    "evidence/scientific/diagnostic-b9f80ce9/assessment.json": "6e0b806d3b0418ab4a335bbe670b30e97201ca48ea7575d8b237e97ca59dd50b",
+    "evidence/scientific/diagnostic-b9f80ce9/compact-summary.json": "7323b0a78ba1892345fd3c4056e3de87a5b528b5e3bfb9b46cf45988aba93864",
+    "evidence/scientific/diagnostic-b9f80ce9/manifest.json": "18f75cb80eb8493390a3acd3ab593d775442789ea7ea44c3a3cf15bdf841bfe1",
+    "evidence/scientific/diagnostic-b9f80ce9/paired-availability.json": "114143d4cd40f89a7ade0236ed7210401f06f469390f07ed4421d298fb78a562",
+    "evidence/scientific/diagnostic-b9f80ce9/source-verification.json": "282741949893432a2d10df839fe4d625e21c4e6aaa2bb125c105c7b79ca8350a",
+    "evidence/scientific/numerical-b9f80ce9/assessment.json": "438873c45f5d2221187455a1f828d2d34c91661bffd1024163cd8bfc5b2aafb9",
+    "evidence/scientific/numerical-b9f80ce9/compact-summary.json": "7652fe913d2a9020695a0c9ccd11435d40c69fe436ffa34f0cc8a1c4e96a9c6f",
+    "evidence/scientific/numerical-b9f80ce9/manifest.json": "43a22a1457e19e07fce016b16f85da858cef2f2ccb7faf7d51149ac89e043f0b",
+    "evidence/scientific/numerical-b9f80ce9/source-verification.json": "e3ab278a8fdd7e280841f11c53ddea74b2f6bc08c1a6643f3022f71ddc1af901",
+    "evidence/scientific/primary-compact-summary.json": "e85335d2314d73abfba974e557b3d2847a1420b426f37777d29605175884cb72",
+    "evidence/scientific/primary-union-audit.json": "44616a155ebf1f7a5e769242a7e52228c730296ecbe165eee023612cc7c179c4",
+    "evidence/source/corresponding-source-240ad74d.json": "55d14fc3c47ccb54e79ebb3177f6647b640caea0e29e68eb1aac744d708fcb0a",
+    "evidence/source/corresponding-source-validation.json": "97c19e70a549aeaeb7060a096fbcacc6fcdeb2b285203ec179bccd21aa77e715",
+    "evidence/source/serial-corrected-public-validation.json": "8b23c13fdb6dca519f8d084799f41f54f359d12a130a735b7e01a20e490f195c",
+    "evidence/source/serial-corrected-reuse-240ad74d/compatibility-63757839-to-240ad74d.json": "307dcedeac215fb80d408c1d0daf9dbdda891c49cf89f21b9a4fc6d687c6076c",
+    "evidence/source/serial-corrected-reuse-240ad74d/compatibility-b9f80ce9-to-240ad74d.json": "8693821334b6e70ef9d8d76a6c492ed9a53629c389cf9ca4e04f6ec54eb27862",
+    "evidence/source/serial-corrected-reuse-240ad74d/review.json": "adc5f3a9ed0998f6b6f10b838ba96a4a32f8aa77787393ee1f1ce7144e725397",
+    "evidence/source/serial-corrected-reuse-240ad74d/source-review-f8d74504-to-240ad74d.json": "870a6334f1c651f19d71713b8b724f3884834e6f0706ef2b6f49e27a9694b928",
+    "evidence/source/serial-corrected-reuse-240ad74d/unchanged-source-63757839.json": "89bbec304cbdd3c5dc5b06e46da53cc424ea4fb0db0f9b16dfe80112b190ef86",
+    "evidence/source/serial-corrected-reuse-240ad74d/unchanged-source-b9f80ce9.json": "2c0147f8a790afaf1308cad19191adf0d42412bebff1ffa504ab21074075837c",
+    "evidence/source/serial-corrected-reuse-240ad74d/unchanged-source-f8d74504.json": "4e7fd9dd431d6290a4aee6665e3612cbc84b04a58d1eff00a001a714ffe0ebb8",
+    "evidence/source/source-gates-63757839.json": "56a3503f887b7b42d5083ced66d2ef3276f7b328f7752533241bad89cc008474",
+    "evidence/windows/hosted-proposal-review.json": "50a8873578e72eec2cca7c48164f2f972c8c43d86de5b8f2289b9f2c3a562db9",
+    "evidence/windows/qualification-240ad74d.json": "48cee571d3680346bf11a1202ec3023332eec8ad165829dcbde2279cdc8e0dfd",
+    "evidence/windows/source-smoke-1.json": "f17ce917fc48a99eef873d8bd553dc77df6ea81dbdb7bde75b6af999c86fbfbd",
+    "evidence/windows/source-smoke-2.json": "776f44dbb07aa19db87307b4adefd8a71dc7d2e78d44c2f3502b4355b2dbe6d3",
+    "fevc-corresponding-source-240ad74d.tar.gz": "7c73a5b06badd22c419a22217560ee045485be507904de4c020f4be48f20d8f4",
+    "fevc-corresponding-source-63757839.tar.gz": "bed7b8bdfd596a210ffd0ee7a2d6b81b3e99b9cb7d4f5b47ec47670fed8aac9c",
+    "fevc-corresponding-source-b9f80ce9.tar.gz": "03fa90502a740da19eda75cfa38f79c655bc5824d2f7336f8f346ac621688db6"
+  },
+  "historical_checkpoint": {
+    "path": "checkpoint.json",
+    "sha256": "ac4ab85d94c588cdfd70e0fe8b5dcbea5ab03ebe8bf778936bf06e40bf70541e"
+  },
+  "limitations": [
+    "Retained Mac/Linux payloads are builds of b9f80ce9/63757839, not source S; they do not contain the lower-level scalar serial Corrected repair.",
+    "Their reuse covers only unchanged public fevc Mac/Unix dispatch and previously qualified routes. Direct low-level serial Corrected entrypoints are excluded.",
+    "Mac x86_64 evidence uses Rosetta, not native Intel hardware. No new representative-scale performance or resource claim.",
+    "Historical failures and source identities remain unchanged. Source repair checks and platform qualification do not establish general sampling coverage.",
+    "Exact highrank k12/k20 and exact q1 k12 fail availability in Mean and fixed-c0 arms.",
+    "Conditional posted-result moments do not replace all-attempt availability and coverage.",
+    "Finite-probe point JLA settings materially affect some fixed-outcome intervals.",
+    "The q1 covariance target is a predeclared diagnostic, not a primary coverage claim.",
+    "Earlier observation-q1 SE-ratio failure at 1.101204 against 1.10 remains failed."
+  ],
+  "local_packaging_evidence": "evidence/packaging/local-install-240ad74d.json",
+  "public_installation": "Separate post-commit/post-push exact-SHA gate; not claimed by this manifest.",
+  "publication_scope": "Adoption of five source-bound package payloads; no tag, native release archive or hosted release.",
+  "schema": "FEVC-MEAN-COMPONENT-ADOPTION-V1",
+  "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+  "source_reuse_review_sha256": "adc5f3a9ed0998f6b6f10b838ba96a4a32f8aa77787393ee1f1ce7144e725397",
+  "status": "FIVE_PAYLOADS_ADOPTED"
+}

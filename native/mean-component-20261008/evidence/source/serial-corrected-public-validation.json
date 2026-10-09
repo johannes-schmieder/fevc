@@ -1,0 +1,103 @@
+{
+  "schema": "FEVC-SERIAL-CORRECTED-SOURCE-VALIDATION-V1",
+  "status": "PASS",
+  "scope": "Reviewed source repair, independent dense Stata oracle under local Windows-route emulation, and focused source gates. This record does not qualify a Windows binary.",
+  "record_kind": "Sanitized summary derived from privately retained original diagnostic records; not a byte-preserved raw runtime receipt.",
+  "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+  "base_source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+  "changed_source_sha256": {
+    "rust/crates/vckss-core/src/exact_estimator.rs": "0c9641a4864423d8b6363c2be5c7b35f34fa3ba43075ba71ea467780548cae5f",
+    "rust/crates/vckss-core/src/exact_estimator/centering_tests.rs": "3f5834c0b1a66d2e288b60e272cb3ab787569b738994ad7aec39fd1acedb37e0"
+  },
+  "diagnosis": {
+    "failure": "CORRECTION_NONFINITE",
+    "native_status": 71,
+    "native_phase": "exact_stayer_hybrid",
+    "cause": "Serial accumulation left the derived total stale before the checked Corrected-centering addition. Parallel accumulation had already materialized the total.",
+    "repair": "Materialize derived correction total inside Corrected block before checked centering increment; retain original final reconstruction, checks and tolerances."
+  },
+  "checks": [
+    {
+      "name": "Python source suite",
+      "status": "PASS",
+      "tests": 890,
+      "seconds": 86.11,
+      "log_sha256": "a2fafdede6a480d41a11732b8b5707b070ed7a3a5ca4aea8691760f623d6fb83"
+    },
+    {
+      "name": "CMG deterministic assembly --all --check",
+      "status": "PASS",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "Documentation/parity/package layout",
+      "status": "PASS",
+      "tests": 42,
+      "log_sha256": "a95a04c8efbf2682ab6651b8bd5b7e4490b090b1c1332b4485f40e6f10b6295f"
+    },
+    {
+      "name": "Existing exact core",
+      "status": "PASS",
+      "tests": 23,
+      "log_sha256": "3232f1732fc81f50defa72f77e0f4752e50a5a842795a16ba6ed059dfe9a9af3"
+    },
+    {
+      "name": "Exact FFI",
+      "status": "PASS",
+      "tests": 15,
+      "log_sha256": "062170e585444e26eb886497f6065b4109a634e0a3c6c6a95bd1f0fc134f2727"
+    },
+    {
+      "name": "Serial/parallel accounting parity",
+      "status": "PASS",
+      "cells": 36,
+      "test": "exact_centering_serial_parallel_preserve_accounting",
+      "log_sha256": "4d732013666ca03141bac1f92a89c36cb271d4ce6e987ea09b98dd66287ca92c"
+    },
+    {
+      "name": "Counterfactual without the three-line repair",
+      "status": "EXPECTED_FAILURE_CONFIRMED",
+      "failure": "CorrectionNonFinite / exact_stayer_hybrid",
+      "log_sha256": "86956365999611aa5b371bed5586619c292415898403ac52746c73f0bdc65d3c"
+    },
+    {
+      "name": "Unchanged Stata exact-centering stage under local Windows-route emulation",
+      "status": "PASS",
+      "corrected_dense_oracle_cells": 12,
+      "mean_component_cells": 12,
+      "max_corrected_mreldif": 1.788e-14,
+      "log_sha256": "99e2ce3565c4afb9f6981771be38e25785316b7c3c08e4babbdefac3604338bf"
+    },
+    {
+      "name": "Pinned Rust formatting and strict core library/test Clippy",
+      "status": "PASS",
+      "clippy_log_sha256": "2cda50fb9540d74f11ed71948eebfd13167201aeec7800ef9e89d32bc79c6470"
+    }
+  ],
+  "versions": {
+    "rust": "1.85.1",
+    "python": "3.13.0"
+  },
+  "performance_scope": {
+    "dynamic_allocations_added": 0,
+    "solves_added": 0,
+    "random_draws_added": 0,
+    "scalar_arithmetic_added": "one multiply and two additions, only when Corrected centering is active",
+    "measurement_claim": "No representative-scale performance claim; source-level operation/allocation audit only"
+  },
+  "original_records_sha256": {
+    "repair-receipt.json": "8f8f42349ed3900a68682d68f7f2d728ab6d6ebb65e66c678fcace22e6ead0a1",
+    "repair-independent-final-review.json": "84301a7a2f7329d0a8c658b9838e53d892fdd760397acd171df703c75ee036ea",
+    "input-identity.json": "c3a951cc921d026d4d6211bcf1d5c5aa1a3070e7f6d7ec7306c83ea2bf969389",
+    "diagnosis.json": "21e28e515f950ac6ce071e009c2b14f5eb8084fe66938d0f75fde5347f9b8e60",
+    "source-freeze.json": "76bc3bd378f139667c83bb2003a4ff0cfaa4fdcddeb109d2a125875088e95335",
+    "publication.json": "4859ac9fe729d9f183135a349f134e9bb49385eee1bc2634d4552fd961db016c"
+  },
+  "limitations": [
+    "The diagnostic Mac plugin is not a distribution candidate and is not adopted.",
+    "The counterfactual changed only the repair in core source; isolated Cargo workspace/member/path/lock adjustments are disclosed in the retained original repair receipt.",
+    "Existing scientific sampling results and all failures remain unchanged; this repair is for Corrected point estimation, not Mean inference coverage.",
+    "Retained Mac/Linux binary reuse is restricted by the separate affected-public-route review; their lower-level serial Corrected entrypoints do not contain this repair.",
+    "New Windows smoke/full qualification and exact-byte package installation remain separate gates."
+  ]
+}

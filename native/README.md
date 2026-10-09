@@ -1,28 +1,36 @@
 # Native package provenance
 
-## Mean component inference: qualified Mac/Linux candidates, adoption blocked
+## Mean component inference: five qualified payloads adopted locally
 
-The [new candidate record](mean-component-20261008/checkpoint.json) preserves
-Mean highrank/q1 implementation and source-bound evidence. Native
-`component_centering_api=1` uses readiness bit 16 through the existing capability
-interface. Mac thin arm64, thin x86-64 under Rosetta and universal builds pass
-full qualification at `b9f80ce9`, plus separate exact-byte installed Mean
-checks for all four architecture aliases. Linux x86-64 passes full and
-staged/installed Mean tests at `63757839` (SCC job `7969972`). The four intervening
-Windows runner/documentation changes have bounded compatibility review.
-Native Intel hardware and representative scale are not claimed.
+The [adoption manifest](mean-component-20261008/manifest.json) binds the five
+locally adopted payloads, their actual build sources, corresponding-source
+archives and engineering qualification. All provide centering,
+projection-centering and component-centering API 1. Native
+`component_centering_api=1` uses readiness bit 16 through the existing interface.
 
-**These new candidates are not adopted.** The package retains its previous
-payloads while Windows qualification blocks the complete five-payload update.
-The first new Windows source-build smoke failed at `build_toolchain` with
-return code 601; the second failed at `build_native` with a null return code.
-Both attempts completed cleanup and left the guarded machine stopped. The
-prepared hosted-build alternative passed 81 offline tests and independent
-review. The owner approved using GitHub for the Windows build, pushing reviewed
-source before all five payloads qualify, and a bounded private retry on the
-exact artifact. Preparation is underway; Windows remains unqualified and the
-new Mac/Linux candidates remain unadopted. The immutable checkpoint above
-preserves the earlier blocked state. No tag or hosted release has been made.
+Mac thin arm64, thin x86-64 under Rosetta and universal builds retain full
+qualification at `b9f80ce9` and installed Mean checks across all four aliases.
+Linux retains full and staged/installed Mean qualification at `63757839`
+(SCC job `7969972`). Their original bytes and source archives are retained.
+The [affected-route review](mean-component-20261008/evidence/source/serial-corrected-reuse-240ad74d/review.json)
+bounds reuse to unchanged public Mac/Unix routes: these binaries do not contain
+the lower-level serial exact Corrected repair in `240ad74d`. Native Intel
+hardware and representative-scale performance are not claimed.
+
+Windows is built at `240ad74d`. Its exact hosted artifact passes private smoke
+and full qualification, including installed Mean component and Corrected exact
+checks; full run `win-20261009T023703Z-209dc9ed` completed cleanup and left the
+machine stopped. The [Windows summary](mean-component-20261008/evidence/windows/qualification-240ad74d.json)
+records four of the 15 authorized infrastructure repair cycles and preserves
+initial source-build, artifact-collection and earlier full-run failures.
+The [historical checkpoint](mean-component-20261008/checkpoint.json) is unchanged.
+
+[Local HTTP fresh/replacement installation](mean-component-20261008/evidence/packaging/local-install-240ad74d.json)
+passes at source `240ad74d`: both cases verify all 61 installed files and five
+payload hashes, and exercise eight Mean-component cells on Mac arm64. Those
+receipts retain the help bytes at that source. Publication of the adopted
+package and final public `net`/`github` checks of the updated package bytes are
+pending. No native release archive, tag or hosted release has been made.
 
 The [completed bounded assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains all 22 exact-Mata availability-screen failures. Eight native primary

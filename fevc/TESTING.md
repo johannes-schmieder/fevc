@@ -232,13 +232,21 @@ fixed-outcome numerical profiles retain unavailable targets and material
 numerical sensitivity. The final 32 harness tests pass against byte-verified
 `b9f80ce9` harness files, identical at `63757839`.
 Mac full and four-alias installed Mean checks pass at `b9f80ce9`; Linux full
-and installed checks pass at `63757839`. Windows remains blocked, so the
-qualified candidates are preserved without adoption. The earlier integrated
-source checker remains staged-development evidence, not clean-SHA integrated
-qualification. [The candidate record](../native/mean-component-20261008/checkpoint.json)
-binds exact scopes and the earlier blocked Windows state. The owner has since
-approved the GitHub-hosted build, source-first publication and bounded private
-retry. Preparation is underway; full Windows qualification remains incomplete.
+and installed checks pass at `63757839`. The Windows artifact at `240ad74d`
+passes hosted checks and private smoke/full qualification, including 12 exact
+Mean, eight native Mean and 12 Corrected exact installed cells. All five
+payloads are adopted locally. The original Mac/Linux bytes and archives are
+reused only for unchanged public routes under an affected-route review; they
+do not contain the lower-level serial Corrected fix in `240ad74d`.
+The [adoption manifest](../native/mean-component-20261008/manifest.json)
+binds sources, routes and preserved earlier failures.
+
+Local HTTP fresh/replacement checks at `240ad74d` pass on Mac arm64, with all
+61 installed file hashes, five payload hashes and eight Mean-component cells
+per case. Final public installation checks must use the updated package after
+commit/push, including its changed help bytes. The earlier integrated source
+checker remains staged-development evidence, not clean-SHA integrated
+qualification. Engineering gates do not remove the assessment's limitations.
 
 ## Manual referee checks
 

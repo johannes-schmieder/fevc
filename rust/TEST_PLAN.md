@@ -181,14 +181,16 @@ and target weights, independent dense oracles and pre-RNG option guards.
 The completed local scope includes the full Rust workspace, strict fmt/clippy,
 integrated package checks, full Mac/Linux platform gates and five explicit
 Rust centering checks per candidate/architecture. The small timing grid is
-recorded in [CENTERING.md](../fevc/docs/CENTERING.md). The new
+recorded in [CENTERING.md](../fevc/docs/CENTERING.md). The historical
 [adoption record](../native/centering-20261006/manifest.json) covers four local
 payloads; Windows, native Intel hardware and representative-scale evidence
 remain outside that record. The [October 7 record](../native/centering-20261007/manifest.json)
 preserves passing hosted Windows/source/Rust gates and two failed private
 runtime attempts. The owner subsequently requested adoption for manual
 testing, recorded in [the manual-test record](../native/centering-windows-manual-20261007.json).
-Windows runtime qualification remains pending. Earlier payload qualifications
+Windows runtime qualification was pending at that cutoff. The current
+[Mean-component adoption](../native/mean-component-20261008/manifest.json) includes
+the qualified Windows artifact at `240ad74d`; earlier payload qualifications
 retain their scope.
 
 ## Plugin qualification
@@ -256,13 +258,18 @@ No result at the older point/projection source qualifies this extension.
 The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 preserves 22 exact-Mata primary availability-screen failures. Eight native
 cells pass broad descriptive screens, while fixed-outcome checks show material
-numerical sensitivity. New Mac candidates at `b9f80ce9` and Linux at `63757839`
-pass full and installed Mean checks, but remain unadopted while Windows is
-blocked. The [new candidate record](../native/mean-component-20261008/checkpoint.json)
-records exact sources and the earlier failed Windows attempts. The owner has
-since approved the GitHub-hosted build, source-first publication and bounded
-private retry; preparation is underway. These results do not establish general
-coverage or qualify Windows.
+numerical sensitivity. The five qualified payloads are adopted locally:
+Mac at `b9f80ce9`, Linux at `63757839` and Windows at `240ad74d`. The exact
+Windows hosted artifact passes private smoke/full qualification, including
+12 exact Mean, eight native Mean and 12 Corrected exact installed cells.
+Original Mac/Linux bytes and archives retain only reviewed unchanged
+public-route scope; they do not contain the lower-level serial Corrected fix
+in `240ad74d`. The [adoption manifest](../native/mean-component-20261008/manifest.json)
+records exact sources, compatibility and earlier failed attempts. Local HTTP
+fresh/replacement checks at `240ad74d` pass on Mac arm64 with all 61 files,
+five payload hashes and eight native Mean cells per case. Final public checks
+must follow commit/push and verify the actual updated help/package bytes.
+These engineering results do not establish general coverage.
 
 ## Focused scalable-projection gate
 
@@ -432,9 +439,10 @@ is numerical Monte Carlo error, never an econometric standard error.
 
 ## Qualification and release boundary
 
-Windows Stata/plugin qualification for the current Mean-component candidate
-remains incomplete. The owner approved the GitHub-hosted build and source-first
-sequence followed by a bounded private retry; preparation is underway.
+Windows Stata/plugin qualification passes for the exact hosted `240ad74d`
+artifact after private smoke and full gates. All five qualified payloads are
+adopted locally with their original source identities and documented reuse
+limits. Publication and final public installation checks remain pending.
 Native Intel hardware qualification and a command-surviving native cache remain
 deferred.
 Current platform status is recorded in the

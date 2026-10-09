@@ -4,7 +4,8 @@
 for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
 compiler, Rust installation, or separate plugin download is needed. Native
 qualification is specific to the exact artifact and platform. Intel Mac
-execution uses Rosetta; Windows runtime qualification remains pending.
+qualification uses Rosetta; the included Windows artifact passes private
+full runtime qualification at `240ad74d`.
 See [native provenance](native/README.md).
 
 ## Installation
@@ -25,8 +26,10 @@ github install johannes-schmieder/fevc
 Both routes install the same runtime, help, licenses, and five plugin files
 (macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
 appropriate native backend. `main` is the development and installation branch.
-These URLs serve the published package; the October 8 local prerelease
-candidate has not been published.
+These URLs serve the published package. The [current checkpoint](fevc/PLAN.md)
+tracks publication and installation verification; the
+[adoption manifest](native/mean-component-20261008/manifest.json) binds the
+included payloads to their sources and tested routes.
 
 After installation:
 
@@ -39,41 +42,39 @@ The example uses simulated data and restores your data afterward. Restart
 Stata after updating a loaded native plugin. This is a prerelease package;
 see [inference support and limitations](fevc/docs/INFERENCE.md).
 
-## Existing Windows manual-test payload
+## Native capability check
 
-Install with either command above, then restart Stata and run:
+After updating the package and restarting Stata, inspect the selected plugin:
 
 ```stata
 fevc_rust probe
 assert r(progress_api) == 2
 assert r(centering_api) == 1
+assert r(projection_centering_api) == 1
+assert r(component_centering_api) == 1
 fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
-fevc_run jla_controls using fevc.sthlp
-assert "`e(backend_selected)'" == "rust"
-matrix list e(mcse)
-estat diagnostics
 ```
 
-The [October 7 Windows build](https://github.com/johannes-schmieder/fevc/actions/runs/37571812326)
-produced a standalone ZIP with a local installer, test do-file and build
-receipt. It supplied the Windows binary retained in the repository installer.
-Its hosted build and binary audit pass; automated private runtime checks fail.
-The owner requested this exact binary for manual testing. The
-[manual-test adoption record](native/centering-windows-manual-20261007.json)
-binds its source and hash; earlier passing Windows records apply to earlier
-bytes.
+The included set provides all three centering capabilities. Mac builds
+retain source `b9f80ce9`, Linux `63757839`, and Windows `240ad74d`. The Windows
+hosted artifact passes private smoke and full installed-runtime qualification.
+Original Mac/Linux binaries and source archives are retained under a review of
+unchanged public routes; they do not contain the lower-level serial exact
+Corrected repair in `240ad74d`. See the
+[adoption manifest](native/mean-component-20261008/manifest.json).
 
-The older October 8 smoke `win-20261008T153726Z-59a2355d` remains a
-`STATA_DRIVER_FAILED` attempt with no identified assertion. The diagnostic
-collector has since been deployed and its infrastructure checks pass. For the
-Mean-component extension, the first private source-build smoke failed at
-`build_toolchain` with return code 601 and the second at `build_native` with
-a null return code. Both attempts completed cleanup and left the guarded
-machine stopped. The prepared hosted-build alternative passed 81 offline tests
-and independent review. The owner approved the GitHub-hosted build, source-first
-publication and bounded private retry; preparation is underway. Windows remains
-unqualified, and no new payload adoption has occurred. See [the current candidate record](native/mean-component-20261008/checkpoint.json).
+Local HTTP `net install` fresh and replacement checks at `240ad74d` pass on
+Mac arm64, verifying all 61 files and five plugin hashes in each case and
+running eight installed Mean-component cells. This source-bound receipt does
+not verify later help bytes or the public installation endpoint. See the
+[current checkpoint](fevc/PLAN.md) for final public installation verification.
+
+The [October 7 manual-test adoption](native/centering-windows-manual-20261007.json)
+and [initial Mean-component checkpoint](native/mean-component-20261008/checkpoint.json)
+retain their original Windows limitations and failures. The
+[new Windows summary](native/mean-component-20261008/evidence/windows/qualification-240ad74d.json)
+preserves later collection and full-run failures before the successful retest.
 
 ## Local source installation
 
@@ -100,20 +101,17 @@ existing supported tuples; Corrected remains unsupported with either. Mean
 component inference holds the observed retained physical-frequency
 working-outcome mean fixed and omits its estimation uncertainty. This
 approximation is separate from numerical MCSE and from omitted nuisance-offset
-uncertainty. New Mac candidates at `b9f80ce9` and Linux at `63757839`
-pass source-bound qualification and installed Mean-component checks. They
-remain preserved outside the installation payloads while Windows blocks the
-five-payload update. The existing Windows manual-test binary has point
-centering API 1 and lacks both attachment-centering capabilities. See
-[the current candidate record](native/mean-component-20261008/checkpoint.json).
+uncertainty. The five included native payloads support point, projection
+and component centering API 1 on their qualified routes. Exact sources and
+compatibility limits are in the
+[adoption manifest](native/mean-component-20261008/manifest.json).
 The [completed assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 records substantial exact-Mata interval unavailability and native numerical
 sensitivity; installation or successful computation is not a coverage claim.
 
 A current source installation can use `backend(mata)` on every platform.
 For Rust, use a matching qualified build, restart Stata, and inspect its
-capability. The retained repository payloads do not yet provide Mean component
-inference:
+capabilities:
 
 ```stata
 fevc_rust probe
@@ -127,8 +125,8 @@ A missing or zero `r(centering_api)` means the plugin does not support active
 centering. Numerical API 2 for all-probe MCSE is independent of centering
 API 1: a plugin supporting MCSE can still lack centering. Mean projection
 requires the separate additive `r(projection_centering_api) == 1` capability.
-The local Mac candidates expose this capability. Earlier point-centering
-payloads, including the retained Windows manual-test binary, lack it.
+The included five-payload set exposes this capability. Earlier
+point-centering payloads may lack it.
 Use current source with `backend(mata)` or a matching qualified native build
 and inspect the probe result. Mean component inference additionally requires
 `r(component_centering_api) == 1`, which identifies matching C transport and
@@ -143,9 +141,9 @@ capability is absent, subject to strict native-consent rules.
 
 The historical [centering adoption record](native/centering-20261006/manifest.json) binds
 the four October 6 plugins to full platform and explicit Rust centering
-checks. The owner authorized source publication on October 7. The Windows hosted
-build passes; the owner subsequently authorized its adoption for manual
-testing while runtime qualification remains pending.
+checks. The owner authorized source publication on October 7. At that checkpoint,
+the Windows hosted build passed and the owner subsequently authorized adoption for manual
+testing while runtime qualification remained pending.
 Earlier binary records retain their original tested artifacts. See [centering](fevc/docs/CENTERING.md) and
 [native provenance](native/README.md).
 

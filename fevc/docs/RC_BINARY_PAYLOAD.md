@@ -1,14 +1,48 @@
 # Native binary payload
 
+## Current Mean-component status and provenance
+
+The [Mean-component manifest](../../native/mean-component-20261008/manifest.json)
+records the five qualified payloads adopted locally, exact hashes, build
+sources, source compatibility and installation evidence. Local installation
+checks pass at `240ad74d`; publication and final public checks of the updated
+package bytes remain pending. The
+[active plan](../PLAN.md) records the completed gates and remaining work,
+including the later owner-authorized Windows repair continuation. Preserve
+all earlier failed attempts and their original receipts.
+
+The Mean refresh retains the original Mac candidates built at `b9f80ce9` and
+Linux candidate built at `63757839`, with their corresponding-source archives.
+The Windows candidate is built at `240ad74d`, which repairs serial exact
+Corrected accounting. The retained Mac/Linux binaries do not contain that
+lower-level repair. Their reuse is limited to unchanged public routes under
+an explicit affected-route compatibility review; it does not establish that
+all native source is unchanged or that all five payloads contain the repair.
+The manifest binds each actual build source, tested route and final package
+identity separately.
+
+Platform qualification is an engineering claim. The
+[bounded assessment](MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md) retains
+22 exact-Mata availability-screen failures and material numerical sensitivity;
+there is no general coverage guarantee. Earlier statistical limitations remain.
+For this task, native packaging uses `--check` and `--repository-dir`; a native
+release archive, tag or hosted release remains outside the authorized scope.
+
+The dated sections below preserve their original source and approval cutoffs.
+Their pending approvals and then-current artifacts are historical; they do
+not replace the current plan or exact-artifact manifest.
+
+## Historical distribution request — September 5, 2026
+
 The owner's 2026-09-05 request selects `0.5.0-rc.1` with all five plugin
 files: macOS arm64, macOS x86_64, macOS universal, Linux x86_64 and Windows
 x86_64. This authorizes local candidate preparation and private platform
 tests, not publication or tagging. No current platform success is implied
 by this preparation document.
 
-## October 8 local candidate status
+## Historical October 8 point/Mean-projection candidate
 
-Clean build source `24754269` supplies the current candidate. Mac arm64,
+Clean build source `24754269` supplied the then-current candidate. Mac arm64,
 Rosetta x86-64 and universal plugins pass full clean qualification plus
 24 isolated-install capability, point-centering and Mean-projection checks.
 They expose centering API 1 and projection-centering API 1.
@@ -141,18 +175,25 @@ Both `net install` and `github install` must deliver that same payload.
 Generated native manifests use `F` entries for the license and notices so
 Stata installs them with the runtime instead of treating them as ancillary files.
 
-When a later packaging or documentation commit leaves the tested native
+For a packaging or documentation change that leaves the tested native
 source unchanged, retain each binary's original `source_commit`. An explicit
 compatibility record may bind it to the new package source under the registered
-acceptance policy. The binary row must provide `compatibility_evidence` and
+acceptance policy. That unchanged-source case does not describe the complete
+Mean refresh: `240ad74d` changes serial exact Corrected accounting. Reuse of
+the older Mac/Linux binaries requires the separately reviewed affected-route
+compatibility and its explicit limitations described above. The binary row
+must provide `compatibility_evidence` and
 `compatibility_sha256`. The referenced JSON uses schema
 `FEVC-BINARY-COMPATIBILITY-V1`, records `build_source_commit`,
 `package_source_commit`, `status: PASS`, a `binaries` name-to-SHA-256 mapping,
 `unchanged_source_manifest_sha256`, `changed_paths`, `checks`, and `limitations`.
-Verify the unchanged production, build, input, and acceptance identities before
-writing that record. The packager verifies its bindings; it does not establish
-the truth of its qualification claims. Final installation checks still apply
-to the new package bytes.
+For an unchanged-source compatibility claim, verify the unchanged production,
+build, input and acceptance identities before writing that record. For the
+current affected-route reuse, identify the changed source and excluded
+lower-level route explicitly; a packaging field must not be presented as proof
+that all native production source is unchanged. The packager verifies its
+bindings; it does not establish the truth of its qualification claims. Final
+installation checks still apply to the new package bytes.
 
 To prepare the repository layout in a new directory, use `--repository-dir`
 instead of `--output-dir`:

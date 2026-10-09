@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-08",
+  "updated": "2026-10-09",
   "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Mean component highrank/q1 inference is implemented under the fixed observed mean approximation. Native component_centering_api 1 uses readiness bit 16 through the existing capability export. Independent algebra and source checks pass. New Mac candidates pass full qualification and exact-byte installed Mean checks across thin/universal arm64/Rosetta aliases at b9f80ce9; Linux passes full and staged/installed Mean tests at 63757839 (SCC job 7969972). Candidates remain unadopted while Windows is blocked. First/second source-build smokes failed at build_toolchain (rc 601) and build_native (rc null); both attempts completed cleanup and left the machine stopped. The prepared hosted-build alternative passed 81 offline tests and independent review. The owner approved the GitHub-hosted build, source-first publication and bounded private retry; preparation is underway. Windows remains unqualified, and no new payload adoption, tag or hosted release has occurred. The immutable checkpoint preserves the earlier blocked state. The completed 12-cell assessment retains 22 exact-Mata availability-screen failures; eight native primary cells have 100% interval availability and pass broad descriptive screens, but material numerical sensitivity remains. No general coverage, representative-scale or native Intel hardware claim. Shipped payloads and historical scientific failures retain their original identities and scope. See native/mean-component-20261008/checkpoint.json and MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md.",
+  "qualification_scope": "Mean component highrank/q1 inference is implemented under the fixed observed mean approximation. Native component_centering_api 1 uses readiness bit 16 through the existing capability export. Independent algebra and source checks pass. Five qualified payloads are adopted locally: Mac b9f80ce9 full and installed Mean checks across thin/universal arm64/Rosetta aliases; Linux 63757839 full and staged/installed Mean checks (SCC job 7969972); Windows 240ad74d hosted and private smoke/full qualification, including installed Mean component and Corrected exact tests. Original Mac/Linux bytes and source archives are retained only for reviewed unchanged public routes; they do not contain the lower-level serial exact Corrected repair in 240ad74d. Four of 15 authorized infrastructure repair cycles were used; initial source-build, collection and f8 full failures remain unchanged. Local HTTP fresh/replacement checks at 240ad74d pass on Mac arm64, verifying 61 files and five payload hashes plus eight Mean cells per case. Publication and final public checks of the updated package bytes remain pending. No tag or hosted release. The completed assessment retains 22 exact-Mata availability-screen failures; eight native primary cells have 100% interval availability and pass broad descriptive screens, but material numerical sensitivity remains. No general coverage, representative-scale or native Intel hardware claim. See native/mean-component-20261008/manifest.json and MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md.",
   "statuses": [
     "qualified",
     "implemented",
@@ -16,7 +16,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. The retained 24754269 Mac/Linux payloads keep their point-centering qualification. New Mac b9f80ce9 and Linux 63757839 candidates also pass full/installed centering checks but are not adopted while Windows is blocked. native/mean-component-20261008/checkpoint.json; CENTERING.md."
+      "evidence": "Frequency-weighted retained working-outcome factor; no additional solves or directions. MCSE holds the observed mean fixed. Both-backend fixed-mean point/MCSE oracles and option guards pass locally. Five qualified payloads adopted locally: Mac b9f80ce9, Linux 63757839 and Windows 240ad74d. Original Mac/Linux bytes retain only reviewed unchanged public-route scope and do not contain the lower-level serial exact Corrected repair in 240ad74d. Final public installation checks remain pending. native/mean-component-20261008/manifest.json; CENTERING.md."
     },
     {
       "id": "mean-component-inference",
@@ -24,7 +24,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Independent fixed-c exact/native algebra, source/capability/caller-state and q1 imperfect-solve tests pass. Mac b9f80ce9 and Linux 63757839 full/installed Mean qualification passes; candidates not adopted because Windows remains blocked. Error probes stay uncentered and mean-estimation uncertainty is omitted. Completed assessment: 22 exact-Mata availability-screen failures in both arms; eight native cells have 100% availability and pass broad descriptive screens. Material numerical sensitivity and earlier calibration limits remain, with no general coverage claim. MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md; native/mean-component-20261008/checkpoint.json."
+      "evidence": "Independent fixed-c exact/native algebra, source/capability/caller-state and q1 imperfect-solve tests pass. Full and installed Mean qualification passes for the adopted Mac b9f80ce9, Linux 63757839 and Windows 240ad74d payloads on their recorded routes; original Mac/Linux reuse excludes the unrepaired lower-level serial Corrected route. Error probes stay uncentered and mean-estimation uncertainty is omitted. Completed assessment retains 22 exact-Mata availability-screen failures in both arms; eight native cells have 100% availability and pass broad descriptive screens. Material numerical sensitivity and earlier calibration limits remain, with no general coverage claim. MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md; native/mean-component-20261008/manifest.json."
     },
     {
       "id": "exact-corrected-centering",
@@ -32,7 +32,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. The retained 24754269 Mac/Linux payloads keep their point-centering qualification. New Mac b9f80ce9 and Linux 63757839 candidates also pass full/installed centering checks but are not adopted while Windows is blocked. native/mean-component-20261008/checkpoint.json; CENTERING.md."
+      "evidence": "Shared coefficient-space system with independent dense oracle, exceptional-unit safeguards and both-backend checks. Enabled MCSE is zero; off is unavailable. Five qualified payloads adopted locally: Mac b9f80ce9, Linux 63757839 and Windows 240ad74d. Original Mac/Linux bytes retain only reviewed unchanged public-route scope and do not contain the lower-level serial exact Corrected repair in 240ad74d. Final public installation checks remain pending. native/mean-component-20261008/manifest.json; CENTERING.md. Serial total is materialized before checked Corrected addition in source 240ad74d; independent regression, unchanged official 12-cell oracle and actual Windows full retest pass. Direct lower-level serial entrypoints in older Mac/Linux builds are excluded from reuse."
     },
     {
       "id": "jla-corrected-centering",
@@ -40,7 +40,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. The retained 24754269 Mac/Linux payloads keep their point-centering qualification. New Mac b9f80ce9 and Linux 63757839 candidates also pass full/installed centering checks but are not adopted while Windows is blocked. native/mean-component-20261008/checkpoint.json; CENTERING.md."
+      "evidence": "Existing full/two-half leverage pools with even probes >=4; independent three-pool map and both-backend MCSE checks. MCSE is Mean covariance with added increment fixed, excluding its uncertainty. Five qualified payloads adopted locally: Mac b9f80ce9, Linux 63757839 and Windows 240ad74d. Original Mac/Linux bytes retain only reviewed unchanged public-route scope and do not contain the lower-level serial exact Corrected repair in 240ad74d. Final public installation checks remain pending. native/mean-component-20261008/manifest.json; CENTERING.md."
     },
     {
       "id": "parallel-deletion-blocks",
@@ -152,7 +152,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "exact Mata and sparse Rust generic-JLA routes; explicit diagonal or forced generic CMG; positive integer frequency weights match literal expansion; KSS Matlab weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates; automatic projection routing withheld; Mean support added October 7 with the retained frequency-weighted working-outcome mean before match scaling. Native Mean requires projection_centering_api 1; earlier None qualification remains source-specific. Retained Mac/Linux 24754269 payloads keep their Mean-projection qualification. New Mac b9f80ce9 and Linux 63757839 candidates pass the current full/installed gates but are not adopted while Windows is blocked. native/mean-component-20261008/checkpoint.json."
+      "evidence": "exact Mata and sparse Rust generic-JLA routes; explicit diagonal or forced generic CMG; positive integer frequency weights match literal expansion; KSS Matlab weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates; automatic projection routing withheld; Mean support added October 7 with the retained frequency-weighted working-outcome mean before match scaling. Native Mean requires projection_centering_api 1; earlier None qualification remains source-specific. Five qualified payloads adopted locally: Mac b9f80ce9, Linux 63757839 and Windows 240ad74d. Original Mac/Linux bytes retain only reviewed unchanged public-route scope and do not contain the lower-level serial exact Corrected repair in 240ad74d. Final public installation checks remain pending. native/mean-component-20261008/manifest.json; CENTERING.md."
     },
     {
       "id": "macos-arm64-rosetta",
@@ -160,7 +160,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean source b9f80ce9; thin arm64, thin x86-64 under Rosetta, universal on both architectures, full runtime qualification and separate exact-byte installed Mean checks for all four aliases pass. New payloads are preserved, not adopted while Windows blocks the complete update. Native Intel hardware and general coverage are not claimed. Earlier 24754269 receipts retain point/projection scope. native/mean-component-20261008/checkpoint.json."
+      "evidence": "Clean source b9f80ce9; thin arm64, thin x86-64 under Rosetta, universal on both architectures, full runtime qualification and separate exact-byte installed Mean checks for all four aliases pass. Original bytes and source archive adopted locally with public-route-only compatibility to 240ad74d; the lower-level serial Corrected repair is absent from these binaries. Native Intel hardware and general coverage are not claimed. Earlier receipts retain their original scope. native/mean-component-20261008/manifest.json."
     },
     {
       "id": "linux-scc",
@@ -168,15 +168,15 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean source 63757839; SCC job 7969972 passes the full Stata suite, staged/installed exact (12 cells each) and native (8 cells each) Mean-component tests, capabilities and isolated installation. Scheduler failed=0, exit_status=0; all 46 collected hashes and 1461 source-manifest entries verified. Candidate preserved, not adopted. native/mean-component-20261008/checkpoint.json."
+      "evidence": "Clean source 63757839; SCC job 7969972 passes the full Stata suite, staged/installed exact (12 cells each) and native (8 cells each) Mean-component tests, capabilities and isolated installation. Scheduler failed=0, exit_status=0; all 46 collected hashes and 1461 source-manifest entries verified. Original bytes and source archive adopted locally with public-route-only compatibility to 240ad74d; the lower-level serial Corrected repair is absent from this binary. native/mean-component-20261008/manifest.json."
     },
     {
       "id": "windows",
       "surface": "Windows qualification",
-      "mata": "implemented",
-      "rust": "implemented",
-      "alpha_required": false,
-      "evidence": "Retained c14fbcb6 manual-test payload lacks Mean-projection/component capabilities. New source-build smoke 1 failed at build_toolchain (rc 601); smoke 2 failed at build_native (rc null). Both attempts completed cleanup and left the guarded machine stopped. Prepared hosted-build alternative: 81 offline tests and independent review PASS. Owner approved the GitHub-hosted build, source-first publication and bounded private retry; preparation is underway. Windows remains unqualified and new Mac/Linux candidates remain unadopted. The checkpoint preserves the earlier blocked state. Historical receipts retain exact original bytes. native/mean-component-20261008/checkpoint.json; native/centering-windows-manual-20261007.json."
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "Exact hosted candidate at 240ad74d passes private smoke and full run win-20261009T023703Z-209dc9ed, including installed exact Mean (12 cells), native Mean (8 cells), Corrected exact (12 cells), point/projection centering, MCSE, lifecycle and existing full gates. Candidate adopted locally; cleanup/source restoration PASS and machine stopped. Four of 15 authorized infrastructure repair cycles used. Prior source-build, collection and f8 full centering_exact failures remain unchanged. Final public checks remain pending. Engineering scope only; no general coverage claim. native/mean-component-20261008/evidence/windows/qualification-240ad74d.json; native/mean-component-20261008/manifest.json."
     },
     {
       "id": "all-point-probe-numerical-mcse",
@@ -184,7 +184,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Public mcse(all|off), default all; conditional is a developer option and numericalmcse() a compatibility alias. Numerical V2 preserves point executors with supported projection/component attachments; no MCSE for their outputs. Frozen V1/result/RHS/work meanings remain. Existing Windows point routes enabled in source. Fresh 239,616-attempt prescribed calibration and full local native Stata/Mac thin/universal arm64/Rosetta checks pass as dirty-tree development evidence. All 300 complete-command timings preserve recorded numeric outputs; generic Mata percentage parity remains unmet. Linux job 7803612 full/native/install and scheduler checks pass; four exact Mac/Linux binaries adopted locally. Source publication is approved and complete; the new Windows hosted build passes, but two private runtime attempts fail. The exact fifth binary is now adopted at owner request for manual testing; runtime qualification remains pending. native/centering-windows-manual-20261007.json. native/centering-20261007/manifest.json. Historical evidence remains source-bound. MCSE_DEFAULT_INTERFACE_2026-09-30.md; MCSE_DEFAULT_VALIDATION_2026-09-30.md."
+      "evidence": "Public mcse(all|off), default all; conditional is a developer option and numericalmcse() a compatibility alias. Numerical V2 preserves point executors with supported projection/component attachments; no MCSE for their outputs. Frozen V1/result/RHS/work meanings remain. Existing Windows point routes enabled in source. Fresh 239,616-attempt prescribed calibration and full local native Stata/Mac thin/universal arm64/Rosetta checks pass as dirty-tree development evidence. All 300 complete-command timings preserve recorded numeric outputs; generic Mata percentage parity remains unmet. Linux job 7803612 full/native/install and scheduler checks pass; four exact Mac/Linux binaries adopted locally. At the October 7 checkpoint, source publication was complete, the Windows hosted build passed but two private runtime attempts failed, and the fifth binary was adopted for manual testing with runtime qualification pending. native/centering-windows-manual-20261007.json. native/centering-20261007/manifest.json. Historical evidence remains source-bound. MCSE_DEFAULT_INTERFACE_2026-09-30.md; MCSE_DEFAULT_VALIDATION_2026-09-30.md. The current Windows 240ad74d candidate passes the private full MCSE attachment/mode gates and is adopted locally; see native/mean-component-20261008/manifest.json. This does not relabel the earlier calibration or timing evidence."
     }
   ]
 }

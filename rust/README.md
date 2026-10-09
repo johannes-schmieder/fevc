@@ -38,17 +38,17 @@ None needs neither attachment-centering capability for its separately
 supported requests. Existing supported tuples and ABI
 request/result layouts remain.
 
-New Mac candidates at clean source `b9f80ce9` pass full arm64/Rosetta
-thin/universal qualification and separate exact-byte installed Mean-component
-checks for all four architecture aliases. Linux x86-64 passes full and
-staged/installed Mean tests at `63757839` (SCC job `7969972`). These candidates
-remain unadopted while Windows is blocked after two private source-build
-smokes. The prepared hosted-build alternative passed 81 offline tests and
-independent review. The owner approved the GitHub-hosted build, source-first
-publication and bounded private retry; preparation is underway. [The candidate
-record](../native/mean-component-20261008/checkpoint.json) retains exact
-source/payload identities and the earlier blocked state. Windows remains
-unqualified; no new payload adoption or tag has occurred for this extension.
+Five qualified payloads are adopted locally. Mac builds at `b9f80ce9` retain
+full arm64/Rosetta thin/universal and four-alias installed Mean checks; Linux
+at `63757839` retains full and staged/installed Mean checks (SCC job `7969972`).
+Windows at `240ad74d` passes hosted checks and private smoke/full qualification,
+including installed Mean and Corrected exact checks. The original Mac/Linux
+bytes and source archives are retained under a review limited to unchanged
+public routes; their lower-level serial exact Corrected path does not contain
+the repair in `240ad74d`. The [adoption manifest](../native/mean-component-20261008/manifest.json)
+binds actual sources and route limitations, preserving prior failed attempts.
+Local HTTP fresh/replacement checks pass at `240ad74d`; publication and final
+public checks of the updated package remain pending. No tag is implied.
 
 The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures. All eight native primary

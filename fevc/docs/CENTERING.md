@@ -86,8 +86,8 @@ q1 k12 in both arms. All eight native primary cells have 100% interval
 availability and pass broad descriptive screens. Mean-versus-fixed-c0 effects
 are small on those designs, but fixed-outcome native checks show material
 numerical sensitivity. Neither those results nor historical None evidence
-establish general coverage. New Mac/Linux candidates pass qualification;
-Windows still blocks adoption of the complete native update.
+establish general coverage. The five included native payloads retain their
+source-bound engineering qualification. See the [adoption manifest](../../native/mean-component-20261008/manifest.json).
 
 ## Projection and the mean convention
 
@@ -203,20 +203,18 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   requests support Mean; native combined component/projection requests remain
   unsupported. Missing metadata is zero; explicit None needs neither
   attachment-centering capability on its separately supported native requests.
-- New Mac candidates at clean source `b9f80ce9` pass full qualification and
-  separate installed Mean-component checks for thin arm64, thin x86-64 under
-  Rosetta and universal on both architectures. Linux x86-64 passes full and
-  staged/installed Mean-component tests at `63757839` (SCC job `7969972`).
-  They expose all three centering capabilities but remain **unadopted** while
-  Windows qualification is blocked. The retained package payloads lack
-  component-centering API 1; the retained Windows manual-test payload also
-  lacks projection-centering API 1. Native Intel hardware is not claimed.
-  See the [new candidate record](../../native/mean-component-20261008/checkpoint.json)
-  for source identities, compatibility and the preserved failed Windows
-  attempts. The owner has since approved the GitHub-hosted build, source-first
-  publication and bounded private retry. Preparation is underway; Windows
-  remains unqualified and no new payload adoption or tag has occurred.
-  Use current Mata source or a matching qualified native build.
+- The five included payloads expose all three centering capabilities.
+  Mac at `b9f80ce9` passes full and installed checks on arm64 and Rosetta,
+  including both universal aliases; Linux at `63757839` passes full and
+  installed checks (SCC job `7969972`). Windows at `240ad74d` passes hosted
+  build and private smoke/full qualification, including installed Mean and
+  Corrected exact checks. Original Mac/Linux bytes and archives are reused
+  only on unchanged public routes; they do not contain the lower-level serial
+  exact Corrected fix in `240ad74d`. Native Intel hardware is not claimed.
+  The [adoption manifest](../../native/mean-component-20261008/manifest.json)
+  binds exact sources, compatibility and earlier failed attempts. The
+  [current checkpoint](../PLAN.md) tracks publication and final installation
+  verification.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit
   Counter-V1 requests require the matching native capability and fail
@@ -237,14 +235,15 @@ or a new coverage/MSE campaign. See the [current checkpoint](../PLAN.md).
 
 See [installation](../../INSTALLATION.md), [memory](MEMORY.md) and
 [native provenance](../../native/README.md). The package version remains
-`0.5.0-rc.1`; repository publication does not imply a release. The [native adoption record](../../native/centering-20261006/manifest.json)
-binds the four updated payloads. The owner authorized source publication on
-October 7. The Windows hosted build passes, but full qualification and a
-focused centering diagnostic fail. The owner subsequently requested adoption
-of that exact candidate for manual testing; see the [manual-test record](../../native/centering-windows-manual-20261007.json).
+`0.5.0-rc.1`; repository publication does not imply a release. The historical [October 6 adoption record](../../native/centering-20261006/manifest.json)
+binds its four payloads. The owner authorized source publication on
+October 7. At that checkpoint, the Windows hosted build passed, but full
+qualification and a focused centering diagnostic failed. The owner subsequently
+requested adoption of that exact candidate for manual testing; see the [manual-test record](../../native/centering-windows-manual-20261007.json).
 The [October 7 attempt record](../../native/centering-20261007/manifest.json)
-preserves the aggregate failures and cleanup. Runtime qualification remains
-pending; no failing assertion is available from the private collector.
+preserves the aggregate failures and cleanup. For that October 7 artifact,
+runtime qualification remained pending; no failing assertion was available
+from the private collector.
 
 ## Stored results
 

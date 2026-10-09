@@ -1,0 +1,1068 @@
+{
+  "affected_surface": "The source repair affects scalar serial Corrected accumulation. Mac/Unix public exact dispatch (including threads(1)) uses the already materialized parallel result; required capabilities prevent a serial native fallback. None/Mean skip the repaired Corrected branch and JLA is unchanged. Retained exact payloads and public runtime identities therefore retain the originally tested behavior. The direct scalar Corrected entrypoints remain defective and excluded.",
+  "binaries": {
+    "fevc_rust_macos.plugin": "52e72091a646591d79c6bd717546bd5302eb90ebf7e3ff9eefb1cb0330375202",
+    "fevc_rust_macos_arm64.plugin": "a2d599ce727f74d579c0cd315288413ac3980cb795258759537e560b00e89e5d",
+    "fevc_rust_macos_x86_64.plugin": "555f8e221288fd1d4c6391161c10b6a6db7a0f35f2bbbd79ae76b02d9ef8a75e"
+  },
+  "build_source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+  "changed_entries": {
+    ".gitattributes": {
+      "new": {
+        "git_blob": "230a374e49ebde9382985cedf27f26f015355bb3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "68a36fea3f046b0bb3d0f3fdf97df78a67a1599a",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "INSTALLATION.md": {
+      "new": {
+        "git_blob": "c8074fb4b599c67db3c4e4e17d6500b255d5d0c4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "72cb6a3668880d965003461fc078433c551c6001",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "README.md": {
+      "new": {
+        "git_blob": "5591e9d92f95c5647b4e447d67dc5052b5f0868c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "6ddbb71ef43df54b601aaf71049dc73107f3acc1",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/CHANGELOG.md": {
+      "new": {
+        "git_blob": "2a1b0304d863b9540822abbfcb5c67fbac3a3541",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "b0d25759b04a169b022890d4bf449374dc0cdf59",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/PLAN.md": {
+      "new": {
+        "git_blob": "364c7090d800a40aff7df56597a0707d92e6617c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "55dd477cb2b4aed99e4e4b13a8423d463eb69df1",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/README.md": {
+      "new": {
+        "git_blob": "e991e4abd0440f9ad2ab782fdbf9300b44e9b9cc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "0a0bee6399e04aa7b108a4c5441a277b3b72bef0",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/TESTING.md": {
+      "new": {
+        "git_blob": "e5313e51b37a0872141f0ebddbb68cdd7ac77429",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "6d133305e088ecda5cf774c9ef00635eaaece912",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/docs/CENTERING.md": {
+      "new": {
+        "git_blob": "5bba21fd5a08dbac47af4db2c47dbafb1c13ce4c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "f86c029006f328e5849d5cdc8a7a7a9d10b90636",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/docs/INFERENCE.md": {
+      "new": {
+        "git_blob": "8fc04df4421089f88430aa49046396e6f2b9013c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "5f4042a0dee20ab491055326c1307daef97def76",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md": {
+      "new": {
+        "git_blob": "86d5f31b58b28b9cc3a6c8039d02ee2b621e28f8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "fevc/docs/README.md": {
+      "new": {
+        "git_blob": "bb6bb8be2d5e71f257dd17f81ecf31be62810915",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "4e340a23d83c86720355ea4f5f4b6fd56ab7e360",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/docs/RUST_MATA_PARITY.md": {
+      "new": {
+        "git_blob": "6c9e512b8941ef439cd4322330b72365a12473d5",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "7d7c48ebdcda4478579b43bdd4c375e7317e520d",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/docs/rust_mata_parity.json": {
+      "new": {
+        "git_blob": "3b5cc34f239bd00a1cb9fefe988c17b1814587b9",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "628bf176829e13e50487dafb5ab7c4db5359806a",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "fevc/fevc.sthlp": {
+      "new": {
+        "git_blob": "53896218b41ff8fbc15890ee2d7ccfba32261e4b",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "03d2f3ee98834dfefe28da69224248b6baefa460",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "native/README.md": {
+      "new": {
+        "git_blob": "b197df5f804f74923b57c5efb0bf68bdc665d27a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "0fc27e6fcc185d2510e0dd39563734b9320efd23",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "native/mean-component-20261008/README.md": {
+      "new": {
+        "git_blob": "077edc46070a660903421cfd5df4a238b57019ae",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/checkpoint.json": {
+      "new": {
+        "git_blob": "cb8963c1e58a539c563a19773c0f51b4d08c5276",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/documentation-compatibility.json": {
+      "new": {
+        "git_blob": "605c832b503250700ffdaff0234edbedc95bf9ad",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/development/checkpoint.json": {
+      "new": {
+        "git_blob": "9e01e221238715f8e57a14abf31d36a00f3ff871",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/development/exact-validation.json": {
+      "new": {
+        "git_blob": "baaaf59e25fc1ab7cbc064a44633e2ae95a5df8a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/development/integrated-source-checks.json": {
+      "new": {
+        "git_blob": "e7e747eba609e9556ca3b8e2d1cc12ebd878ca45",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/development/rust-development-gates.json": {
+      "new": {
+        "git_blob": "b1447bfaca14104d2d07240e5441ac00bc6707d8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/development/source-compatibility.json": {
+      "new": {
+        "git_blob": "f3665029e28540d260d569eb403c7b7ee74fc554",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/harness/final-harness-pytest.txt": {
+      "new": {
+        "git_blob": "46069d609175d8995139fe56a7e52fd298c48bc6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/harness/final-harness-tests-b9f80ce9.json": {
+      "new": {
+        "git_blob": "72a0b4706b9f2aec53873f8092678d0cd6769cfe",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/linux/qacct.txt": {
+      "new": {
+        "git_blob": "b3b492464fe77e462e205263bb5faa860b98ec45",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/linux/qualification-source.sha256": {
+      "new": {
+        "git_blob": "2a1851515990aad29f3d24623a32a38d1b01a719",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/linux/qualification.txt": {
+      "new": {
+        "git_blob": "489ff1aac53c3b11c40e68e05c7c7ddc60658af8",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/linux/remote-hashes.txt": {
+      "new": {
+        "git_blob": "17811b1e1f9995a5e6aeae36d3a19f4b0f234d8a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/linux/validation.json": {
+      "new": {
+        "git_blob": "6b39e665ea60621025044e881d0ab977457b7e67",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/linux/wrapper.txt": {
+      "new": {
+        "git_blob": "d265911f07e11f665dc7eee80f609fb2af2b1a42",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/macos/ci.json": {
+      "new": {
+        "git_blob": "01d485d96734fea7ce1e9c03420a4f8c3eab01d1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/macos/installed-mean-component.json": {
+      "new": {
+        "git_blob": "57ab6e669b4ee0e1f497308d1f32996601ee1aca",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/macos/qualification.txt": {
+      "new": {
+        "git_blob": "33e071f1e5a350309176737ea28a292567080196",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/macos/source-manifest.sha256": {
+      "new": {
+        "git_blob": "6467bbfebd36051f392b59510eaba48a0714bae3",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/q1/dense_audit.json": {
+      "new": {
+        "git_blob": "5fecbf96a7ab212bc6e6ac6ee9418ecc1691a143",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/q1/overhead-comparison.json": {
+      "new": {
+        "git_blob": "a6813d4df3fc6b859697c6c0f4b5de0ba60c9ade",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/q1/pilot-classification-review.json": {
+      "new": {
+        "git_blob": "c62a8c4d77c295fd83a323e7076479ebaa25ff1a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/q1/receipt.json": {
+      "new": {
+        "git_blob": "0059425c9f36adb7cd8fe6e5e2151c3037fddeae",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/assessment.json": {
+      "new": {
+        "git_blob": "52695be32fd7f5fa7a7c319294d3c08fd6d70e2c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/availability-diagnosis.json": {
+      "new": {
+        "git_blob": "1232bc7d55f92642e09688336406376a9428fae1",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/compact-summary.json": {
+      "new": {
+        "git_blob": "2e3afc90b9c66138b917077d32fa2e8acae1304f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/manifest.json": {
+      "new": {
+        "git_blob": "cf0076ec594fc9e09d18737a004d8a92b58c92c6",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/source-verification.json": {
+      "new": {
+        "git_blob": "91b7285cf2cd236722d76f0d7183f302f5f4883a",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/assessment.json": {
+      "new": {
+        "git_blob": "9f5f9a69a2bb39baa57c4cc0c60388ff7ec79456",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/manifest.json": {
+      "new": {
+        "git_blob": "9399e52f71c5eb0c658c174ba9ddb55bffede4d7",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/source-verification.json": {
+      "new": {
+        "git_blob": "0876c70f0b773755a901c6672bd1074ce648f99f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/assessment.json": {
+      "new": {
+        "git_blob": "c86094f97a2154867e45fe9691e9e1808abcba79",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/compact-summary.json": {
+      "new": {
+        "git_blob": "b791ea2faed8375e15e66ee7b4f0c528b1359df0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/manifest.json": {
+      "new": {
+        "git_blob": "d8775297887155189d1132e38dd5b06532cf03f4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/paired-availability.json": {
+      "new": {
+        "git_blob": "a3f50832417c01bf85c5592114aa1f3508ac8dbc",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/source-verification.json": {
+      "new": {
+        "git_blob": "718cc415516389e101a26ce6e0cbcee58392d016",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/assessment.json": {
+      "new": {
+        "git_blob": "55ebc24e64948063c388835fe46ad64b433c8b13",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/compact-summary.json": {
+      "new": {
+        "git_blob": "1f5f4718cd2ed74bd1b6b2fac01608d6713eb9d0",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/manifest.json": {
+      "new": {
+        "git_blob": "a85edd6a9ff4c9dd9198c17c09828e9fb4d6d42f",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/source-verification.json": {
+      "new": {
+        "git_blob": "4ee2753f6d1a90dd80844e6aef6f7b30f2753b57",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/primary-compact-summary.json": {
+      "new": {
+        "git_blob": "be5a036a3da00cd9fcefaa04c62ce388723790b4",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/scientific/primary-union-audit.json": {
+      "new": {
+        "git_blob": "30b7f9e83ec23f980d02a8d43c5332f4e14227ec",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/source/corresponding-source-validation.json": {
+      "new": {
+        "git_blob": "17289f7f71c8951d24a82ef044570d13ccaf5839",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/source/source-gates-63757839.json": {
+      "new": {
+        "git_blob": "016780a37c5a11dca19f2d4cdd60bc62d4d81671",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/windows/hosted-proposal-review.json": {
+      "new": {
+        "git_blob": "2110d6290f0f795ba9c37d70fb1272d82f0d820c",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/windows/source-smoke-1.json": {
+      "new": {
+        "git_blob": "e44529a05139a4a1eb501dba36d86e320d09b974",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/evidence/windows/source-smoke-2.json": {
+      "new": {
+        "git_blob": "9f75b067129597f1f0b9832ec06533639eb000ea",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/fevc-corresponding-source-63757839.tar.gz": {
+      "new": {
+        "git_blob": "e113d0a7641797e2810663f7a2e3465b0a26d075",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "native/mean-component-20261008/fevc-corresponding-source-b9f80ce9.tar.gz": {
+      "new": {
+        "git_blob": "14d3eee54c94fbeb97256b162fa37eb79c2ab048",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "rust/README.md": {
+      "new": {
+        "git_blob": "a8cf860fedafc8f69401ca7420ad0c02b8250272",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "f29d77a58437676d15630785ca460ca40711e56f",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "rust/TEST_PLAN.md": {
+      "new": {
+        "git_blob": "a445364e8b529fcc174e12b1b77a02f6b37492ec",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "1b1734625e3d3af2e0ebf1a03c60d9562ad7336c",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "rust/crates/vckss-core/src/exact_estimator.rs": {
+      "new": {
+        "git_blob": "2901de0566c3df650a38d795a81503d90f1bf810",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "c2aab554af5ff7f05d2b1c89088935ffa6467348",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "rust/crates/vckss-core/src/exact_estimator/centering_tests.rs": {
+      "new": {
+        "git_blob": "0affc3eb0b53e3551506023d61b69332377328af",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": null
+    },
+    "rust/stata_backend/README.md": {
+      "new": {
+        "git_blob": "8148186f8138dd42c3b3940c941f4642dbede678",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "815f065899b88b6f3e80ed7b18d7bd00b7027b61",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    "rust/stata_backend/package_windows_test.ps1": {
+      "new": {
+        "git_blob": "4d28f1e555aa7ad03dd8b027c0894427f2f60c11",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "old": {
+        "git_blob": "3a23ec57a3199c0d162ece44af8a3c9ae277d80e",
+        "mode": "100644",
+        "type": "blob"
+      }
+    }
+  },
+  "changed_paths": [
+    ".gitattributes",
+    "INSTALLATION.md",
+    "README.md",
+    "fevc/CHANGELOG.md",
+    "fevc/PLAN.md",
+    "fevc/README.md",
+    "fevc/TESTING.md",
+    "fevc/docs/CENTERING.md",
+    "fevc/docs/INFERENCE.md",
+    "fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md",
+    "fevc/docs/README.md",
+    "fevc/docs/RUST_MATA_PARITY.md",
+    "fevc/docs/rust_mata_parity.json",
+    "fevc/fevc.sthlp",
+    "native/README.md",
+    "native/mean-component-20261008/README.md",
+    "native/mean-component-20261008/checkpoint.json",
+    "native/mean-component-20261008/documentation-compatibility.json",
+    "native/mean-component-20261008/evidence/development/checkpoint.json",
+    "native/mean-component-20261008/evidence/development/exact-validation.json",
+    "native/mean-component-20261008/evidence/development/integrated-source-checks.json",
+    "native/mean-component-20261008/evidence/development/rust-development-gates.json",
+    "native/mean-component-20261008/evidence/development/source-compatibility.json",
+    "native/mean-component-20261008/evidence/harness/final-harness-pytest.txt",
+    "native/mean-component-20261008/evidence/harness/final-harness-tests-b9f80ce9.json",
+    "native/mean-component-20261008/evidence/linux/qacct.txt",
+    "native/mean-component-20261008/evidence/linux/qualification-source.sha256",
+    "native/mean-component-20261008/evidence/linux/qualification.txt",
+    "native/mean-component-20261008/evidence/linux/remote-hashes.txt",
+    "native/mean-component-20261008/evidence/linux/validation.json",
+    "native/mean-component-20261008/evidence/linux/wrapper.txt",
+    "native/mean-component-20261008/evidence/macos/ci.json",
+    "native/mean-component-20261008/evidence/macos/installed-mean-component.json",
+    "native/mean-component-20261008/evidence/macos/qualification.txt",
+    "native/mean-component-20261008/evidence/macos/source-manifest.sha256",
+    "native/mean-component-20261008/evidence/q1/dense_audit.json",
+    "native/mean-component-20261008/evidence/q1/overhead-comparison.json",
+    "native/mean-component-20261008/evidence/q1/pilot-classification-review.json",
+    "native/mean-component-20261008/evidence/q1/receipt.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/assessment.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/availability-diagnosis.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/compact-summary.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/manifest.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/source-verification.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/assessment.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/manifest.json",
+    "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/source-verification.json",
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/assessment.json",
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/compact-summary.json",
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/manifest.json",
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/paired-availability.json",
+    "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/source-verification.json",
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/assessment.json",
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/compact-summary.json",
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/manifest.json",
+    "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/source-verification.json",
+    "native/mean-component-20261008/evidence/scientific/primary-compact-summary.json",
+    "native/mean-component-20261008/evidence/scientific/primary-union-audit.json",
+    "native/mean-component-20261008/evidence/source/corresponding-source-validation.json",
+    "native/mean-component-20261008/evidence/source/source-gates-63757839.json",
+    "native/mean-component-20261008/evidence/windows/hosted-proposal-review.json",
+    "native/mean-component-20261008/evidence/windows/source-smoke-1.json",
+    "native/mean-component-20261008/evidence/windows/source-smoke-2.json",
+    "native/mean-component-20261008/fevc-corresponding-source-63757839.tar.gz",
+    "native/mean-component-20261008/fevc-corresponding-source-b9f80ce9.tar.gz",
+    "rust/README.md",
+    "rust/TEST_PLAN.md",
+    "rust/crates/vckss-core/src/exact_estimator.rs",
+    "rust/crates/vckss-core/src/exact_estimator/centering_tests.rs",
+    "rust/stata_backend/README.md",
+    "rust/stata_backend/package_windows_test.ps1"
+  ],
+  "checks": [
+    {
+      "detail": "Complete Git mode/type/blob comparison for f8 to S and both original build sources to S; exact reviewed repair bytes match committed S.",
+      "kind": "fresh identity review",
+      "result": "PASS"
+    },
+    {
+      "detail": "All four retained candidate sizes and SHA256 values match immutable f8-authenticated checkpoint; all 47 checkpoint evidence/archive hashes pass.",
+      "kind": "fresh retained evidence review",
+      "result": "PASS"
+    },
+    {
+      "detail": "23 existing exact core tests; 15 exact FFI tests; 36-cell new parity regression; expected failure without exact three-line production repair; format and strict affected-core Clippy.",
+      "independent_review": {
+        "bytes": 4378,
+        "path": ".local/mean-component-20261008/windows-serial-route-emulation/repair-independent-final-review.json",
+        "sha256": "84301a7a2f7329d0a8c658b9838e53d892fdd760397acd171df703c75ee036ea"
+      },
+      "kind": "focused existing receipt review",
+      "receipt": {
+        "bytes": 6743,
+        "path": ".local/mean-component-20261008/windows-serial-route-emulation/repair-receipt.json",
+        "sha256": "8f8f42349ed3900a68682d68f7f2d728ab6d6ebb65e66c678fcace22e6ead0a1"
+      },
+      "result": "PASS"
+    },
+    {
+      "detail": "Unchanged tests under copied Mac serial-dispatch emulation: 12 Corrected cells, maximum dense-oracle mreldif 1.788e-14; 12 exact-Mata Mean component cells. This is local route evidence, not Windows qualification.",
+      "kind": "independent official oracle",
+      "result": "PASS"
+    },
+    {
+      "commands": [
+        "./.venv/bin/python -m pytest -q",
+        "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check"
+      ],
+      "kind": "minimum source gates",
+      "log_sha256": {
+        "cmg-source-gate.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "python-source-gate.log": "a2fafdede6a480d41a11732b8b5707b070ed7a3a5ca4aea8691760f623d6fb83"
+      },
+      "result": "PASS",
+      "results": [
+        "890 passed in 86.11s",
+        "Root reported exit zero; empty captured output"
+      ],
+      "scope": "Executed on the reviewed working tree before S commit. Exact two affected Rust files match S; not relabelled as a complete clean-S integrated Stata or platform run."
+    }
+  ],
+  "claims_reused": [
+    "Original macos exact-byte qualification for the supported public fevc routes at the original build source, bound to package S by this affected-route review.",
+    "Original installed Mean component inference tests on the same payloads and unchanged runtime/test bytes."
+  ],
+  "evidence_reuse": {
+    "affected_surface_and_rationale": "The source repair affects scalar serial Corrected accumulation. Mac/Unix public exact dispatch (including threads(1)) uses the already materialized parallel result; required capabilities prevent a serial native fallback. None/Mean skip the repaired Corrected branch and JLA is unchanged. Retained exact payloads and public runtime identities therefore retain the originally tested behavior. The direct scalar Corrected entrypoints remain defective and excluded.",
+    "changed_paths": [
+      ".gitattributes",
+      "INSTALLATION.md",
+      "README.md",
+      "fevc/CHANGELOG.md",
+      "fevc/PLAN.md",
+      "fevc/README.md",
+      "fevc/TESTING.md",
+      "fevc/docs/CENTERING.md",
+      "fevc/docs/INFERENCE.md",
+      "fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md",
+      "fevc/docs/README.md",
+      "fevc/docs/RUST_MATA_PARITY.md",
+      "fevc/docs/rust_mata_parity.json",
+      "fevc/fevc.sthlp",
+      "native/README.md",
+      "native/mean-component-20261008/README.md",
+      "native/mean-component-20261008/checkpoint.json",
+      "native/mean-component-20261008/documentation-compatibility.json",
+      "native/mean-component-20261008/evidence/development/checkpoint.json",
+      "native/mean-component-20261008/evidence/development/exact-validation.json",
+      "native/mean-component-20261008/evidence/development/integrated-source-checks.json",
+      "native/mean-component-20261008/evidence/development/rust-development-gates.json",
+      "native/mean-component-20261008/evidence/development/source-compatibility.json",
+      "native/mean-component-20261008/evidence/harness/final-harness-pytest.txt",
+      "native/mean-component-20261008/evidence/harness/final-harness-tests-b9f80ce9.json",
+      "native/mean-component-20261008/evidence/linux/qacct.txt",
+      "native/mean-component-20261008/evidence/linux/qualification-source.sha256",
+      "native/mean-component-20261008/evidence/linux/qualification.txt",
+      "native/mean-component-20261008/evidence/linux/remote-hashes.txt",
+      "native/mean-component-20261008/evidence/linux/validation.json",
+      "native/mean-component-20261008/evidence/linux/wrapper.txt",
+      "native/mean-component-20261008/evidence/macos/ci.json",
+      "native/mean-component-20261008/evidence/macos/installed-mean-component.json",
+      "native/mean-component-20261008/evidence/macos/qualification.txt",
+      "native/mean-component-20261008/evidence/macos/source-manifest.sha256",
+      "native/mean-component-20261008/evidence/q1/dense_audit.json",
+      "native/mean-component-20261008/evidence/q1/overhead-comparison.json",
+      "native/mean-component-20261008/evidence/q1/pilot-classification-review.json",
+      "native/mean-component-20261008/evidence/q1/receipt.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/assessment.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/availability-diagnosis.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/compact-summary.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/manifest.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-mata-63757839/source-verification.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/assessment.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/manifest.json",
+      "native/mean-component-20261008/evidence/scientific/assessment-native-b9f80ce9/source-verification.json",
+      "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/assessment.json",
+      "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/compact-summary.json",
+      "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/manifest.json",
+      "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/paired-availability.json",
+      "native/mean-component-20261008/evidence/scientific/diagnostic-b9f80ce9/source-verification.json",
+      "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/assessment.json",
+      "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/compact-summary.json",
+      "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/manifest.json",
+      "native/mean-component-20261008/evidence/scientific/numerical-b9f80ce9/source-verification.json",
+      "native/mean-component-20261008/evidence/scientific/primary-compact-summary.json",
+      "native/mean-component-20261008/evidence/scientific/primary-union-audit.json",
+      "native/mean-component-20261008/evidence/source/corresponding-source-validation.json",
+      "native/mean-component-20261008/evidence/source/source-gates-63757839.json",
+      "native/mean-component-20261008/evidence/windows/hosted-proposal-review.json",
+      "native/mean-component-20261008/evidence/windows/source-smoke-1.json",
+      "native/mean-component-20261008/evidence/windows/source-smoke-2.json",
+      "native/mean-component-20261008/fevc-corresponding-source-63757839.tar.gz",
+      "native/mean-component-20261008/fevc-corresponding-source-b9f80ce9.tar.gz",
+      "rust/README.md",
+      "rust/TEST_PLAN.md",
+      "rust/crates/vckss-core/src/exact_estimator.rs",
+      "rust/crates/vckss-core/src/exact_estimator/centering_tests.rs",
+      "rust/stata_backend/README.md",
+      "rust/stata_backend/package_windows_test.ps1"
+    ],
+    "claims_carried_forward": [
+      "Original macos exact-byte qualification for the supported public fevc routes at the original build source, bound to package S by this affected-route review.",
+      "Original installed Mean component inference tests on the same payloads and unchanged runtime/test bytes."
+    ],
+    "current_source_identity_or_content_identity": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+    "focused_checks_run": [
+      {
+        "detail": "Complete Git mode/type/blob comparison for f8 to S and both original build sources to S; exact reviewed repair bytes match committed S.",
+        "kind": "fresh identity review",
+        "result": "PASS"
+      },
+      {
+        "detail": "All four retained candidate sizes and SHA256 values match immutable f8-authenticated checkpoint; all 47 checkpoint evidence/archive hashes pass.",
+        "kind": "fresh retained evidence review",
+        "result": "PASS"
+      },
+      {
+        "detail": "23 existing exact core tests; 15 exact FFI tests; 36-cell new parity regression; expected failure without exact three-line production repair; format and strict affected-core Clippy.",
+        "independent_review": {
+          "bytes": 4378,
+          "path": ".local/mean-component-20261008/windows-serial-route-emulation/repair-independent-final-review.json",
+          "sha256": "84301a7a2f7329d0a8c658b9838e53d892fdd760397acd171df703c75ee036ea"
+        },
+        "kind": "focused existing receipt review",
+        "receipt": {
+          "bytes": 6743,
+          "path": ".local/mean-component-20261008/windows-serial-route-emulation/repair-receipt.json",
+          "sha256": "8f8f42349ed3900a68682d68f7f2d728ab6d6ebb65e66c678fcace22e6ead0a1"
+        },
+        "result": "PASS"
+      },
+      {
+        "detail": "Unchanged tests under copied Mac serial-dispatch emulation: 12 Corrected cells, maximum dense-oracle mreldif 1.788e-14; 12 exact-Mata Mean component cells. This is local route evidence, not Windows qualification.",
+        "kind": "independent official oracle",
+        "result": "PASS"
+      },
+      {
+        "commands": [
+          "./.venv/bin/python -m pytest -q",
+          "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check"
+        ],
+        "kind": "minimum source gates",
+        "log_sha256": {
+          "cmg-source-gate.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "python-source-gate.log": "a2fafdede6a480d41a11732b8b5707b070ed7a3a5ca4aea8691760f623d6fb83"
+        },
+        "result": "PASS",
+        "results": [
+          "890 passed in 86.11s",
+          "Root reported exit zero; empty captured output"
+        ],
+        "scope": "Executed on the reviewed working tree before S commit. Exact two affected Rust files match S; not relabelled as a complete clean-S integrated Stata or platform run."
+      }
+    ],
+    "limitations_or_invalidation_triggers": [
+      "The four retained payloads remain builds of their original 63757839 or b9f80ce9 commits, not S. Native source at S has changed; no complete native-source/build-input identity or all-source-fixed claim is made.",
+      "The retained payloads still contain the old lower-level scalar serial Corrected accounting bug. Direct low-level fevc_rust/FFI serial Corrected entrypoints are excluded from this carry-forward claim.",
+      "Reuse is restricted to the unchanged public fevc Mac/Unix dispatch and already qualified routes, with exactly these binaries, runtime/input bytes and acceptance semantics.",
+      "Mac x86_64 evidence is under Rosetta, not native Intel hardware. No new statistical coverage, representative-scale performance or resource claim is made.",
+      "Windows f8 full run remains failed. A new Windows artifact built from S and successful S-bound smoke/full gates are required; local Mac route emulation is not Windows qualification.",
+      "Final five-payload staging and fresh/replacement local/public HTTP installation remain separate gates. These records do not adopt payloads, tag, create a release archive or publish a release.",
+      "Any future relevant runtime/dispatch/ABI/binary/source/fixture/acceptance change invalidates automatic reuse and requires a new affected-surface review; direct scalar Corrected use requires repaired binaries.",
+      "Historical development/integrated/Monte Carlo evidence retains its original source identities and failures; this record does not upgrade staged development evidence to clean-S evidence or alter the 22 exact availability failures."
+    ],
+    "tested_source_identity": "b9f80ce9d6444c267300b66ddf67254fe0f213fe",
+    "unchanged_relevant_source_build_binary_input_and_acceptance_identities": {
+      "binary_rows": [
+        {
+          "bytes": 4945776,
+          "name": "fevc_rust_macos_arm64.plugin",
+          "sha256": "a2d599ce727f74d579c0cd315288413ac3980cb795258759537e560b00e89e5d",
+          "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe"
+        },
+        {
+          "bytes": 5642352,
+          "name": "fevc_rust_macos_x86_64.plugin",
+          "sha256": "555f8e221288fd1d4c6391161c10b6a6db7a0f35f2bbbd79ae76b02d9ef8a75e",
+          "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe"
+        },
+        {
+          "bytes": 10614640,
+          "name": "fevc_rust_macos.plugin",
+          "sha256": "52e72091a646591d79c6bd717546bd5302eb90ebf7e3ff9eefb1cb0330375202",
+          "source_commit": "b9f80ce9d6444c267300b66ddf67254fe0f213fe"
+        }
+      ],
+      "current_package_build_difference": "S contains the reviewed scalar Corrected repair and test; rebuilding at S is not assumed byte-equivalent. Windows-only scripts changed in earlier source ranges; those changes do not execute in the retained Mac/Linux candidates.",
+      "original_build_inputs": "Original corresponding-source archive bytes are preserved at the actual build source. Build artifacts have not been rebuilt or relabelled.",
+      "public_runtime_fixtures_inputs_acceptance": "All executable installed runtime/dispatch, existing fixtures, scientific registrations and acceptance thresholds unchanged across these source ranges; docs/help/status/evidence changes are enumerated. No new measurement inputs or performance claim.",
+      "qualification_and_corresponding_source": {
+        "root": "native/mean-component-20261008",
+        "sha256": {
+          "evidence/macos/ci.json": "211d2ea66ac522cded428ae8b4fc9989d8a0fade9cc80e2f88477d5195da4599",
+          "evidence/macos/installed-mean-component.json": "8ee83ffd0d8d9a9d08e81be2ed45d4ff75b1eae956a5926d0c27d26d0e094363",
+          "evidence/macos/qualification.txt": "a305b19cd023ea3ea55780cba252dcc7eed29e65a9254577194186ff654df3e0",
+          "evidence/macos/source-manifest.sha256": "149a4c5b03adc9b8f97b000fe096a4f5701be3ec4d6bb861f56f23ed6d35ff65",
+          "evidence/source/corresponding-source-validation.json": "97c19e70a549aeaeb7060a096fbcacc6fcdeb2b285203ec179bccd21aa77e715",
+          "fevc-corresponding-source-b9f80ce9.tar.gz": "03fa90502a740da19eda75cfa38f79c655bc5824d2f7336f8f346ac621688db6"
+        }
+      },
+      "scope": "Manifest contains every equal Git mode/type/blob entry and excludes every changed path, including exact_estimator.rs and its added test. It is not a whole-native-source identity claim.",
+      "unchanged_source_manifest": {
+        "path": "unchanged-source-b9f80ce9.json",
+        "sha256": "2c0147f8a790afaf1308cad19191adf0d42412bebff1ffa504ab21074075837c"
+      }
+    }
+  },
+  "immutable_checkpoint": {
+    "bytes": 10727,
+    "path": "native/mean-component-20261008/checkpoint.json",
+    "sha256": "ac4ab85d94c588cdfd70e0fe8b5dcbea5ab03ebe8bf778936bf06e40bf70541e"
+  },
+  "limitations": [
+    "The four retained payloads remain builds of their original 63757839 or b9f80ce9 commits, not S. Native source at S has changed; no complete native-source/build-input identity or all-source-fixed claim is made.",
+    "The retained payloads still contain the old lower-level scalar serial Corrected accounting bug. Direct low-level fevc_rust/FFI serial Corrected entrypoints are excluded from this carry-forward claim.",
+    "Reuse is restricted to the unchanged public fevc Mac/Unix dispatch and already qualified routes, with exactly these binaries, runtime/input bytes and acceptance semantics.",
+    "Mac x86_64 evidence is under Rosetta, not native Intel hardware. No new statistical coverage, representative-scale performance or resource claim is made.",
+    "Windows f8 full run remains failed. A new Windows artifact built from S and successful S-bound smoke/full gates are required; local Mac route emulation is not Windows qualification.",
+    "Final five-payload staging and fresh/replacement local/public HTTP installation remain separate gates. These records do not adopt payloads, tag, create a release archive or publish a release.",
+    "Any future relevant runtime/dispatch/ABI/binary/source/fixture/acceptance change invalidates automatic reuse and requires a new affected-surface review; direct scalar Corrected use requires repaired binaries.",
+    "Historical development/integrated/Monte Carlo evidence retains its original source identities and failures; this record does not upgrade staged development evidence to clean-S evidence or alter the 22 exact availability failures."
+  ],
+  "package_source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+  "prior_compatibility": {
+    "bytes": 24898,
+    "path": ".local/mean-component-20261008/final-packaging-array-v3/compatibility-b9f80ce9-to-f8d74504.json",
+    "sha256": "96f59375574af6f6af7a8f509ab64e71ece92e7420dcd73e9d79eb385d697ca5"
+  },
+  "prior_unchanged_manifest": {
+    "bytes": 233908,
+    "path": ".local/mean-component-20261008/final-packaging-array-v3/unchanged-source-b9f80ce9.json",
+    "sha256": "95877eeea3d0c5c23ea61897af4516d2f5c8d6bd896e21cc3284fbff47c6f253"
+  },
+  "route_review": [
+    {
+      "lines": [
+        2086,
+        2092
+      ],
+      "meaning": "On Mac/Unix, exact selected before RNG routes to exact_execution for explicit exact and auto selection.",
+      "path": "fevc/fevc.ado",
+      "sha256": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "unchanged_from_f8": true
+    },
+    {
+      "lines": [
+        4859,
+        4863
+      ],
+      "meaning": "Required exact execution capability checked before native work; failure is rejection or pre-work Mata fallback, never scalar native fallback.",
+      "path": "fevc/fevc.ado",
+      "sha256": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "unchanged_from_f8": true
+    },
+    {
+      "lines": [
+        8044,
+        8046,
+        8209
+      ],
+      "meaning": "Explicit exact movers uses exact_legacy on Mac/Unix, including a requested single native thread.",
+      "path": "fevc/fevc.ado",
+      "sha256": "79ec5d4658598376bc35e58f2053186076d67174a210d3f143d2697fcb36b416",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "unchanged_from_f8": true
+    },
+    {
+      "lines": [
+        370,
+        390
+      ],
+      "meaning": "Exact execution calls parallel::run_with_interrupt unconditionally for all positive thread counts, including one, for base and applicable hybrid passes.",
+      "path": "rust/crates/vckss-plugin/src/exact_execution_api.rs",
+      "sha256": "50f3cdf96fed8ba3be3ad6afeee74810f907c2a0ec20756863669289dc7c3096",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "unchanged_from_f8": true
+    },
+    {
+      "lines": [
+        590,
+        591
+      ],
+      "meaning": "Parallel correction already reconstructs total and checks accounting before returning to shared Corrected logic.",
+      "path": "rust/crates/vckss-core/src/exact_estimator/parallel.rs",
+      "sha256": "91ada82c17db0efc0f37d387e164ebe26a882d1b54514fc70491846bc8bb0efb",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "unchanged_from_f8": true
+    },
+    {
+      "lines": [
+        861,
+        1169,
+        1172
+      ],
+      "meaning": "Only Corrected creates centering State and executes repaired assignment; None/Mean bypass it.",
+      "path": "rust/crates/vckss-core/src/exact_estimator.rs",
+      "sha256": "0c9641a4864423d8b6363c2be5c7b35f34fa3ba43075ba71ea467780548cae5f",
+      "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "unchanged_from_f8": false
+    }
+  ],
+  "schema": "FEVC-BINARY-COMPATIBILITY-V1",
+  "source_review": {
+    "path": "source-review-f8d74504-to-240ad74d.json",
+    "sha256": "870a6334f1c651f19d71713b8b724f3884834e6f0706ef2b6f49e27a9694b928"
+  },
+  "status": "PASS",
+  "unchanged_source_manifest": "unchanged-source-b9f80ce9.json",
+  "unchanged_source_manifest_sha256": "2c0147f8a790afaf1308cad19191adf0d42412bebff1ffa504ab21074075837c",
+  "unchanged_tracked_files": 1448
+}

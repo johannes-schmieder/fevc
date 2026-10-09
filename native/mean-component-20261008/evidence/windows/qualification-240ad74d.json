@@ -1,0 +1,447 @@
+{
+  "backend": {
+    "acceptance_proofs": {
+      "infrastructure": {
+        "record_kind": "sanitized derived summary, not original receipt",
+        "runs": [
+          {
+            "acceptance_status": "PASS",
+            "cleanup_verified": true,
+            "error_code": null,
+            "expected_exit": 0,
+            "failure_stage": "complete",
+            "original_receipt_sha256": "34b43861b7fd046017d43cb65328c99ff8f75c10e53d6fa32f696c06b44ae303",
+            "original_receipt_verified": true,
+            "profile": "stata-smoke",
+            "record_kind": "sanitized derived summary, not original receipt",
+            "run_id": "win-20261009T013123Z-2d29e4a2",
+            "source_archive_sha256": "5f44766c16c1a3588d1a29f93e8888bd6c9cfd0df23b6d604228df482ae7a3e6",
+            "source_revision": "commit-f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+            "stata_rc": null,
+            "status": "PASS",
+            "status_scope": "original hash-verified controller receipt outcome"
+          },
+          {
+            "acceptance_status": "PASS",
+            "cleanup_verified": true,
+            "error_code": "DELIBERATE_FAILURE",
+            "expected_exit": 50,
+            "failure_stage": "unknown",
+            "original_receipt_sha256": "87c30fd724319e928a446203abbf22dd208b201651e694f08274c29453ab232c",
+            "original_receipt_verified": true,
+            "profile": "fail-smoke",
+            "record_kind": "sanitized derived summary, not original receipt",
+            "run_id": "win-20261009T013316Z-f3716cdb",
+            "source_archive_sha256": "d897bc473f6845be2bd220d97be99b136539383ffa13b659f051d7cb2c597636",
+            "source_revision": "commit-f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+            "stata_rc": null,
+            "status": "FAIL",
+            "status_scope": "original hash-verified controller receipt outcome"
+          }
+        ],
+        "sha256": "7bb3145603f87317d2f11a48145696f15edc88036e96007a2411c49577f05ea0",
+        "status": "PASS",
+        "status_scope": "backend acceptance verdict"
+      },
+      "malformed": {
+        "record_kind": "sanitized derived summary, not original receipt",
+        "runs": [
+          {
+            "acceptance_status": "PASS",
+            "cleanup_verified": true,
+            "error_code": "STATA_DRIVER_FAILED",
+            "expected_exit": 51,
+            "failure_stage": "unknown",
+            "original_receipt_sha256": "387eb0deb16ec270d40897a9ffe7492c08efaf9494a4fcbd49fb54b3bbbae898",
+            "original_receipt_verified": true,
+            "profile": "stata-do",
+            "record_kind": "sanitized derived summary, not original receipt",
+            "run_id": "win-20261009T013935Z-7ca96402",
+            "source_archive_sha256": "456e0631dcfcf972f4e4efbc77d37a1c6ed92a723db81d0d817d250ad81f1bfb",
+            "source_revision": "dirty-66c6ac21a825884c54e1a1f20b7a38eb626b456fa6a91489573fe779a6387151",
+            "stata_rc": null,
+            "status": "FAIL",
+            "status_scope": "original hash-verified controller receipt outcome"
+          }
+        ],
+        "sha256": "841c0639f134fd4fe012ea89dc4253415e4fdea9d10407bc4271fc7e872b8b1a",
+        "status": "PASS",
+        "status_scope": "backend acceptance verdict"
+      },
+      "valid": {
+        "record_kind": "sanitized derived summary, not original receipt",
+        "runs": [
+          {
+            "acceptance_status": "PASS",
+            "cleanup_verified": true,
+            "error_code": "STATA_DRIVER_FAILED",
+            "expected_exit": 51,
+            "failure_stage": "projection_mean",
+            "original_receipt_sha256": "5a3af53c07eea27c019a127c8d3d55bfda31464c5d44d35a6e15bf1e16ccc22b",
+            "original_receipt_verified": true,
+            "profile": "stata-do",
+            "record_kind": "sanitized derived summary, not original receipt",
+            "run_id": "win-20261009T013625Z-0f41433d",
+            "source_archive_sha256": "5b12967cd1fb56d9f7737d8237c222e80eed7dc54de42471000956a47ef6822b",
+            "source_revision": "dirty-ebd571535dbda0c159bd7ee6259ea1e7a427baf67e3de2df02ee7b5b151810fc",
+            "stata_rc": 498,
+            "status": "FAIL",
+            "status_scope": "original hash-verified controller receipt outcome"
+          }
+        ],
+        "sha256": "824356905e7bec9cd295c26b699b48ce36b5f79c970223aab7e1448436d2c918",
+        "status": "PASS",
+        "status_scope": "backend acceptance verdict"
+      }
+    },
+    "acceptance_scope": "unchanged pinned backend only; no runtime-source qualification reuse",
+    "acceptance_source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+    "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+    "authentication_denial": "PASS",
+    "cleanup_and_source_restoration": "PASS",
+    "concurrency_rejection": "PASS",
+    "controller_sha256": "56780c798bf756f8478f623e32cafab65171456db009341db31c5d03f6d5521a",
+    "native_array_regression": {
+      "deployment_proof_sha256": "197d6ef5e238ce9fdee27bbd733525c44fe9582ea29f0afde14316cadffb75a0",
+      "function_return_count": 3,
+      "invalid_inputs_rejected": true,
+      "new_record_count": 3,
+      "old_nested_count": 1,
+      "payload_sha256": "5da04af245c7a624ec424410690e2f480ac5eb15abe6ba8c5a9717960d0e37c0",
+      "runtime": "Windows PowerShell5.1",
+      "status": "PASS"
+    },
+    "proposal_manifest_sha256": "1c20afe2e4664943a570fb2a9f68f85f80a1a424b3ab5822e66171aa16ba5c82",
+    "summary_sha256": "f7ec4bc11d7dad876d51fa32ac7259e030e760654dc5e02568c885e22fe42bdf"
+  },
+  "candidate": {
+    "bytes": 5621248,
+    "name": "fevc_rust_windows_x64.plugin",
+    "sha256": "fb06c85fd88a8c415afbd8f80e203401aded33a2409d8a3f13b9d7cfe5609d05"
+  },
+  "clarification": "Backend acceptance PASS is distinct from an intentionally failing controller run. Each backend run status below is read from the original hash-verified controller receipt; acceptance_status is the separate validation verdict.",
+  "coverage": {
+    "basis": "The exact-source full driver completed its capability assertion and unchanged installed exact/native Mean component tests, both highrank and q1, plus the Corrected exact point oracle and all existing full gates. Counts describe source-bound test coverage, not raw-log collection.",
+    "component_centering_api": 1,
+    "full_project_checks": {
+      "binary_sha256": "fb06c85fd88a8c415afbd8f80e203401aded33a2409d8a3f13b9d7cfe5609d05",
+      "gates": {
+        "centering_exact": "PASS",
+        "centering_jla": "PASS",
+        "centering_mean": "PASS",
+        "centering_options": "PASS",
+        "clean_install": "PASS",
+        "individual_component": "PASS",
+        "lifecycle": "PASS",
+        "match_component": "PASS",
+        "mcse_attachments": "PASS",
+        "mcse_modes": "PASS",
+        "observation_component": "PASS",
+        "pe_import_export": "PASS",
+        "point_mean": "PASS",
+        "pooled_deletion": "PASS",
+        "projection_mean": "PASS",
+        "registry_idle": "PASS",
+        "rust_backend": "HOSTED_CI_PASS",
+        "rust_workspace": "HOSTED_CI_PASS"
+      },
+      "harness_sha256": "36f9817e1cfcc6cf350109619fe6ff0dcd6ec2506ca05079a4fb24fbf511858d",
+      "production_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+      "runtime_profile": "full",
+      "schema": "FEVC-WINDOWS-CHECKS-V3",
+      "stata_flavor": "MP",
+      "stata_version": "19",
+      "status": "PASS"
+    },
+    "installed_corrected_exact_point_cells": 12,
+    "installed_exact_cells": 12,
+    "installed_native_cells": 8
+  },
+  "failed_attempts": [
+    {
+      "all_started_wrappers_terminal": true,
+      "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+      "artifacts": [],
+      "checks": {
+        "archive_paths": true,
+        "execution_identity": true,
+        "project_test": true,
+        "shutdown_backstop": true,
+        "source_hash": true,
+        "source_manifest": true,
+        "stata": true
+      },
+      "cleanup_verified": true,
+      "controller_sha256": "f8db7b3321b44d893d19919dc11e1a298b41ced53b8a6b5a4b24ca60a494c3c2",
+      "error_code": "ARTIFACT_COLLECTION_FAILED",
+      "failure_stage": "artifact_collection",
+      "input_identity_sha256": "e3ff51b7b18704c146f316097d7373ecb2b078a0506d1a7073de35215b9fd23f",
+      "profile": "smoke",
+      "qualification": "SMOKE_ONLY_NOT_QUALIFICATION",
+      "receipt_sha256": "fef8155d841b614eaf3e5acae5fc401444cb3070d1da0454b665f1f8a6a05a56",
+      "run_id": "win-20261008T235353Z-856fd74e",
+      "runtime_sha256": "1810d5a16412ae8f1ff5d338b8bfb35d45dcc4642e313ce019cd8783ae28323d",
+      "source_archive_sha256": "a08cb7f093d5ec736257b7b46f8c2c6522ef2e0c517145d138a5f04c2de9c8db",
+      "source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+      "source_restored": true,
+      "stata_rc": null,
+      "status": "FAIL"
+    },
+    {
+      "all_started_wrappers_terminal": true,
+      "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+      "artifacts": [],
+      "checks": {
+        "archive_paths": true,
+        "execution_identity": true,
+        "project_test": true,
+        "shutdown_backstop": true,
+        "source_hash": true,
+        "source_manifest": true,
+        "stata": true
+      },
+      "cleanup_verified": true,
+      "controller_sha256": "b86be1aabe3ee6bb8f4afc6e275a7376a3b40ec4212adc08d4bf918c1f81299f",
+      "error_code": "ARTIFACT_COLLECTION_FAILED",
+      "failure_stage": "artifact_collection",
+      "input_identity_sha256": "e3ff51b7b18704c146f316097d7373ecb2b078a0506d1a7073de35215b9fd23f",
+      "profile": "smoke",
+      "qualification": "SMOKE_ONLY_NOT_QUALIFICATION",
+      "receipt_sha256": "399ab314e7a4bd0faac6909c85dc5ae3375384ddfda0d9047d94b1c05cd116ce",
+      "run_id": "win-20261009T011402Z-d0fb13e3",
+      "runtime_sha256": "e367f5f759f2c115100d1f9eda56e4a771c46f9a0da24d905d1d08d9f0060618",
+      "source_archive_sha256": "9fd98631577ef081ec1e278ef15e66a2e67883727373f505b7efc57d288387f1",
+      "source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+      "source_restored": true,
+      "stata_rc": null,
+      "status": "FAIL"
+    },
+    {
+      "all_started_wrappers_terminal": true,
+      "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+      "artifacts": [],
+      "checks": {
+        "archive_paths": true,
+        "execution_identity": true,
+        "project_test": false,
+        "shutdown_backstop": true,
+        "source_hash": true,
+        "source_manifest": true,
+        "stata": false
+      },
+      "cleanup_verified": true,
+      "controller_sha256": "56780c798bf756f8478f623e32cafab65171456db009341db31c5d03f6d5521a",
+      "error_code": "STATA_DRIVER_FAILED",
+      "failure_stage": "centering_exact",
+      "input_identity_sha256": "bfc1a910edce7284b5cfc4d0c26bd9214ab4a53ba3ea4fc69a6b1390063dcc2a",
+      "profile": "full",
+      "qualification": "FULL_QUALIFICATION_FAILED",
+      "receipt_sha256": "46ab4fa1d9fe60aae820931327f0999327b69be3eeac2ffcbe65b735f8c08475",
+      "run_id": "win-20261009T015013Z-79411bd4",
+      "runtime_sha256": "081cc910f658e861bd6dc0ca5bd75e9a12871f980b2e0dad8575160b0e7dd2e8",
+      "source_archive_sha256": "65324fc077e4a43562f0d8876cc73d278e7daa324a221bace947057154eb4547",
+      "source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+      "source_restored": true,
+      "stata_rc": 498,
+      "status": "FAIL"
+    }
+  ],
+  "full": {
+    "all_started_wrappers_terminal": true,
+    "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+    "artifacts": [
+      {
+        "bytes": 5621248,
+        "name": "fevc_rust_windows_x64.plugin",
+        "sha256": "fb06c85fd88a8c415afbd8f80e203401aded33a2409d8a3f13b9d7cfe5609d05"
+      },
+      {
+        "bytes": 6800,
+        "name": "windows-build.json",
+        "sha256": "239f5f012aa468f069a67511d7f750b6d72c94880e3161f13c9789a31abb5bb3"
+      },
+      {
+        "bytes": 816,
+        "name": "windows-project-checks.json",
+        "sha256": "eba504d752046e1462ad3db045f67983b4e05732623b264478499546557966d5"
+      }
+    ],
+    "checks": {
+      "archive_paths": true,
+      "execution_identity": true,
+      "project_test": true,
+      "shutdown_backstop": true,
+      "source_hash": true,
+      "source_manifest": true,
+      "stata": true
+    },
+    "cleanup_verified": true,
+    "controller_sha256": "56780c798bf756f8478f623e32cafab65171456db009341db31c5d03f6d5521a",
+    "error_code": null,
+    "failure_stage": "complete",
+    "input_identity_sha256": "f34774817afec9d22529daeed986305accab81bb8d4c4f44f35c52457fe0f7f6",
+    "profile": "full",
+    "qualification": "FULL_HOSTED_BUILD_PRIVATE_RUNTIME_PASS",
+    "receipt_sha256": "8dbd013ad04788aa85532f5e94d0412b1571432e0d41fa788115aba71a4aed9e",
+    "run_id": "win-20261009T023703Z-209dc9ed",
+    "runtime_sha256": "21caaae28f83fc4ff49577118432a49ba15bd6367a2ec90c7b1df46bad1e2831",
+    "source_archive_sha256": "ffa88f60227706e76b78ddc2ebee1cde407227c387352d677539049140c54401",
+    "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+    "source_restored": true,
+    "stata_rc": null,
+    "status": "PASS"
+  },
+  "hosted": {
+    "all_workflows_passed": true,
+    "artifact_id": "11591975030",
+    "artifact_name": "fevc-windows-test-240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+    "artifact_sha256": "64b96ac8a81ab71894a98c8425b171864e0ce03cc8741551968ca359490c88d5",
+    "build_receipt_sha256": "3bc3eec6c630dc13b0d55b90b3d6a912ac7c5244e83d61878c9a4527b16a4758",
+    "candidate_sha256": "fb06c85fd88a8c415afbd8f80e203401aded33a2409d8a3f13b9d7cfe5609d05",
+    "gates_summary_sha256": "e04e87cca92a65201767ae13a78cf9b990b0c60f5e2f5137cdfbacc7ed403c84",
+    "hosted_build_run_id": "37873624975",
+    "hosted_rust_run_id": "37873600062",
+    "package_sha256": "93be73fbd5c95db06a5df6b0ffeddc758a60cec2ff3e750b25940bf310deeb34",
+    "proof_sha256": "f1064978d9da8596c424595d238958ca9bdfd654305d5ea0671dd7a462f93e9a",
+    "schema": "FEVC-HOSTED-WINDOWS-PROOF-V1",
+    "source_checks_run_id": "37873600104",
+    "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd"
+  },
+  "infrastructure_repairs": {
+    "limit": 15,
+    "numbered_basis": [
+      {
+        "basis": "Conservatively counted earlier accepted collector repair deployment.",
+        "cycle": 1
+      },
+      {
+        "basis": "Conservatively counted earlier acceptance-helper pagination repair deployment.",
+        "cycle": 2
+      },
+      {
+        "basis": "Successful FEVC log cleanup deferred until after artifact collection; backend acceptance passed, project collection still failed.",
+        "cycle": 3
+      },
+      {
+        "basis": "Windows PowerShell 5.1 JSON-array conversion repair; native prewrite regression and backend acceptance passed. f8 smoke passed, f8 full failed at a project typed check.",
+        "cycle": 4
+      }
+    ],
+    "source_fix": "240ad74d repairs derived-total accounting in serial Corrected exact estimation; this was a project source change, not another infrastructure deployment.",
+    "used": 4
+  },
+  "limitations": [
+    "Earlier failed attempts remain failures. No logs were retrieved to infer their hidden branch or subcell.",
+    "The f8 full failure has centering_exact and Stata rc498; its source defect was independently reproduced through local Windows-route emulation before the reviewed fix and this actual Windows retest.",
+    "Hosted build and Rust tests ran on GitHub Windows; licensed Stata full qualification ran privately on the identical candidate bytes.",
+    "This summary establishes Windows candidate qualification only. All-five payload adoption, source compatibility, installation and publication decisions have their own evidence.",
+    "No raw Stata logs, source inventories, maintenance helpers, lock contents or machine identifiers are included."
+  ],
+  "prior_f8_smoke": {
+    "all_started_wrappers_terminal": true,
+    "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+    "artifacts": [
+      {
+        "bytes": 5621248,
+        "name": "fevc_rust_windows_x64.plugin",
+        "sha256": "9c0de0206e0556bb2f77607a5d66c2542a42429dec72f20a41c96f2499794e50"
+      },
+      {
+        "bytes": 6801,
+        "name": "windows-build.json",
+        "sha256": "db967ff0f2cb48f4bdc9b3962e46567c8d0bea035a14d7a0c4dd28d823737b07"
+      },
+      {
+        "bytes": 561,
+        "name": "windows-project-checks.json",
+        "sha256": "57ae52e24a44f07caf2db5486af0bcfcb68778fe9bf8714dcb7f251a1525c69e"
+      }
+    ],
+    "checks": {
+      "archive_paths": true,
+      "execution_identity": true,
+      "project_test": true,
+      "shutdown_backstop": true,
+      "source_hash": true,
+      "source_manifest": true,
+      "stata": true
+    },
+    "cleanup_verified": true,
+    "controller_sha256": "56780c798bf756f8478f623e32cafab65171456db009341db31c5d03f6d5521a",
+    "error_code": null,
+    "failure_stage": "complete",
+    "input_identity_sha256": "e3ff51b7b18704c146f316097d7373ecb2b078a0506d1a7073de35215b9fd23f",
+    "profile": "smoke",
+    "qualification": "SMOKE_ONLY_NOT_QUALIFICATION",
+    "receipt_sha256": "39d951c114d5d829e6aa2666c8a5a35422a016727249bda30b8507e2445b435f",
+    "run_id": "win-20261009T014353Z-e95b12a1",
+    "runtime_sha256": "27b94517287c832bc3651638464dd1dbe013ee99f189f1df618cb3c4b12fbc25",
+    "source_archive_sha256": "fa75e534410f0805b966f6beb1f8702fbba98c702211f88962dff34c121a1c81",
+    "source_commit": "f8d7450472c9e36ac3705b5e8c34fb02f7a25efb",
+    "source_restored": true,
+    "stata_rc": null,
+    "status": "PASS"
+  },
+  "prior_source_build_failures": [
+    {
+      "path": "native/mean-component-20261008/evidence/windows/source-smoke-1.json",
+      "sha256": "f17ce917fc48a99eef873d8bd553dc77df6ea81dbdb7bde75b6af999c86fbfbd"
+    },
+    {
+      "path": "native/mean-component-20261008/evidence/windows/source-smoke-2.json",
+      "sha256": "776f44dbb07aa19db87307b4adefd8a71dc7d2e78d44c2f3502b4355b2dbe6d3"
+    }
+  ],
+  "record_kind": "sanitized derived summary, not original receipt",
+  "recorded_utc": "2026-10-09T02:48:31.632138+00:00",
+  "schema": "FEVC-WINDOWS-QUALIFICATION-SUMMARY-V1",
+  "smoke": {
+    "all_started_wrappers_terminal": true,
+    "artifact_guard_sha256": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+    "artifacts": [
+      {
+        "bytes": 5621248,
+        "name": "fevc_rust_windows_x64.plugin",
+        "sha256": "fb06c85fd88a8c415afbd8f80e203401aded33a2409d8a3f13b9d7cfe5609d05"
+      },
+      {
+        "bytes": 6801,
+        "name": "windows-build.json",
+        "sha256": "1ecbc8755aa57982931d4bd3d830d5341123e72a6e152d9cb19323b71090bd08"
+      },
+      {
+        "bytes": 561,
+        "name": "windows-project-checks.json",
+        "sha256": "a0f7ecf6e87f859830d973aae806c8574ec180814ae2b130b4dfbc37833e72ca"
+      }
+    ],
+    "checks": {
+      "archive_paths": true,
+      "execution_identity": true,
+      "project_test": true,
+      "shutdown_backstop": true,
+      "source_hash": true,
+      "source_manifest": true,
+      "stata": true
+    },
+    "cleanup_verified": true,
+    "controller_sha256": "56780c798bf756f8478f623e32cafab65171456db009341db31c5d03f6d5521a",
+    "error_code": null,
+    "failure_stage": "complete",
+    "input_identity_sha256": "6e0cc5ff0a385daa23defd36dd6d0f776f75422e9bf373fc498fad6e2bf8659f",
+    "profile": "smoke",
+    "qualification": "SMOKE_ONLY_NOT_QUALIFICATION",
+    "receipt_sha256": "fc418e161fc15e101c0a4ce82945bc1faab1d24135454410b7dab2fa3b7eb74c",
+    "run_id": "win-20261009T023131Z-2c76bbcd",
+    "runtime_sha256": "9f45db4235d4f5b48acfbc4b2f37550f820c1fc2c873480085759bf00a3b5585",
+    "source_archive_sha256": "2e2532c0c7e66f410d0ea137779fbbfc551ab53b2dadef39ed28743293eea5cc",
+    "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+    "source_restored": true,
+    "stata_rc": null,
+    "status": "PASS"
+  },
+  "source_commit": "240ad74d069d1f4030aa5ec82b2ead1848db87dd",
+  "source_transport": "exact clean committed production source plus owned prebuilt candidate and input identity; full included-file inventory is hash-bound",
+  "status": "PASS",
+  "supersedes_summary_sha256": "7c67734434aaa033866e9a9e2b0362dff6c1f5b22d11966804d71d5395f4fe85"
+}
