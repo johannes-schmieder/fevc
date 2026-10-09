@@ -1,9 +1,9 @@
 # Native package provenance
 
-## Mean component inference: five qualified payloads adopted locally
+## Mean component inference: five qualified payloads published
 
 The [adoption manifest](mean-component-20261008/manifest.json) binds the five
-locally adopted payloads, their actual build sources, corresponding-source
+payloads published at `66d0278b`, their actual build sources, corresponding-source
 archives and engineering qualification. All provide centering,
 projection-centering and component-centering API 1. Native
 `component_centering_api=1` uses readiness bit 16 through the existing interface.
@@ -28,9 +28,15 @@ The [historical checkpoint](mean-component-20261008/checkpoint.json) is unchange
 [Local HTTP fresh/replacement installation](mean-component-20261008/evidence/packaging/local-install-240ad74d.json)
 passes at source `240ad74d`: both cases verify all 61 installed files and five
 payload hashes, and exercise eight Mean-component cells on Mac arm64. Those
-receipts retain the help bytes at that source. Publication of the adopted
-package and final public `net`/`github` checks of the updated package bytes are
-pending. No native release archive, tag or hosted release has been made.
+receipts retain the help bytes at that source. The adopted package is published
+at `66d0278b`. The [public-install summary](mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+and [exact binding](mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json)
+record PASS for public `net` and `github` fresh/replacement
+checks: four cases on Mac arm64, 61 installed files and five payload hashes
+verified, and eight Mean-component cells per case. These checks cover the
+final help bytes and Mac arm64 runtime; original platform qualification
+scopes remain separate. No native release archive, tag or hosted release has
+been made.
 
 The [completed bounded assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains all 22 exact-Mata availability-screen failures. Eight native primary

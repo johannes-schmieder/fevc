@@ -94,7 +94,7 @@ from accepting a projection request whose covariance it cannot center. Missing
 capability is a structural preflight failure under the usual strict Rust and
 automatic-Mata routing rules, before preparation/RNG.
 
-The five locally adopted payloads support all three centering capabilities.
+The five payloads published at `66d0278b` support all three centering capabilities.
 Mac builds retain full and installed Mean qualification at `b9f80ce9`; Linux
 retains it at `63757839`. Windows at `240ad74d` passes hosted checks and private
 smoke/full qualification, including installed Mean and Corrected exact tests.
@@ -103,8 +103,13 @@ reuse is limited to unchanged public routes and excludes the unrepaired
 lower-level serial exact Corrected path. The new Windows binary contains that
 repair. The [adoption manifest](../../native/mean-component-20261008/manifest.json)
 binds sources, tested routes and compatibility. Local installation checks
-pass at `240ad74d`; publication and final public checks of the updated package
-remain pending. Earlier failures and receipts are preserved. Existing ABI
+pass at `240ad74d`. At published source `66d0278b`, the four public `net`/`github`
+fresh/replacement cases have status PASS on Mac arm64,
+with all 61 final files, five plugin hashes and eight Mean cells per case. The
+[public-install summary](../../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+and [exact binding](../../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json)
+retain this scope separately from other platform qualification. Earlier
+failures and receipts are preserved. Existing ABI
 structures are unchanged.
 
 ## Additive component-centering API 1

@@ -2,8 +2,8 @@
 
 ## October 9, 2026 (UTC) — Mean component native adoption
 
-- Adopt five qualified payloads locally: Mac at `b9f80ce9`, Linux at `63757839`
-  and Windows at `240ad74d`, with actual source archives and exact-byte
+- Adopt and publish five qualified payloads at `66d0278b`: Mac at `b9f80ce9`,
+  Linux at `63757839` and Windows at `240ad74d`, with actual source archives and exact-byte
   provenance. All expose component-centering API 1. Windows private smoke and
   full qualification pass after four authorized infrastructure repair cycles.
   Earlier failed attempts remain unchanged.
@@ -14,8 +14,12 @@
   review; their lower-level serial Corrected route remains outside reuse.
 - Local HTTP fresh/replacement checks at `240ad74d` pass on Mac arm64 with all
   61 installed files, five plugin hashes and eight Mean-component cells per
-  case. Publication and final public `net`/`github` checks of the updated
-  package are pending. See [the adoption manifest](../native/mean-component-20261008/manifest.json).
+  case. The published `66d0278b` package has public `net`/`github`
+  fresh/replacement status PASS: four cases on Mac arm64,
+  all 61 final files and five plugin hashes, and eight Mean cells per case.
+  See [the public-install summary](../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+  and [exact binding](../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json).
+  Original platform qualification remains bound to each build source.
 - Preserve all 22 exact-Mata availability-screen failures, native numerical
   sensitivity and prior calibration limitations. Native qualification does
   not establish general coverage. No tag or hosted release is implied.

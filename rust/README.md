@@ -38,7 +38,7 @@ None needs neither attachment-centering capability for its separately
 supported requests. Existing supported tuples and ABI
 request/result layouts remain.
 
-Five qualified payloads are adopted locally. Mac builds at `b9f80ce9` retain
+Five qualified payloads are published at `66d0278b`. Mac builds at `b9f80ce9` retain
 full arm64/Rosetta thin/universal and four-alias installed Mean checks; Linux
 at `63757839` retains full and staged/installed Mean checks (SCC job `7969972`).
 Windows at `240ad74d` passes hosted checks and private smoke/full qualification,
@@ -47,8 +47,13 @@ bytes and source archives are retained under a review limited to unchanged
 public routes; their lower-level serial exact Corrected path does not contain
 the repair in `240ad74d`. The [adoption manifest](../native/mean-component-20261008/manifest.json)
 binds actual sources and route limitations, preserving prior failed attempts.
-Local HTTP fresh/replacement checks pass at `240ad74d`; publication and final
-public checks of the updated package remain pending. No tag is implied.
+Local HTTP fresh/replacement checks pass at `240ad74d`. The published
+`66d0278b` package has public `net`/`github` fresh/replacement status
+PASS on Mac arm64: four cases, all 61 final files and
+five plugin hashes, and eight Mean cells per case. See the
+[public-install summary](../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+and [exact binding](../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json).
+This does not extend other platform or native Intel scope. No tag is implied.
 
 The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures. All eight native primary

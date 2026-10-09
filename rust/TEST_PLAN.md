@@ -258,7 +258,7 @@ No result at the older point/projection source qualifies this extension.
 The [completed assessment](../fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 preserves 22 exact-Mata primary availability-screen failures. Eight native
 cells pass broad descriptive screens, while fixed-outcome checks show material
-numerical sensitivity. The five qualified payloads are adopted locally:
+numerical sensitivity. The five qualified payloads are published at `66d0278b`:
 Mac at `b9f80ce9`, Linux at `63757839` and Windows at `240ad74d`. The exact
 Windows hosted artifact passes private smoke/full qualification, including
 12 exact Mean, eight native Mean and 12 Corrected exact installed cells.
@@ -267,8 +267,13 @@ public-route scope; they do not contain the lower-level serial Corrected fix
 in `240ad74d`. The [adoption manifest](../native/mean-component-20261008/manifest.json)
 records exact sources, compatibility and earlier failed attempts. Local HTTP
 fresh/replacement checks at `240ad74d` pass on Mac arm64 with all 61 files,
-five payload hashes and eight native Mean cells per case. Final public checks
-must follow commit/push and verify the actual updated help/package bytes.
+five payload hashes and eight native Mean cells per case. At published source
+`66d0278b`, four public `net`/`github` fresh/replacement cases have status
+PASS on Mac arm64, verifying all 61 final files, five
+plugin hashes and eight Mean cells per case. See the
+[public-install summary](../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+and [exact binding](../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json).
+These installation checks do not extend other platform or native Intel scope.
 These engineering results do not establish general coverage.
 
 ## Focused scalable-projection gate
@@ -441,8 +446,9 @@ is numerical Monte Carlo error, never an econometric standard error.
 
 Windows Stata/plugin qualification passes for the exact hosted `240ad74d`
 artifact after private smoke and full gates. All five qualified payloads are
-adopted locally with their original source identities and documented reuse
-limits. Publication and final public installation checks remain pending.
+published at `66d0278b` with original source identities and documented reuse
+limits. The source-bound four-case public-install status is
+PASS on Mac arm64, as recorded above.
 Native Intel hardware qualification and a command-surviving native cache remain
 deferred.
 Current platform status is recorded in the

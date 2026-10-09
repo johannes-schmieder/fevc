@@ -23,8 +23,8 @@ Work stays on `main`; tags and hosted releases remain separate decisions.
   signed normal-equation residuals at unchanged tolerances. Public raw
   remainder discrepancies, estimator values and solver gates remain intact.
   The preserved failing draw and independent dense checks pass after repair.
-- All five qualified payloads are adopted locally. Mac thin arm64, thin
-  x86-64 under Rosetta and universal builds retain full qualification at
+- All five qualified payloads are adopted and published in `66d0278b`. Mac
+  thin arm64, thin x86-64 under Rosetta and universal builds retain full qualification at
   `b9f80ce9` and installed Mean checks across all four aliases. Linux retains
   full and staged/installed Mean qualification at `63757839` (SCC job
   `7969972`). Their original bytes and corresponding-source archives are
@@ -60,32 +60,40 @@ Work stays on `main`; tags and hosted releases remain separate decisions.
 - [Local staging and HTTP fresh/replacement checks](../native/mean-component-20261008/evidence/packaging/local-install-240ad74d.json)
   pass at `240ad74d` on Mac arm64: both cases verify all 61 files and five
   plugin hashes and run eight installed Mean-component cells. These receipts
-  retain the help bytes at that source. Publication and final public `net` and
-  `github` checks of the updated package bytes remain pending.
+  retain the help bytes at that source. The adopted package is published at
+  `66d0278b`. Its four public `net`/`github` fresh/replacement cases have status
+  PASS on Mac arm64 under Stata 19, with all 61 files, five plugin hashes
+  and eight Mean-component cells per case. The [public-install summary](../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+  and [exact binding](../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json)
+  bind the tested source and final help bytes; this does not qualify other
+  platform runtime or native Intel hardware. Source checks `37877625153` and
+  all seven Rust-backend CI jobs in run `37877625154` also pass at `66d0278b`.
 - The companion technical note in
   `technical-memos/centering/mean_centered_component_inference.tex` is complete,
   with a compiled and visually reviewed 13-page PDF, independent moment checks,
-  and the assessment and numerical limits. The reviewed paper changes are
-  pushed; unrelated paper edits remain preserved.
+  and the assessment and numerical limits. The scoped five-file paper follow-up
+  is committed and pushed at `9c6b27540485ec17aa1511f7dce502d67c5bbd93`;
+  built-in compilation, PDF export and visual review pass. Scientific content
+  and the 12 companion files remain unchanged; unrelated paper edits are
+  preserved.
 
-## Approved continuation
+## Completed implementation and publication
 
 The owner approved the source-first GitHub build/private Windows sequence and
 up to 15 infrastructure repair cycles. Four were used before successful final
 qualification; the serial Corrected repair was a separate project source
 change. The later authority superseded the earlier single-retry stopping
 instruction. Source and paper pushes are complete. All five native payloads,
-source archives and reviewed local installation evidence are adopted locally.
+source archives and reviewed local installation evidence are published at
+`66d0278b`.
 No tag, native release archive or hosted release has been made.
 
-Complete the active documentation/package review, commit the adopted bytes and
-intended records, and push within the approved sequence. Then run final public
-`net` and `github` fresh/replacement checks against the actual committed package,
-including the updated help bytes, and record a separate source-bound follow-up.
-Earlier staged-install receipts do not verify future package bytes. Preserve
-all previous failures and the original Mac/Linux build identities and reuse
-limits. The outgoing four-ancestor audit found no blocker within its recorded
-scope; it does not replace review of new changes.
+The adopted package and documentation were reviewed, committed and pushed at
+`66d0278b`. All four public installation cases pass, with exact source and
+installed-file bindings in the records above. This follow-up records those completed checks without
+changing any installed file. Preserve all prior failures and original
+Mac/Linux source identities and reuse limits. No scientific or platform scope
+is expanded by the public Mac arm64 installation check.
 
 ## Preserved previous evidence
 

@@ -3,10 +3,14 @@
 ## Current Mean-component status and provenance
 
 The [Mean-component manifest](../../native/mean-component-20261008/manifest.json)
-records the five qualified payloads adopted locally, exact hashes, build
+records the five qualified payloads published at `66d0278b`, exact hashes, build
 sources, source compatibility and installation evidence. Local installation
-checks pass at `240ad74d`; publication and final public checks of the updated
-package bytes remain pending. The
+checks pass at `240ad74d`. The [public-install summary](../../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+and [exact binding](../../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json)
+record PASS at published source `66d0278b`: four public
+`net`/`github` fresh/replacement cases on Mac arm64, all 61 final files and five
+payload hashes verified, and eight Mean cells per case. Other platform runtime
+and native Intel hardware are not inferred from these checks. The
 [active plan](../PLAN.md) records the completed gates and remaining work,
 including the later owner-authorized Windows repair continuation. Preserve
 all earlier failed attempts and their original receipts.

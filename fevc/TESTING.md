@@ -235,7 +235,7 @@ Mac full and four-alias installed Mean checks pass at `b9f80ce9`; Linux full
 and installed checks pass at `63757839`. The Windows artifact at `240ad74d`
 passes hosted checks and private smoke/full qualification, including 12 exact
 Mean, eight native Mean and 12 Corrected exact installed cells. All five
-payloads are adopted locally. The original Mac/Linux bytes and archives are
+payloads are published at `66d0278b`. The original Mac/Linux bytes and archives are
 reused only for unchanged public routes under an affected-route review; they
 do not contain the lower-level serial Corrected fix in `240ad74d`.
 The [adoption manifest](../native/mean-component-20261008/manifest.json)
@@ -243,8 +243,12 @@ binds sources, routes and preserved earlier failures.
 
 Local HTTP fresh/replacement checks at `240ad74d` pass on Mac arm64, with all
 61 installed file hashes, five payload hashes and eight Mean-component cells
-per case. Final public installation checks must use the updated package after
-commit/push, including its changed help bytes. The earlier integrated source
+per case. At published source `66d0278b`, the four public `net`/`github`
+fresh/replacement cases have status PASS on Mac arm64,
+with all 61 final files, five plugin hashes and eight Mean cells per case. See
+the [public-install summary](../native/mean-component-20261008/evidence/packaging/public-install-66d0278b.json)
+and [exact binding](../native/mean-component-20261008/evidence/packaging/public-install-binding-66d0278b.json).
+Other platform runtime and native Intel hardware are outside this check. The earlier integrated source
 checker remains staged-development evidence, not clean-SHA integrated
 qualification. Engineering gates do not remove the assessment's limitations.
 
