@@ -1001,14 +1001,18 @@ impl FullCmgDirectSolver {
                 )?;
             }
             let refinement_rhs_nanoseconds = refinement_rhs_start.elapsed().as_nanos();
-            let mut refinement_options = pcg;
-            refinement_options.tolerance *= factor;
+            let smallest_rhs_norm = refinement_rhs
+                .chunks_exact(self.hybrid.vertices())
+                .map(euclidean_norm)
+                .fold(f64::INFINITY, f64::min);
+            let refinement_options =
+                refinement_pcg_options(pcg, factor, full_residual_tolerance, smallest_rhs_norm)?;
             let refinement_solve_start = Instant::now();
             let (refinement_execution, refined_solved) = self.solve_scalar_columns(
                 &refinement_rhs,
                 Some(&refinement_initial),
                 failing.len(),
-                full_pcg_options(refinement_options)?,
+                refinement_options,
             )?;
             let refinement_solve_nanoseconds = refinement_solve_start.elapsed().as_nanos();
             interrupt.checkpoint("cmg_full_v2_refinement_solve_complete")?;
@@ -1356,6 +1360,41 @@ fn full_pcg_options(options: PcgOptions) -> Result<FullPcgOptions> {
             })?,
         validation: ValidationOptions::default(),
     })
+}
+
+/// Refinement targets the gate's own norm, `||r|| <= factor * gate * ||b||`.
+/// CMG's relative stop also scales by `||A|| ||x||`, so tightening only its
+/// relative tolerance cannot rescue a column whose solution is large relative
+/// to its right-hand side. One option set serves the batch, so the smallest
+/// failing right-hand-side norm sets the shared absolute target.
+fn refinement_pcg_options(
+    pcg: PcgOptions,
+    factor: f64,
+    full_residual_tolerance: f64,
+    smallest_rhs_norm: f64,
+) -> Result<FullPcgOptions> {
+    let mut options = full_pcg_options(pcg)?;
+    let target = factor * full_residual_tolerance * smallest_rhs_norm;
+    if target.is_finite() && target > 0.0 {
+        options.relative_tolerance = 0.0;
+        options.absolute_tolerance = target;
+    } else {
+        options.relative_tolerance = pcg.tolerance * factor;
+    }
+    Ok(options)
+}
+
+fn euclidean_norm(values: &[f64]) -> f64 {
+    let scale = values.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
+    if scale == 0.0 || !scale.is_finite() {
+        return scale;
+    }
+    scale
+        * values
+            .iter()
+            .map(|v| (v / scale).powi(2))
+            .sum::<f64>()
+            .sqrt()
 }
 
 fn validate_rhs(
@@ -1983,6 +2022,136 @@ mod tests {
             assert_eq!(predicted.workspace_count, actual.workspace_count);
             assert!(solver.forecast_capacity(3).is_err());
         }
+    }
+
+    #[test]
+    fn refinement_targets_the_acceptance_norm() {
+        let pcg = PcgOptions {
+            tolerance: 1.0e-10,
+            maximum_iterations: 10_000,
+            residual_replacement_interval: 100,
+        };
+        let options = refinement_pcg_options(pcg, 0.1, 1.0e-9, 4.0).unwrap();
+        assert_eq!(options.relative_tolerance, 0.0);
+        assert!((options.absolute_tolerance - 4.0e-10).abs() <= 1.0e-24);
+        assert_eq!(options.max_iterations, 10_000);
+        // A zero right-hand side keeps the original relative stop instead of an
+        // invalid all-zero tolerance pair.
+        let zero = refinement_pcg_options(pcg, 0.01, 1.0e-9, 0.0).unwrap();
+        assert!((zero.relative_tolerance - 1.0e-12).abs() <= 1.0e-26);
+        assert_eq!(zero.absolute_tolerance, 0.0);
+        assert!((euclidean_norm(&[3.0e-200, 4.0e-200]) - 5.0e-200).abs() <= 1.0e-214);
+        assert_eq!(euclidean_norm(&[0.0, 0.0]), 0.0);
+    }
+
+    /// A smooth, large firm solution on a weighted grid has a reduced right-hand
+    /// side far smaller than `||A|| ||x||`. CMG's operator-scaled relative stop
+    /// then accepts residuals above the `||r|| / ||b||` gate; refinement must
+    /// still certify the column instead of returning `FullResidualFailed`.
+    #[test]
+    fn refinement_certifies_columns_with_small_rhs_relative_to_solution() {
+        // Workers link adjacent grid firms; heavily weighted workers also link
+        // each grid firm to one hub. The hub inflates the operator bound, so
+        // the operator-scaled stop leaves the complete residual above the gate
+        // unless refinement targets `||r|| / ||b||` directly.
+        let side = 40_usize;
+        let firms = side * side;
+        let hub = firms as u64 + 1;
+        const HUB_COPIES: u64 = 100_000;
+        let mut worker = Vec::new();
+        let mut firm = Vec::new();
+        let mut frequency = Vec::new();
+        let mut next_worker = 0_u64;
+        for r in 0..side {
+            for c in 0..side {
+                let here = r * side + c;
+                for there in [
+                    (c + 1 < side).then(|| here + 1),
+                    (r + 1 < side).then(|| here + side),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    next_worker += 1;
+                    for j in [here, there] {
+                        worker.push(next_worker);
+                        firm.push(j as u64 + 1);
+                        frequency.push(1);
+                    }
+                }
+                for _ in 0..20 {
+                    next_worker += 1;
+                    for (j, copies) in [(here as u64 + 1, 1), (hub, HUB_COPIES)] {
+                        worker.push(next_worker);
+                        firm.push(j);
+                        frequency.push(copies);
+                    }
+                }
+            }
+        }
+        let rows = worker.len();
+        let problem = CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion: (1..=rows as u64).collect(),
+                outcome: vec![0.0; rows],
+                frequency,
+                target_weight: vec![1.0; rows],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("grid fixture"),
+        )
+        .expect("canonical")
+        .compress(&vec![true; rows])
+        .expect("compressed");
+        let operator = TwoWayOperator::new(&problem).expect("operator");
+        // y = F psi with psi smooth, so the exact solution is (0, psi).
+        let psi = |j: usize| {
+            if j >= firms {
+                return 0.0;
+            }
+            let (r, c) = ((j / side) as f64, (j % side) as f64);
+            1.0e3
+                * (std::f64::consts::PI * r / side as f64).cos()
+                * (std::f64::consts::PI * c / side as f64).cos()
+        };
+        let mut worker_rhs = vec![0.0; problem.workers()];
+        let mut firm_rhs = vec![0.0; problem.firms()];
+        for row in 0..problem.outcome.len() {
+            let f = problem.row_firm[row] as usize;
+            let y = problem.frequency[row] as f64 * psi(f);
+            worker_rhs[problem.row_worker[row] as usize] += y;
+            firm_rhs[f] += y;
+        }
+        let pcg = PcgOptions {
+            tolerance: 1.0e-10,
+            maximum_iterations: 10_000,
+            residual_replacement_interval: 100,
+        };
+        let solver = FullCmgDirectSolver::prepare_with_interrupt(
+            &problem,
+            pcg,
+            u64::MAX,
+            FullCmgPlanOptions::production(1, 1.0e-10, None),
+            &mut NeverInterrupt,
+        )
+        .expect("prepared grid solver");
+        let gate = complete_residual_tolerance(pcg.tolerance);
+        let solved = solver
+            .solve_batch_with_options_and_interrupt(
+                &operator,
+                &worker_rhs,
+                &firm_rhs,
+                1,
+                pcg,
+                gate,
+                &mut NeverInterrupt,
+            )
+            .expect("refinement must certify the complete residual");
+        assert!(solved.solution[0].residual.relative_norm <= gate);
+        assert!(solved.pcg[0].relative_residual <= gate);
     }
 
     #[test]
