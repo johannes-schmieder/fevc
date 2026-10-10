@@ -1,0 +1,25 @@
+{
+  "schema": "FEVC-QUALIFICATION-LEDGER-CORRECTION-V1",
+  "status": "LOCAL_CHECKS_PASS_HOSTED_CONFIRMATION_PENDING",
+  "package_commit": "819d4c5141293b44e21dce28474096ddb7279278",
+  "original_hosted_source_check": {
+    "url": "https://github.com/johannes-schmieder/fevc/actions/runs/38052223805",
+    "result": "FAIL: 1 failed, 883 passed, 10 skipped",
+    "failure": "test_every_alpha_gap_is_explicit still expected zero qualification gaps after Windows was correctly marked pending.",
+    "log_sha256": "268596fc04d6661dee0cc260749cc8bfc4f2bc0149e0a6b4d92be6df862015af"
+  },
+  "sequence": "The earlier local 894-test pass preceded the final Windows pending-status ledger edit; hosted CI exposed the stale assertion. This record preserves that failure and records the correction.",
+  "change": "Require Windows as the only explicit alpha gap, pending Mata/Rust status, a linked owner manual-test adoption record, runtime NOT_RUN, owner test PENDING, and its SHA matching the distributed binary.",
+  "unchanged": "Estimator code, build recipes, binaries, installation payload, and platform runtime acceptance gates.",
+  "test_sha256": "89313a92000fb344b120e05968b71958c2da7fbc2199cf997dda4b5c610c5538",
+  "validation": {
+    "full_python_command": "./.venv/bin/python -m pytest -q",
+    "result": "894 passed in 86.84s",
+    "log_sha256": "a6e660589ca352c0bd12211cbc00255f9674a98a10a573bfb8aa848e183f6dc3",
+    "focused_parity": "2 passed",
+    "cmg_assembly": "PASS --all --check",
+    "parity_render": "PASS --check",
+    "license_audit": "PASS"
+  },
+  "scope": "Status-ledger regression only; Windows remains runtime-unqualified and authentication is untouched."
+}

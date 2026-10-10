@@ -11,7 +11,10 @@ Clean Mac arm64/Rosetta thin/universal and SCC Linux full/installed qualificatio
 pass. Windows hosted build, unit tests and PE/export audit pass; the owner
 requests publication now and will test Windows later. Its
 [runtime qualification remains pending](pooled-component-20261010/windows-manual-adoption.json).
-Authentication is left unchanged. Package installation receipts under
+Authentication is left unchanged. Package commit `819d4c51` passes both local
+HTTP cases and all four public net/github fresh/replacement cases on Mac arm64;
+the [public binding](pooled-component-20261010/evidence/packaging/public-install-binding.json)
+records exact source and installed bytes. Package installation receipts under
 `pooled-component-20261010/evidence/packaging/` record all 61 installed files and five binary hashes;
 runtime checks apply only to the recorded platform. No tag or release is created.
 

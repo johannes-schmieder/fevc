@@ -1,0 +1,95 @@
+{
+  "schema": "FEVC-POOLED-PUBLIC-INSTALL-BINDING-V1",
+  "status": "PASS",
+  "published_package_commit": "819d4c5141293b44e21dce28474096ddb7279278",
+  "actual_build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "public_main_head_before_and_after": "819d4c5141293b44e21dce28474096ddb7279278",
+  "adoption_manifest_sha256": "9c6ce3fe6bb6f4a9ebf2d5997aa004f4564d2d8538b189b3f6c9ecd0c095ac79",
+  "public_install_receipt_sha256": "551ada1dbb39331b9f3f28c3e8c7af5911617574e4d10d3e824b4852a38d2d0a",
+  "source_archive_sha256": "b7ae33a7268d66330f823396abf1c45f46ce5b76b75e6c77b5b9461926c49101",
+  "cases": 4,
+  "installed_files_per_case": 61,
+  "binaries": {
+    "fevc/fevc_rust_macos_arm64.plugin": "a74464823c80a19c5175b674219e81796ad74880b60b618cd729b3c56ba0fce4",
+    "fevc/fevc_rust_macos_x86_64.plugin": "2a77d91efbf36996270862d5cbbaf65ea119eadec0c8612ee62051216dd7627a",
+    "fevc/fevc_rust_macos.plugin": "817381e80567bbf59692780cde7da1f7e3552893723973260a8a9f62ad8a2017",
+    "fevc/fevc_rust_linux_x64.plugin": "355491380b9f47580c5cc6eca2b02aeaa9ce5bb579965152b1421eb0d7745af8",
+    "fevc/fevc_rust_windows_x64.plugin": "163a1d06c07d2ec409cbca9c9737c71539b28b952ef6c77b010a527f26e1ca63"
+  },
+  "execution_platform": {
+    "os": "Darwin",
+    "architecture": "arm64",
+    "stata": "19 MP",
+    "processors_per_process": 4
+  },
+  "test_identities": {
+    "fevc/tools/verify_native_installers.py": "01f69f2473973b66fbe0c864a6ecfd647598a0cad887018dd1f221024021fd33",
+    "fevc/tests/stata/test_rust_match_component_inference.do": "49425fdcb9f873afadd774a1c223c24a54003d45143f9fa18e1a204103af43df",
+    "fevc/tests/stata/test_pooled_component_inference.do": "c46260d9f8bfe427169bbd5195259cbfc03d115396754fca478af4eb2234459a",
+    "fevc/tests/stata/test_pooled_deletion.do": "c134b194d40cd7f4044458dbe2af031a9d37ab1e74bb71cac12ca5290ae2d6c7",
+    "fevc/tests/stata/test_subsample_equivalence.do": "9386dc6b82f4461e85bd7d87340440f4241a14ac32d7c9342c408aefaf86e95d",
+    "fevc/tests/stata/test_timer_ownership.do": "e6f388665f6bbfe1fe9dfc02301e74d0b5ae193cca53b10347ab198697990d68"
+  },
+  "local_driver_sha256": "866193caa6bef1fa458ca5a524285e8a125971084f08aba3e635b20ca8d720eb",
+  "source_compatibility": {
+    "changed_paths": [
+      ".gitattributes",
+      "INSTALLATION.md",
+      "fevc/CHANGELOG.md",
+      "fevc/PLAN.md",
+      "fevc/docs/RC_BINARY_PAYLOAD.md",
+      "fevc/docs/RUST_MATA_PARITY.md",
+      "fevc/docs/rust_mata_parity.json",
+      "fevc/fevc_rust_linux_x64.plugin",
+      "fevc/fevc_rust_macos.plugin",
+      "fevc/fevc_rust_macos_arm64.plugin",
+      "fevc/fevc_rust_macos_x86_64.plugin",
+      "fevc/fevc_rust_windows_x64.plugin",
+      "native/README.md",
+      "native/pooled-component-20261010/README.md",
+      "native/pooled-component-20261010/corresponding-source.json",
+      "native/pooled-component-20261010/evidence/hosted/hosted-build-success.json",
+      "native/pooled-component-20261010/evidence/hosted/hosted-gates.json",
+      "native/pooled-component-20261010/evidence/hosted/hosted-rust-status.json",
+      "native/pooled-component-20261010/evidence/hosted/hosted-source-success.json",
+      "native/pooled-component-20261010/evidence/linux/qacct.txt",
+      "native/pooled-component-20261010/evidence/linux/qualification-source.sha256",
+      "native/pooled-component-20261010/evidence/linux/qualification.txt",
+      "native/pooled-component-20261010/evidence/linux/validation.json",
+      "native/pooled-component-20261010/evidence/macos/ci-receipt.json",
+      "native/pooled-component-20261010/evidence/macos/qualification.txt",
+      "native/pooled-component-20261010/evidence/macos/source-manifest.sha256",
+      "native/pooled-component-20261010/evidence/macos/validation.json",
+      "native/pooled-component-20261010/evidence/packaging/local-install.json",
+      "native/pooled-component-20261010/evidence/packaging/local-validation.json",
+      "native/pooled-component-20261010/evidence/packaging/staging.json",
+      "native/pooled-component-20261010/evidence/windows/build-audit.json",
+      "native/pooled-component-20261010/evidence/windows/hosted-build-receipt.json",
+      "native/pooled-component-20261010/fevc-corresponding-source-002205f2.tar.gz",
+      "native/pooled-component-20261010/manifest.json",
+      "native/pooled-component-20261010/windows-manual-adoption.json",
+      "rust/README.md",
+      "rust/TEST_PLAN.md",
+      "rust/stata_backend/README.md"
+    ],
+    "unchanged": "All production code, build recipes, lock files, test inputs, harnesses, acceptance thresholds, help and installation catalogs are unchanged from 002205f2. Only the five plugins, publication documentation and provenance/export records differ.",
+    "checks": [
+      "reviewed full changed-path inventory",
+      "exact 63 catalog file hashes",
+      "all four real public installation cases",
+      "all original adoption evidence hashes remain unchanged"
+    ],
+    "claims_reused": "Exact-source Mac/Linux runtime qualification and Windows hosted build/unit/export checks; Windows runtime remains unqualified."
+  },
+  "limitations": [
+    "Installer runtime tests are Mac arm64 only; other platform runtime is not inferred.",
+    "Windows Stata runtime not run; owner manual test pending.",
+    "Rosetta does not qualify native Intel hardware.",
+    "No general coverage, controlled scale-performance, tag or release claim."
+  ],
+  "qualification_ledger_correction": {
+    "path": "ledger-correction.json",
+    "sha256": "2b3f32897a1b628404cfc18b87792e66fde8053b3267fd686b8920fa639513bc",
+    "scope": "Separate follow-up regression fix; original package payload and public installer tests unchanged."
+  }
+}

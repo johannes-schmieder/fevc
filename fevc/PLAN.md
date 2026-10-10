@@ -16,9 +16,16 @@ The owner now explicitly says: “Leave windows authentication as is. Push the
 binaries anyways. I'll run windows later.” Windows hosted build/unit/PE/export
 checks pass; private Stata runtime was not run and owner manual testing remains
 pending. Authentication and the stopped private machine are left unchanged.
-The complete 61-file repository installation package includes all five plugins.
-Local HTTP and public net/github verification receipts are recorded separately
-under the adoption record. No tag or native release archive is authorized.
+The complete 61-file repository installation package is published at `819d4c51`
+with all five plugins. Local HTTP fresh/replacement and all four public
+net/github fresh/replacement cases pass on Mac arm64: every installed file hash,
+pooled components with both models/backends, match q0/q1 and caller-state checks.
+The [public binding](../native/pooled-component-20261010/evidence/packaging/public-install-binding.json)
+records the exact package commit and unchanged production/build/test identities
+from `002205f2`. The follow-up commit adds documentation/evidence and updates the
+ledger regression to require the explicitly deferred Windows status; estimator,
+build inputs, installation payloads and runtime qualification gates are unchanged.
+No tag or native release archive is created.
 
 The historical checkpoints below retain their original source, authorization,
 failures and evidence scope. They do not qualify the newly adopted binaries.
