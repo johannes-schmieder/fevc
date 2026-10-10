@@ -1,0 +1,21 @@
+{
+  "schema": "FEVC_POOLED_COMPONENT_INFERENCE_AMENDMENT_V1",
+  "registered_date": "2026-10-09",
+  "status": "REGISTERED_BEFORE_REPLACEMENT_OUTCOMES",
+  "superseded_manifest": "674e06d0d70482fb99453b31536635e8ffcbc42e8a3b5a312a1a0bede484a5b1",
+  "reason": "Independent solver-invariance regression found structurally zero stayer firm/covariance diagonals ranked at roundoff scale, creating spurious common-model regressors. Explicitly set these features to zero in both implementations and independent geometry audit. Preserve all first-run output; it does not qualify the corrected source.",
+  "unchanged": [
+    "DGPs",
+    "dimensions",
+    "counts",
+    "variance function",
+    "target eligibility",
+    "acceptance thresholds",
+    "probe budgets",
+    "40-bit tie grid",
+    "deletion units and sample",
+    "point estimator"
+  ],
+  "replacement_domain": "assessment_structural_zero_repair",
+  "assessment_nature": "New source-bound confirmation attempt; no tuning in response to coverage outcomes."
+}

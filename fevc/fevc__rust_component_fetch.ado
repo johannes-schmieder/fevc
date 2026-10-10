@@ -7,12 +7,9 @@ program define fevc__rust_component_fetch, rclass
     local modelcode = cond("`model'"=="structured_common",1,2)
     local referencecode = ("`reference'"=="q1")
     capture noisily fevc__rust_public_call componentresultv5 `handle', reference(`reference')
-    if _rc {
-        local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
-            phase(component_result_export)
-        exit `failure_rc'
-    }
+    // The owning fevc program releases the prepared generation on any error;
+    // its private abort routine is not visible from an autoloaded helper.
+    if _rc exit _rc
     tempname primitive covariance mcse spectrum q1_raw summaries folds cv receipt
     tempname inference_results q1_results units target_status
     matrix `target_status' = r(target_variance_status)
@@ -21,9 +18,9 @@ program define fevc__rust_component_fetch, rclass
     matrix `units' = (r(unit_schema),r(unit_deletion),r(independent_units), ///
         r(nuisance_uncertainty_omitted),r(effective_match_count),            ///
         r(largest_match_mass_share),r(largest_match_leverage),              ///
-        r(smallest_maker_denominator))
+        r(smallest_maker_denominator),r(mover_units),r(stayer_observations))
     matrix colnames `units' = schema deletion independent_units nuisance_omitted ///
-        effective_matches largest_mass_share largest_leverage smallest_maker
+        effective_matches largest_mass_share largest_leverage smallest_maker mover_units stayer_observations
     matrix `primitive' = r(primitive_covariance)
     matrix `covariance' = r(covariance)
     matrix `mcse' = r(trace_mcse)
@@ -76,14 +73,15 @@ program define fevc__rust_component_fetch, rclass
         `receipt'[1,20]==cond("`reference'"=="q1",max(100000,100*`simulations'),0) & ///
         `receipt'[1,21]>=0 & `receipt'[1,22]>0 & `receipt'[1,23]>=0 & ///
         `receipt'[1,23]<=4*`receipt'[1,20] &                         ///
-        `units'[1,1]==1 & `units'[1,2]==cond("`deletion'"=="match",1,2) & ///
+        inlist(`units'[1,1],1,2) & `units'[1,2]==cond("`deletion'"=="match",1,2) & ///
         `units'[1,3]==`expectedunits' & `units'[1,3]>0 &            ///
         `units'[1,4]==("`deletion'"=="match")
     if "`deletion'"=="match" local ok = `ok' &                     ///
         `units'[1,5]>=1 & `units'[1,5]<=`expectedunits'*(1+1e-12) &  ///
         `units'[1,6]>0 & `units'[1,6]<=1 &                         ///
         `units'[1,7]>=0 & `units'[1,7]<1 &                         ///
-        `units'[1,8]>0 & `units'[1,8]<=1
+        `units'[1,8]>0 & `units'[1,8]<=1 & `units'[1,9]>0 & ///
+        `units'[1,9]+`units'[1,10]==`units'[1,3]
     else local ok = `ok' & `units'[1,5]==0 & `units'[1,6]==0 &     ///
         `units'[1,7]==0 & `units'[1,8]==0
     if "`reference'"=="q1" local ok = `ok' & rowsof(`q1_raw')==4 & ///
@@ -102,7 +100,7 @@ program define fevc__rust_component_fetch, rclass
             }
         }
         if `variance_fit'==2 local ok = `ok' & `receipt'[1,26]==`expectedgramprobes' & ///
-            `receipt'[1,27]==cond("`deletion'"=="match",3,2) & ///
+            `receipt'[1,27]==cond(`units'[1,10]>0,4,cond("`deletion'"=="match",3,2)) & ///
             `receipt'[1,28]>0 & `receipt'[1,29]>=0 & ///
             `receipt'[1,30]>=0 & `receipt'[1,31]>0 & `receipt'[1,32]<`expectedunits' & ///
             `receipt'[1,33]<=`receipt'[1,32]
@@ -254,8 +252,6 @@ program define fevc__rust_component_fetch, rclass
             cov_b1_theta1 var_theta1 b1 theta1 F curvature critical_value
     }
     if !`ok' {
-        capture noisily _fevc_rust_abort, rc(498) handle(`handle') ///
-            phase(component_result_export)
         exit 498
     }
     matrix `outprimitive' = `primitive'

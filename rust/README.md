@@ -34,6 +34,14 @@ Private internal identifiers retain their established names and ABI meanings.
 
 ## Outcome centering
 
+The pooled mover–stayer component development route supports generic JLA with
+fixed nuisance offsets, original mover deletion units and independent physical
+stayer observations. It uses a joint residual-moment fit with separate variance
+coefficients by type. Public callers need the additive mixed-component capability
+and unit receipt V2. See the [pooled contract](../fevc/docs/POOLED_COMPONENT_INFERENCE.md)
+and [current checkpoint](../fevc/PLAN.md) for assessment and native distribution
+status; historical qualification below retains its original scope.
+
 The core supports None, Mean and Corrected in exact and JLA point execution.
 Mean changes only the retained working-outcome correction factor. Corrected
 exact shares one coefficient-space system; Corrected JLA uses the existing

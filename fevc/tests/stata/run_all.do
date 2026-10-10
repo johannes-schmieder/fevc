@@ -36,6 +36,8 @@ do `"`pkgroot'/tests/stata/test_mcse_modes.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_centering_mean.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_centering_options.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_component_centering_exact.do"' `"`pkgroot'"'
+do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' mata structured_leverage
+do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' mata structured_common
 do `"`pkgroot'/tests/stata/test_projection_mean.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_centering_exact.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_centering_jla.do"' `"`pkgroot'"' mata
@@ -82,6 +84,11 @@ if !_rc {
     }
     do `"`pkgroot'/tests/stata/test_rust_component_inference.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_match_component_inference.do"' `"`pkgroot'"'
+    quietly fevc_rust probe
+    if r(component_mixed_api)==1 {
+        do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' rust structured_leverage
+        do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' rust structured_common
+    }
     do `"`pkgroot'/tests/stata/test_rust_individual_inference.do"' `"`pkgroot'"'
 }
 else {

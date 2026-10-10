@@ -12,6 +12,10 @@ and the installed `help fevc`.
   frequency-weighted mean, the KSS mean distinction, MCSE, native availability
   and local timing evidence.
 - [Inference](INFERENCE.md): supported requests, assumptions, and limitations.
+- [Pooled mover–stayer inference](POOLED_COMPONENT_INFERENCE.md): explicit Rust/JLA
+  and exact Mata structured models, independent physical stayers and fixed offsets.
+- [Pooled development assessment](POOLED_COMPONENT_ASSESSMENT.md): registered
+  primary results, every withheld target, stress cases and numerical sensitivity.
 - [Memory](MEMORY.md): optional budgets, forecasts, and returned diagnostics.
 - [Failures and returned results](FAILURES_AND_RETURNS.md).
 - [Changelog](../CHANGELOG.md).

@@ -161,6 +161,20 @@ program define fevc__rust_component_post, eclass
         ereturn scalar inference_largest_leverage = `units'[1,7]
         ereturn scalar inference_smallest_maker = `units'[1,8]
     }
+    if "`deletion'"=="match" {
+        ereturn scalar inference_mover_units = `units'[1,9]
+        ereturn scalar inference_stayer_units = `units'[1,10]
+        if `units'[1,10]>0 {
+            ereturn local inference_method "Pooled mover-block and stayer-observation inference with fixed nuisance offsets."
+            ereturn local inference_capability "structured mixed deletion; fixedoffset; generic JLA"
+            ereturn local inference_deletion "mover-block and physical-stayer-observation deletion"
+            ereturn local inference_ordering "FEVC-MIXED-DESIGN-ORDER-V1"
+            ereturn local inference_variance_response "joint residual moments with separate mover and stayer coefficients"
+            ereturn local inference_independence "mutually independent mover units and physical stayer observations"
+            ereturn local inference_frequency "mover regression mass; literal independent stayer copies"
+            ereturn local inference_variance_conditioning "within-type normalized midranks; separate polynomial coefficients"
+        }
+    }
     ereturn matrix component_unit_receipt = `units'
     fevc__centering inference
     ereturn local status = cond("`inference'"=="q1",             ///

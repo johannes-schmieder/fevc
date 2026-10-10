@@ -42,6 +42,14 @@ def installed_file(plus, name):
     return found[0]
 
 
+def pooled_checks_passed(transcript):
+    # Stata echoes the display command as well as its output. Count only the
+    # complete output lines, requiring both models on each backend.
+    markers = re.findall(r'^FEVC POOLED COMPONENT INFERENCE PASS: (mata|rust)\s*$',
+                         transcript, re.MULTILINE)
+    return markers.count('mata') == 2 and markers.count('rust') == 2
+
+
 def verify(catalog, test_root, output, stata, url, methods):
     entries = [line[2:] for line in (catalog / 'fevc.pkg').read_text().splitlines()
                if line.startswith(('f ', 'F '))]
@@ -104,6 +112,10 @@ assert `"`r(datasignature)'"' == `"`before'"'
 estat decomposition, full
 help fevc
 do "{test_root}/fevc/tests/stata/test_rust_match_component_inference.do" "{plus}/f"
+do "{test_root}/fevc/tests/stata/test_pooled_component_inference.do" "{plus}/f" mata structured_common
+do "{test_root}/fevc/tests/stata/test_pooled_component_inference.do" "{plus}/f" mata structured_leverage
+do "{test_root}/fevc/tests/stata/test_pooled_component_inference.do" "{plus}/f" rust structured_common
+do "{test_root}/fevc/tests/stata/test_pooled_component_inference.do" "{plus}/f" rust structured_leverage
 do "{test_root}/fevc/tests/stata/test_pooled_deletion.do" "{plus}/f"
 do "{test_root}/fevc/tests/stata/test_subsample_equivalence.do" "{plus}/f"
 do "{test_root}/fevc/tests/stata/test_timer_ownership.do" "{plus}/f"
@@ -120,6 +132,7 @@ exit 0
                 (output / (label + '.sanitized.log')).write_text(transcript)
                 if (completed.returncode or 'FEVC PUBLIC INSTALL PASS' not in completed.stdout
                         or 'PASS test_rust_match_component_inference.do' not in completed.stdout
+                        or not pooled_checks_passed(completed.stdout)
                         or 'PASS test_pooled_deletion.do' not in completed.stdout
                         or 'PASS test_subsample_equivalence.do' not in completed.stdout):
                     raise RuntimeError('Stata installation checks failed: ' + label)
@@ -135,6 +148,7 @@ exit 0
                     'transcript_sha256': sha(transcript.encode()),
                     'checks': ['native progress API 2', 'README example', 'caller data restoration',
                                'decomposition', 'help', 'installed match q0/q1',
+                               'installed pooled components: both backends and models',
                                'installed deletion-unit mover regression',
                                'installed subsample equivalence regression', 'caller timer preservation',
                                'idle native registry',

@@ -1,5 +1,26 @@
 # Pending changes
 
+## October 10, 2026 — diagonal solver residual refinement
+
+- Refine Rust generic diagonal solves that miss the complete original-equation
+  residual gate, with at most three corrections through the same solver.
+  Preserve the acceptance threshold, passing-column arithmetic, hard failure
+  on exhaustion, cancellation, and logical RHS/RNG counts.
+- Include correction work and memory in numerical receipts and forecasts;
+  test recovery against independent physical-row equations and a known solution.
+
+## October 9, 2026 — pooled component inference development
+
+- Add explicit structured pooled match inference to exact Mata and scalable
+  Rust/JLA, with independent physical stayer observations, fixed nuisance
+  offsets and separate type variance coefficients in a joint moment system.
+- Preserve original sample/deletion units, frequency copies and pooled targets;
+  distinguish individual intervals from joint covariance availability.
+- Add native mixed capability, unit receipt V2 and early old-plugin rejection.
+- Add dense oracles, public weighted regressions and a registered bounded
+  assessment. Distribution and platform status remain in PLAN.md.
+
+
 ## October 9, 2026 — CMG replay, refinement and stayer reporting
 
 - Reviewed/pushed `a8617882` aligns CMG_FULL_V2 replay with its posted phase

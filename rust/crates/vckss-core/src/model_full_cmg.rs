@@ -127,16 +127,6 @@ impl DirectControlGeometry {
     }
 }
 
-fn stable_add_index_value(sum: &mut f64, correction: &mut f64, value: f64) {
-    let next = *sum + value;
-    *correction += if sum.abs() >= value.abs() {
-        (*sum - next) + value
-    } else {
-        (value - next) + *sum
-    };
-    *sum = next;
-}
-
 impl<'a> PreparedModelSolver<'a> {
     pub(crate) fn prepare_generic_jla_direct(
         problem: &'a CompressedProblem,
@@ -703,53 +693,6 @@ impl SharedDirectSolver<'_> {
         }
         Ok(())
     }
-}
-
-fn correction_quotient_rhs(
-    residual: &ModelResidual,
-    interrupt: &mut dyn InterruptCheck,
-) -> Result<(Vec<f64>, Vec<f64>)> {
-    // Roundoff in recomputed score residuals can leave a tiny null-coordinate
-    // component even for an exactly compatible original RHS. Project only the
-    // *correction* onto the FE quotient. Its direct gate is unchanged, and the
-    // accumulated answer is still certified against every original equation.
-    let mut worker = copy_f64_with_interrupt(
-        &residual.worker,
-        "correction worker quotient",
-        interrupt,
-        "model_direct_refinement_quotient",
-    )?;
-    let mut firm = copy_f64_with_interrupt(
-        &residual.firm,
-        "correction firm quotient",
-        interrupt,
-        "model_direct_refinement_quotient",
-    )?;
-    let dimension = worker
-        .len()
-        .checked_add(firm.len())
-        .ok_or_else(|| rank_resource("correction quotient dimension overflow"))?;
-    let mut sum = 0.0;
-    let mut correction = 0.0;
-    for (index, value) in worker
-        .iter()
-        .copied()
-        .chain(firm.iter().map(|&v| -v))
-        .enumerate()
-    {
-        checkpoint_chunk(interrupt, index, "model_direct_refinement_quotient")?;
-        stable_add_index_value(&mut sum, &mut correction, value);
-    }
-    let shift = (sum + correction) / dimension as f64;
-    for (index, value) in worker.iter_mut().enumerate() {
-        checkpoint_chunk(interrupt, index, "model_direct_refinement_quotient")?;
-        *value -= shift;
-    }
-    for (index, value) in firm.iter_mut().enumerate() {
-        checkpoint_chunk(interrupt, index, "model_direct_refinement_quotient")?;
-        *value += shift;
-    }
-    Ok((worker, firm))
 }
 
 #[cfg(test)]

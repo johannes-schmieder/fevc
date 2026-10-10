@@ -33,6 +33,8 @@ def permitted_untracked(path: PurePosixPath) -> bool:
         return path.suffix in {".ado", ".mata", ".sthlp", ".pkg", ".toc"}
     if len(parts) >= 3 and parts[:2] == ("fevc", "docs"):
         return path.suffix in {".md", ".json"}
+    if len(parts) == 4 and parts[:3] == ("fevc", "benchmarks", "pooled_component_inference_20261009"):
+        return path.suffix in {".py", ".md"}
     if len(parts) >= 4 and parts[:3] == ("fevc", "tests", "fixtures"):
         return path.suffix in {".txt", ".do"}
     if len(parts) >= 4 and parts[:3] == ("fevc", "tests", "oracles"):

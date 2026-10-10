@@ -82,6 +82,15 @@ pub(super) fn row_ranks(order: &[usize]) -> Vec<u64> {
 }
 
 pub(super) fn terms(prepared: &ComponentExecution<'_>) -> Result<usize> {
+    if prepared.mixed_units.is_some() {
+        return match prepared.variance_source {
+            ComponentVarianceSource::StructuredCommon => Ok(36),
+            ComponentVarianceSource::StructuredLeverage => Ok(6),
+            ComponentVarianceSource::Oracle => {
+                Err(invalid("mixed moments require a structured variance model"))
+            }
+        };
+    }
     match prepared.variance_source {
         ComponentVarianceSource::StructuredCommon => Ok(
             if prepared.inference_unit == ComponentInferenceUnit::Match {
@@ -100,6 +109,7 @@ pub(super) fn terms(prepared: &ComponentExecution<'_>) -> Result<usize> {
 fn callback_bytes(
     problem: &CompressedProblem,
     route: RouteMemory,
+    units: usize,
     queued_width: Option<usize>,
 ) -> Result<u64> {
     let p = checked_sum(&[
@@ -114,7 +124,7 @@ fn callback_bytes(
     checked_sum(&[
         checked_product(&[p, 64, 8], "residual projection coefficient workspace")?,
         checked_product(
-            &[problem.outcome.len() as u64, 4, 8],
+            &[units.max(problem.outcome.len()) as u64, 4, 8],
             "residual projection row workspace",
         )?,
         route.cmg_batch_workspace_per_column,
@@ -162,14 +172,12 @@ pub(super) fn peak_bytes(
     moment.projection_workspace_bytes = usize::try_from(callback_bytes(
         problem,
         route,
+        prepared.unit_count(problem),
         queue_capacity.map(|capacity| capacity.min(options.batch_width).min(options.probes)),
     )?)
     .map_err(|_| resource("residual projection workspace overflow"))?;
     moment.additional_memory_limit_bytes = usize::MAX;
-    let units = match prepared.inference_unit {
-        ComponentInferenceUnit::Observation => problem.outcome.len(),
-        ComponentInferenceUnit::Match => problem.deletion_units(),
-    };
+    let units = prepared.unit_count(problem);
     let plan = if prepared.unified_variance_fit {
         crate::residual_moments::memory_envelope(units, terms, moment)?
     } else {
@@ -232,25 +240,46 @@ pub(super) fn fit(
         .variance_source
         .structured_model()
         .ok_or_else(|| invalid("missing structured basis"))?;
-    let mut ranks = vec![normalized_midranks(leverage, interrupt)?];
-    for diagonal in target_diagonal {
-        ranks.push(normalized_midranks(diagonal, interrupt)?);
-    }
-    if let Some(mass) = match_mass {
-        ranks.push(normalized_midranks(mass, interrupt)?);
-    }
+    let mixed_start = match inference_rows {
+        ComponentInferenceRows::Match { mover_units, .. } => mover_units,
+        ComponentInferenceRows::Observation { .. } => None,
+    };
+    let raw_basis = if let Some(movers) = mixed_start {
+        super::pooled_component::basis(
+            model,
+            leverage,
+            target_diagonal,
+            match_mass.ok_or_else(|| invalid("mixed basis requires unit masses"))?,
+            movers,
+            prepared.structured_options.observations_per_term,
+            interrupt,
+        )?
+    } else {
+        let mut ranks = vec![normalized_midranks(leverage, interrupt)?];
+        for diagonal in target_diagonal {
+            ranks.push(normalized_midranks(diagonal, interrupt)?);
+        }
+        if let Some(mass) = match_mass {
+            ranks.push(normalized_midranks(mass, interrupt)?);
+        }
+        let mut basis = Vec::with_capacity(n * terms);
+        for row in 0..n {
+            basis.extend_from_slice(&basis_row(model, &ranks, row)[..terms]);
+        }
+        basis
+    };
     let mut basis = Vec::with_capacity(n * terms);
     let mut h = Vec::with_capacity(n);
     let mut e = Vec::with_capacity(n);
     let mut ids = Vec::with_capacity(n);
     for (position, &row) in order.iter().enumerate() {
         checkpoint_chunk(interrupt, position, "residual_moment_basis")?;
-        basis.extend_from_slice(&basis_row(model, &ranks, row)[..terms]);
+        basis.extend_from_slice(&raw_basis[row * terms..(row + 1) * terms]);
         h.push(leverage[row]);
         e.push(residual[row]);
         ids.push((addresses.entity[row], addresses.subdraw[row]));
     }
-    drop(ranks);
+    drop(raw_basis);
     let (basis_columns, basis_reconstruction_error) = if prepared.unified_variance_fit {
         crate::residual_moments::basis::reduce(&mut basis, terms, interrupt)?
     } else {
@@ -281,7 +310,7 @@ pub(super) fn fit(
         }
     }
     moment.projection_workspace_bytes =
-        usize::try_from(callback_bytes(problem, route, queued_width)?)
+        usize::try_from(callback_bytes(problem, route, n, queued_width)?)
             .map_err(|_| resource("residual projection workspace overflow"))?;
     // This increment was added to the complete generic-JLA admission pre-RNG.
     moment.additional_memory_limit_bytes = usize::MAX;
@@ -434,7 +463,9 @@ pub(super) fn fit(
     fit.raw_variance = raw;
     fit.positive_variance = positive;
     Ok(Diagnostic {
-        ordering_contract: if prepared.inference_unit == ComponentInferenceUnit::Match {
+        ordering_contract: if mixed_start.is_some() {
+            "FEVC-MIXED-DESIGN-ORDER-V1"
+        } else if prepared.inference_unit == ComponentInferenceUnit::Match {
             MATCH_ORDERING_CONTRACT
         } else if prepared.design_only_order {
             DESIGN_ORDERING_CONTRACT

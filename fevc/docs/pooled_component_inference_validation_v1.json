@@ -1,0 +1,180 @@
+{
+  "schema": "FEVC_POOLED_COMPONENT_INFERENCE_VALIDATION_V1",
+  "registered_date": "2026-10-09",
+  "status": "REGISTERED_BEFORE_OUTCOME_RESULTS",
+  "scope": "Bounded pooled match inference assessment. Descriptive scientific screens; engineering failures block completion.",
+  "authority": "Owner accepted pooled mover-stayer implementation and bounded assessment.",
+  "primary": {
+    "routes": [
+      "mata",
+      "rust"
+    ],
+    "references": [
+      "highrank",
+      "q1"
+    ],
+    "cells": 8,
+    "replications_per_cell": 1000,
+    "paired_arms": [
+      "mean",
+      "fixed_c0"
+    ],
+    "all_reported_targets": [
+      "worker",
+      "firm",
+      "covariance",
+      "total"
+    ],
+    "highrank_primary_targets": [
+      "worker",
+      "firm",
+      "covariance",
+      "total"
+    ],
+    "q1_primary_targets": [
+      "worker",
+      "firm",
+      "total"
+    ],
+    "q1_covariance": "Predeclared diagnostic: two concentrated modes, with remainder leading share approximately one.",
+    "variance": "Separate positive quadratics in within-type normalized leverage midranks; in both offered model spans on the exact design.",
+    "design": "12 by 12 mover grid with unequal integer match masses; 36 attached stayers with independent physical histories 2/4/8 and target mass .25/.75. q1 concentrates stayer mass on its first worker; movers remain diffuse.",
+    "spectral_interpretation": "Outcome-free exact q0 leading shares at most .138. q1 worker/total leading shares exceed .99, firm .50/.86; primary remainder shares at most .130. Covariance deliberately has two concentrated modes and remainder share above .999.",
+    "count_note": "1000 outcomes x 8 cells x two arms = 16000 calls, 64000 target rows.",
+    "dimension": 12,
+    "stayer_shares": [
+      0.25,
+      0.75
+    ]
+  },
+  "profiles": {
+    "smoke": {
+      "replications_per_cell": 2,
+      "domain": "pipeline"
+    },
+    "pilot": {
+      "replications_per_cell": 10,
+      "domain": "development"
+    },
+    "assessment": {
+      "replications_per_cell": 1000,
+      "domain": "assessment"
+    },
+    "diagnostic": {
+      "replications_per_cell": 100,
+      "domain": "diagnostic"
+    }
+  },
+  "diagnostic_grid": {
+    "dimension": 12,
+    "cells": [
+      {
+        "route": "mata",
+        "reference": "highrank",
+        "diagnostic": "weak",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "rust",
+        "reference": "q1",
+        "diagnostic": "null",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "rust",
+        "reference": "highrank",
+        "diagnostic": "mild",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "rust",
+        "reference": "q1",
+        "diagnostic": "severe",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "rust",
+        "reference": "q1",
+        "diagnostic": "multimode",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "rust",
+        "reference": "highrank",
+        "diagnostic": "concentrated_mass",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "mata",
+        "reference": "highrank",
+        "diagnostic": "short_histories",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "mata",
+        "reference": "q1",
+        "diagnostic": "estimated_offset",
+        "stayer_share": 0.75
+      },
+      {
+        "route": "rust",
+        "reference": "q1",
+        "diagnostic": "leverage_sensitivity",
+        "stayer_share": 0.75
+      }
+    ],
+    "interpretation": "All attempts and targets are descriptive; no post-result relabeling of primary cells. Gaussian oracle moments do not describe the heavy-tail cell. Estimated-offset diagnostics compare to an explicitly known-offset FE oracle, not an exact sampling law for estimated controls."
+  },
+  "numerics": {
+    "point_probes": 200,
+    "gram_probes": 2048,
+    "covariance_simulations": 1000,
+    "inference_bins": 1000,
+    "critical_draws": "Unchanged production q1 minimum 100000",
+    "solver": "Explicit diagonal; unchanged default phase tolerances and original-system residual gates",
+    "native_threads": 1,
+    "rng": "Independent NumPy PCG64 outcome stream addressed by SHA256(domain, canonical cell, replication), production Counter-V1 numerical addresses; fixed outcome-free numerical seeds per cell/reference across outcome draws. Separate pipeline/development/assessment/diagnostic domains. Mean and fixed-c0 use the same draws and numerical seed.",
+    "fixed_c0": "Population mean of the retained working outcome from known DGP; None inference on y-c0.",
+    "actual_mean": "Recompute retained physical-frequency working mean on every outcome draw; treat it as fixed only inside inference calculations."
+  },
+  "descriptive_screens": {
+    "status": "Descriptive screens registered before outcomes, not public-enablement coverage qualification. Engineering errors block completion; scientific screen failures are enumerated without retuning.",
+    "success_rate_minimum": 0.95,
+    "absolute_bias_over_oracle_sd_maximum": 0.1,
+    "bias_mcse_multiplier": 3.0,
+    "coverage_lower": 0.9,
+    "coverage_mcse_multiplier": 3.0,
+    "paired_coverage_drop_maximum": 0.02,
+    "paired_mcse_multiplier": 3.0,
+    "q0_rms_se_over_empirical_sd": [
+      0.8,
+      1.2
+    ],
+    "q1_conservatism": "No upper coverage penalty. q1 highrank SE is descriptive, not a validity gate for AM endpoints.",
+    "mean_approximation_rms_over_actual_sd": 0.1,
+    "rationale": "Predeclared broad descriptive screens. At 1000 draws, binomial MCSE is about .0069 at 95% coverage. Every failed attempt and cell is retained."
+  },
+  "engineering_gates": {
+    "dense_point_absolute_scaled": 1e-08,
+    "deterministic_moment_identity_absolute_scaled": 1e-10,
+    "q1_remainder_identity_absolute_scaled": 1e-08,
+    "sample": "Every designed row retained; exact counts and physical-frequency mean semantics.",
+    "inventory": "Exact unique cell/replication/arm/target keys, frozen dimensions, seeds, source, binaries and expected row counts; classify every attempt.",
+    "failure_tests": [
+      "malformed",
+      "missing",
+      "duplicate",
+      "partial",
+      "wrong_profile",
+      "wrong_source",
+      "wrong_seed",
+      "wrong_count",
+      "scientific_failure",
+      "reverse_order_and_sharding"
+    ],
+    "variance_identification": "Before outcome draws, record separate type support, active basis dimensions, joint Gram reciprocal condition and positive DGP variance. Dense diagnostics are assessment-only."
+  },
+  "source_binding": "Freeze all runtime package files, native payload hashes, harness source hashes, registration hash, exact source commit plus dirty-content identities, DGP/geometry, numerical settings and task inventory before each run. Assessment uses immutable copies. Aggregate only complete validated outputs.",
+  "execution": "Local private licensed Stata by default. No large run before measured pilot. SCC requires the cluster skill, a tiny local complete path, one real 1--4-core end-to-end smoke, and scheduler dependencies. No public licensed runner.",
+  "historical_evidence": "All prior observation/match inference and centering experiments retain original identities, failures and scope. No historical receipt is modified."
+}

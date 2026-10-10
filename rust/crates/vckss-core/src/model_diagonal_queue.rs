@@ -76,7 +76,8 @@ impl DiagonalQueuePlan {
         let original = add(add(workers, firms)?, controls)?;
         let reduced = add(firms, controls)?;
         // Upper envelope over reduced PCG, recovery and complete W+F+Q
-        // residual certification. These lifetimes are summed conservatively;
+        // residual certification, including one scalar residual correction.
+        // These lifetimes are summed conservatively;
         // no observation-by-RHS matrix is allocated by the solver.
         let workspace = add(mul(add(mul(reduced, 16)?, mul(original, 16)?)?, 8)?, 1024)?;
         let output = mul(

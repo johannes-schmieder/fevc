@@ -1,3 +1,115 @@
+# Pooled inference package publication — October 10, 2026
+
+The owner requests current component-inference help, all updated native
+binaries, a verified installation package, and commit/push to main. This
+authorizes source and package commits and publication; no tag or release is
+requested. Freeze the reviewed source first, qualify its Mac/Linux/Windows
+payloads, then commit the exact tested package and verify public installation.
+The help now distinguishes exact Mata from scalable Rust/JLA, spells out the
+independent stayer assumption and supported tuples, and explains partial
+interval availability, covariance posting and numerical failures.
+
+The restricted Windows inspector passes and confirms the machine is stopped.
+The approved collector update still requires the expired owner-maintenance
+login; browser automation reports the Mac locked. An owner login request is
+pending while the independent source, Mac/Linux and packaging work proceeds.
+The checkpoints below retain their original authorization and evidence scope.
+
+## Completed diagonal residual refinement
+
+The owner approved bounded refinement for the generic Rust diagonal solver.
+A failed complete-equation check now receives at most three corrections using
+the same prepared operator and preconditioner. The acceptance threshold,
+passing-column arithmetic, original RHS, estimator, and RNG counts remain
+unchanged. Work receipts and the memory forecast account for correction work;
+exhaustion remains a hard error. Independent physical-row tests cover recovery,
+cancellation/reuse, and failure when the original equations are incompatible.
+
+Both original 240,000-row highrank/q1 examples now complete locally with the
+same data, seeds, solver route and numerical budgets. Their maximum reported
+full residual is `7.5535e-10`, below the unchanged `1e-9` threshold. Highrank
+returns three intervals and q1 returns four. Logs and source/binary identities
+are in `.local/diagonal-refinement/`. These are development reproductions;
+concurrent test activity makes their times unsuitable for a controlled speed
+comparison. The old failures remain unchanged.
+
+The full Rust workspace, 894 Python tests, formatting, strict clippy and CMG
+assembly pass. Mac arm64/Rosetta thin/universal runtime, ABI and installation
+checks pass with source manifest `0860cd30f727646d79db31f02071b47afbaaf97381fc0ebdc5feb642de497605`.
+The formal `plugin-build` CI receipt remains `failure/dirty_checkout`: the
+underlying qualifier exited zero as `LOCAL_CHECKPOINT_DIRTY_TREE`, but the CI
+wrapper requires a clean committed checkout. This is preserved, not waived.
+Integrated Stata quick/full, clean installation, helper migration and benchmark
+smokes pass with the rebuilt candidates (`FEVC LOCAL QUALIFICATION PASS`).
+All five distributed plugins were restored and verified byte-for-byte against
+HEAD after testing. This production solver change means
+the preceding Mac/Linux candidate qualifications below do not qualify the new
+binary revision. No new Linux or Windows qualification is claimed. The Windows
+collector approval remains valid, but authentication still requires manual Mac
+unlock/login. Distributed binaries retain their original bytes. No commit, push, publication, tag or release is authorized.
+
+## Pre-refinement pooled-inference checkpoint
+
+# Pooled mover–stayer component inference — October 9–10, 2026
+
+The owner approved implementation of [the pooled inference plan](docs/POOLED_COMPONENT_INFERENCE_PLAN.md).
+The source implementation is complete in scalable Rust/JLA and exact Mata,
+with explicit structured variance models, fixed nuisance offsets, original
+unit classification and independent physical stayer observations. The work
+remains uncommitted on main. No publication, push, tag or release is authorized.
+
+The [bounded assessment](docs/POOLED_COMPONENT_ASSESSMENT.md) completed 16,000
+calls: all primary intervals were available and all registered descriptive
+screens passed. Every diagnostic failure and the stopped pre-repair attempt
+remain preserved. These results do not establish general coverage; null,
+weak-signal and multiple-mode cases remain problematic, and numerical probe
+sensitivity is material in some fixed outcomes.
+
+Independent dense/physical-row and literal-expansion oracles, source checks,
+integrated Stata quick/full, Rust core/plugin targets, ABI and public regression
+checks pass. Three source-bound Mac candidates pass arm64 and Rosetta
+thin/universal qualification. Local HTTP fresh/replacement installation checks pass, verifying all 61
+installed bytes and both models on both backends. The final Python gate passes
+894 tests; assembly, formatting and clippy pass. The three-size timing
+assessment is complete with explicit limitations: 240,000-row diagonal calls
+failed the unchanged residual gate; CMG diagnostics completed in 57.0 seconds
+(highrank, three targets) and 42.0 seconds (q1, four targets), at 605/582 MiB
+process RSS on an M2 Ultra with two native threads. Original failures remain
+in [the performance record](docs/pooled_component_inference_performance_v1.json).
+
+The owner explicitly approved the frozen SCC bundle and the prepared private
+Windows collector update. SCC job `8010602` passed the four staged pooled
+checks and full Stata suite, then failed clean installation with `r(601)`
+locating a fixture in its temporary test copy. Its failed accounting and
+37 hash-verified evidence files are preserved. The frozen fixture exists;
+the lookup failure's mechanism is not established after temporary cleanup.
+One focused four-core retest, job `8011621`, passed clean installation and all
+12 installed checks using the immutable fixture directory and identical binary.
+Its accounting has zero failed/exit status; all 32 collected evidence files
+match remote hashes. The retest took 354 seconds with 930 MiB peak virtual
+memory. The permanent qualifier now uses the immutable source fixtures, and a
+focused regression covers an incomplete temporary copy. Both attempts retain bundle
+`fb1b52c85bd40e50cb786d9e61bc5e2cd5bf77661f9275464e4c726936d1febf`
+under `/projectnb/welfgr/vckss/runs/20261010T042343Z-pooled-component-final`.
+Linux candidate qualification is complete through the combined full/staged
+and installed evidence; the original failed attempt remains failed. The local
+`linux-install-retest/composite-qualification.json` records that reuse and its
+unchanged source, binary, fixture and acceptance identities.
+Windows maintenance stopped at `AUTH_REQUIRED` before acquiring a lock or
+changing the controller. The owner-authorized browser login attempt could not
+fill the saved credential; the computer-use tool then reported the Mac locked
+and requiring manual unlock. Authentication must be completed interactively.
+The restricted inspector confirms that the Windows instance is stopped.
+Earlier approval-review rejections remain recorded in the local approval brief;
+the new owner approval resolves the authorization issue.
+The three qualified Mac candidates and the Linux candidate are preserved under
+`.local/pooled-component/`;
+the qualifier's copies into tracked binary paths were restored to their original
+bytes. All five distributed binaries remain unchanged and lack the new mixed
+capability. Five-payload adoption is not complete.
+
+## Preserved completed checkpoint
+
 # CMG replay, refinement and sample reporting — October 9, 2026
 
 Commit A `a8617882` and Commit B `eec825d6` were reviewed, committed and pushed

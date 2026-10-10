@@ -1,0 +1,81 @@
+{
+  "schema": "FEVC_POOLED_COMPONENT_INFERENCE_NUMERICAL_V1",
+  "registered_date": "2026-10-09",
+  "status": "REGISTERED_BEFORE_NUMERICAL_DIAGNOSTIC_DRAWS",
+  "scope": "Fixed-outcome numerical sensitivity only; no sampling coverage claim or numerical-seed selection.",
+  "routes": [
+    "rust"
+  ],
+  "references": [
+    "highrank",
+    "q1"
+  ],
+  "dimension": 12,
+  "numerical_seeds": [
+    410081,
+    410089,
+    410099
+  ],
+  "budgets": {
+    "baseline": {
+      "point_probes": 200,
+      "gram_probes": 2048,
+      "covariance_simulations": 1000
+    },
+    "point800": {
+      "point_probes": 800,
+      "gram_probes": 2048,
+      "covariance_simulations": 1000
+    },
+    "gram8192": {
+      "point_probes": 200,
+      "gram_probes": 8192,
+      "covariance_simulations": 1000
+    },
+    "covariance4000": {
+      "point_probes": 200,
+      "gram_probes": 2048,
+      "covariance_simulations": 4000
+    }
+  },
+  "profile": {
+    "replications_per_cell": 1,
+    "domain": "numerical_fixed_outcome"
+  },
+  "outcome_identity": "Primary pooled geometry at k12, keyed by route/reference/stayer share and replication1 in a separate numerical domain. All 12 settings per outcome use identical CSV inputs.",
+  "inventory": {
+    "fixed_outcomes": 4,
+    "settings_per_outcome": 12,
+    "paired_tasks": 48,
+    "calls": 96,
+    "target_rows": 384
+  },
+  "arms": [
+    "mean",
+    "fixed_c0"
+  ],
+  "unchanged": [
+    "production q1 critical draws",
+    "variance model",
+    "inference bins",
+    "phase tolerances",
+    "solver",
+    "target eligibility",
+    "point MCSE all",
+    "existing diagnostic/error guards"
+  ],
+  "reports": [
+    "all attempts and unavailable targets",
+    "point error relative to exact dense oracle",
+    "within-seed deviations from baseline",
+    "across-seed dispersion at each budget",
+    "SE and AM endpoint deviations",
+    "q1 joint covariance deviations",
+    "input hashes and numerical counts"
+  ],
+  "interpretation": "Three seeds provide a bounded sensitivity check, not reliable tail calibration. Keep all seeds and failures; never select the most favorable interval or adapt budgets after observing results.",
+  "stayer_shares": [
+    0.25,
+    0.75
+  ]
+}

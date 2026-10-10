@@ -669,11 +669,18 @@ impl PreparedProblemWithMask {
                 "the prepared generation already owns component inference",
             ));
         }
-        if self.projection.is_some() || self.stayer_augmentation.is_some() {
+        if self.projection.is_some()
+            || (self.stayer_augmentation.is_some()
+                && !matches!(
+                    policy,
+                    ComponentInferencePolicy::DirectV4 { .. }
+                        | ComponentInferencePolicy::DirectAutomaticV5 { .. }
+                ))
+        {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
                 "session_component_inference_augmentation",
-                "structured component inference requires a mover-only generation without projection",
+                "mixed component inference requires the direct joint variance policy without projection",
             ));
         }
         let expected_deletion = match inference_unit {
@@ -687,11 +694,18 @@ impl PreparedProblemWithMask {
                 "component inference units disagree with the prepared deletion mode",
             ));
         }
+        let inference_problem = self
+            .stayer_augmentation
+            .as_ref()
+            .map_or(&self.problem, |augmentation| &augmentation.core.problem);
         let rows = to_u64(
-            self.problem.outcome.len(),
+            inference_problem.outcome.len(),
             "component inference retained rows",
         )?;
-        let old_resident = self.receipt.memory.prepared_resident_bytes;
+        let old_resident = self.stayer_augmentation.as_ref().map_or(
+            self.receipt.memory.prepared_resident_bytes,
+            |augmentation| augmentation.memory.total_prepared_resident_bytes,
+        );
         // Preparation validates every retained row and publishes only a small
         // options object. The row-level fitted variance state belongs to the
         // already-conservative generic-JLA attachment peak, not this boundary.
@@ -721,7 +735,7 @@ impl PreparedProblemWithMask {
         | ComponentInferencePolicy::DirectAutomaticV5 { gram_probes } = policy
         {
             vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
-                &self.problem,
+                inference_problem,
                 inference_unit,
                 variance_source,
                 options,
@@ -731,7 +745,7 @@ impl PreparedProblemWithMask {
             )?
         } else if policy == ComponentInferencePolicy::UnifiedV3 {
             vckss_core::residual_moment_inference::prepare_unified_with_interrupt(
-                &self.problem,
+                inference_problem,
                 inference_unit,
                 variance_source,
                 options,
@@ -742,7 +756,7 @@ impl PreparedProblemWithMask {
             match inference_unit {
                 ComponentInferenceUnit::Observation if individual => {
                     vckss_core::residual_moment_inference::prepare_default_with_interrupt(
-                        &self.problem,
+                        inference_problem,
                         variance_source,
                         options,
                         structured_options,
@@ -751,7 +765,7 @@ impl PreparedProblemWithMask {
                 }
                 ComponentInferenceUnit::Observation => {
                     prepare_structured_component_inference_with_interrupt(
-                        &self.problem,
+                        inference_problem,
                         variance_source,
                         options,
                         structured_options,
@@ -759,7 +773,7 @@ impl PreparedProblemWithMask {
                     )?
                 }
                 ComponentInferenceUnit::Match => prepare_grouped_structured_component_inference(
-                    &self.problem,
+                    inference_problem,
                     variance_source,
                     options,
                     structured_options,

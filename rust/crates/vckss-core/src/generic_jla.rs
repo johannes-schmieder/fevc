@@ -18,6 +18,7 @@ use core::cmp::Ordering;
 
 mod centering;
 mod numerical;
+mod pooled_component;
 pub(crate) mod residual_moment_attachment;
 mod spectrum_batches;
 mod statistical_batches;
@@ -976,6 +977,29 @@ pub fn run_generic_jla_with_automatic_component_batches_interrupt(
     full_cmg: Option<FullCmgPlanOptions>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
+    run_generic_jla_with_automatic_mixed_component_batches_interrupt(
+        problem,
+        execution_options,
+        component,
+        None,
+        threads,
+        full_cmg,
+        interrupt,
+    )
+}
+
+/// Automatic widths preserve the certified mixed deletion partition.
+#[doc(hidden)]
+#[allow(clippy::too_many_arguments)]
+pub fn run_generic_jla_with_automatic_mixed_component_batches_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    component: &PreparedComponentInference,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    threads: usize,
+    full_cmg: Option<FullCmgPlanOptions>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
     let direct = full_cmg.is_some();
     if threads == 0
         || full_cmg.is_some_and(|plan| plan.threads != threads)
@@ -997,7 +1021,7 @@ pub fn run_generic_jla_with_automatic_component_batches_interrupt(
         execution_options,
         None,
         Some(component),
-        None,
+        hybrid,
         full_cmg,
         if direct { None } else { Some(threads) },
         direct,
@@ -1183,6 +1207,32 @@ fn run_generic_jla_with_execution_interrupt(
     let _profile = ProfileScope::new(ProfilePhase::Command);
     let component_prepared = component_inference;
     let mut component_view = component_prepared.map(ComponentExecution::new);
+    if let (Some(view), Some(hybrid)) = (component_view.as_mut(), hybrid) {
+        validate_hybrid_plan(
+            problem,
+            execution_options.estimator.deletion,
+            projection,
+            Some(hybrid),
+        )?;
+        let physical = hybrid
+            .stayer_rows
+            .iter()
+            .zip(&problem.frequency)
+            .filter(|(stayer, _)| **stayer)
+            .try_fold(0_usize, |sum, (_, &frequency)| {
+                sum.checked_add(
+                    usize::try_from(frequency).map_err(|_| resource("stayer inference count"))?,
+                )
+                .ok_or_else(|| resource("stayer inference count overflow"))
+            })?;
+        if physical > 0 {
+            hybrid
+                .mover_deletion_units
+                .checked_add(physical)
+                .ok_or_else(|| resource("mixed inference count overflow"))?;
+            view.mixed_units = Some((hybrid.mover_deletion_units, physical));
+        }
+    }
     let component_inference = component_view.as_ref();
     if full_cmg.is_some()
         && (((projection.is_some() || component_inference.is_some()) && !direct_attachments)
@@ -2134,6 +2184,20 @@ fn run_generic_jla_with_execution_interrupt(
             }
         }
     };
+    let pooled_plan = if component_inference.is_some() {
+        hybrid
+            .map(|hybrid| {
+                pooled_component::plan(
+                    problem,
+                    prepared_match_plan.as_ref().expect("mixed mover plan"),
+                    hybrid,
+                    interrupt,
+                )
+            })
+            .transpose()?
+    } else {
+        None
+    };
     let component_addresses = match component_inference {
         Some(prepared) if prepared.inference_unit == ComponentInferenceUnit::Observation => {
             Some(observation_inference_addresses(
@@ -2149,12 +2213,16 @@ fn run_generic_jla_with_execution_interrupt(
         }
         Some(prepared) if prepared.inference_unit == ComponentInferenceUnit::Match => {
             let (addresses, folds) = grouped_component_addresses_and_folds(
-                prepared_match_plan.as_ref().ok_or_else(|| {
-                    BackendError::invariant(
-                        "generic_jla_component_inference",
-                        "grouped component-inference preflight is missing its match plan",
-                    )
-                })?,
+                pooled_plan
+                    .as_ref()
+                    .map(|mixed| &mixed.plan)
+                    .or(prepared_match_plan.as_ref())
+                    .ok_or_else(|| {
+                        BackendError::invariant(
+                            "generic_jla_component_inference",
+                            "grouped component-inference preflight is missing its match plan",
+                        )
+                    })?,
                 interrupt,
             )?;
             if prepared.variance_source.structured_model().is_some()
@@ -2291,14 +2359,14 @@ fn run_generic_jla_with_execution_interrupt(
                 interrupt,
             )?;
         }
-        let mover_adjusted = match_deleted_adjustment(
+        let mut mover_adjusted = match_deleted_adjustment(
             problem,
             &match_plan,
             &match_moments,
             &residual,
             active_geometry,
             options,
-            false,
+            component_inference.is_some(),
             numerical_state.as_mut(),
             interrupt,
         )?;
@@ -2325,7 +2393,7 @@ fn run_generic_jla_with_execution_interrupt(
                 interrupt,
             )?;
         }
-        let stayer_adjusted = observation_deleted_adjustment(
+        let mut stayer_adjusted = observation_deleted_adjustment(
             problem,
             &observation_classes,
             &observation_moments,
@@ -2334,9 +2402,17 @@ fn run_generic_jla_with_execution_interrupt(
             active_leverage,
             &row_order,
             options,
-            false,
+            component_inference.is_some(),
             interrupt,
         )?;
+        if let Some(mixed) = pooled_plan.as_ref() {
+            component_geometry = Some(pooled_component::geometry(
+                mixed,
+                &mut mover_adjusted,
+                &mut stayer_adjusted,
+                interrupt,
+            )?);
+        }
         if let Some(state) = numerical_state.as_mut() {
             state.point_clipping(stayer_adjusted.variance_clipped);
             state.observation(
@@ -2635,7 +2711,7 @@ fn run_generic_jla_with_execution_interrupt(
                         "grouped component inference lost its match plan",
                     )
                 })?;
-                let collapsed = collapse_match_component_data(
+                let mut collapsed = collapse_match_component_data(
                     problem,
                     match_plan,
                     &working_y,
@@ -2644,12 +2720,26 @@ fn run_generic_jla_with_execution_interrupt(
                     diagonal,
                     interrupt,
                 )?;
+                if let Some(mixed) = pooled_plan.as_ref() {
+                    pooled_component::append_data(
+                        mixed,
+                        &mut collapsed,
+                        &working_y,
+                        &residual,
+                        maker_inverse,
+                        diagonal,
+                        interrupt,
+                    )?;
+                }
                 run_component_inference_attachment(
                     problem,
                     prepared,
                     working_solver,
                     coefficients,
-                    ComponentInferenceRows::Match { plan: match_plan },
+                    ComponentInferenceRows::Match {
+                        plan: pooled_plan.as_ref().map_or(match_plan, |mixed| &mixed.plan),
+                        mover_units: pooled_plan.as_ref().map(|mixed| mixed.mover_units),
+                    },
                     &collapsed.outcome,
                     outcome_center,
                     &collapsed.residual,
@@ -2987,10 +3077,7 @@ fn validate_component_inference_request(
             "residual moments require inference with a structured basis",
         ));
     }
-    let expected_variance = match prepared.inference_unit {
-        ComponentInferenceUnit::Observation => problem.outcome.len(),
-        ComponentInferenceUnit::Match => problem.deletion_units(),
-    };
+    let expected_variance = prepared.unit_count(problem);
     let variance_shape_valid = match prepared.variance_source {
         ComponentVarianceSource::Oracle => prepared.variance.len() == expected_variance,
         ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
@@ -3041,11 +3128,15 @@ fn validate_component_inference_request(
             }
         }
     }
-    if hybrid.is_some() {
+    if hybrid.is_some()
+        && (prepared.inference_unit != ComponentInferenceUnit::Match
+            || (!prepared.unified_variance_fit
+                && prepared.variance_source != ComponentVarianceSource::Oracle))
+    {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "generic_jla_component_inference",
-            "eligible-stayer or mixed-deletion inference is outside the MVP",
+            "mixed component inference requires fixed-offset match units and the unified variance fit",
         ));
     }
     if projection.is_some() {
@@ -3076,6 +3167,13 @@ fn validate_component_inference_request(
             mover[worker] |= first != unit;
         } else {
             first_unit[worker] = Some(unit);
+        }
+    }
+    if let Some(hybrid) = hybrid {
+        for (row, &stayer) in hybrid.stayer_rows.iter().enumerate() {
+            if stayer {
+                mover[problem.row_worker[row] as usize] = true;
+            }
         }
     }
     if mover.iter().any(|value| !value) {
@@ -5401,6 +5499,7 @@ struct DeletedAdjustment {
     maximum_relres: f64,
     inference_leverage: Option<Vec<f64>>,
     inference_maker_inverse: Option<Vec<f64>>,
+    inference_physical: Option<(Vec<f64>, Vec<f64>)>,
 }
 
 fn observation_deleted_adjustment(
@@ -5444,6 +5543,13 @@ fn observation_deleted_adjustment(
     }
     let mut variance_clipped = false;
     let mut maximum_leverage = 0.0_f64;
+    let mut inference_physical =
+        (retain_inference_geometry && options.deletion == DeletionMode::Match).then(|| {
+            (
+                vec![f64::NAN; correlations.first.len()],
+                vec![f64::NAN; correlations.first.len()],
+            )
+        });
     let mut inference_leverage = retain_inference_geometry.then(|| vec![f64::NAN; rows]);
     let mut inference_maker_inverse = retain_inference_geometry.then(|| vec![f64::NAN; rows]);
     for (position, &row) in row_order.iter().enumerate() {
@@ -5490,6 +5596,10 @@ fn observation_deleted_adjustment(
             }
             inverse_sum.add(inverse);
             let total_leverage = finite.projection + control_leverage[row];
+            if let Some((leverage, maker)) = inference_physical.as_mut() {
+                leverage[physical] = total_leverage;
+                maker[physical] = inverse;
+            }
             leverage_sum.add(total_leverage);
             maximum_leverage = maximum_leverage.max(total_leverage);
         }
@@ -5514,6 +5624,7 @@ fn observation_deleted_adjustment(
         maximum_relres: 0.0,
         inference_leverage,
         inference_maker_inverse,
+        inference_physical,
     })
 }
 
@@ -5691,6 +5802,7 @@ fn match_deleted_adjustment(
         maximum_relres,
         inference_leverage,
         inference_maker_inverse,
+        inference_physical: None,
     })
 }
 
@@ -5723,6 +5835,7 @@ enum ComponentInferenceRows<'a> {
     },
     Match {
         plan: &'a MatchPlan,
+        mover_units: Option<usize>,
     },
 }
 
@@ -5730,7 +5843,7 @@ impl<'a> ComponentInferenceRows<'a> {
     fn len(self, problem: &CompressedProblem) -> usize {
         match self {
             Self::Observation { .. } => problem.outcome.len(),
-            Self::Match { plan } => plan.rows.len(),
+            Self::Match { plan, .. } => plan.rows.len(),
         }
     }
 
@@ -6166,7 +6279,7 @@ fn component_transpose_rhs_by(
             controls,
             row_order,
         } => transpose_outcome_rhs_by(problem, controls, row_order, value_at, interrupt),
-        ComponentInferenceRows::Match { plan } => {
+        ComponentInferenceRows::Match { plan, .. } => {
             let mut worker = zeroed_f64_with_interrupt(
                 problem.workers(),
                 "component worker RHS",
@@ -6215,7 +6328,7 @@ fn component_predict(
                 interrupt,
             )
         }
-        ComponentInferenceRows::Match { plan } => {
+        ComponentInferenceRows::Match { plan, .. } => {
             if !coefficients.control.is_empty() {
                 return Err(BackendError::invariant(
                     "grouped_component_predict",
@@ -6269,7 +6382,7 @@ fn component_predict_in_order(
                 )?;
             }
         }
-        ComponentInferenceRows::Match { plan } => {
+        ComponentInferenceRows::Match { plan, .. } => {
             if !coefficients.control.is_empty()
                 || coefficients.worker.len() != problem.workers()
                 || coefficients.firm.len() != problem.firms()
@@ -7786,7 +7899,14 @@ fn run_component_inference_attachment(
         u64::try_from(rows).map_err(|_| resource("component-inference independent unit count"))?;
     result.nuisance_uncertainty_conditioned_away =
         prepared.inference_unit == ComponentInferenceUnit::Match;
+    result.mixed_units = prepared
+        .mixed_units
+        .map(|(movers, stayers)| (movers as u64, stayers as u64));
     if let Some(match_mass) = match_mass {
+        let mover_count = prepared
+            .mixed_units
+            .map_or(match_mass.len(), |(movers, _)| movers);
+        let match_mass = &match_mass[..mover_count];
         let total = match_mass.iter().sum::<f64>();
         let square = match_mass.iter().map(|value| value * value).sum::<f64>();
         if !total.is_finite() || total <= 0.0 || !square.is_finite() || square <= 0.0 {
@@ -7795,8 +7915,11 @@ fn run_component_inference_attachment(
         result.effective_match_count = total * total / square;
         result.largest_match_mass_share =
             match_mass.iter().copied().fold(0.0_f64, f64::max) / total;
-        result.largest_match_leverage = leverage.iter().copied().fold(0.0_f64, f64::max);
-        result.smallest_maker_denominator = maker_inverse
+        result.largest_match_leverage = leverage[..mover_count]
+            .iter()
+            .copied()
+            .fold(0.0_f64, f64::max);
+        result.smallest_maker_denominator = maker_inverse[..mover_count]
             .iter()
             .map(|value| value.recip())
             .fold(f64::INFINITY, f64::min);
@@ -7830,7 +7953,7 @@ fn component_inference_peak_forecast(
     queue_capacity: Option<usize>,
     spectrum_workers: usize,
 ) -> Result<u64> {
-    let rows = u64::try_from(problem.outcome.len())
+    let rows = u64::try_from(prepared.unit_count(problem).max(problem.outcome.len()))
         .map_err(|_| resource("component-inference row forecast is not representable"))?;
     let original_parameters = problem
         .workers()
@@ -7850,7 +7973,20 @@ fn component_inference_peak_forecast(
             (prepared.options.probes as usize).max(prepared.options.spectrum_probes as usize),
         ))
         .map_err(|_| resource("component-inference batch width is not representable"))?;
-    let fixed_rows = checked_product(&[rows, 32, 8], "component-inference fixed row state")?;
+    let fixed_rows = checked_product(&[rows, 32, 8], "component-inference fixed row state")?
+        .checked_add(if prepared.mixed_units.is_some() {
+            checked_sum(&[
+                checked_product(
+                    &[problem.physical_total, 2, 8],
+                    "mixed physical maker capture",
+                )?,
+                checked_product(&[rows, 128], "mixed inference unit plan")?,
+                checked_product(&[problem.outcome.len() as u64, 8], "mixed plan mover rows")?,
+            ])?
+        } else {
+            0
+        })
+        .ok_or_else(|| resource("mixed component forecast overflow"))?;
     let batch_rows = checked_product(
         &[
             rows,
@@ -9426,6 +9562,12 @@ fn memory_forecast(
             checked_product(&[workers, columns, f64_bytes, 3], "solver worker workspace")?,
             checked_product(&[columns, f64_bytes, 8], "solver scalar workspace")?,
             checked_product(&[columns, 96], "solver receipts and flags")?,
+            // At most one serial column is refined while the original batch
+            // remains live. Queued diagonal workers have their separate,
+            // larger per-worker envelope in DiagonalQueuePlan.
+            checked_product(&[dimension, f64_bytes, 6], "model refinement parameters")?,
+            checked_product(&[workers, f64_bytes, 3], "model refinement workers")?,
+            1024, // Scalar correction receipts, flags and vector headers.
             checked_product(
                 &[route_memory.cmg_batch_workspace_per_column, columns],
                 "batched CMG workspace",

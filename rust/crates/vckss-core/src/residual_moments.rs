@@ -19,7 +19,7 @@ use crate::interrupt::{checkpoint_chunk, unstable_sort_by_with_interrupt, Interr
 use crate::rng::{CounterRng, ProbeDomain, MAX_PHYSICAL_WORDS_PER_ATOM};
 
 const PHASE: &str = "observation_residual_moments";
-const MAX_TERMS: usize = 21;
+const MAX_TERMS: usize = 36;
 const SMALL_RESIDUAL_GATE: f64 = 1.0e-9;
 
 pub(crate) mod basis;
@@ -184,7 +184,7 @@ pub struct ResidualMomentFit {
 
 /// Prepare once per fixed design/numerical seed, before fitting any outcome.
 ///
-/// `basis` is row-major, with a constant first column and at most 21 terms.
+/// `basis` is row-major, with a constant first column and at most 36 terms.
 /// Intended callers supply the existing leverage/common rank-polynomial basis;
 /// this API neither selects a model nor drops collinear columns. `addresses`
 /// contains strictly increasing canonical (entity, subdraw) pairs: replicated

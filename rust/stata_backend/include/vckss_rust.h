@@ -41,6 +41,7 @@ int32_t vckss_rust_engine_centering_v1(uint64_t generation, uint32_t mode);
 #define VCKSS_CORE_RESOLVED_EXECUTION_V1_READY (UINT64_C(1) << 14)
 #define VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY (UINT64_C(1) << 15)
 #define VCKSS_CORE_COMPONENT_CENTERING_V1_READY (UINT64_C(1) << 16)
+#define VCKSS_CORE_MIXED_COMPONENT_V1_READY (UINT64_C(1) << 17)
 #define VCKSS_SUPPORT_EXACT (UINT64_C(1) << 0)
 #define VCKSS_SUPPORT_JLA (UINT64_C(1) << 1)
 #define VCKSS_SUPPORT_MATCH_DELETION (UINT64_C(1) << 2)
@@ -919,6 +920,21 @@ typedef struct VckssComponentInferenceUnitReceiptV1 {
     double smallest_maker_denominator;
 } VckssComponentInferenceUnitReceiptV1;
 
+typedef struct VckssComponentInferenceUnitReceiptV2 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t deletion_mode;
+    uint32_t nuisance_uncertainty_omitted;
+    uint64_t independent_units;
+    double effective_match_count;
+    double largest_match_mass_share;
+    double largest_match_leverage;
+    double smallest_maker_denominator;
+    uint64_t mover_units;
+    uint64_t stayer_observations;
+} VckssComponentInferenceUnitReceiptV2;
+
 typedef struct VckssComponentVectorV1 {
     double worker;
     double firm;
@@ -1723,6 +1739,11 @@ int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v1(
 int32_t vckss_rust_engine_component_inference_unit_receipt_v1(
     uint64_t generation,
     VckssComponentInferenceUnitReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_component_inference_unit_receipt_v2(
+    uint64_t generation,
+    VckssComponentInferenceUnitReceiptV2 *output,
     uint32_t output_capacity_bytes
 );
 /* V2 changes policy, not the frozen V1 tuning-request layout. */

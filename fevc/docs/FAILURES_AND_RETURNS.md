@@ -216,6 +216,26 @@ diagnostic, not an estimated degrees-of-freedom adjustment. Observation
 requests receive the unit receipt with match-specific entries zero and do not
 post match-specific scalars. The requested/selected nuisance metadata and
 `e(inference_offset_warning)` make the fixed-offset approximation explicit.
+Pooled match inference uses the additive native unit receipt V2 (schema 2),
+with the V1 fields followed by mover-unit and physical-stayer-observation counts.
+`e(inference_mover_units)` and `e(inference_stayer_units)` sum to
+`e(inference_independent_units)`. Frequency copies count separately for stayers.
+The mass concentration and maker diagnostics above refer to the mover units.
+The native capability `r(component_mixed_api)==1` is required before preparation
+for default/explicit `stayers(both)`; an older plugin returns
+`MIXED_COMPONENT_NATIVE_REQUIRED`. The old V1 ABI layout remains unchanged and
+rejects mixed results. Mixed ordering is `FEVC-MIXED-DESIGN-ORDER-V1` (code 4).
+
+Explicit exact Mata structured match inference posts the same unit-count scalars,
+`e(residual_moment_diagnostics)`, `e(component_spectrum)`, individual target status,
+and `e(component_raw_covariance)`. Its fit is `exact_residual_moments`, Gram method
+is `exact_coefficient_contraction`, and Gram probe count is zero. A valid highrank
+joint covariance is posted as `e(V)`; otherwise individual available intervals
+remain. Structured q1 never posts a substitute joint Gaussian `e(V)`. Both
+backends record omitted nuisance estimation uncertainty. These fields report
+computation and model assumptions, not general coverage qualification; see
+[the pooled contract](POOLED_COMPONENT_INFERENCE.md).
+
 For match `q=1`, the same Rust result additionally retains the raw
 leave-match leading recenter, leading and remainder covariance, direct
 remainder-identity error, curvature, critical value, interval endpoints,

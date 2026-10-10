@@ -1,5 +1,22 @@
 # Stata plugin boundary
 
+## Pooled component development interface
+
+The pooled fixed-offset match extension adds readiness bit 17
+(`VCKSS_CORE_MIXED_COMPONENT_V1_READY`), exposed as `r(component_mixed_api)`.
+Its additive `vckss_rust_engine_component_inference_unit_receipt_v2` export
+returns an 80-byte schema-2 receipt: the original unit fields followed by
+64-bit mover-unit and physical-stayer-observation counts. V1 retains its
+64-byte layout and rejects mixed results. Existing statistical-result layouts
+are unchanged. The wrapper clears optional transport fields before each fetch
+and requires both counts for schema 2.
+
+Default/explicit `stayers(both)` structured match inference requires this
+capability before preparation or RNG. See the
+[pooled contract](../../fevc/docs/POOLED_COMPONENT_INFERENCE.md) and
+[checkpoint](../../fevc/PLAN.md) for development assessment and platform status.
+The historical distributed payloads below retain their original capabilities.
+
 ## Current CMG repair qualification
 
 All five CMG repair payloads are rebuilt from `eec825d6` and published at

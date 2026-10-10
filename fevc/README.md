@@ -17,6 +17,13 @@ The main display reports twice the covariance as the sorting contribution.
 Controls enter the regression; the reported targets concern the worker and
 firm effects.
 
+Pooled match component inference is available in the development source through
+explicit structured models in exact Mata and scalable Rust/JLA. It assumes
+independent physical stayer observations and holds fitted controls fixed.
+See [the pooled inference contract](docs/POOLED_COMPONENT_INFERENCE.md) for
+syntax, assumptions and native capability requirements. Existing distributed
+binaries need the matching new capability before this route can run.
+
 ## Deletion and population
 
 Match deletion is the default. It leaves out a worker–firm match when

@@ -256,6 +256,8 @@ fn receipt_v5(
             == vckss_core::residual_moment_inference::MATCH_ORDERING_CONTRACT
         {
             3
+        } else if fit.ordering_contract == "FEVC-MIXED-DESIGN-ORDER-V1" {
+            4
         } else {
             1
         };

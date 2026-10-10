@@ -35,6 +35,9 @@ local infer inferencemodel(structured_common) inferencesimulations(512)
 quietly fevc outcome [fw=copies], `point'
 matrix baseline = e(results)
 matrix baseline_b = e(b)
+// Optional V2 fields left by a failed transport cannot contaminate V1 results.
+scalar __vckss_comp_unit_movers = -17
+scalar __vckss_comp_unit_stayers = 17
 quietly fevc outcome [fw=copies], `point' `infer' inference(highrank)
 assert mreldif(baseline,e(results))==0
 assert mreldif(baseline_b,e(b))==0
@@ -44,6 +47,8 @@ assert `"`e(inference_nuisance_requested)'"'=="fixedoffset"
 assert `"`e(inference_nuisance_selected)'"'=="fixedoffset"
 assert e(inference_nuisance_omitted)==1
 assert e(inference_independent_units)==400
+assert e(inference_mover_units)==400
+assert e(inference_stayer_units)==0
 assert e(deletion_units)==400
 assert e(N_physical)==1600
 assert abs(e(inference_effective_matches)-400)<1e-10
@@ -52,7 +57,7 @@ assert e(inference_largest_leverage)>0 & e(inference_largest_leverage)<1
 assert e(inference_smallest_maker)>0
 assert strpos(`"`e(inference_method)'"',"Fixed-offset approximate match inference")>0
 assert strpos(`"`e(inference_offset_warning)'"',"few controls")>0
-assert e(component_unit_receipt)[1,"schema"]==1
+assert inlist(e(component_unit_receipt)[1,"schema"],1,2)
 assert e(component_unit_receipt)[1,"deletion"]==1
 assert "`e(inference_variance_fit)'"=="residual_moments"
 assert e(inference_gram_probes)==2048
@@ -154,18 +159,37 @@ foreach reference in highrank q1 {
 restore
 
 // Unsupported combinations stop in capability preflight, before native work.
-foreach change in joint both autoengine omittedengine omitteddeletion omittednuisance omittedstayers {
+foreach change in joint autoengine omittedengine omitteddeletion omittednuisance {
     if "`change'"=="joint" local invalid : subinstr local point "nuisance(fixedoffset)" "nuisance(joint)"
-    if "`change'"=="both" local invalid : subinstr local point "stayers(movers)" "stayers(both)"
     if "`change'"=="autoengine" local invalid : subinstr local point "engine(generic)" "engine(auto)"
     if "`change'"=="omittedengine" local invalid : subinstr local point "engine(generic)" ""
     if "`change'"=="omitteddeletion" local invalid : subinstr local point "deletion(match)" ""
     if "`change'"=="omittednuisance" local invalid : subinstr local point "nuisance(fixedoffset)" ""
-    if "`change'"=="omittedstayers" local invalid : subinstr local point "stayers(movers)" ""
     capture noisily fevc outcome [fw=copies], `invalid' `infer' inference(highrank)
     assert _rc==498
     assert `"`e(status)'"'=="WITHHELD"
     assert `"`e(withholding_status)'"'=="STRUCTURED_INFERENCE_TUPLE_REQUIRED"
+    assert `"`c(rngstate)'"'==`"`caller_rng'"'
+    quietly fevc_rust snapshot
+    assert r(state)==0
+}
+// Default/explicit both requires the new capability, even with zero stayers.
+quietly fevc_rust probe
+local mixed_api = r(component_mixed_api)
+foreach population in both default {
+    local replacement "stayers(both)"
+    if "`population'"=="default" local replacement ""
+    local pooled : subinstr local point "stayers(movers)" "`replacement'"
+    capture noisily fevc outcome [fw=copies], `pooled' `infer' inference(highrank)
+    if `mixed_api'==1 {
+        assert _rc==0
+        assert e(inference_stayer_units)==0
+        assert mreldif(baseline,e(results))==0
+    }
+    else {
+        assert _rc==498
+        assert "`e(withholding_status)'"=="MIXED_COMPONENT_NATIVE_REQUIRED"
+    }
     assert `"`c(rngstate)'"'==`"`caller_rng'"'
     quietly fevc_rust snapshot
     assert r(state)==0
@@ -181,7 +205,7 @@ program define fevc__rust_public_call, rclass
         if "$FEVC_TEST_UNIT_FAULT"=="count" return scalar independent_units = r(independent_units)+1
         if "$FEVC_TEST_UNIT_FAULT"=="deletion" return scalar unit_deletion = 2
         if "$FEVC_TEST_UNIT_FAULT"=="omission" return scalar nuisance_uncertainty_omitted = 0
-        if "$FEVC_TEST_UNIT_FAULT"=="schema" return scalar unit_schema = 2
+        if "$FEVC_TEST_UNIT_FAULT"=="schema" return scalar unit_schema = 99
         if "$FEVC_TEST_UNIT_FAULT"=="ordering" return scalar ordering = 2
     }
 end
@@ -189,7 +213,7 @@ foreach fault in count deletion omission schema ordering {
     global FEVC_TEST_UNIT_FAULT "`fault'"
     capture noisily fevc outcome [fw=copies], `point' `infer' inference(highrank)
     assert _rc==498
-    capture matrix bad_V = e(V)
+    capture matrix list e(V)
     assert _rc!=0
     assert `"`c(rngstate)'"'==`"`caller_rng'"'
     quietly fevc_rust snapshot

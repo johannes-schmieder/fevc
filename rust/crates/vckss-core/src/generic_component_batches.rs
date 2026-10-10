@@ -31,6 +31,9 @@ pub(super) struct ComponentExecution<'a> {
     prepared: &'a PreparedComponentInference,
     pub options: ComponentInferenceOptions,
     pub residual_moments: Option<crate::residual_moment_inference::Options>,
+    /// Original mover blocks and physical stayer observations. Classification
+    /// comes from the certified augmentation, never from synthetic IDs.
+    pub mixed_units: Option<(usize, usize)>,
 }
 
 impl<'a> ComponentExecution<'a> {
@@ -39,7 +42,18 @@ impl<'a> ComponentExecution<'a> {
             prepared,
             options: prepared.options,
             residual_moments: prepared.residual_moments,
+            mixed_units: None,
         }
+    }
+
+    pub fn unit_count(self, problem: &CompressedProblem) -> usize {
+        self.mixed_units.map_or_else(
+            || match self.inference_unit {
+                ComponentInferenceUnit::Observation => problem.outcome.len(),
+                ComponentInferenceUnit::Match => problem.deletion_units(),
+            },
+            |(movers, stayers)| movers + stayers,
+        )
     }
 
     pub fn automatic(self, width: usize) -> Self {

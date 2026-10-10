@@ -168,6 +168,18 @@ Solver error is reported separately from probe MCSE. The implementation does not
 uniform-theorem bound from a residual alone; dense overlap tests and SCC
 qualification are numerical evidence at the registered tolerance.
 
+For Rust's generic diagonal route, a converged reduced solve that fails the
+complete-system gate receives at most three residual corrections through the
+same prepared operator and diagonal preconditioner. Correction PCG tolerances
+are 0.1, 0.01 and 0.001 times the requested phase tolerance; the original
+acceptance gate is unchanged. Only correction right-hand sides are projected
+onto the worker--firm quotient, and each accumulated answer is checked against
+all original equations. Passing columns receive no correction. Work counters
+include correction solves, while logical RHS and RNG counts remain unchanged;
+the reduced-residual diagnostic stays relative to the original reduced RHS.
+Exhaustion remains a hard `FULL_RESIDUAL_FAILED` error. The memory forecast
+includes the extra scalar correction workspace beside a retained batch.
+
 The command profiles graph selection, fit, Schur-diagonal setup, Schur
 actions, preconditioner applications, PCG, leverage probes, target probes, and
 the combined correction. API 18 measures setup and fit with disjoint timers

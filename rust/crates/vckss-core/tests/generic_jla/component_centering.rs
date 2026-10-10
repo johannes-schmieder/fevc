@@ -14,7 +14,7 @@ fn shifted(problem: &CompressedProblem, shift: f64) -> CompressedProblem {
     result
 }
 
-fn design(problem: &CompressedProblem, controls: bool) -> (Vec<f64>, usize) {
+pub(super) fn design(problem: &CompressedProblem, controls: bool) -> (Vec<f64>, usize) {
     let fe = problem.workers() + problem.firms() - 1;
     let p = fe + if controls { problem.controls.len() } else { 0 };
     let mut x = vec![0.0; problem.outcome.len() * p];
@@ -35,7 +35,10 @@ fn design(problem: &CompressedProblem, controls: bool) -> (Vec<f64>, usize) {
 
 // Fit the full raw control basis independently of production centering and
 // control canonicalization; fixed-offset c is the mean of y minus Z gamma.
-fn working_outcome(problem: &CompressedProblem, unit: ComponentInferenceUnit) -> Vec<f64> {
+pub(super) fn working_outcome(
+    problem: &CompressedProblem,
+    unit: ComponentInferenceUnit,
+) -> Vec<f64> {
     if unit == ComponentInferenceUnit::Observation {
         return problem.outcome.clone();
     }

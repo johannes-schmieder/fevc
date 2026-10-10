@@ -32,14 +32,16 @@ The symmetric population options do not change the observation inference
 formula or its default retained sample. Earlier prerelease observation calls
 called that population `movers` while retaining eligible one-firm workers;
 explicit `stayers(movers)` now filters those workers before graph selection.
-This is not a new match/stayer hybrid component-inference capability.
+The new explicit structured match routes also support pooled mover–stayer
+inference, as described below; that capability does not change observation semantics.
 The supported explicit Rust generic-JLA attachment
 implements matrix-free `q=0` and eligible one-mode `q=1` component inference
 with a named structured variance model. The current development candidate
 uses one residual-moment fitter for observation and match deletion.
 It is selected only by
 `inferencemodel(structured_common|structured_leverage)` together with the
-explicit Rust/JLA/Counter-V1 observation or fixed-offset match tuple. Omitting
+explicit Rust/JLA/Counter-V1 observation or fixed-offset match tuple, or
+explicit Mata/exact fixed-offset match tuple. Omitting
 `inferencemodel()` preserves the exact Mata target-specific smoother. The
 paper's unrestricted KSS variance-product construction remains unimplemented
 and has no reserved FEVC option token; see
@@ -104,12 +106,11 @@ including point-budget endpoint changes up to 1.15 dense-oracle SD. These
 results separate mean-approximation error from other inference limitations;
 they establish no general coverage guarantee.
 
-The five included native payloads are qualified: Mac at `b9f80ce9`,
-Linux at `63757839` and Windows at `240ad74d`. The exact Windows hosted artifact
-passes private full qualification and installed Mean tests. Original
-Mac/Linux bytes retain only their reviewed unchanged public-route scope and
-do not contain the lower-level serial Corrected repair in `240ad74d`.
-See [native provenance](../../native/mean-component-20261008/manifest.json).
+The [native payload guide](RC_BINARY_PAYLOAD.md) records the current
+distributed artifacts and their exact platform qualification. Pooled match
+inference additionally requires `r(component_mixed_api) == 1`; an ado update
+alone does not add that capability to an older plugin. Check the loaded
+plugin with `fevc_rust probe`.
 Historical None confirmations, calibration failures and platform receipts retain their
 original scope; engineering qualification does not imply general coverage.
 
@@ -192,11 +193,18 @@ The separate public match tuple requires all of:
 
 ```text
 backend(rust) rng(counter_v1) algorithm(jla) engine(generic)
-deletion(match) nuisance(fixedoffset) stayers(movers)
+deletion(match) nuisance(fixedoffset) stayers(both|movers)
 preconditioner(diagonal|cmg)
 inference(highrank|q1)
 inferencemodel(structured_common|structured_leverage)
 ```
+
+Default/explicit `stayers(both)` includes eligible original stayers as
+independent physical observations. The additional exact route replaces
+Rust/JLA/Counter-V1 and the preconditioner with
+`backend(mata) algorithm(exact)`. Both require an explicit structured model.
+See [pooled inference](POOLED_COMPONENT_INFERENCE.md); historical mover-only
+confirmation evidence below retains its original scope.
 
 It estimates the full joint model once, forms `y_star` with `gamma_hat`,
 and holds that offset fixed in an FE-only whole-match calculation. Regression

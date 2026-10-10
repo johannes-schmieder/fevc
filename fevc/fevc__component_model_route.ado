@@ -106,9 +106,14 @@ program define fevc__component_model_route, rclass
         inlist(lower(strtrim("`stayers'")),"","movers","both") & ///
         inlist(lower(strtrim("`nuisance'")),"","joint")
     local match_tuple = lower(strtrim("`deletion'"))=="match" &  ///
-        lower(strtrim("`stayers'"))=="movers" &                  ///
+        inlist(lower(strtrim("`stayers'")),"","movers","both") &                  ///
         lower(strtrim("`nuisance'"))=="fixedoffset" &             ///
         lower(strtrim("`engine'"))=="generic"
+    local exact_structured = `structured' & "`backend_requested'"=="mata" & ///
+        inlist("`rng_requested'","auto","stata") & `algorithm_supplied' & ///
+        lower(strtrim("`algorithm'"))=="exact" & ///
+        lower(strtrim("`deletion'"))=="match" & ///
+        lower(strtrim("`nuisance'"))=="fixedoffset"
     local scalable = `structured' & !`project_supplied' &         ///
         "`backend_requested'"=="rust" & "`rng_requested'"=="counter_v1" & ///
         `algorithm_supplied' & lower(strtrim("`algorithm'"))=="jla" & ///
@@ -116,15 +121,25 @@ program define fevc__component_model_route, rclass
         `preconditioner_supplied' &                               ///
         inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") & ///
         inlist(lower(strtrim("`engine'")),"","auto","generic")
-    if `structured' & !`scalable' {
+    if `structured' & !(`scalable' | `exact_structured') {
         quietly _fevc_component_route_failure "STRUCTURED_INFERENCE_TUPLE_REQUIRED" ///
-            "Structured inference requires explicit Rust/Counter-V1 JLA and diagonal or CMG; use observation deletion with joint nuisance, or explicit deletion(match) nuisance(fixedoffset) stayers(movers) engine(generic)."
+            "Structured inference requires explicit Rust/Counter-V1 JLA with diagonal or CMG, or explicit Mata/exact match deletion with fixedoffset nuisance. Match inference permits stayers(both) or stayers(movers)."
         exit 498
     }
     if `gram_supplied' & !`scalable' {
         quietly _fevc_component_route_failure "INFERENCE_GRAM_TUPLE_REQUIRED" ///
             "inferencegramprobes() requires supported explicit structured Rust component inference."
         exit 498
+    }
+    if `scalable' & `match_tuple' & lower(strtrim("`stayers'"))!="movers" {
+        capture quietly fevc__rust_public_call probe
+        local mixed_rc = _rc
+        if !`mixed_rc' local mixed_rc = (r(component_mixed_api)!=1)
+        if `mixed_rc' {
+            quietly _fevc_component_route_failure "MIXED_COMPONENT_NATIVE_REQUIRED" ///
+                "Pooled component inference requires the mixed-unit native capability; install the matching plugin."
+            exit 498
+        }
     }
     if `scalable' {
         capture quietly fevc__rust_public_call componentversion
@@ -141,6 +156,7 @@ program define fevc__component_model_route, rclass
     c_local inferencegramprobes `inferencegramprobes'
     c_local inferencemodel_supplied `supplied'
     c_local scalable_component_requested `scalable'
+    c_local exact_structured_requested `exact_structured'
     c_local inference_supplied `inference_supplied'
     c_local inference "`inference'"
     c_local project_supplied `project_supplied'

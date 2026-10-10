@@ -345,6 +345,7 @@ quietly fevc_rust probe
 assert r(centering_api)==1
 assert r(projection_centering_api)==1
 assert r(component_centering_api)==1
+assert r(component_mixed_api)==1
 assert r(numerical_api)==2
 display as result "FEVC LINUX CENTERING CAPABILITY PASS"
 CENTERING_CAPABILITY
@@ -359,6 +360,18 @@ run_stata_case component-centering-exact \
 run_stata_case component-centering-native \
   "${test_package_dir}/tests/stata/test_component_centering_native.do" \
   'PASS test_component_centering_native.do' "${test_package_dir}"
+run_stata_case pooled-component-mata-structured_common \
+  "${test_package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${test_package_dir}" mata structured_common
+run_stata_case pooled-component-mata-structured_leverage \
+  "${test_package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${test_package_dir}" mata structured_leverage
+run_stata_case pooled-component-rust-structured_common \
+  "${test_package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${test_package_dir}" rust structured_common
+run_stata_case pooled-component-rust-structured_leverage \
+  "${test_package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${test_package_dir}" rust structured_leverage
 
 run_stata_case lifecycle \
   "${test_package_dir}/tests/stata/test_rust_plugin.do" \
@@ -381,9 +394,9 @@ run_stata_case full-suite \
   "${test_package_dir}/tests/stata/run_all.do" \
   'FEVC TEST SUITE PASS: full' full
 run_stata_case clean-install \
-  "${test_package_dir}/tests/stata/test_rust_public_install.do" \
+  "${package_dir}/tests/stata/test_rust_public_install.do" \
   'PASS test_rust_public_install.do' "${test_package_dir}" \
-  "${install_root}" qualified "${test_package_dir}/tests/stata"
+  "${install_root}" qualified "${package_dir}/tests/stata"
 
 installed_package_dir=${install_root}/f
 [[ $(hash_file "${installed_package_dir}/fevc_rust_linux_x64.plugin") == \
@@ -391,27 +404,39 @@ installed_package_dir=${install_root}/f
 run_stata_case installed-centering-capability "${centering_capability_do}" \
   'FEVC LINUX CENTERING CAPABILITY PASS' "${installed_package_dir}"
 run_stata_case installed-mean-projection \
-  "${test_package_dir}/tests/stata/test_projection_mean_native.do" \
+  "${package_dir}/tests/stata/test_projection_mean_native.do" \
   'PASS test_projection_mean_native.do cells=8' "${installed_package_dir}"
 run_stata_case installed-component-centering-exact \
-  "${test_package_dir}/tests/stata/test_component_centering_exact.do" \
+  "${package_dir}/tests/stata/test_component_centering_exact.do" \
   'PASS test_component_centering_exact.do' "${installed_package_dir}"
 run_stata_case installed-component-centering-native \
-  "${test_package_dir}/tests/stata/test_component_centering_native.do" \
+  "${package_dir}/tests/stata/test_component_centering_native.do" \
   'PASS test_component_centering_native.do' "${installed_package_dir}"
+run_stata_case installed-pooled-component-mata-structured_common \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${installed_package_dir}" mata structured_common
+run_stata_case installed-pooled-component-mata-structured_leverage \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${installed_package_dir}" mata structured_leverage
+run_stata_case installed-pooled-component-rust-structured_common \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${installed_package_dir}" rust structured_common
+run_stata_case installed-pooled-component-rust-structured_leverage \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${installed_package_dir}" rust structured_leverage
 # The ordinary suite uses Mata for these oracles; qualify native centering
 # explicitly against the bytes delivered by the isolated installation.
 run_stata_case installed-centering-mean \
-  "${test_package_dir}/tests/stata/test_centering_mean.do" \
+  "${package_dir}/tests/stata/test_centering_mean.do" \
   'SIMPLE_MEAN_PASS' "${installed_package_dir}" rust
 run_stata_case installed-centering-exact \
-  "${test_package_dir}/tests/stata/test_centering_exact.do" \
+  "${package_dir}/tests/stata/test_centering_exact.do" \
   'SIMPLE_EXACT_ORACLE_PASS' "${installed_package_dir}" rust
 run_stata_case installed-centering-jla \
-  "${test_package_dir}/tests/stata/test_centering_jla.do" \
+  "${package_dir}/tests/stata/test_centering_jla.do" \
   'SIMPLE_CORRECTED_MCSE_PASS' "${installed_package_dir}" rust
 run_stata_case installed-centering-options \
-  "${test_package_dir}/tests/stata/test_centering_options.do" \
+  "${package_dir}/tests/stata/test_centering_options.do" \
   'SIMPLE_CENTERING_OPTIONS_PASS' "${installed_package_dir}" rust
 
 source_after=${temporary_root}/qualification-source-after.sha256

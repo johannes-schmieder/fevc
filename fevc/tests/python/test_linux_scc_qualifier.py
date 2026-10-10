@@ -139,7 +139,8 @@ def test_scc_wrapper_preserves_pinned_stata_and_rust_tools() -> None:
     "component-centering-exact", "component-centering-native",
     "installed-centering-capability", "installed-mean-projection",
     "installed-component-centering-exact", "installed-component-centering-native",
-    "installed-hash"])
+    "pooled-component-rust-structured_common",
+    "installed-pooled-component-mata-structured_leverage", "installed-hash"])
 def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, failure):
     source = QUALIFIER.read_text(encoding="utf-8")
     runner = source.split("last_run_directory=\n", 1)[1].split("\nenvironment_do=", 1)[0]
@@ -147,6 +148,8 @@ def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, fa
     installed = source.split("installed_package_dir=", 1)[1].split("\nsource_after=", 1)[0]
     package = tmp_path / "package"
     install = tmp_path / "install"
+    frozen = tmp_path / "frozen-source"
+    (frozen / "tests/stata").mkdir(parents=True)
     (install / "f").mkdir(parents=True)
     (package / "tests/stata").mkdir(parents=True)
     candidate = b"candidate"
@@ -164,6 +167,7 @@ def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, fa
         " 'test_projection_mean_native.do': 'PASS test_projection_mean_native.do cells=8',\n"
         " 'test_component_centering_exact.do': 'PASS test_component_centering_exact.do cells=12',\n"
         " 'test_component_centering_native.do': 'PASS test_component_centering_native.do cells=8',\n"
+        " 'test_pooled_component_inference.do': 'FEVC POOLED COMPONENT INFERENCE PASS: ' + (sys.argv[6] if len(sys.argv)>6 else ''),\n"
         " 'test_centering_mean.do': 'SIMPLE_MEAN_PASS',\n"
         " 'test_centering_exact.do': 'SIMPLE_EXACT_ORACLE_PASS',\n"
         " 'test_centering_jla.do': 'SIMPLE_CORRECTED_MCSE_PASS',\n"
@@ -178,6 +182,7 @@ def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, fa
         "hash_file() { shasum -a 256 \"$1\" | awk '{print $1}'; }\n"
         f'temporary_root="{tmp_path}"\n'
         f'test_package_dir="{package}"\n'
+        f'package_dir="{frozen}"\n'
         f'install_root="{install}"\n'
         f'stata_binary="{fake_stata}"\n'
         f'candidate_sha256={hashlib.sha256(candidate).hexdigest()}\n'
@@ -193,21 +198,23 @@ def test_linux_centering_gates_require_staged_and_installed_success(tmp_path, fa
         return
     assert result.returncode == 0, result.stderr
     calls = [json.loads(line) for line in (tmp_path / "calls.jsonl").read_text().splitlines()]
-    assert len(calls) == 12
-    assert [call[4] for call in calls[:4]] == [str(package)] * 4
-    assert [call[4] for call in calls[4:]] == [str(install / "f")] * 8
+    assert len(calls) == 20
+    assert all(Path(call[3]).parent == frozen / "tests/stata" for call in calls[9:])
+    assert [call[4] for call in calls[:8]] == [str(package)] * 8
+    assert [call[4] for call in calls[8:]] == [str(install / "f")] * 12
     assert [Path(call[3]).name for call in calls[2:4]] == [
         "test_component_centering_exact.do", "test_component_centering_native.do"]
-    assert [Path(call[3]).name for call in calls[6:8]] == [
+    assert [Path(call[3]).name for call in calls[10:12]] == [
         "test_component_centering_exact.do", "test_component_centering_native.do"]
-    assert [Path(call[3]).name for call in calls[8:]] == [
+    assert [Path(call[3]).name for call in calls[16:]] == [
         "test_centering_mean.do", "test_centering_exact.do",
         "test_centering_jla.do", "test_centering_options.do"]
-    assert all(call[5] == "rust" for call in calls[8:])
+    assert all(call[5] == "rust" for call in calls[16:])
     capability = (tmp_path / "centering-capability.do").read_text()
     assert "assert r(centering_api)==1" in capability
     assert "assert r(projection_centering_api)==1" in capability
     assert "assert r(component_centering_api)==1" in capability
+    assert "assert r(component_mixed_api)==1" in capability
     assert "assert r(numerical_api)==2" in capability
 
 
@@ -339,3 +346,26 @@ def test_pipeline_snapshot_extension_admits_code_not_data() -> None:
         "KSS_Veneto_replication/private.csv",
     ):
         assert not builder.permitted_untracked(PurePosixPath(name))
+
+
+def test_installed_route_tests_use_immutable_source_when_staging_is_incomplete(tmp_path):
+    source = QUALIFIER.read_text(encoding="utf-8")
+    install_call = source.split("run_stata_case clean-install ", 1)[1].split(
+        "\ninstalled_package_dir=", 1
+    )[0]
+    package = tmp_path / "frozen-source"
+    staged = tmp_path / "mutable-stage"
+    (package / "tests/stata").mkdir(parents=True)
+    staged.mkdir()
+    (package / "tests/stata/test_subsample_equivalence.do").write_text("exit 0\n")
+    script = tmp_path / "check.sh"
+    script.write_text(
+        "set -euo pipefail\n"
+        f'package_dir="{package}"\n'
+        f'test_package_dir="{staged}"\n'
+        f'install_root="{tmp_path / "plus"}"\n'
+        'run_stata_case() { test -f "$7/test_subsample_equivalence.do"; }\n'
+        "run_stata_case clean-install " + install_call
+    )
+    result = subprocess.run(["bash", str(script)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr

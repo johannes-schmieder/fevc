@@ -1,6 +1,7 @@
 v 3
 d fevc: KSS point estimates, structured observation-deletion component inference, and block projections
 d Also explicit fixed-offset match q0/q1 inference, omitting nuisance-control estimation uncertainty.
+d Pooled movers and independent stayer observations: exact Mata or scalable Rust/JLA.
 d GPL-3.0-only prerelease source package; no public release has yet been issued.
 f LICENSE
 f THIRD_PARTY_NOTICES.txt

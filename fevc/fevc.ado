@@ -2383,7 +2383,12 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_cv_diagnostics' `component_inference_receipt'      ///
             `component_inference_results' `component_q1_results'          ///
             `component_unit_receipt' `deletionmode' `result_units' `inferencegramprobes'
-        if _rc exit _rc
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
+                phase(component_result_export)
+            exit `failure_rc'
+        }
         local ci_result_peak = r(peak)
         // componentresult replaces r(). Re-export the immutable solved
         // result before any generic-result reconciliation or posting.
@@ -4541,7 +4546,7 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
     if "`inference'" != "none" & "`deletion'" != "observation" & ///
-        !`scalable_component_requested' {
+        !(`scalable_component_requested' | `exact_structured_requested') {
         quietly _vckss_post_failure "INFERENCE_DELETION_UNSUPPORTED" ///
             "The registered inference surface requires deletion(observation)."
         di as error "inference requires deletion(observation)"
@@ -4586,7 +4591,8 @@ program define _vckss_impl, eclass sortpreserve
     // observation population. Observation selection is resolved below before
     // native preparation/RNG; both populations use ordinary observation units.
     if "`deletion'" == "observation" local stayers movers
-    if "`inference'" != "none" & "`stayers'" != "movers" {
+    if "`inference'" != "none" & "`stayers'" != "movers" & ///
+        !(`scalable_component_requested' | `exact_structured_requested') {
         quietly _vckss_post_failure "INFERENCE_STAYER_UNSUPPORTED" ///
             "Inference is defined for the single retained observation-deletion population."
         di as error "inference requires stayers(movers)"
@@ -6302,7 +6308,7 @@ program define _vckss_impl, eclass sortpreserve
     tempname inference_V_primitive inference_V inference_highrank
     tempname inference_q1 projection_b projection_V projection_V_naive
     tempname inference_q1_status
-    tempname projection_results inference_diagnostics
+    tempname projection_results inference_diagnostics inference_varfit inference_spectrum
     tempname decomposition
     tempname hybrid_raw_results hybrid_diagnostics
     tempname hybrid_correction_source hybrid_decomposition
@@ -6971,7 +6977,7 @@ program define _vckss_impl, eclass sortpreserve
         if !_rc local inference_runtime_loaded = 1
         capture mata: assert(vckss_inference__api_level() == 2 & ///
             vckss_inference__build_id() ==                       ///
-            "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1")
+            "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1-mixed1")
         if _rc {
             if `inference_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
@@ -6989,7 +6995,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_inference__api_level() == 2 & ///
                 vckss_inference__build_id() ==                   ///
-                "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1")
+                "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1-mixed1")
             if _rc {
                 quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
                     "The installed fevc inference runtime is incompatible with this command."
@@ -7015,7 +7021,7 @@ program define _vckss_impl, eclass sortpreserve
             "`projection_b'", "`projection_V'",                ///
             "`projection_V_naive'", "`projection_results'",    ///
             "`inference_diagnostics'", "inference_status",     ///
-            "inference_message")
+            "inference_message", "`inferencemodel'", "`inference_varfit'", "`inference_spectrum'")
         local inference_rc = _rc
         if `inference_rc' {
             quietly _vckss_post_failure "INFERENCE_RUNTIME_FAILED" ///
@@ -7321,7 +7327,8 @@ program define _vckss_impl, eclass sortpreserve
     quietly summarize `frequency' if `headline_touse', meanonly
     local N_physical = r(sum)
     ereturn clear
-    if "`inference'" != "none" {
+    if "`inference'" != "none" & ///
+        (!`exact_structured_requested' | ("`inference'"=="highrank" & `inference_joint_available')) {
         ereturn post `corrected' `inference_V', obs(`N_physical') ///
             esample(`headline_touse') depname(`depvar')
     }
@@ -7335,41 +7342,15 @@ program define _vckss_impl, eclass sortpreserve
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix results = `raw_results'
     ereturn matrix decomposition = `decomposition'
-    if `inference_requested' {
-        ereturn matrix inference_diagnostics = `inference_diagnostics'
-        ereturn scalar level = `level'
-        if "`inference'" != "none" {
-            ereturn scalar inference_simulations = `inferencesimulations'
-            ereturn scalar inference_seed = `inferenceseed'
-            ereturn scalar inference_bins = `inferencebins'
-            ereturn matrix V_primitive = `inference_V_primitive'
-            ereturn matrix component_inference = `inference_highrank'
-        }
-        if "`inference'" == "q1" {
-            ereturn matrix q1_inference = `inference_q1'
-            tempname q1status
-            matrix `q1status' = `inference_q1_status'[1..4,1]
-            ereturn matrix q1_status = `q1status'
-            ereturn local q1_status_codes "0 computed; 1 nonpositive variance; 2 singular covariance; 3 interval failure; 4 unidentified mode; 5 target variance fit invalid"
-            local q1computed = 0
-            forvalues row = 1/4 {
-                local q1computed = `q1computed'+(`inference_q1_status'[`row',1]==0)
-            }
-            ereturn scalar q1_computed_targets = `q1computed'
-            ereturn matrix q1_failure_diagnostics = `inference_q1_status'
-        }
-        if `project_supplied' {
-            ereturn matrix projection_b = `projection_b'
-            ereturn matrix projection_V = `projection_V'
-            ereturn matrix projection_V_naive = `projection_V_naive'
-            ereturn matrix projection_results = `projection_results'
-            ereturn local projection_effect "`projecteffect'"
-            ereturn local projection_weight "`projectweight'"
-            ereturn local projection_variables "`project'"
-            ereturn local projection_constant                     ///
-                "automatic; normalization-dependent"
-        }
-    }
+    fevc__exact_inference_model_post results ///
+        "`inference_requested'" "`inference_diagnostics'" "`level'"  ///
+        "`inference'" "`inferencesimulations'" "`inferenceseed'"  ///
+        "`inferencebins'" "`exact_structured_requested'" "`inference_joint_available'"  ///
+        "`inference_V_primitive'" "`inference_V'" "`inference_highrank'"  ///
+        "`inference_q1'" "`inference_q1_status'" "`project_supplied'"  ///
+        "`projection_b'" "`projection_V'" "`projection_V_naive'"  ///
+        "`projection_results'" "`projecteffect'" "`projectweight'"  ///
+        "`project'" "`inference_varfit'" "`inference_spectrum'"
     if "`stayers'" == "both" {
         if "`selected_algorithm'" == "exact" {
             ereturn matrix mover_plugin = `mover_plugin'
@@ -7796,15 +7777,17 @@ program define _vckss_impl, eclass sortpreserve
             "exact block cross-fit projection",                  ///
             "not requested"),                                  ///
         "MATLAB-compatible target-specific binned local-linear variance approximation")
-    fevc__exact_inference_model_post `inference' `inferencemodel_supplied'
     ereturn local inference_deletion = cond(`inference_requested', ///
         cond(`project_supplied',                                  ///
             "exact `deletion' deletion; stayers `stayers'",      ///
-            "exact observation deletion"), "not requested")
+            cond(`exact_structured_requested',"exact mixed mover-block/stayer-observation deletion", ///
+                "exact observation deletion")), "not requested")
     ereturn local inference_covariance = cond("`inference'"=="none", ///
         cond(`project_supplied',                                  ///
             "symmetrized block covariance",                      ///
             "not posted"), "full joint component covariance")
+    fevc__exact_inference_model_post `inference' `inferencemodel_supplied' `inferencemodel' ///
+        `exact_structured_requested' "`inference_joint_available'"
     ereturn local inference_rng = cond("`inference'"!="none",   ///
         "guarded Stata RNG with caller state restoration",       ///
         cond(`project_supplied',"not used; deterministic exact projection", ///
@@ -7831,7 +7814,7 @@ program define _vckss_impl, eclass sortpreserve
                     "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",     ///
                     "KSS_POINT_ESTIMATES_ONLY"))))
     if "`inference'"=="q1" {
-        if `q1computed'<4 ereturn local status "KSS_Q1_PARTIAL"
+        if e(q1_computed_targets)<4 ereturn local status "KSS_Q1_PARTIAL"
     }
 
     quietly mata: vckss_timer__off($VCKSS_STAGE_VALIDATION_TIMER)

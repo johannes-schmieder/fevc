@@ -54,6 +54,9 @@ mod projection_centering;
 #[path = "generic_jla/component_centering.rs"]
 mod component_centering;
 
+#[path = "generic_jla/pooled_component.rs"]
+mod pooled_component;
+
 fn fixture(controls: bool) -> CompressedProblem {
     let mut worker = Vec::new();
     let mut firm = Vec::new();

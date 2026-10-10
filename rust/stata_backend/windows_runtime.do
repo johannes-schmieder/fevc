@@ -44,6 +44,7 @@ file close `rc_stage'
 do "fevc/tests/stata/test_rust_plugin.do" `"`rc_plus'/f"'
 quietly fevc_rust probe
 assert r(component_centering_api) == 1
+assert r(component_mixed_api) == 1
 file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "point_mean" _n
 file close `rc_stage'
@@ -65,6 +66,10 @@ file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "match_component" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_rust_match_component_inference.do" `"`rc_plus'/f"'
+do "fevc/tests/stata/test_pooled_component_inference.do" `"`rc_plus'/f"' mata structured_common
+do "fevc/tests/stata/test_pooled_component_inference.do" `"`rc_plus'/f"' mata structured_leverage
+do "fevc/tests/stata/test_pooled_component_inference.do" `"`rc_plus'/f"' rust structured_common
+do "fevc/tests/stata/test_pooled_component_inference.do" `"`rc_plus'/f"' rust structured_leverage
 file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "pooled_deletion" _n
 file close `rc_stage'

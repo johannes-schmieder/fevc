@@ -918,6 +918,8 @@ static int vckss_probe(void)
          * old transport omission or old core support can never report readiness. */
         (status = vckss_save_u64("__vckss_rust_comp_center_api",
             (capabilities.core_ready_flags & VCKSS_CORE_COMPONENT_CENTERING_V1_READY) != 0 ? 1u : 0u)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_comp_mixed_api",
+            (capabilities.core_ready_flags & VCKSS_CORE_MIXED_COMPONENT_V1_READY) != 0 ? 1u : 0u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_numerical_api", vckss_rust_numerical_schema_v2())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_api", vckss_rust_exact_execution_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_resolved_api", vckss_rust_exact_resolved_execution_schema_v2())) != 0 ||
@@ -3732,7 +3734,7 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
 {
     VckssComponentInferenceResultReceiptV4 receipt;
     VckssComponentInferenceResultReceiptV5 receipt5;
-    VckssComponentInferenceUnitReceiptV1 units;
+    VckssComponentInferenceUnitReceiptV2 units;
     VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
@@ -3815,20 +3817,25 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         return vckss_rust_failure(status);
     }
     memset(&units, 0, sizeof(units));
-    status = vckss_rust_engine_component_inference_unit_receipt_v1(
+    status = vckss_rust_engine_component_inference_unit_receipt_v2(
         generation, &units, (uint32_t)sizeof(units));
     if (status != 0) {
         free(storage);
         return vckss_rust_failure(status);
     }
-    if (units.struct_size != sizeof(units) || units.schema_version != 1u ||
+    if (units.struct_size != sizeof(units) || units.schema_version != 2u ||
         units.generation != generation || units.independent_units == 0u ||
+        (units.deletion_mode == VCKSS_DELETION_MATCH &&
+            (units.mover_units == 0u || units.mover_units > units.independent_units ||
+             units.stayer_observations != units.independent_units - units.mover_units)) ||
+        (units.deletion_mode == VCKSS_DELETION_OBSERVATION &&
+            (units.mover_units != 0u || units.stayer_observations != 0u)) ||
         (units.deletion_mode != VCKSS_DELETION_MATCH && units.deletion_mode != VCKSS_DELETION_OBSERVATION) ||
         units.nuisance_uncertainty_omitted != (uint32_t)(units.deletion_mode == VCKSS_DELETION_MATCH) ||
         !isfinite(units.effective_match_count) || !isfinite(units.largest_match_mass_share) ||
         !isfinite(units.largest_match_leverage) || !isfinite(units.smallest_maker_denominator) ||
         (units.deletion_mode == VCKSS_DELETION_MATCH &&
-            (units.effective_match_count < 1.0 || units.effective_match_count > (double)units.independent_units * (1.0 + 1e-12) ||
+            (units.effective_match_count < 1.0 || units.effective_match_count > (double)units.mover_units * (1.0 + 1e-12) ||
              units.largest_match_mass_share <= 0.0 || units.largest_match_mass_share > 1.0 ||
              units.largest_match_leverage < 0.0 || units.largest_match_leverage >= 1.0 ||
              units.smallest_maker_denominator <= 0.0 || units.smallest_maker_denominator > 1.0)) ||
@@ -3961,7 +3968,8 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         }
         if (receipt5.variance_fit == 2u) {
             const uint32_t expected_ordering =
-                units.deletion_mode == VCKSS_DELETION_MATCH ? 3u : 2u;
+                units.stayer_observations > 0u ? 4u :
+                    (units.deletion_mode == VCKSS_DELETION_MATCH ? 3u : 2u);
             if (receipt5.gram_probes < 2u ||
                 receipt5.ordering != expected_ordering || !isfinite(receipt5.gram_rcond) || receipt5.gram_rcond <= 0.0 ||
                 !isfinite(receipt5.gram_inverse_relres) || !isfinite(receipt5.variance_fit_relres) ||
@@ -4023,6 +4031,8 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         (status = vckss_save_double("__vckss_comp_logratio_p90", base->p90_absolute_log_ratio)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logratio_max", base->maximum_absolute_log_ratio)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logvar_corr", base->log_variance_correlation)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_unit_movers", units.mover_units)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_unit_stayers", units.stayer_observations)) != 0 ||
         (status = vckss_save_u64("__vckss_comp_unit_schema", units.schema_version)) != 0 ||
         (status = vckss_save_u64("__vckss_comp_unit_deletion", units.deletion_mode)) != 0 ||
         (status = vckss_save_u64("__vckss_comp_unit_count", units.independent_units)) != 0 ||

@@ -62,7 +62,7 @@ program define fevc_rust, rclass
         // successful response fails during collection.
         local probe_scalars abi_compiled abi_runtime core_flags support_flags ///
             deterministic progress_api execution_api numerical_api centering_api ///
-            proj_center_api comp_center_api exact_api exact_resolved_api exact_legacy_api
+            proj_center_api comp_center_api comp_mixed_api exact_api exact_resolved_api exact_legacy_api
         foreach name of local probe_scalars {
             capture scalar drop __vckss_rust_`name'
         }
@@ -100,6 +100,11 @@ program define fevc_rust, rclass
             return scalar centering_api = `centering_api'
             return scalar projection_centering_api = `projection_centering_api'
             return scalar component_centering_api = `component_centering_api'
+            local component_mixed_api = 0
+            capture confirm scalar __vckss_rust_comp_mixed_api
+            if !_rc local component_mixed_api = scalar(__vckss_rust_comp_mixed_api)
+            capture scalar drop __vckss_rust_comp_mixed_api
+            return scalar component_mixed_api = `component_mixed_api'
             return scalar exact_api = `exact_api'
             return scalar exact_resolved_api = `exact_resolved_api'
             return scalar exact_legacy_api = `exact_legacy_api'
@@ -716,6 +721,9 @@ program define fevc_rust, rclass
             di as err "Stata could not allocate the component-inference result matrices"
             exit `allocation_rc'
         }
+        // A partial transport must not inherit V2 counts from an earlier call.
+        capture scalar drop __vckss_comp_unit_movers
+        capture scalar drop __vckss_comp_unit_stayers
         if "`reference'" == "q1" {
             fevc__rust_plugin_call `plugin', `result_command' `handle' q1       ///
                 `primitive' `covariance' `mcse' `spectrum' `q1'              ///
@@ -773,6 +781,15 @@ program define fevc_rust, rclass
             gettoken colon target : target, parse(":")
             return scalar `target' = scalar(__vckss_`source')
         }
+        // Older single-type transports remain valid for their original routes.
+        local mover_units = cond(scalar(__vckss_comp_unit_deletion)==1,scalar(__vckss_comp_unit_count),0)
+        local stayer_observations = 0
+        if scalar(__vckss_comp_unit_schema)==2 {
+            local mover_units = scalar(__vckss_comp_unit_movers)
+            local stayer_observations = scalar(__vckss_comp_unit_stayers)
+        }
+        return scalar mover_units = `mover_units'
+        return scalar stayer_observations = `stayer_observations'
         return scalar handle = real("`handle'")
         return local reference "`reference'"
         return local backend "rust"
@@ -780,7 +797,7 @@ program define fevc_rust, rclass
         foreach name in schema model reference probes atoms words peak psd eig_min ///
             eig_max point_err max_iter max_reduced max_complete full_tol           ///
             logratio_med logratio_p90 logratio_max logvar_corr critical q1_identity columns critical_used ///
-            unit_schema unit_deletion unit_count unit_omitted unit_effective unit_mass unit_leverage unit_maker {
+            unit_schema unit_deletion unit_count unit_omitted unit_effective unit_mass unit_leverage unit_maker unit_movers unit_stayers {
             capture scalar drop __vckss_comp_`name'
         }
         exit

@@ -60,6 +60,9 @@ _Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "stayer hybrid result s
 _Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "performance receipt size changed");
 _Static_assert(offsetof(VckssEnginePerformanceReceiptV1, ingest_ns) == 32, "performance timing offset changed");
 _Static_assert(sizeof(VckssComponentInferenceUnitReceiptV1) == 64, "component unit receipt size changed");
+_Static_assert(sizeof(VckssComponentInferenceUnitReceiptV2) == 80, "mixed unit receipt size");
+_Static_assert(offsetof(VckssComponentInferenceUnitReceiptV2, mover_units) == 64, "mixed mover count offset");
+_Static_assert(VCKSS_CORE_MIXED_COMPONENT_V1_READY == UINT64_C(131072), "mixed capability bit");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, independent_units) == 24, "component independent unit offset changed");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, effective_match_count) == 32, "component match mass offset changed");
 

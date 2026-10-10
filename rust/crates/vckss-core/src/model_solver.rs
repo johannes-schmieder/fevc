@@ -21,9 +21,9 @@ use crate::interrupt::{
 use crate::krylov::{PcgOptions, Preconditioner as FePreconditioner};
 use crate::model_operator::{
     checked_matrix_length, copy_f64_with_interrupt, copy_into_with_interrupt,
-    fill_f64_with_interrupt, reserve_exact, validate_finite_with_interrupt,
-    zeroed_f64_with_interrupt, CanonicalModelData, ModelOperator, ModelResidual, ModelRhs,
-    ModelWorkspace,
+    fill_f64_with_interrupt, reserve_exact, stable_dot_with_interrupt,
+    validate_finite_with_interrupt, zeroed_f64_with_interrupt, CanonicalModelData, ModelOperator,
+    ModelResidual, ModelRhs, ModelWorkspace,
 };
 use crate::problem::{CompressedProblem, GroupIndex};
 use crate::types::Dimensions;
@@ -1239,7 +1239,7 @@ impl<'a> PreparedModelSolver<'a> {
         &self,
         rhs: ModelRhs<'_>,
         reduced: Vec<f64>,
-        pcg: ModelPcgReceipt,
+        mut pcg: ModelPcgReceipt,
         solve_options: ModelSolverOptions,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<ModelSolve> {
@@ -1264,10 +1264,30 @@ impl<'a> PreparedModelSolver<'a> {
         let worker = self
             .operator
             .reconstruct_worker_with_interrupt(rhs.worker, &reduced, interrupt)?;
-        let residual = self
-            .operator
-            .full_residual_with_interrupt(&worker, &firm, &control, rhs, interrupt)?;
+        let mut coefficients = ModelCoefficients {
+            worker,
+            firm,
+            control,
+        };
+        let mut residual = self.operator.full_residual_with_interrupt(
+            &coefficients.worker,
+            &coefficients.firm,
+            &coefficients.control,
+            rhs,
+            interrupt,
+        )?;
         let tolerance = solve_options.full_residual_tolerance();
+        if residual.relative_norm > tolerance && self.receipt.selected == ModelSolverRoute::Diagonal
+        {
+            self.refine_diagonal(
+                rhs,
+                &mut coefficients,
+                &mut residual,
+                &mut pcg,
+                solve_options,
+                interrupt,
+            )?;
+        }
         if residual.relative_norm > tolerance {
             return Err(BackendError::new(
                 ErrorCode::FullResidualFailed,
@@ -1279,11 +1299,7 @@ impl<'a> PreparedModelSolver<'a> {
             ));
         }
         Ok(ModelSolve {
-            coefficients: ModelCoefficients {
-                worker,
-                firm,
-                control,
-            },
+            coefficients,
             receipt: ModelSolveReceipt {
                 pcg,
                 full_residual_tolerance: tolerance,
@@ -1292,6 +1308,210 @@ impl<'a> PreparedModelSolver<'a> {
             residual,
         })
     }
+
+    /// Correct only failed original equations, with the prepared diagonal
+    /// operator and preconditioner. The public gate and logical RHS count stay
+    /// fixed; correction work is included in the original column's receipt.
+    fn refine_diagonal(
+        &self,
+        rhs: ModelRhs<'_>,
+        coefficients: &mut ModelCoefficients,
+        residual: &mut ModelResidual,
+        receipt: &mut ModelPcgReceipt,
+        options: ModelSolverOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let gate = options.full_residual_tolerance();
+        for factor in [0.1, 0.01, 0.001] {
+            if residual.relative_norm <= gate {
+                break;
+            }
+            interrupt.checkpoint("model_diagonal_refinement")?;
+            let (worker, firm) = correction_quotient_rhs(residual, interrupt)?;
+            let reduced_rhs = self.operator.reduce_rhs_with_interrupt(
+                ModelRhs {
+                    worker: &worker,
+                    firm: &firm,
+                    control: &residual.control,
+                },
+                interrupt,
+            )?;
+            let mut correction = model_batched_pcg_with_interrupt(
+                &self.operator,
+                self.preconditioner(),
+                &reduced_rhs,
+                1,
+                PcgOptions {
+                    tolerance: options.pcg.tolerance * factor,
+                    ..options.pcg
+                },
+                interrupt,
+            )?;
+            self.operator
+                .project_parameters_with_interrupt(&mut correction.solution, interrupt)?;
+            let delta_worker = self.operator.reconstruct_worker_with_interrupt(
+                &worker,
+                &correction.solution,
+                interrupt,
+            )?;
+            for (index, (value, delta)) in coefficients
+                .worker
+                .iter_mut()
+                .chain(&mut coefficients.firm)
+                .chain(&mut coefficients.control)
+                .zip(delta_worker.iter().chain(&correction.solution))
+                .enumerate()
+            {
+                checkpoint_chunk(interrupt, index, "model_diagonal_refinement_update")?;
+                *value += delta;
+            }
+            let work = &correction.receipt[0];
+            for (total, additional) in [
+                (&mut receipt.iterations, work.iterations),
+                (
+                    &mut receipt.residual_replacements,
+                    work.residual_replacements,
+                ),
+                (
+                    &mut receipt.operator_applications,
+                    work.operator_applications,
+                ),
+                (
+                    &mut receipt.preconditioner_applications,
+                    work.preconditioner_applications,
+                ),
+            ] {
+                *total = total
+                    .checked_add(additional)
+                    .ok_or_else(|| rank_resource("diagonal refinement work count overflow"))?;
+            }
+            *residual = self.operator.full_residual_with_interrupt(
+                &coefficients.worker,
+                &coefficients.firm,
+                &coefficients.control,
+                rhs,
+                interrupt,
+            )?;
+        }
+        if residual.relative_norm <= gate {
+            // Keep the reduced-residual diagnostic relative to the original
+            // RHS, rather than reporting the tiny correction equation's ratio.
+            let original = self.operator.reduce_rhs_with_interrupt(rhs, interrupt)?;
+            let mut reduced = zeroed_f64_with_interrupt(
+                self.operator.parameter_count(),
+                "refined parameters",
+                interrupt,
+                "model_diagonal_refinement_diagnostic",
+            )?;
+            copy_into_with_interrupt(
+                &coefficients.firm,
+                &mut reduced[..self.operator.firms()],
+                interrupt,
+                "model_diagonal_refinement_diagnostic",
+            )?;
+            copy_into_with_interrupt(
+                &coefficients.control,
+                &mut reduced[self.operator.firms()..],
+                interrupt,
+                "model_diagonal_refinement_diagnostic",
+            )?;
+            let mut action = zeroed_f64_with_interrupt(
+                reduced.len(),
+                "refined action",
+                interrupt,
+                "model_diagonal_refinement_diagnostic",
+            )?;
+            let mut workspace = ModelWorkspace::new_with_interrupt(&self.operator, interrupt)?;
+            self.operator.apply_with_workspace_and_interrupt(
+                &reduced,
+                &mut action,
+                &mut workspace,
+                interrupt,
+            )?;
+            for (index, (value, expected)) in action.iter_mut().zip(&original).enumerate() {
+                checkpoint_chunk(interrupt, index, "model_diagonal_refinement_diagnostic")?;
+                *value = expected - *value;
+            }
+            let norm = |v: &[f64], check: &mut dyn InterruptCheck| -> Result<f64> {
+                Ok(
+                    stable_dot_with_interrupt(v, v, check, "model_diagonal_refinement_diagnostic")?
+                        .sqrt(),
+                )
+            };
+            let rhs_norm = norm(&original, interrupt)?;
+            receipt.relative_residual =
+                norm(&action, interrupt)? / if rhs_norm == 0.0 { 1.0 } else { rhs_norm };
+            if !receipt.relative_residual.is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::FullResidualFailed,
+                    "model_solver",
+                    "refined reduced residual is nonfinite",
+                ));
+            }
+            receipt.operator_applications = receipt
+                .operator_applications
+                .checked_add(1)
+                .ok_or_else(|| rank_resource("diagonal refinement action count overflow"))?;
+        }
+        Ok(())
+    }
+}
+
+fn stable_add_index_value(sum: &mut f64, correction: &mut f64, value: f64) {
+    let next = *sum + value;
+    *correction += if sum.abs() >= value.abs() {
+        (*sum - next) + value
+    } else {
+        (value - next) + *sum
+    };
+    *sum = next;
+}
+
+fn correction_quotient_rhs(
+    residual: &ModelResidual,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<f64>, Vec<f64>)> {
+    // Roundoff in recomputed score residuals can leave a tiny null-coordinate
+    // component even for an exactly compatible original RHS. Project only the
+    // *correction* onto the FE quotient. Its direct gate is unchanged, and the
+    // accumulated answer is still certified against every original equation.
+    let mut worker = copy_f64_with_interrupt(
+        &residual.worker,
+        "correction worker quotient",
+        interrupt,
+        "model_refinement_quotient",
+    )?;
+    let mut firm = copy_f64_with_interrupt(
+        &residual.firm,
+        "correction firm quotient",
+        interrupt,
+        "model_refinement_quotient",
+    )?;
+    let dimension = worker
+        .len()
+        .checked_add(firm.len())
+        .ok_or_else(|| rank_resource("correction quotient dimension overflow"))?;
+    let mut sum = 0.0;
+    let mut correction = 0.0;
+    for (index, value) in worker
+        .iter()
+        .copied()
+        .chain(firm.iter().map(|&v| -v))
+        .enumerate()
+    {
+        checkpoint_chunk(interrupt, index, "model_refinement_quotient")?;
+        stable_add_index_value(&mut sum, &mut correction, value);
+    }
+    let shift = (sum + correction) / dimension as f64;
+    for (index, value) in worker.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, index, "model_refinement_quotient")?;
+        *value -= shift;
+    }
+    for (index, value) in firm.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, index, "model_refinement_quotient")?;
+        *value += shift;
+    }
+    Ok((worker, firm))
 }
 
 fn certify_control_rank(
@@ -2284,3 +2504,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "model_refinement_tests.rs"]
+mod refinement_tests;

@@ -1457,3 +1457,143 @@ fn component_mean_capability_lifecycle_and_execution_routes() {
         }
     }
 }
+
+#[test]
+fn mixed_component_automatic_batches_keep_partition_and_v2_unit_receipt() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    let mut capability = VckssBackendCapabilitiesV1::default();
+    ok(vckss_rust_backend_capabilities_v1(
+        &mut capability,
+        bytes::<VckssBackendCapabilitiesV1>(),
+    ));
+    assert_ne!(
+        capability.core_ready_flags & VCKSS_CORE_MIXED_COMPONENT_V1_READY,
+        0
+    );
+    let mut columns = OwnedColumns::structured_component_sized(12, 12);
+    for (row, unit) in columns.deletion.iter_mut().enumerate() {
+        *unit = (row / 2 + 1) as f64;
+    }
+    let firm: Vec<f64> = (0..128).map(|row| ((row / 4) % 12 + 1) as f64).collect();
+    let worker: Vec<f64> = (0..128).map(|row| (row / 4 + 1) as f64).collect();
+    let outcome: Vec<f64> = (0..128)
+        .map(|row| row as f64 * 0.13 + ((row * 17) % 23) as f64 * 0.21)
+        .collect();
+    let frequency: Vec<f64> = (0..128).map(|row| (1 + row % 2) as f64).collect();
+    let target = vec![1.0; 128];
+    let descriptor = VckssStayerAugmentationColumnsV1 {
+        struct_size: bytes::<VckssStayerAugmentationColumnsV1>(),
+        rows: 128,
+        firm: firm.as_ptr(),
+        worker: worker.as_ptr(),
+        outcome: outcome.as_ptr(),
+        frequency: frequency.as_ptr(),
+        target_weight: target.as_ptr(),
+        controls: ptr::null(),
+        controls_count: 0,
+        reserved: 0,
+        reserved_2: 0,
+    };
+    let mut reference: Option<(Vec<f64>, [f64; 4])> = None;
+    for (executor, threads) in [(1, 1), (1, 7), (2, 1)] {
+        reset();
+        let generation = prepare_with_controls_memory(&columns, &[], VCKSS_DELETION_MATCH, 1 << 30);
+        let augmentation = VckssStayerAugmentationRequestV1 {
+            rows: 128,
+            caller_copy_bytes: 128 * 5 * 8,
+            ..Default::default()
+        };
+        ok(vckss_rust_engine_augment_stayers_v1(
+            generation,
+            &augmentation,
+            &descriptor,
+        ));
+        let mut attachment = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+        attachment.options.variance_source = VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE;
+        attachment.options.probes = 33;
+        attachment.options.batch_width = 0;
+        attachment.options.spectrum_probes = 17;
+        attachment.options.spectrum_iterations = 128;
+        ok(
+            vckss_rust_engine_augment_match_component_inference_interrupt_v5(
+                generation,
+                &attachment,
+                513,
+            ),
+        );
+        let mut old = request(
+            VCKSS_DELETION_MATCH,
+            VCKSS_NUISANCE_FIXED_OFFSET,
+            0,
+            executor,
+            threads,
+            false,
+        );
+        let mut cap = planned_capability_request(
+            VCKSS_ALGORITHM_JLA,
+            VCKSS_ENGINE_GENERIC,
+            if executor == 1 {
+                VCKSS_ROUTE_DIAGONAL_PCG
+            } else {
+                VCKSS_ROUTE_CMG_PCG
+            },
+            VCKSS_DELETION_MATCH,
+            VCKSS_NUISANCE_FIXED_OFFSET,
+            0,
+            VCKSS_BATCH_MODE_AUTO,
+            VCKSS_BATCH_MODE_AUTO,
+        );
+        cap.v2.stayers_mode = VCKSS_STAYERS_ALL;
+        old.v4 = planned_solve_request(cap, 0, 0);
+        old.v4.v3.v2.v1.probes = 128;
+        let mut solve = VckssEngineSolveRequestV7 {
+            v6: old,
+            ..Default::default()
+        };
+        solve.v6.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV7>();
+        ok(vckss_rust_engine_solve_v7(generation, &solve));
+        let mut units = VckssComponentInferenceUnitReceiptV2::default();
+        assert_eq!(bytes::<VckssComponentInferenceUnitReceiptV2>(), 80);
+        assert_ne!(
+            vckss_rust_engine_component_inference_unit_receipt_v2(generation, &mut units, 79),
+            0
+        );
+        assert_eq!(units, VckssComponentInferenceUnitReceiptV2::default());
+        ok(vckss_rust_engine_component_inference_unit_receipt_v2(
+            generation, &mut units, 80,
+        ));
+        assert_eq!(
+            (
+                units.schema_version,
+                units.mover_units,
+                units.stayer_observations,
+                units.independent_units
+            ),
+            (2, 144, 192, 336)
+        );
+        let mut old_units = VckssComponentInferenceUnitReceiptV1::default();
+        assert_eq!(
+            vckss_rust_engine_component_inference_unit_receipt_v1(generation, &mut old_units, 64),
+            ErrorCode::UnsupportedFeature as i32
+        );
+        assert_eq!(old_units, VckssComponentInferenceUnitReceiptV1::default());
+        let (actual, receipt) = inference_with_q1(generation, false);
+        assert_eq!(receipt.ordering, 4);
+        if let Some((expected, expected_point)) = &reference {
+            close(&point(generation), expected_point);
+            for (index, (&a, &b)) in actual.iter().zip(expected).enumerate() {
+                if a.is_nan() || f64::is_nan(b) {
+                    assert!(a.is_nan() && f64::is_nan(b));
+                } else {
+                    assert!(
+                        (a - b).abs() <= 1e-8 * b.abs().max(1.0),
+                        "executor={executor} threads={threads} index={index} {a} != {b}"
+                    );
+                }
+            }
+        } else {
+            reference = Some((actual, point(generation)));
+        }
+        ok(vckss_rust_engine_release_v1(generation));
+    }
+}

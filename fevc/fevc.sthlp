@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-rc.1 06oct2026}{...}
+{* *! version 0.5.0-rc.1 10oct2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -303,12 +303,11 @@ Mean projection additionally requires {cmd:r(projection_centering_api)} equal
 to 1; Mean component inference requires {cmd:r(component_centering_api)} equal
 to 1. These are separate native attachment capabilities; native combined
 component/projection requests remain unsupported for both Mean and None.
-The included native set provides all three capabilities on its qualified
-routes: Mac builds at b9f80ce9, Linux at 63757839 and Windows at 240ad74d.
-Mac x86-64 qualification uses Rosetta. The older Mac/Linux builds retain their
-public-route scope and do not contain the lower-level serial exact Corrected
-repair in 240ad74d. Exact artifacts and limits are recorded in the
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/native/mean-component-20261008/manifest.json":adoption manifest}.
+Pooled match component inference additionally requires
+{cmd:r(component_mixed_api)} equal to 1. Run {cmd:fevc_rust probe} after
+installation to check the loaded plugin. Exact artifacts, platform
+qualification and installation status are recorded in the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/RC_BINARY_PAYLOAD.md":native payload guide}.
 An older plugin may lead {cmd:backend(auto)} to Mata before preparation/RNG
 under the ordinary consent rules. Strict {cmd:backend(rust)} or explicit
 {cmd:rng(counter_v1)} requires a matching plugin. Use current source with
@@ -377,9 +376,9 @@ dropped. See the
     {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}optional structured variance model
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
-    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}Gram precision; default 2,048
+    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}Rust Gram probes; default 2,048
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 40}inference seed; default 8675309
-    {cmd:inferencebins(}{it:#}{cmd:)}{col 40}exact-route smoothing; default 1,000
+    {cmd:inferencebins(}{it:#}{cmd:)}{col 40}target_lowess bins; default 1,000
   {hline 76}
 
 {pstd}
@@ -394,6 +393,78 @@ remain uncentered; the mean is not re-estimated within these draws.
 identified mode. These require different identification conditions; q1
 does not cover arbitrary multi-mode weakness. Successful computation does
 not establish valid coverage, and there is no automatic choice between them.
+
+{pstd}
+Pooled match inference supports default/explicit {cmd:stayers(both)} with
+independent physical stayer observations and separate mover/stayer variance
+coefficients. Select {cmd:inferencemodel(structured_common)} or
+{cmd:inferencemodel(structured_leverage)}, {cmd:deletion(match)} and
+{cmd:nuisance(fixedoffset)}. A mover has multiple original deletion units;
+a stayer has one. With {cmd:deletionid()}, distinct units at the same
+worker-firm coordinate can therefore make a worker a mover. Errors may be
+correlated within a mover unit, but mover units and every physical stayer
+observation are assumed mutually independent, including repeated observations
+of one stayer. Positive integer frequency copies of stayer rows are separate
+independent observations. Eligible stayers have at least two physical
+observations at a retained mover firm; removed movers are not reclassified.
+Use {cmd:stayers(movers)} for the mover-only target. Fitted-control and
+observed-Mean uncertainty are omitted.
+
+{pstd}
+{bf:Small and large datasets are supported through different routes.}
+For small designs within the exact-size and memory limits, explicitly select
+{cmd:backend(mata) algorithm(exact)}. For large datasets, explicitly select
+{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)} with
+{cmd:preconditioner(diagonal)} or {cmd:preconditioner(cmg)}. Both routes accept
+the two structured models, {cmd:deletionid()}, {cmd:targetweight()} and
+positive integer frequency weights. There is no Mata JLA attachment for
+structured component inference, and structured inference cannot be combined
+with {cmd:project()}. Rust requires {cmd:r(component_mixed_api)} equal to 1
+for pooled matches. See the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_INFERENCE.md":pooled inference contract}.
+
+{pstd}
+For example, a pooled match request with outcome {cmd:y}, control {cmd:x},
+worker identifier {cmd:id} and firm identifier {cmd:firmid} is:
+
+{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset) stayers(both) backend(mata) algorithm(exact) inference(highrank) inferencemodel(structured_common)}{p_end}
+
+{pstd}
+For the scalable route, use:
+
+{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset) stayers(both) backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(diagonal) inference(highrank) inferencemodel(structured_common)}{p_end}
+
+{pstd}
+Replace {cmd:inference(highrank)} by {cmd:inference(q1)} only when the
+one-dominant-mode assumptions are appropriate. The common variance model
+uses a richer set of design features; the leverage model is a separate,
+more restrictive sensitivity specification. Neither is chosen automatically.
+Exact Mata computes the structured Gram by coefficient contractions, but
+still uses covariance simulations. {cmd:inferencesimulations()} controls
+those draws on both routes. {cmd:inferencegramprobes()} applies only to
+structured Rust inference; {cmd:inferencebins()} controls the separate
+{cmd:target_lowess} method. The JLA point-probe budget and these inference
+budgets control different numerical approximations. Numerical MCSE is not
+an econometric standard error.
+
+{pstd}
+Inspect {cmd:e(component_inference)} for Gaussian results and
+{cmd:e(q1_inference)} for q1 results. A successful command can withhold
+individual intervals: {cmd:e(q0_status)} and {cmd:e(q1_status)} record their
+availability, with zero meaning computed. Unavailable q1 endpoints are not
+replaced by Gaussian endpoints. Structured highrank posts {cmd:e(V)} only
+when all individual and joint covariance checks pass; structured q1 does not
+post {cmd:e(V)}. Thus {cmd:lincom} requires an available highrank covariance.
+Shared failures, including a failed full-system solver residual check, stop
+the command with an error. Rust's diagonal solver can make up to three
+residual corrections before that error, without relaxing the threshold.
+
+{pstd}
+The pooled unit counts are {cmd:e(inference_mover_units)},
+{cmd:e(inference_stayer_units)} and {cmd:e(inference_independent_units)}.
+Inspect {cmd:e(residual_moment_diagnostics)} and {cmd:e(component_spectrum)}
+for variance-fit and spectral diagnostics. These checks describe numerical
+availability and the realized design; they do not establish coverage.
 
 {pstd}
 Without {cmd:inferencemodel()}, component inference uses exact Mata
@@ -414,6 +485,9 @@ to probe budgets. These finite designs provide no general coverage guarantee.
 Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
 and {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md":assessment}
 for supported requests, assumptions, and limitations before reporting intervals.
+The separate {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_ASSESSMENT.md":pooled mover-stayer assessment}
+reports its own finite-design results, failure cases and numerical sensitivity;
+earlier observation or mover-only evidence is not pooled coverage evidence.
 An {help fevc##component_example:illustrative example} appears below.
 
 {dlgtab:Fixed-effect projection inference}

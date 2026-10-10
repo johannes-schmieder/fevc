@@ -57,7 +57,7 @@ pub use memory_api::*;
 use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
-    run_generic_jla_with_automatic_component_batches_interrupt,
+    run_generic_jla_with_automatic_mixed_component_batches_interrupt,
     run_generic_jla_with_diagonal_queue_attachments_interrupt,
     run_generic_jla_with_direct_attachments_interrupt,
     run_generic_jla_with_direct_solver_interrupt, run_generic_jla_with_interrupt,
@@ -148,6 +148,7 @@ pub const VCKSS_CORE_RESOLVED_EXECUTION_V1_READY: u64 = 1 << 14;
 pub const VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY: u64 = 1 << 15;
 /// Component inference supports Mean with the observed centering mean fixed.
 pub const VCKSS_CORE_COMPONENT_CENTERING_V1_READY: u64 = 1 << 16;
+pub const VCKSS_CORE_MIXED_COMPONENT_V1_READY: u64 = 1 << 17;
 const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 =
     if cfg!(any(target_os = "macos", target_os = "linux")) {
         VCKSS_CORE_FULL_CMG_V2_READY
@@ -177,7 +178,8 @@ const VCKSS_BACKEND_CAPABILITIES_V1_CORE_READY_FLAGS: u64 = VCKSS_CORE_MATCH_GRA
     | VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY
     | VCKSS_CORE_PROJECTION_JLA_READY
     | VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY
-    | VCKSS_CORE_COMPONENT_CENTERING_V1_READY;
+    | VCKSS_CORE_COMPONENT_CENTERING_V1_READY
+    | VCKSS_CORE_MIXED_COMPONENT_V1_READY;
 const VCKSS_BACKEND_CAPABILITIES_V1_SUPPORT_FLAGS: u64 =
     VCKSS_SUPPORT_JLA | VCKSS_SUPPORT_MATCH_DELETION | VCKSS_SUPPORT_DIAGONAL;
 pub const VCKSS_INTERRUPT_CONTINUE: i32 = 0;
@@ -914,6 +916,25 @@ pub struct VckssComponentInferenceUnitReceiptV1 {
     pub largest_match_mass_share: f64,
     pub largest_match_leverage: f64,
     pub smallest_maker_denominator: f64,
+}
+
+/// Additive unit metadata; the frozen statistical-result layouts are unchanged.
+/// Deletion codes match the preparation ABI (1 match, 2 observation).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssComponentInferenceUnitReceiptV2 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub deletion_mode: u32,
+    pub nuisance_uncertainty_omitted: u32,
+    pub independent_units: u64,
+    pub effective_match_count: f64,
+    pub largest_match_mass_share: f64,
+    pub largest_match_leverage: f64,
+    pub smallest_maker_denominator: f64,
+    pub mover_units: u64,
+    pub stayer_observations: u64,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -2201,6 +2222,7 @@ const _: [(); 168] = [(); size_of::<VckssComponentInferenceResultReceiptV2>()];
 const _: [(); 192] = [(); size_of::<VckssComponentInferenceResultReceiptV3>()];
 const _: [(); 208] = [(); size_of::<VckssComponentInferenceResultReceiptV4>()];
 const _: [(); 64] = [(); size_of::<VckssComponentInferenceUnitReceiptV1>()];
+const _: [(); 80] = [(); size_of::<VckssComponentInferenceUnitReceiptV2>()];
 
 /// Lossless native receipt for one logical original-system right-hand side.
 /// Rows are exported in full-fit, leverage-probe, then target worker/firm
@@ -5171,7 +5193,7 @@ fn solve_engine_v4_with_numerical_attachment(
                             }
                             Some(GenericExecutionPlan::AutomaticComponentDiagonalQueue(
                                 threads,
-                            )) => run_generic_jla_with_automatic_component_batches_interrupt(
+                            )) => run_generic_jla_with_automatic_mixed_component_batches_interrupt(
                                 plan_problem,
                                 options,
                                 &component_inference
@@ -5182,13 +5204,14 @@ fn solve_engine_v4_with_numerical_attachment(
                                         )
                                     })?
                                     .core,
+                                hybrid,
                                 threads,
                                 None,
                                 interrupt,
                             ),
                             Some(GenericExecutionPlan::AutomaticComponentDirectAttachments(
                                 threads,
-                            )) => run_generic_jla_with_automatic_component_batches_interrupt(
+                            )) => run_generic_jla_with_automatic_mixed_component_batches_interrupt(
                                 plan_problem,
                                 options,
                                 &component_inference
@@ -5199,6 +5222,7 @@ fn solve_engine_v4_with_numerical_attachment(
                                         )
                                     })?
                                     .core,
+                                hybrid,
                                 threads,
                                 full_cmg,
                                 interrupt,
@@ -6977,6 +7001,13 @@ pub extern "C" fn vckss_rust_engine_component_inference_unit_receipt_v1(
                 "the generation has no component inference",
             )
         })?;
+        if result.mixed_units.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_units",
+                "mixed units require the V2 unit receipt",
+            ));
+        }
         write_output(
             output,
             VckssComponentInferenceUnitReceiptV1 {
@@ -6995,6 +7026,68 @@ pub extern "C" fn vckss_rust_engine_component_inference_unit_receipt_v1(
                 largest_match_mass_share: result.largest_match_mass_share,
                 largest_match_leverage: result.largest_match_leverage,
                 smallest_maker_denominator: result.smallest_maker_denominator,
+            },
+        );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_component_inference_unit_receipt_v2(
+    generation: u64,
+    output: *mut VckssComponentInferenceUnitReceiptV2,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssComponentInferenceUnitReceiptV2>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "component inference unit receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_component_inference_units")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_units",
+                "inference units require generic JLA",
+            ));
+        };
+        let result = generic.component_inference.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_units",
+                "the generation has no component inference",
+            )
+        })?;
+        write_output(
+            output,
+            VckssComponentInferenceUnitReceiptV2 {
+                struct_size: struct_size_u32::<VckssComponentInferenceUnitReceiptV2>()?,
+                schema_version: 2,
+                generation,
+                deletion_mode: match result.inference_unit {
+                    ComponentInferenceUnit::Match => VCKSS_DELETION_MATCH,
+                    ComponentInferenceUnit::Observation => VCKSS_DELETION_OBSERVATION,
+                },
+                nuisance_uncertainty_omitted: u32::from(
+                    result.nuisance_uncertainty_conditioned_away,
+                ),
+                independent_units: result.independent_units,
+                effective_match_count: result.effective_match_count,
+                largest_match_mass_share: result.largest_match_mass_share,
+                largest_match_leverage: result.largest_match_leverage,
+                smallest_maker_denominator: result.smallest_maker_denominator,
+                mover_units: result.mixed_units.map_or(
+                    if result.inference_unit == ComponentInferenceUnit::Match {
+                        result.independent_units
+                    } else {
+                        0
+                    },
+                    |(movers, _)| movers,
+                ),
+                stayer_observations: result.mixed_units.map_or(0, |(_, stayers)| stayers),
             },
         );
         Ok(())

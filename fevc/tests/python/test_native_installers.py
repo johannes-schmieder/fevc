@@ -40,3 +40,14 @@ def test_repository_catalog_installs_all_platform_plugins():
     # installs download them. The portable manifest must remain binary-free.
     portable = (root / "fevc/fevc.pkg").read_text()
     assert ".plugin" not in portable
+
+
+def test_pooled_markers_ignore_stata_echoes_and_require_both_backends():
+    echoed = '. display "FEVC POOLED COMPONENT INFERENCE PASS: `backend\'"\n'
+    mata = 'FEVC POOLED COMPONENT INFERENCE PASS: mata\n'
+    rust = 'FEVC POOLED COMPONENT INFERENCE PASS: rust\n'
+    assert MODULE.pooled_checks_passed((echoed + mata) * 2 + (echoed + rust) * 2)
+    assert not MODULE.pooled_checks_passed(echoed * 4)
+    assert not MODULE.pooled_checks_passed(mata * 4)
+    assert not MODULE.pooled_checks_passed(mata * 2 + rust)
+    assert not MODULE.pooled_checks_passed(mata * 2 + rust * 3)

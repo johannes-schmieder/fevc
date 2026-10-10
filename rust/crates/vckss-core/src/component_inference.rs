@@ -255,6 +255,8 @@ pub struct ComponentInferenceResult {
     pub q0_status: [ComponentQ0Status; REPORTED_TARGETS],
     pub inference_unit: ComponentInferenceUnit,
     pub independent_units: u64,
+    /// Original mover blocks and literal independent stayer observations.
+    pub mixed_units: Option<(u64, u64)>,
     /// True only for grouped match inference that conditions on the realized
     /// full-sample control offset and omits uncertainty from estimating it.
     pub nuisance_uncertainty_conditioned_away: bool,
@@ -1612,6 +1614,7 @@ pub fn finish_component_covariance_with_reporting(
         inference_unit: ComponentInferenceUnit::Observation,
         independent_units: u64::try_from(rows)
             .map_err(|_| resource("component inference unit count"))?,
+        mixed_units: None,
         nuisance_uncertainty_conditioned_away: false,
         effective_match_count: 0.0,
         largest_match_mass_share: 0.0,

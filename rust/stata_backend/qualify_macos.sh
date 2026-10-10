@@ -379,6 +379,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_projection_mean_native.do"
   "${package_dir}/tests/stata/test_component_centering_exact.do"
   "${package_dir}/tests/stata/test_component_centering_native.do"
+  "${package_dir}/tests/stata/test_pooled_component_inference.do"
   "${package_dir}/tests/stata/test_memory_policy.do"
   "${package_dir}/tests/stata/test_rust_plugin.do"
   "${package_dir}/tests/stata/test_rust_mata_diagnostic.do"
@@ -842,6 +843,18 @@ run_stata_case arm64 component-centering-exact \
 run_stata_case arm64 component-centering-native \
   "${package_dir}/tests/stata/test_component_centering_native.do" \
   'PASS test_component_centering_native.do' "${test_package_dir}"
+run_stata_case arm64 pooled-component-mata-structured_common \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${test_package_dir}" mata structured_common
+run_stata_case arm64 pooled-component-mata-structured_leverage \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${test_package_dir}" mata structured_leverage
+run_stata_case arm64 pooled-component-rust-structured_common \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${test_package_dir}" rust structured_common
+run_stata_case arm64 pooled-component-rust-structured_leverage \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${test_package_dir}" rust structured_leverage
 run_stata_case arm64 public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${test_package_dir}"
@@ -929,6 +942,18 @@ run_stata_case arm64 universal-component-centering-exact \
 run_stata_case arm64 universal-component-centering-native \
   "${package_dir}/tests/stata/test_component_centering_native.do" \
   'PASS test_component_centering_native.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-pooled-component-mata-structured_common \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${universal_test_package_dir}" mata structured_common
+run_stata_case arm64 universal-pooled-component-mata-structured_leverage \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${universal_test_package_dir}" mata structured_leverage
+run_stata_case arm64 universal-pooled-component-rust-structured_common \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${universal_test_package_dir}" rust structured_common
+run_stata_case arm64 universal-pooled-component-rust-structured_leverage \
+  "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+  "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${universal_test_package_dir}" rust structured_leverage
 run_stata_case arm64 universal-public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
@@ -1025,6 +1050,18 @@ run_stata_case x86_64 public-timer-ownership \
   run_stata_case x86_64 component-centering-native \
     "${package_dir}/tests/stata/test_component_centering_native.do" \
     'PASS test_component_centering_native.do' "${test_package_dir}"
+  run_stata_case x86_64 pooled-component-mata-structured_common \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${test_package_dir}" mata structured_common
+  run_stata_case x86_64 pooled-component-mata-structured_leverage \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${test_package_dir}" mata structured_leverage
+  run_stata_case x86_64 pooled-component-rust-structured_common \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${test_package_dir}" rust structured_common
+  run_stata_case x86_64 pooled-component-rust-structured_leverage \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${test_package_dir}" rust structured_leverage
   run_stata_case x86_64 public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${test_package_dir}"
@@ -1112,6 +1149,18 @@ run_stata_case x86_64 universal-public-timer-ownership \
   run_stata_case x86_64 universal-component-centering-native \
     "${package_dir}/tests/stata/test_component_centering_native.do" \
     'PASS test_component_centering_native.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-pooled-component-mata-structured_common \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${universal_test_package_dir}" mata structured_common
+  run_stata_case x86_64 universal-pooled-component-mata-structured_leverage \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: mata" "${universal_test_package_dir}" mata structured_leverage
+  run_stata_case x86_64 universal-pooled-component-rust-structured_common \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${universal_test_package_dir}" rust structured_common
+  run_stata_case x86_64 universal-pooled-component-rust-structured_leverage \
+    "${package_dir}/tests/stata/test_pooled_component_inference.do" \
+    "FEVC POOLED COMPONENT INFERENCE PASS: rust" "${universal_test_package_dir}" rust structured_leverage
   run_stata_case x86_64 universal-public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"

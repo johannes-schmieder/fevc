@@ -157,6 +157,16 @@ changes require their applicable commands; documentation, tests, CI, packaging,
 or evidence-workflow-only changes normally require only focused checks. Do not
 run this whole list mechanically for every commit.
 
+Generic diagonal full-residual refinement has a deterministic post-PCG
+regression in `model_refinement_tests.rs`: weighted physical-row equations with
+known coefficients, with/without controls, recovery after an injected error,
+unchanged gate, accumulated work, cancellation/reuse, and rejection after three
+attempts when the original equations are incompatible. The 240,000-row pooled
+highrank/q1 failures also require a focused native reproduction on the original
+synthetic input and unchanged seeds, tolerances and budgets. Preserve the old
+failed performance records; new development checks have their own source and
+binary identities.
+
 Run from a clean checkout:
 
 ```bash
@@ -342,6 +352,20 @@ the [archived scalable-projection protocol](https://github.com/johannes-schmiede
 SCC or platform matrix.
 
 ## Supported explicit matrix-free component-inference gate
+
+The pooled mover–stayer extension additionally requires
+`test_pooled_component_inference.do` for both structured models on Rust and
+exact Mata, including installed candidate bytes. Independent mixed-unit dense
+oracles check the point and covariance identities; public tests cover literal
+frequency expansion, target weights, fixed controls, frozen Mean, memory
+rejection, stale plugins, and solver/batch/thread/order invariance. Fixed-offset
+stayer firm/covariance basis features must remain structural zeros across
+equivalent solver reductions. ABI gates cover the additive capability bit,
+80-byte V2 unit receipt, short-buffer rejection and unchanged V1 layout.
+The [accepted plan](../fevc/docs/POOLED_COMPONENT_INFERENCE_PLAN.md) also requires
+its registered bounded assessment, numerical sensitivity, complete-command
+timing/RSS, and source-bound five-payload qualification. Historical component
+evidence does not qualify these added routes.
 
 For the individual-inference candidate, add
 `test_rust_individual_inference.do` to native and isolated-install gates.

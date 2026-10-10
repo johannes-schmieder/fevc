@@ -331,6 +331,19 @@ program define _fevc_display_structured
         exit
     }
 
+    if "`e(inference_variance_fit)'"=="exact_residual_moments" {
+        di as txt _newline "Structured variance model: " as result "`e(inference_model)'"
+        di as txt "Exact residual-moment fit; separate mover and stayer coefficients."
+        di as txt "Independent units: " as result %12.0fc e(inference_mover_units) ///
+            as txt " mover blocks and " as result %12.0fc e(inference_stayer_units) as txt " stayer observations."
+        di as txt "Gram reciprocal condition: " as result %10.3g e(variance_gram_rcond) ///
+            as txt "; variance floor share: " as result %7.4f e(variance_floor_share)
+        di as txt "Fixed nuisance offsets: estimation uncertainty omitted."
+        if e(inference_mean_omitted)==1 di as txt "Observed mean treated as fixed; mean-estimation uncertainty omitted."
+        if e(inference_joint_posted)==0 di as txt "Joint Gaussian covariance withheld; use available individual intervals."
+        di as txt "Structured variance assumptions and the target's q=0/q=1 conditions remain necessary."
+        exit
+    }
     tempname component_spectrum variance_summary q1_diagnostics
     matrix `component_spectrum' = e(component_spectrum)
     di as txt _newline "Explicit structured-model diagnostics"
@@ -339,8 +352,9 @@ program define _fevc_display_structured
     }
     if "`e(inference_deletion_selected)'"=="match" {
         di as txt "`e(inference_method)'"
-        di as txt "Independent matches: " as result %12.0fc e(inference_independent_units) ///
+        di as txt "Independent mover blocks: " as result %12.0fc e(inference_mover_units) ///
             as txt "; effective by regression mass: " as result %12.2fc e(inference_effective_matches)
+        if e(inference_stayer_units)>0 di as txt "Independent stayer observations: " as result %12.0fc e(inference_stayer_units)
         di as txt "Largest mass share: " as result %9.5f e(inference_largest_mass_share) ///
             as txt "; largest leverage: " as result %9.5f e(inference_largest_leverage) ///
             as txt "; minimum maker denominator: " as result %9.5f e(inference_smallest_maker)
