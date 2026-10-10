@@ -1,0 +1,52 @@
+{
+  "schema": "FEVC-CORRESPONDING-SOURCE-VALIDATION-V1",
+  "status": "PASS",
+  "source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "source_tree": "e46fd8836e8f9c2309a8a56ef1947918b9735f44",
+  "archive_command": [
+    "git",
+    "-c",
+    "tar.umask=0022",
+    "archive",
+    "--format=tar.gz",
+    "--prefix=fevc-source/",
+    "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0"
+  ],
+  "archive": "fevc-corresponding-source-002205f2.tar.gz",
+  "sha256": "b7ae33a7268d66330f823396abf1c45f46ce5b76b75e6c77b5b9461926c49101",
+  "bytes": 6379864,
+  "file_count": 1589,
+  "all_members_match_git_blobs": true,
+  "all_file_modes_match_git": true,
+  "deterministic_git_archive": true,
+  "complete_inventory_except_committed_export_ignore": true,
+  "excluded_paths": [
+    "fevc/fevc_rust_linux_x64.plugin",
+    "fevc/fevc_rust_macos.plugin",
+    "fevc/fevc_rust_macos_arm64.plugin",
+    "fevc/fevc_rust_macos_x86_64.plugin",
+    "fevc/fevc_rust_windows_x64.plugin",
+    "native/cmg-defects-20261009/fevc-corresponding-source-eec825d6.tar.gz",
+    "native/mean-component-20261008/fevc-corresponding-source-240ad74d.tar.gz",
+    "native/mean-component-20261008/fevc-corresponding-source-63757839.tar.gz",
+    "native/mean-component-20261008/fevc-corresponding-source-b9f80ce9.tar.gz"
+  ],
+  "required_build_runtime_lock_license_members": "PASS",
+  "generated_members": [
+    {
+      "path": "fevc/cmg/generated/cmg_test.mata",
+      "bytes": 141308,
+      "sha256": "581e824f4be69809da6262dce118f9b49a27773db5626cda59f67b076e8fd7c0",
+      "git_blob": "7c008a05c171414063883f2ea8fe06587e063b1e",
+      "mode": "100644"
+    },
+    {
+      "path": "fevc/fevc_cmg.mata",
+      "bytes": 141974,
+      "sha256": "3572a105f25316fc1ddbfb2697dbb8ad63808c637ef1d2079e6416c14a790c47",
+      "git_blob": "f46b17c740f5cd8712119956519fdf314bad9475",
+      "mode": "100644"
+    }
+  ],
+  "scope": "Exact corresponding source for all five adopted binaries; no native release archive. Full exported inventory independently compared with committed Git blobs and modes."
+}

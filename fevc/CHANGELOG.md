@@ -1,5 +1,16 @@
 # Pending changes
 
+## October 10, 2026 — pooled inference package adoption
+
+- Update the help for small exact-Mata and scalable Rust/JLA component inference,
+  independent stayers, structured variance models, and numerical failures.
+- Rebuild all five plugins from `002205f2`, including pooled inference and bounded
+  diagonal residual refinement. Mac arm64/Rosetta and Linux qualification pass.
+- Adopt the Windows hosted build at the owner's explicit request; Windows Stata
+  runtime testing remains pending with the owner. Authentication is unchanged.
+- Bind package bytes, corresponding source and installation evidence in the
+  [adoption manifest](../native/pooled-component-20261010/manifest.json).
+
 ## October 10, 2026 — diagonal solver residual refinement
 
 - Refine Rust generic diagonal solves that miss the complete original-equation

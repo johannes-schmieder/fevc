@@ -1,0 +1,77 @@
+{
+  "schema": "FEVC_POOLED_LINUX_QUALIFICATION_V1",
+  "status": "PASS",
+  "job_id": "8015131",
+  "source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "source_bundle_sha256": "21134270d47cebfcd8c5f20c88444f7e4db7e8e15e220987b7039ecfbee2809c",
+  "candidate_sha256": "355491380b9f47580c5cc6eca2b02aeaa9ce5bb579965152b1421eb0d7745af8",
+  "scheduler_failed": 0,
+  "scheduler_exit_status": 0,
+  "slots": 4,
+  "wall_seconds": 1669,
+  "maxvmem": "9.277G",
+  "receipt_sha256": "efbfa6e5e9d261d5d6541934c8f94b9cd52a8ba395aeebee933c1fffc4dfe9a5",
+  "qacct_sha256": "c485378b033ddfccde0cf3d8c4398960a2817906deb4a38676ba938cc4285ee7",
+  "verified_remote_files": 63,
+  "full_suite": "PASS",
+  "clean_install": "PASS",
+  "pooled_cases": [
+    {
+      "installed": false,
+      "backend": "mata",
+      "model": "structured_common",
+      "log": "artifacts/stata-logs/stata-pooled-component-mata-structured_common__fevc mata structured_common.log.sanitized.log",
+      "sha256": "d5f6c1e315067ef5055060563510bf2cfde30a3b7165ac45f3910874af300907"
+    },
+    {
+      "installed": false,
+      "backend": "mata",
+      "model": "structured_leverage",
+      "log": "artifacts/stata-logs/stata-pooled-component-mata-structured_leverage__fevc mata structured_leverage.log.sanitized.log",
+      "sha256": "d5f6c1e315067ef5055060563510bf2cfde30a3b7165ac45f3910874af300907"
+    },
+    {
+      "installed": false,
+      "backend": "rust",
+      "model": "structured_common",
+      "log": "artifacts/stata-logs/stata-pooled-component-rust-structured_common__fevc rust structured_common.log.sanitized.log",
+      "sha256": "6efd993dcb61fc382151bd064eb6a9dc9da239021d60658a95fe916caa56a96d"
+    },
+    {
+      "installed": false,
+      "backend": "rust",
+      "model": "structured_leverage",
+      "log": "artifacts/stata-logs/stata-pooled-component-rust-structured_leverage__fevc rust structured_leverage.log.sanitized.log",
+      "sha256": "6efd993dcb61fc382151bd064eb6a9dc9da239021d60658a95fe916caa56a96d"
+    },
+    {
+      "installed": true,
+      "backend": "mata",
+      "model": "structured_common",
+      "log": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_common__f mata structured_common.log.sanitized.log",
+      "sha256": "9b24db69dcb127aca4516649722dbbc47a544e5a768fe06257b2b4a633e655ce"
+    },
+    {
+      "installed": true,
+      "backend": "mata",
+      "model": "structured_leverage",
+      "log": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_leverage__f mata structured_leverage.log.sanitized.log",
+      "sha256": "9b24db69dcb127aca4516649722dbbc47a544e5a768fe06257b2b4a633e655ce"
+    },
+    {
+      "installed": true,
+      "backend": "rust",
+      "model": "structured_common",
+      "log": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_common__f rust structured_common.log.sanitized.log",
+      "sha256": "a9551428450f2d53680b0b41e84ee53db71a436fc00c7634225d8af5faa5aaa7"
+    },
+    {
+      "installed": true,
+      "backend": "rust",
+      "model": "structured_leverage",
+      "log": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_leverage__f rust structured_leverage.log.sanitized.log",
+      "sha256": "a9551428450f2d53680b0b41e84ee53db71a436fc00c7634225d8af5faa5aaa7"
+    }
+  ],
+  "scope": "Clean-source Linux x86-64 candidate qualification. No coverage, performance, Windows, publication or distribution-adoption claim."
+}

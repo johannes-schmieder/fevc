@@ -1,0 +1,15 @@
+{
+  "schema": "FEVC-WINDOWS-MANUAL-TEST-ADOPTION-V1",
+  "status": "ADOPTED_FOR_OWNER_MANUAL_TEST_RUNTIME_UNQUALIFIED",
+  "owner_authorization": "Leave windows authentication as is. Push the binaries anyways. I'll run windows later.",
+  "owner_authorization_date": "2026-10-10",
+  "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "path": "fevc/fevc_rust_windows_x64.plugin",
+  "sha256": "163a1d06c07d2ec409cbca9c9737c71539b28b952ef6c77b010a527f26e1ca63",
+  "build_run": "https://github.com/johannes-schmieder/fevc/actions/runs/38049204154",
+  "build_and_unit_export_audit": "PASS",
+  "automated_private_runtime": "NOT_RUN",
+  "owner_manual_runtime_test": "PENDING",
+  "authentication": "LEFT_UNCHANGED_AT_OWNER_REQUEST",
+  "qualification_claim": "No Windows Stata runtime qualification claimed for these bytes; earlier receipts qualify only their earlier binaries."
+}

@@ -1,0 +1,146 @@
+{
+  "schema": "FEVC-POOLED-COMPONENT-ADOPTION-V1",
+  "status": "ADOPTED_WINDOWS_OWNER_MANUAL_RUNTIME_PENDING",
+  "owner_authorization": "Leave windows authentication as is. Push the binaries anyways. I'll run windows later.",
+  "owner_authorization_date": "2026-10-10",
+  "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "features": [
+    "pooled mover-stayer structured component inference",
+    "bounded diagonal original-residual refinement",
+    "mixed component capability bit 17 and unit receipt V2"
+  ],
+  "binaries": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "a74464823c80a19c5175b674219e81796ad74880b60b618cd729b3c56ba0fce4",
+      "bytes": 4878288,
+      "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "6c9bc784f638e7c9225889c53742323f026703c0008f79d3068741fe3c950625"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "2a77d91efbf36996270862d5cbbaf65ea119eadec0c8612ee62051216dd7627a",
+      "bytes": 5582016,
+      "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "f56417e05877ffd2ef702381d7de58615b260632622d5be7e82d45cd06998dd6"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "817381e80567bbf59692780cde7da1f7e3552893723973260a8a9f62ad8a2017",
+      "bytes": 10481616,
+      "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "e8652b341c6c405ae7100b4e63c30097d20fb3c9690b1b5bfcc4f1e9c72891ad"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "355491380b9f47580c5cc6eca2b02aeaa9ce5bb579965152b1421eb0d7745af8",
+      "bytes": 5975568,
+      "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "77b6beec06a58bc274ab0cfd67a4c0e76d92ba43a3cc09befd4df709844b7333"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "sha256": "163a1d06c07d2ec409cbca9c9737c71539b28b952ef6c77b010a527f26e1ca63",
+      "bytes": 5676544,
+      "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+      "runtime_qualification": "OWNER_MANUAL_TEST_PENDING",
+      "replaces_sha256": "7252994e3b60c3bd84e5d433c81ecbd946fe050dda82f62efa53e03696e2f9e4"
+    }
+  ],
+  "corresponding_source": {
+    "path": "fevc-corresponding-source-002205f2.tar.gz",
+    "sha256": "b7ae33a7268d66330f823396abf1c45f46ce5b76b75e6c77b5b9461926c49101"
+  },
+  "evidence": [
+    {
+      "path": "evidence/macos/ci-receipt.json",
+      "sha256": "4ecb5a846e5dcdfe5873a9735f9aaadd412ba8a48c23aedbace9b589e63f292f"
+    },
+    {
+      "path": "evidence/macos/qualification.txt",
+      "sha256": "c4faedc31fa8ad40eb8f0295e5a52c077a3bdef14b2ffa65a1c6b5436b668e42"
+    },
+    {
+      "path": "evidence/macos/source-manifest.sha256",
+      "sha256": "3f5dde45f6c07e025061d45d45b998aaebaef8cd2fe8049d0a1e6f278075c6f0"
+    },
+    {
+      "path": "evidence/macos/validation.json",
+      "sha256": "04262e4383e8d8121a9d6c8a2ef76b921433c0da12045b129b6880ef51a45497"
+    },
+    {
+      "path": "evidence/linux/validation.json",
+      "sha256": "1e36ba7c77e601962c18079eb34c691924ebd98b5341ebb1e3b143e932334247"
+    },
+    {
+      "path": "evidence/linux/qualification.txt",
+      "sha256": "efbfa6e5e9d261d5d6541934c8f94b9cd52a8ba395aeebee933c1fffc4dfe9a5"
+    },
+    {
+      "path": "evidence/linux/qacct.txt",
+      "sha256": "c485378b033ddfccde0cf3d8c4398960a2817906deb4a38676ba938cc4285ee7"
+    },
+    {
+      "path": "evidence/linux/qualification-source.sha256",
+      "sha256": "9940a368228c98713dc6e96ba8ae95d52310ff0e2e946a19b36f2e3739367dff"
+    },
+    {
+      "path": "evidence/windows/hosted-build-receipt.json",
+      "sha256": "b24bc56d05b9cd103f869570f478b2ed4b1610457569d1ad8a533012fce6db85"
+    },
+    {
+      "path": "evidence/windows/build-audit.json",
+      "sha256": "38920ad01d027a99935d1689266eb3cfffcc3fd09f1d8f2044eb3a4b1afdb9bb"
+    },
+    {
+      "path": "evidence/hosted/hosted-gates.json",
+      "sha256": "7b7c8587520b674e047386731539646ccbb390c5f0d9de90a3f1524b1742b067"
+    },
+    {
+      "path": "evidence/hosted/hosted-rust-status.json",
+      "sha256": "358ed48e534c2ce84fcb5f4af0d03a6da5c52f5af1445b7bc1b229e4f3510bb5"
+    },
+    {
+      "path": "evidence/hosted/hosted-build-success.json",
+      "sha256": "e4cdc9506503d39e3592e10fe906c0495d8bcabea783fcb06c6ff6b325cb07fb"
+    },
+    {
+      "path": "evidence/hosted/hosted-source-success.json",
+      "sha256": "db159eab0835456d38e78caae107e287a87e2d08cd67614187568e386002c860"
+    },
+    {
+      "path": "evidence/packaging/staging.json",
+      "sha256": "398ef366a390fc1a100e471e5353ba165d32fa3ee08f7d71566325fb38858b9e"
+    },
+    {
+      "path": "evidence/packaging/local-install.json",
+      "sha256": "67582439cb213bee863a605ae37667ff47bdaf7ed2da6338ed1b7ae819df3a8c"
+    },
+    {
+      "path": "evidence/packaging/local-validation.json",
+      "sha256": "197dd113c4bc29ea3058d4b494f0006eda6d71246b75c85a6dda78d2d3d6da1c"
+    }
+  ],
+  "windows_manual_adoption": {
+    "path": "windows-manual-adoption.json",
+    "sha256": "4535b6792aee35f89cef6b8badb5576d56302d1842eb4514cb069eae1844a8f9"
+  },
+  "source_checks": {
+    "python_tests": "894 passed",
+    "cmg_assembly": "PASS",
+    "license_audit": "PASS",
+    "hosted_source_rust_windows_build": "PASS"
+  },
+  "qualification_scope": "Clean Mac arm64 and Rosetta x86-64 thin/universal qualification and SCC Linux full/installed qualification pass. Windows hosted build/unit/PE/export checks pass; no private Windows Stata run. Local/public package installation receipts are separate.",
+  "limitations": [
+    "Windows runtime awaits owner manual test",
+    "Rosetta is not native Intel hardware qualification",
+    "No general coverage or controlled scale-performance claim",
+    "No tag or native release archive"
+  ],
+  "original_evidence": "Copied receipts retain their original bytes and run-time scope; local sanitized transcripts remain in .local/pooled-publication. Their publication exclusions refer to the original test runs, not this subsequent owner-authorized adoption."
+}

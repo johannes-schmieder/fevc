@@ -1,0 +1,26 @@
+{
+  "status": "BUILD_AUDIT_PASS_RUNTIME_PENDING",
+  "source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "hosted_build_run": 38049204154,
+  "package_sha256": "8487810199d1831903b3379ca40cdc4ad3e1c5f1db6db8e91334d248b608909c",
+  "candidate_sha256": "163a1d06c07d2ec409cbca9c9737c71539b28b952ef6c77b010a527f26e1ca63",
+  "prepared_export_manifest_sha256": "6c1451c21bf28fb688b7371a8e314dcda1bde7d9aef51391147f0c01760e9a92",
+  "pe_audit": {
+    "status": "PASS",
+    "format": "PE32+",
+    "architecture": "x86_64",
+    "dll": true,
+    "sha256": "163a1d06c07d2ec409cbca9c9737c71539b28b952ef6c77b010a527f26e1ca63",
+    "size_bytes": 5676544,
+    "imports": [
+      "api-ms-win-core-synch-l1-2-0.dll",
+      "kernel32.dll",
+      "ntdll.dll"
+    ],
+    "import_symbol_count": 95,
+    "export_count": 149,
+    "required_export_count": 146,
+    "dynamic_msvc_crt": false
+  },
+  "private_stata_runtime": "NOT_RUN_AUTH_REQUIRED"
+}

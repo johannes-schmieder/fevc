@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "gates": [
+    {
+      "path": "hosted-rust-status.json",
+      "sha256": "358ed48e534c2ce84fcb5f4af0d03a6da5c52f5af1445b7bc1b229e4f3510bb5",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/38049183092",
+      "jobs": [
+        "Standalone dependency policy",
+        "windows-latest / Rust 1.85.1",
+        "windows-latest / Rust stable",
+        "macos-latest / Rust stable",
+        "macos-latest / Rust 1.85.1",
+        "ubuntu-latest / Rust 1.85.1",
+        "ubuntu-latest / Rust stable"
+      ]
+    },
+    {
+      "path": "hosted-build-success.json",
+      "sha256": "e4cdc9506503d39e3592e10fe906c0495d8bcabea783fcb06c6ff6b325cb07fb",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/38049204154",
+      "jobs": [
+        "build"
+      ]
+    },
+    {
+      "path": "hosted-source-success.json",
+      "sha256": "db159eab0835456d38e78caae107e287a87e2d08cd67614187568e386002c860",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/38049183206",
+      "jobs": [
+        "test"
+      ]
+    }
+  ],
+  "scope": "Hosted source/Rust/build gates; private Windows Stata runtime remains pending"
+}

@@ -1,0 +1,77 @@
+{
+  "schema": "FEVC-POOLED-PACKAGE-VALIDATION-V1",
+  "status": "PASS",
+  "build_source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "package_source_scope": "This adoption checkpoint; exact published commit is bound after push by public-install-binding.json.",
+  "changed_paths_at_validation": [
+    ".gitattributes",
+    "INSTALLATION.md",
+    "fevc/CHANGELOG.md",
+    "fevc/PLAN.md",
+    "fevc/docs/RC_BINARY_PAYLOAD.md",
+    "fevc/docs/RUST_MATA_PARITY.md",
+    "fevc/docs/rust_mata_parity.json",
+    "fevc/fevc_rust_linux_x64.plugin",
+    "fevc/fevc_rust_macos.plugin",
+    "fevc/fevc_rust_macos_arm64.plugin",
+    "fevc/fevc_rust_macos_x86_64.plugin",
+    "fevc/fevc_rust_windows_x64.plugin",
+    "native/README.md",
+    "native/pooled-component-20261010/README.md",
+    "native/pooled-component-20261010/corresponding-source.json",
+    "native/pooled-component-20261010/evidence/hosted/hosted-build-success.json",
+    "native/pooled-component-20261010/evidence/hosted/hosted-gates.json",
+    "native/pooled-component-20261010/evidence/hosted/hosted-rust-status.json",
+    "native/pooled-component-20261010/evidence/hosted/hosted-source-success.json",
+    "native/pooled-component-20261010/evidence/linux/qacct.txt",
+    "native/pooled-component-20261010/evidence/linux/qualification-source.sha256",
+    "native/pooled-component-20261010/evidence/linux/qualification.txt",
+    "native/pooled-component-20261010/evidence/linux/validation.json",
+    "native/pooled-component-20261010/evidence/macos/ci-receipt.json",
+    "native/pooled-component-20261010/evidence/macos/qualification.txt",
+    "native/pooled-component-20261010/evidence/macos/source-manifest.sha256",
+    "native/pooled-component-20261010/evidence/macos/validation.json",
+    "native/pooled-component-20261010/evidence/packaging/staging.json",
+    "native/pooled-component-20261010/evidence/windows/build-audit.json",
+    "native/pooled-component-20261010/evidence/windows/hosted-build-receipt.json",
+    "native/pooled-component-20261010/fevc-corresponding-source-002205f2.tar.gz",
+    "native/pooled-component-20261010/manifest.json",
+    "native/pooled-component-20261010/windows-manual-adoption.json",
+    "rust/README.md",
+    "rust/TEST_PLAN.md",
+    "rust/stata_backend/README.md"
+  ],
+  "unchanged": [
+    "all production Ado/Mata/Rust/C code",
+    "build recipes and lock files",
+    "test harnesses and inputs",
+    "registered acceptance thresholds",
+    "source-commit help and package catalogs"
+  ],
+  "affected_surface": "Five binary replacements, documentation, provenance and source-archive export exclusions only.",
+  "checks": {
+    "python": {
+      "command": "./.venv/bin/python -m pytest -q",
+      "result": "894 passed in 129.67s",
+      "log_sha256": "c48beff93f1730576d2a8226f3a42e474e3c13d266a0c35ad8437d71ce19aa6c"
+    },
+    "cmg_assembly": "PASS --all --check",
+    "parity_render": "PASS --check",
+    "license_audit": "PASS",
+    "git_diff_check": "PASS staged and unstaged",
+    "staged_catalog_file_hashes": "PASS 63 catalog files / 61 installed payloads",
+    "local_http_install": "PASS net fresh and replace, 61 installed file hashes each; pooled components both models and backends"
+  },
+  "environment": {
+    "python": "3.13.0",
+    "os": "Darwin",
+    "architecture": "arm64",
+    "stata": "19 MP"
+  },
+  "evidence_reuse": "Carry exact 002205f2 Mac/Linux qualification and hosted Windows build/unit/export evidence to this package; production code, build inputs, test inputs and acceptance identities are unchanged.",
+  "limitations": [
+    "Windows Stata runtime not run; owner manual test pending",
+    "Mac installer runtime is arm64 only; x86_64 separately qualified under Rosetta",
+    "No new coverage, controlled performance, tag or release claim"
+  ]
+}

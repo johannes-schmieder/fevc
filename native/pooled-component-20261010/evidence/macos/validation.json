@@ -1,0 +1,99 @@
+{
+  "schema": "FEVC_POOLED_MAC_QUALIFICATION_V1",
+  "status": "PASS",
+  "source_commit": "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0",
+  "formal_ci_status": "success",
+  "source_manifest_sha256": "3f5dde45f6c07e025061d45d45b998aaebaef8cd2fe8049d0a1e6f278075c6f0",
+  "verified_source_files": 276,
+  "ci_receipt_sha256": "4ecb5a846e5dcdfe5873a9735f9aaadd412ba8a48c23aedbace9b589e63f292f",
+  "qualification_sha256": "c4faedc31fa8ad40eb8f0295e5a52c077a3bdef14b2ffa65a1c6b5436b668e42",
+  "binaries": {
+    "fevc_rust_macos_arm64.plugin": "a74464823c80a19c5175b674219e81796ad74880b60b618cd729b3c56ba0fce4",
+    "fevc_rust_macos_x86_64.plugin": "2a77d91efbf36996270862d5cbbaf65ea119eadec0c8612ee62051216dd7627a",
+    "fevc_rust_macos.plugin": "817381e80567bbf59692780cde7da1f7e3552893723973260a8a9f62ad8a2017"
+  },
+  "pooled_cases": [
+    {
+      "case": "stata-arm64-pooled-component-mata-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-arm64-pooled-component-mata-structured_common__test-package mata structured_common.log.sanitized.log",
+      "sha256": "234c3bcc9df85b740bb7fc6ebbb0092950258b9b2a3d2d55d1a381da258231b3"
+    },
+    {
+      "case": "stata-arm64-pooled-component-mata-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-arm64-pooled-component-mata-structured_leverage__test-package mata structured_leverage.log.sanitized.log",
+      "sha256": "a96366705e8a4dda14615a271e3bb843d6999a184941aabde1cc716602df1486"
+    },
+    {
+      "case": "stata-arm64-pooled-component-rust-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-arm64-pooled-component-rust-structured_common__test-package rust structured_common.log.sanitized.log",
+      "sha256": "2370d198998aa0bd235a7252a44aa1bc90c937c9abb9e4f58c388db6aaeb05f0"
+    },
+    {
+      "case": "stata-arm64-pooled-component-rust-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-arm64-pooled-component-rust-structured_leverage__test-package rust structured_leverage.log.sanitized.log",
+      "sha256": "1ade546a1d0a3cd12212fab2f59b6f7393c5dc9fdfe0cedac58e6afa59f861af"
+    },
+    {
+      "case": "stata-arm64-universal-pooled-component-mata-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-arm64-universal-pooled-component-mata-structured_common__test-package-universal mata structured_common.log.sanitized.log",
+      "sha256": "264d05ef5c7fa4f6eacd734afe58e6c9ff78a6c6d7a7b8caa11f5359d2901255"
+    },
+    {
+      "case": "stata-arm64-universal-pooled-component-mata-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-arm64-universal-pooled-component-mata-structured_leverage__test-package-universal mata structured_leverage.log.sanitized.log",
+      "sha256": "b55c6342cae6255a90654901215bcefebe09ad53a16465b2a3d36123473fc985"
+    },
+    {
+      "case": "stata-arm64-universal-pooled-component-rust-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-arm64-universal-pooled-component-rust-structured_common__test-package-universal rust structured_common.log.sanitized.log",
+      "sha256": "643ddd8be05d934be65b3c9879cb70683c4e9ea1678b04fe6737a81835880920"
+    },
+    {
+      "case": "stata-arm64-universal-pooled-component-rust-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-arm64-universal-pooled-component-rust-structured_leverage__test-package-universal rust structured_leverage.log.sanitized.log",
+      "sha256": "78cdb6745e6b2d1b109c1a5119c63a9693af91545cd36e5ce9c4d829074ee4c0"
+    },
+    {
+      "case": "stata-x86_64-pooled-component-mata-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-pooled-component-mata-structured_common__test-package mata structured_common.log.sanitized.log",
+      "sha256": "234c3bcc9df85b740bb7fc6ebbb0092950258b9b2a3d2d55d1a381da258231b3"
+    },
+    {
+      "case": "stata-x86_64-pooled-component-mata-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-pooled-component-mata-structured_leverage__test-package mata structured_leverage.log.sanitized.log",
+      "sha256": "a96366705e8a4dda14615a271e3bb843d6999a184941aabde1cc716602df1486"
+    },
+    {
+      "case": "stata-x86_64-pooled-component-rust-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-pooled-component-rust-structured_common__test-package rust structured_common.log.sanitized.log",
+      "sha256": "2370d198998aa0bd235a7252a44aa1bc90c937c9abb9e4f58c388db6aaeb05f0"
+    },
+    {
+      "case": "stata-x86_64-pooled-component-rust-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-pooled-component-rust-structured_leverage__test-package rust structured_leverage.log.sanitized.log",
+      "sha256": "1ade546a1d0a3cd12212fab2f59b6f7393c5dc9fdfe0cedac58e6afa59f861af"
+    },
+    {
+      "case": "stata-x86_64-universal-pooled-component-mata-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-universal-pooled-component-mata-structured_common__test-package-universal mata structured_common.log.sanitized.log",
+      "sha256": "264d05ef5c7fa4f6eacd734afe58e6c9ff78a6c6d7a7b8caa11f5359d2901255"
+    },
+    {
+      "case": "stata-x86_64-universal-pooled-component-mata-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-universal-pooled-component-mata-structured_leverage__test-package-universal mata structured_leverage.log.sanitized.log",
+      "sha256": "b55c6342cae6255a90654901215bcefebe09ad53a16465b2a3d36123473fc985"
+    },
+    {
+      "case": "stata-x86_64-universal-pooled-component-rust-structured_common",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-universal-pooled-component-rust-structured_common__test-package-universal rust structured_common.log.sanitized.log",
+      "sha256": "643ddd8be05d934be65b3c9879cb70683c4e9ea1678b04fe6737a81835880920"
+    },
+    {
+      "case": "stata-x86_64-universal-pooled-component-rust-structured_leverage",
+      "log": "plugin-evidence/stata-logs/stata-x86_64-universal-pooled-component-rust-structured_leverage__test-package-universal rust structured_leverage.log.sanitized.log",
+      "sha256": "78cdb6745e6b2d1b109c1a5119c63a9693af91545cd36e5ce9c4d829074ee4c0"
+    }
+  ],
+  "clean_install_cases": 2,
+  "scope": "Mac arm64 native; x86_64 under Rosetta; thin and universal; no native Intel hardware claim"
+}

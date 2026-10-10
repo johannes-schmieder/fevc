@@ -4,8 +4,9 @@
 for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
 compiler, Rust installation, or separate plugin download is needed. Native
 qualification is specific to the exact artifact and platform. Intel Mac
-qualification uses Rosetta; the included Windows artifact passes private
-full runtime qualification at `240ad74d`.
+qualification uses Rosetta. The current Windows artifact passes hosted build,
+unit and PE/export checks; Windows Stata runtime testing is pending with the
+owner, who explicitly requested publication before that test.
 See [native provenance](native/README.md).
 
 ## Installation
@@ -28,7 +29,7 @@ Both routes install the same runtime, help, licenses, and five plugin files
 appropriate native backend. `main` is the development and installation branch.
 These URLs serve the published package. The [current checkpoint](fevc/PLAN.md)
 tracks publication and installation verification; the
-[adoption manifest](native/mean-component-20261008/manifest.json) binds the
+[adoption manifest](native/pooled-component-20261010/manifest.json) binds the
 included payloads to their sources and tested routes.
 
 After installation:
@@ -52,29 +53,23 @@ assert r(progress_api) == 2
 assert r(centering_api) == 1
 assert r(projection_centering_api) == 1
 assert r(component_centering_api) == 1
+assert r(component_mixed_api) == 1
 fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 ```
 
-The included set provides all three centering capabilities. Mac builds
-retain source `b9f80ce9`, Linux `63757839`, and Windows `240ad74d`. The Windows
-hosted artifact passes private smoke and full installed-runtime qualification.
-Original Mac/Linux binaries and source archives are retained under a review of
-unchanged public routes; they do not contain the lower-level serial exact
-Corrected repair in `240ad74d`. See the
-[adoption manifest](native/mean-component-20261008/manifest.json).
+All five included binaries are rebuilt from `002205f2` and provide the centering
+capabilities plus pooled component inference and bounded diagonal residual
+refinement. Mac arm64/Rosetta thin/universal and Linux full/installed qualification
+pass. Windows runtime qualification remains pending. See the
+[adoption manifest](native/pooled-component-20261010/manifest.json).
 
-Local HTTP `net install` fresh and replacement checks at `240ad74d` pass on
-Mac arm64, verifying all 61 files and five plugin hashes in each case and
-running eight installed Mean-component cells. This source-bound receipt does
-not verify later help bytes or the public installation endpoint. See the
-[current checkpoint](fevc/PLAN.md) for final public installation verification.
-
-The [October 7 manual-test adoption](native/centering-windows-manual-20261007.json)
-and [initial Mean-component checkpoint](native/mean-component-20261008/checkpoint.json)
-retain their original Windows limitations and failures. The
-[new Windows summary](native/mean-component-20261008/evidence/windows/qualification-240ad74d.json)
-preserves later collection and full-run failures before the successful retest.
+The package contains 61 installed files, including five plugins. Installation
+checks verify every file hash and exercise pooled components on both backends
+and with both variance models. The [current checkpoint](fevc/PLAN.md) and
+[installation receipts](native/pooled-component-20261010/evidence/packaging/)
+record local HTTP and public `net`/`github` fresh/replacement results on Mac arm64.
+These installation checks do not establish Windows runtime qualification.
 
 ## Local source installation
 
@@ -102,9 +97,8 @@ component inference holds the observed retained physical-frequency
 working-outcome mean fixed and omits its estimation uncertainty. This
 approximation is separate from numerical MCSE and from omitted nuisance-offset
 uncertainty. The five included native payloads support point, projection
-and component centering API 1 on their qualified routes. Exact sources and
-compatibility limits are in the
-[adoption manifest](native/mean-component-20261008/manifest.json).
+and component centering API 1. Exact sources and platform qualification limits
+are in the [adoption manifest](native/pooled-component-20261010/manifest.json).
 The [completed assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 records substantial exact-Mata interval unavailability and native numerical
 sensitivity; installation or successful computation is not a coverage claim.

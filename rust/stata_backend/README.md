@@ -1,6 +1,6 @@
 # Stata plugin boundary
 
-## Pooled component development interface
+## Pooled component interface
 
 The pooled fixed-offset match extension adds readiness bit 17
 (`VCKSS_CORE_MIXED_COMPONENT_V1_READY`), exposed as `r(component_mixed_api)`.
@@ -14,10 +14,25 @@ and requires both counts for schema 2.
 Default/explicit `stayers(both)` structured match inference requires this
 capability before preparation or RNG. See the
 [pooled contract](../../fevc/docs/POOLED_COMPONENT_INFERENCE.md) and
-[checkpoint](../../fevc/PLAN.md) for development assessment and platform status.
-The historical distributed payloads below retain their original capabilities.
+[checkpoint](../../fevc/PLAN.md) for assessment and platform status.
+Earlier payload records below retain their original capabilities and evidence scope.
 
-## Current CMG repair qualification
+## Current pooled component inference binaries
+
+All five payloads are rebuilt from `002205f2` and adopted for repository
+installation under explicit owner authorization. They include pooled mover–stayer
+structured component inference, mixed capability bit 17/unit receipt V2, and
+bounded diagonal residual refinement. The [manifest](../../native/pooled-component-20261010/manifest.json)
+binds exact bytes, corresponding source and original platform receipts.
+Clean Mac arm64/Rosetta thin/universal and SCC Linux full/installed qualification
+pass. Windows hosted build, unit tests and PE/export audit pass; the owner
+requests publication now and will test Windows later. Its
+[runtime qualification remains pending](../../native/pooled-component-20261010/windows-manual-adoption.json).
+Authentication is left unchanged. Package installation receipts under
+`../../native/pooled-component-20261010/evidence/packaging/` record all 61 installed files and five binary hashes;
+runtime checks apply only to the recorded platform. No tag or release is created.
+
+## Historical CMG repair qualification
 
 All five CMG repair payloads are rebuilt from `eec825d6` and published at
 `13a98492` after registered platform qualification and explicit owner approval.

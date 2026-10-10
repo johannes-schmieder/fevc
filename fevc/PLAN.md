@@ -1,21 +1,29 @@
 # Pooled inference package publication — October 10, 2026
 
-The owner requests current component-inference help, all updated native
-binaries, a verified installation package, and commit/push to main. This
-authorizes source and package commits and publication; no tag or release is
-requested. Freeze the reviewed source first, qualify its Mac/Linux/Windows
-payloads, then commit the exact tested package and verify public installation.
-The help now distinguishes exact Mata from scalable Rust/JLA, spells out the
-independent stayer assumption and supported tuples, and explains partial
-interval availability, covariance posting and numerical failures.
+The owner requests current component-inference help, all updated native binaries,
+a verified installation package, and commit/push to main. Source and help are
+published at `002205f2`. The help describes exact Mata for small designs and
+scalable Rust/JLA, independent physical stayers, supported variance models,
+fixed nuisance offsets, covariance availability, and hard numerical failures.
 
-The restricted Windows inspector passes and confirms the machine is stopped.
-The approved collector update still requires the expired owner-maintenance
-login; browser automation reports the Mac locked. An owner login request is
-pending while the independent source, Mac/Linux and packaging work proceeds.
-The checkpoints below retain their original authorization and evidence scope.
+All five binaries are rebuilt from that exact source and adopted under the
+[manifest](../native/pooled-component-20261010/manifest.json). Clean Mac
+arm64/Rosetta thin/universal qualification and SCC Linux job 8015131 pass,
+including pooled inference and clean-install checks. All 894 Python tests,
+CMG assembly, license audit, and hosted source/Rust/Windows build checks pass.
 
-## Completed diagonal residual refinement
+The owner now explicitly says: “Leave windows authentication as is. Push the
+binaries anyways. I'll run windows later.” Windows hosted build/unit/PE/export
+checks pass; private Stata runtime was not run and owner manual testing remains
+pending. Authentication and the stopped private machine are left unchanged.
+The complete 61-file repository installation package includes all five plugins.
+Local HTTP and public net/github verification receipts are recorded separately
+under the adoption record. No tag or native release archive is authorized.
+
+The historical checkpoints below retain their original source, authorization,
+failures and evidence scope. They do not qualify the newly adopted binaries.
+
+## Historical diagonal residual refinement checkpoint
 
 The owner approved bounded refinement for the generic Rust diagonal solver.
 A failed complete-equation check now receives at most three corrections using
