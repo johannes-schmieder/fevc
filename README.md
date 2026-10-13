@@ -33,13 +33,12 @@ API 1; Mean projection additionally needs projection-centering API 1, and
 Mean component inference needs component-centering API 1. Existing combined
 exact-Mata requests support Mean; native combined component/projection
 requests remain unsupported.
-The five included native payloads are qualified: Mac at `b9f80ce9`,
-Linux at `63757839` and Windows at `240ad74d`. Mac x86-64 checks use Rosetta.
-Original Mac/Linux bytes are reused only on unchanged public routes; they do
-not contain the lower-level serial exact Corrected repair in the Windows
-source. See the
-[adoption manifest](native/mean-component-20261008/manifest.json) for exact
-artifacts, source compatibility and tested scopes.
+All five included native plugins are built from `002205f2` and include pooled
+mover–stayer component inference and bounded diagonal residual refinement.
+Mac and Linux runtime qualification passes; Mac x86-64 checks use Rosetta.
+Windows build and unit checks pass, with Windows Stata runtime testing pending.
+See the [adoption manifest](native/pooled-component-20261010/manifest.json)
+for exact artifacts and tested scopes.
 
 The [completed bounded assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures. All eight native primary
@@ -62,16 +61,20 @@ net install fevc, replace ///
     from("https://raw.githubusercontent.com/johannes-schmieder/fevc/main/")
 ```
 
-If you already use the Stata `github` command:
+Alternatively, use the community-contributed
+[`github` installer](https://github.com/haghish/github):
 
 ```stata
+* Install the github command once, if needed
+net install github, from("https://haghish.github.io/github/")
 github install johannes-schmieder/fevc
 ```
 
-Both routes install the published command, help, and native backends for all
-three platforms. They do not yet deliver the October 8 local candidate.
-Restart Stata after updating. See [installation notes](INSTALLATION.md) if
-you have an older development installation.
+Both routes install the current package from `main`, including the command,
+help, and all five native plugins.
+Restart Stata after updating to load the new programs and native plugin.
+See [installation notes](INSTALLATION.md) if you have an older development
+installation.
 
 ## Example
 

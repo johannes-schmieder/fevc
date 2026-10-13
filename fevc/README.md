@@ -17,12 +17,12 @@ The main display reports twice the covariance as the sorting contribution.
 Controls enter the regression; the reported targets concern the worker and
 firm effects.
 
-Pooled match component inference is available in the development source through
+Pooled match component inference is available in the current package through
 explicit structured models in exact Mata and scalable Rust/JLA. It assumes
 independent physical stayer observations and holds fitted controls fixed.
 See [the pooled inference contract](docs/POOLED_COMPONENT_INFERENCE.md) for
-syntax, assumptions and native capability requirements. Existing distributed
-binaries need the matching new capability before this route can run.
+syntax, assumptions and native capability requirements. All five included
+plugins provide `component_mixed_api=1`; older installations need an update.
 
 ## Deletion and population
 
@@ -147,12 +147,11 @@ Point centering works in Mata and a matching native build. Native point
 centering requires centering API 1; Mean projection additionally requires
 projection-centering API 1 and Mean component inference requires
 component-centering API 1. Existing combined exact-Mata requests support Mean;
-native combined component/projection requests remain unsupported. The five
-included payloads are qualified: Mac at `b9f80ce9`, Linux at `63757839`
-and Windows at `240ad74d`. Original Mac/Linux bytes retain their source and
-qualified public-route scope; they do not contain the lower-level serial exact
-Corrected repair in `240ad74d`. See the
-[adoption manifest](../native/mean-component-20261008/manifest.json).
+native combined component/projection requests remain unsupported. All five
+included plugins are built from `002205f2`. Mac and Linux runtime qualification
+passes; Mac x86-64 checks use Rosetta. Windows build and unit checks pass, with
+Windows Stata runtime testing pending. See the
+[adoption manifest](../native/pooled-component-20261010/manifest.json).
 
 The [completed assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
 retains 22 exact-Mata availability-screen failures across three cells. Eight

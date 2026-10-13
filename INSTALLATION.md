@@ -18,7 +18,15 @@ net install fevc, replace ///
     from("https://raw.githubusercontent.com/johannes-schmieder/fevc/main/")
 ```
 
-With the community-contributed `github` installer already installed:
+Alternatively, use the community-contributed
+[`github` installer by E. F. Haghish](https://github.com/haghish/github).
+Install the `github` command once if needed:
+
+```stata
+net install github, from("https://haghish.github.io/github/")
+```
+
+Then install `fevc` directly from this repository:
 
 ```stata
 github install johannes-schmieder/fevc
@@ -27,7 +35,9 @@ github install johannes-schmieder/fevc
 Both routes install the same runtime, help, licenses, and five plugin files
 (macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
 appropriate native backend. `main` is the development and installation branch.
-These URLs serve the published package. The [current checkpoint](fevc/PLAN.md)
+Both routes serve the current package from `main`, including the October 10
+pooled inference update and all five rebuilt plugins.
+The [current checkpoint](fevc/PLAN.md)
 tracks publication and installation verification; the
 [adoption manifest](native/pooled-component-20261010/manifest.json) binds the
 included payloads to their sources and tested routes.

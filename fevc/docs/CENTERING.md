@@ -75,8 +75,9 @@ neither corrects estimated-mean bias nor guarantees conservative intervals.
 
 The existing deletion, nuisance, weighting, backend and q-specific
 identification restrictions still apply. In particular, observation component
-inference remains unit-frequency; the supported native match tuple remains
-mover-only with fixed offsets. Existing combined exact-Mata requests support
+inference remains unit-frequency. Native match inference supports mover-only
+requests and explicit structured [pooled mover–stayer models](POOLED_COMPONENT_INFERENCE.md)
+with fixed nuisance offsets. Existing combined exact-Mata requests support
 Mean; native combined component/projection requests remain unsupported.
 See [the inference guide](INFERENCE.md) for supported requests and
 [the implementation contract](MATRIX_FREE_COMPONENT_INFERENCE.md) for algebra.
@@ -86,8 +87,8 @@ q1 k12 in both arms. All eight native primary cells have 100% interval
 availability and pass broad descriptive screens. Mean-versus-fixed-c0 effects
 are small on those designs, but fixed-outcome native checks show material
 numerical sensitivity. Neither those results nor historical None evidence
-establish general coverage. The five included native payloads retain their
-source-bound engineering qualification. See the [adoption manifest](../../native/mean-component-20261008/manifest.json).
+establish general coverage. Current native artifacts and platform qualification
+limits are recorded in the [adoption manifest](../../native/pooled-component-20261010/manifest.json).
 
 ## Projection and the mean convention
 
@@ -204,15 +205,13 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   unsupported. Missing metadata is zero; explicit None needs neither
   attachment-centering capability on its separately supported native requests.
 - The five included payloads expose all three centering capabilities.
-  Mac at `b9f80ce9` passes full and installed checks on arm64 and Rosetta,
-  including both universal aliases; Linux at `63757839` passes full and
-  installed checks (SCC job `7969972`). Windows at `240ad74d` passes hosted
-  build and private smoke/full qualification, including installed Mean and
-  Corrected exact checks. Original Mac/Linux bytes and archives are reused
-  only on unchanged public routes; they do not contain the lower-level serial
-  exact Corrected fix in `240ad74d`. Native Intel hardware is not claimed.
-  The [adoption manifest](../../native/mean-component-20261008/manifest.json)
-  binds exact sources, compatibility and earlier failed attempts. The
+  All are rebuilt from `002205f2` and include pooled component inference and
+  bounded diagonal residual refinement. Mac arm64/Rosetta thin/universal and
+  Linux full/installed qualification pass. Windows hosted build, unit and
+  PE/export checks pass; Windows Stata runtime testing remains pending.
+  Native Intel hardware is not claimed.
+  The [adoption manifest](../../native/pooled-component-20261010/manifest.json)
+  binds exact sources, artifacts and platform evidence. The
   [current checkpoint](../PLAN.md) tracks publication and final installation
   verification.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,

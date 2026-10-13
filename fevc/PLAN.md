@@ -1,4 +1,36 @@
-# Pooled inference package publication — October 10, 2026
+# Installation documentation refresh — October 13, 2026
+
+The owner requests verification that the latest code is online, removal of the
+stale October 8 candidate warning, and explicit instructions for
+`github install johannes-schmieder/fevc` with a link to Haghish's installer.
+GitHub `main` and the clean local checkout both start at `c5f2025b`; the current
+code and all five plugins were already published. The warning originated in
+`623b156d` and was superseded by subsequent publications.
+
+This documentation update changes only `README.md`, `INSTALLATION.md`,
+`fevc/README.md`, `fevc/docs/CENTERING.md`, and this checkpoint. It aligns current
+availability and platform descriptions with the October 10 adoption, including
+pooled inference and the pending Windows Stata runtime test.
+The tested package source remains `819d4c51`, with build source `002205f2` and
+the [existing public-install binding](../native/pooled-component-20261010/evidence/packaging/public-install-binding.json).
+Production, build, binary, input, harness and acceptance identities are unchanged
+from the starting checkout. Historical installation and platform claims retain
+their original artifacts and limitations; no new runtime qualification is
+inferred from documentation changes.
+
+Validation passes with Python 3.13.0 and Stata/MP 19.0.115:
+`./.venv/bin/python fevc/tools/run_checks.py` includes all 894 Python tests,
+`./.venv/bin/python fevc/cmg/tools/assemble.py --all --check`, source audits,
+CMG checks, Stata quick/full suites, clean installation, helper migration and
+benchmark smokes, ending with `FEVC LOCAL QUALIFICATION PASS`. Registered test
+seeds and tolerances are unchanged. Relative documentation links and
+`git diff --check` pass. All 61 installation files and both catalogs match
+`819d4c51` byte for byte; a fresh public HTTP check also matches every file,
+including the five plugin hashes in the original public-install binding.
+No external platform or native-build gates are rerun for this documentation
+change. The owner requests publication of this update on `main`.
+
+## Pooled inference package publication — October 10, 2026
 
 The owner requests current component-inference help, all updated native binaries,
 a verified installation package, and commit/push to main. Source and help are
