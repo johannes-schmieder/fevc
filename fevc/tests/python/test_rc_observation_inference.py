@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from .history_support import historical_file
+
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -140,8 +142,24 @@ def test_failure_accounting_and_unchanged_thresholds():
     assert MODULE.ALL_CELLS == HELPERS.MODULE.ALL_CELLS
 
 
-def test_registration_real_source():
-    assert REGISTRATION(ROOT)["schema"] == MODULE.REGISTRATION_SCHEMA
+def test_registration_real_source(tmp_path):
+    # The frozen campaign is validated at the original native build source;
+    # subsequent packaging changes must not rewrite its recorded inventory.
+    commit = "002205f2804a7fc8e54a7a4ad1d48194bc04c6d0"
+    payload = historical_file(ROOT, commit, MODULE.REGISTRATION_PATH)
+    registration = tmp_path / MODULE.REGISTRATION_PATH
+    registration.parent.mkdir(parents=True)
+    registration.write_bytes(payload)
+    frozen = json.loads(payload)["source_binding"]["frozen_file_sha256"]
+    for relative in frozen:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(historical_file(ROOT, commit, relative))
+    assert REGISTRATION(tmp_path)["schema"] == MODULE.REGISTRATION_SCHEMA
+    exporter = "rust/stata_backend/scc/build_linux_bundle.py"
+    (tmp_path / exporter).write_bytes((ROOT / exporter).read_bytes())
+    with pytest.raises(MODULE.ConfirmationError, match="V5 frozen file hash mismatch"):
+        REGISTRATION(tmp_path)
 
 
 def test_confirmation_inventory_and_dirty_source(tmp_path, monkeypatch):
