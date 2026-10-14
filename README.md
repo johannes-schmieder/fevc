@@ -109,6 +109,7 @@ options, and more examples, or read the [usage guide](fevc/README.md).
 
 ## Documentation
 
+- [Technical supplement](https://johannes-schmieder.com/papers/fevc_technical_supplement.pdf)
 - [Usage guide](fevc/README.md)
 - [Outcome centering](fevc/docs/CENTERING.md)
 - [Installation](INSTALLATION.md)
