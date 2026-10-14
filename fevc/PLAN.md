@@ -14,6 +14,9 @@ The ZIP contains the same 61 installed files as the repository catalog, plus
 the two installation catalogs. Corresponding source and checksum/inventory
 records accompany it. Tagged repository archives include the plugins needed
 by the root catalog. The separate portable-source catalog remains binary-free.
+The SCC source-bundle exporter explicitly omits plugins so qualification still
+rebuilds from source. Version-only result guards accept the new release status
+without treating a version query as fitted results.
 
 Validation uses the integrated local checker, deterministic ZIP and inventory
 checks, existing adoption evidence/hash checks, and fresh/replacement Stata

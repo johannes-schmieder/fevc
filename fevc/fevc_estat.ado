@@ -4,7 +4,7 @@
 program define fevc_estat, rclass
     version 18.0
     if "`e(cmd)'" != "fevc" |                                ///
-        inlist("`e(status)'", "WITHHELD", "ALPHA") {
+        inlist("`e(status)'", "WITHHELD", "ALPHA", "RELEASED") {
         error 301
     }
 

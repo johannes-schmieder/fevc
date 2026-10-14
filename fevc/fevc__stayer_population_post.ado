@@ -4,7 +4,7 @@
 program define fevc__stayer_population_post, eclass
     version 18.0
     if "${VCKSS_ROUTE_STAYERS_REQUESTED}"=="" | "`e(cmd)'"!="fevc" exit
-    if inlist("`e(status)'","WITHHELD","ALPHA") exit
+    if inlist("`e(status)'","WITHHELD","ALPHA","RELEASED") exit
     ereturn local stayers "${VCKSS_ROUTE_STAYERS_REQUESTED}"
     ereturn scalar stayers_option_supplied = real("${VCKSS_ROUTE_STAYERS_SUPPLIED}")
     ereturn local stayer_option_schema "FEVC-STAYER-POPULATION-V1"

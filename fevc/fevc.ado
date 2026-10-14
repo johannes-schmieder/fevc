@@ -219,7 +219,7 @@ program define _fevc_command, eclass
         exit 498
     }
     if !`command_rc' & "`e(cmd)'" == "fevc" &                  ///
-        !inlist("`e(status)'", "WITHHELD", "ALPHA") {
+        !inlist("`e(status)'", "WITHHELD", "ALPHA", "RELEASED") {
         ereturn local estat_cmd "fevc_estat"
     }
     // UserBreak is untyped; no partial estimate or prior fit may survive it.
