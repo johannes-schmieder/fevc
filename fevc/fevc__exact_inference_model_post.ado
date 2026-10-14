@@ -1,3 +1,6 @@
+*! Posts exact-Mata inference and projection results, model descriptions,
+*! and the availability of target-specific and joint covariance results.
+
 program define fevc__exact_inference_model_post, eclass
     version 18.0
     gettoken action : 0

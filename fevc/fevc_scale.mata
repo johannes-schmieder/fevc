@@ -1,4 +1,5 @@
-*! fevc compressed-cell runtime 0.4.0-alpha.1 18aug2026
+*! Builds compressed coefficient-cell and target-stratum representations
+*! while retaining the distinction between cells and deletion units.
 
 version 18.0
 quietly fevc__timer load

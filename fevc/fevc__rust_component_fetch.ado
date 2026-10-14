@@ -1,3 +1,6 @@
+*! Fetches native structured component-inference outputs and validates
+*! their dimensions, numerical diagnostics, and execution receipts.
+
 program define fevc__rust_component_fetch, rclass
     version 18.0
     args handle reference model simulations memorylimit posted level      ///

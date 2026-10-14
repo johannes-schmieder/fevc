@@ -1,3 +1,6 @@
+*! Validates component-inference and projection requests and checks backend
+*! capabilities. Normalized options and route flags are returned in caller locals.
+
 program define fevc__component_model_route, rclass
     version 18.0
     args inference inferencemodel project projecteffect projectweight ///

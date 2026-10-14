@@ -1,4 +1,5 @@
-*! fevc compressed-command runtime bridge 0.4.0-alpha.1 18aug2026
+*! Bridges Stata calls to cached compressed Mata designs and results,
+*! including explicit reset and release of command state.
 
 version 18.0
 

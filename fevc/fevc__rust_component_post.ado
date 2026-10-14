@@ -1,3 +1,6 @@
+*! Posts validated native component-inference results and diagnostics
+*! into e(), with covariance availability determined by the returned checks.
+
 program define fevc__rust_component_post, eclass
     version 18.0
     args model inference simulations inferenceseed level primitive results ///

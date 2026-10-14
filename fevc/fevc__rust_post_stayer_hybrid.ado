@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 31aug2026
+*! Combines native mover and eligible-stayer contributions and posts
+*! the pooled decomposition, sample counts, and numerical diagnostics.
+
 program define fevc__rust_post_stayer_hybrid, eclass sortpreserve
     version 18.0
     args depvar frequency target hybridtouse nuisance nhystayers    ///

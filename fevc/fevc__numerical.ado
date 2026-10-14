@@ -1,4 +1,6 @@
-*! fevc all-point-probe numerical attachment V1 29sep2026
+*! Initializes, validates, and posts numerical Monte Carlo error diagnostics
+*! for point estimates, and clears their command-local working state.
+
 program define fevc__numerical, eclass
     version 18.0
     gettoken action 0 : 0

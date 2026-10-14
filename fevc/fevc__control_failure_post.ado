@@ -1,4 +1,5 @@
-*! Stable, failure-only control-certificate diagnostics.
+*! Posts control-basis certification diagnostics after a native failure.
+
 program define fevc__control_failure_post, eclass
     version 18.0
     args detail

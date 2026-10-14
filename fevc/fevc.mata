@@ -1,4 +1,5 @@
-*! fevc Mata runtime 0.5.0-rc.1 05sep2026
+*! Mata estimation runtime for fevc. Implements exact and randomized
+*! leave-out calculations, target construction, and numerical safeguards.
 
 version 18.0
 quietly fevc__timer load
@@ -1038,112 +1039,112 @@ struct vckss_center__map {
     real scalar used
     string scalar status, message
 }
-struct vckss_center__map scalar vckss_center__new(real scalar units,real scalar p)
+struct vckss_center__map scalar vckss_center__new(real scalar units, real scalar p)
 {
     struct vckss_center__map scalar out
-    out.F=J(units,p,0);out.q=out.delta=out.mass=out.multiple=out.source=J(units,1,0)
-    out.score=J(p,1,0);out.local_increment=J(2,3,0);out.used=0
-    out.status="CONVERGED";out.message=""
+    out.F = J(units, p, 0); out.q = out.delta = out.mass = out.multiple = out.source = J(units, 1, 0)
+    out.score = J(p, 1, 0); out.local_increment = J(2, 3, 0); out.used = 0
+    out.status = "CONVERGED"; out.message = ""
     return(out)
 }
 void vckss_center__observation(struct vckss_center__map scalar map,
-    real rowvector x,real rowvector xa,real scalar z,real scalar e,
-    real scalar maker,real scalar frequency,real scalar n,
-    struct vckss_target_matrices scalar targets,real scalar source)
+    real rowvector x, real rowvector xa, real scalar z, real scalar e,
+    real scalar maker, real scalar frequency, real scalar n,
+    struct vckss_target_matrices scalar targets, real scalar source)
 {
     real scalar g
-    if(frequency>1 & n*maker-1<=1e-12*max((abs(n*maker),1))) {
-        map.status="CENTERING_SINGULAR"
-        map.message="nonpositive omitted physical-copy contrast mode"
+    if (frequency>1 & n*maker-1 <= 1e-12*max((abs(n*maker), 1))) {
+        map.status = "CENTERING_SINGULAR"
+        map.message = "nonpositive omitted physical-copy contrast mode"
         return
     }
-    g=++map.used
-    map.F[g,.]=sqrt(frequency)*x
-    map.q[g]=sqrt(frequency)*z*e/maker
-    map.delta[g]=n*maker-1;map.mass[g]=1;map.multiple[g]=sqrt(frequency)
-    map.source[g]=source
-    map.score=map.score+frequency*x'*z*e/maker
+    g = ++map.used
+    map.F[g, .] = sqrt(frequency)*x
+    map.q[g] = sqrt(frequency)*z*e/maker
+    map.delta[g] = n*maker-1; map.mass[g] = 1; map.multiple[g] = sqrt(frequency)
+    map.source[g] = source
+    map.score = map.score+frequency*x'*z*e/maker
 }
 void vckss_center__block(struct vckss_center__map scalar map,
-    real matrix X,real matrix XA,real colvector c,real colvector z,
-    real colvector deleted,real scalar n,
-    struct vckss_target_matrices scalar targets,real scalar source)
+    real matrix X, real matrix XA, real colvector c, real colvector z,
+    real colvector deleted, real scalar n,
+    struct vckss_target_matrices scalar targets, real scalar source)
 {
-    real colvector t,xi,direction,w,h,F
-    real scalar g,m,a
-    m=quadcross(c,c);t=z*quadcross(c,deleted)
-    xi=(t-deleted*quadcross(c,z))/m
-    F=X'*c;direction=c-X*(XA'*c);a=quadcross(c,direction)/m
-    g=++map.used;map.F[g,.]=F';map.mass[g]=m;map.multiple[g]=1;map.source[g]=source
-    map.q[g]=quadcross(c,t)-n*quadcross(direction,xi)
-    map.delta[g]=n*a-m;map.score=map.score+X'*t
-    w=XA'*c;h=XA'*xi
-    map.local_increment[source,.]=map.local_increment[source,.]+
-        ((w'*targets.worker*h)[1],(w'*targets.firm*h)[1],(w'*targets.covariance*h)[1])
+    real colvector t, xi, direction, w, h, F
+    real scalar g, m, a
+    m = quadcross(c, c); t = z*quadcross(c, deleted)
+    xi = (t-deleted*quadcross(c, z))/m
+    F = X'*c; direction = c-X*(XA'*c); a = quadcross(c, direction)/m
+    g = ++map.used; map.F[g, .] = F'; map.mass[g] = m; map.multiple[g] = 1; map.source[g] = source
+    map.q[g] = quadcross(c, t)-n*quadcross(direction, xi)
+    map.delta[g] = n*a-m; map.score = map.score+X'*t
+    w = XA'*c; h = XA'*xi
+    map.local_increment[source, .] = map.local_increment[source, .]+
+        ((w'*targets.worker*h)[1], (w'*targets.firm*h)[1], (w'*targets.covariance*h)[1])
 }
 real matrix vckss_center__finish(struct vckss_center__map scalar map,
-    real matrix S,real matrix A,struct vckss_target_matrices scalar targets,
-    real scalar tolerance,real scalar rank_tolerance)
+    real matrix S, real matrix A, struct vckss_target_matrices scalar targets,
+    real scalar tolerance, real scalar rank_tolerance)
 {
-    struct vckss_inverse_result scalar factor,exception
-    real colvector good,bad,b,kappa,gamma,rhs,check,weights,index
-    real matrix F,J,E,W,out
-    real scalar i,source,residual
-    if(map.status!="CONVERGED")return(J(2,4,.))
-    if(map.used!=rows(map.F)) {
-        map.status="CENTERING_INCOMPLETE";map.message="unit map is incomplete"
-        return(J(2,4,.))
+    struct vckss_inverse_result scalar factor, exception
+    real colvector good, bad, b, kappa, gamma, rhs, check, weights, index
+    real matrix F, J, E, W, out
+    real scalar i, source, residual
+    if (map.status != "CONVERGED") return(J(2, 4, .))
+    if (map.used != rows(map.F)) {
+        map.status = "CENTERING_INCOMPLETE"; map.message = "unit map is incomplete"
+        return(J(2, 4, .))
     }
-    F=map.F;b=map.q-F*A*map.score
-    good=selectindex(map.delta:>0.1:*(map.delta+map.mass))
-    bad=selectindex(map.delta:<=0.1:*(map.delta+map.mass))
-    if(rows(bad)>64){
-        map.status="RESOURCE_LIMIT";map.message="centering has more than 64 exceptional representatives"
-        return(J(2,4,.))
+    F = map.F; b = map.q-F*A*map.score
+    good = selectindex(map.delta:>0.1:*(map.delta+map.mass))
+    bad = selectindex(map.delta:<=0.1:*(map.delta+map.mass))
+    if (rows(bad)>64) {
+        map.status = "RESOURCE_LIMIT"; map.message = "centering has more than 64 exceptional representatives"
+        return(J(2, 4, .))
     }
-    J=S
-    if(rows(good))J=J+quadcross(F[good,.],1:/map.delta[good],F[good,.])
-    factor=vckss__inverse(J,rank_tolerance)
-    if(factor.status!="CONVERGED"){
-        map.status="CENTERING_SINGULAR";map.message="auxiliary coefficient system failed"
-        return(J(2,4,.))
+    J = S
+    if (rows(good)) J = J+quadcross(F[good, .], 1:/map.delta[good], F[good, .])
+    factor = vckss__inverse(J, rank_tolerance)
+    if (factor.status != "CONVERGED") {
+        map.status = "CENTERING_SINGULAR"; map.message = "auxiliary coefficient system failed"
+        return(J(2, 4, .))
     }
-    gamma=J(cols(S),1,0)
-    if(rows(good))gamma=factor.inverse*(F[good,.]'*(b[good]:/map.delta[good]))
-    kappa=J(rows(F),1,0)
-    if(rows(bad)) {
-        E=diag(map.delta[bad])+F[bad,.]*factor.inverse*F[bad,.]'
-        exception=vckss__inverse(E,rank_tolerance)
-        if(exception.status!="CONVERGED"){
-        map.status="CENTERING_SINGULAR";map.message="exceptional Schur system failed"
-        return(J(2,4,.))
-    }
-        kappa[bad]=exception.inverse*(b[bad]-F[bad,.]*gamma)
-        gamma=gamma+factor.inverse*F[bad,.]'*kappa[bad]
-    }
-    if(rows(good))kappa[good]=(b[good]-F[good,.]*gamma):/map.delta[good]
-    check=map.delta:*kappa+F*A*(F'*kappa)-b
-    residual=max(abs(b))
-    if(residual==0)residual=max(abs(check))
-    else residual=vckss__norm2(check/residual)/vckss__norm2(b/residual)
-    if(hasmissing(kappa) | missing(residual) | residual>max((1e-11,10*tolerance))) {
-        map.status="INVERSE_RESIDUAL_FAILED";map.message="complete centering correction equation failed"
-        return(J(2,4,.))
-    }
-    W=F*A;out=(map.local_increment,J(2,1,0))
-    for(source=1;source<=2;source++) {
-        index=selectindex(map.source:==source)
-        if(rows(index)) {
-            weights=kappa[index]:/(map.mass[index]:*map.multiple[index])
-            out[source,1]=out[source,1]+quadcross(weights,vckss__target_diagonal(W[index,.],targets.worker))
-            out[source,2]=out[source,2]+quadcross(weights,vckss__target_diagonal(W[index,.],targets.firm))
-            out[source,3]=out[source,3]+quadcross(weights,vckss__target_diagonal(W[index,.],targets.covariance))
+    gamma = J(cols(S), 1, 0)
+    if (rows(good)) gamma = factor.inverse*(F[good, .]'*(b[good]:/map.delta[good]))
+    kappa = J(rows(F), 1, 0)
+    if (rows(bad)) {
+        E = diag(map.delta[bad])+F[bad, .]*factor.inverse*F[bad, .]'
+        exception = vckss__inverse(E, rank_tolerance)
+        if (exception.status != "CONVERGED") {
+            map.status = "CENTERING_SINGULAR"; map.message = "exceptional Schur system failed"
+            return(J(2, 4, .))
         }
-        out[source,4]=out[source,1]+out[source,2]+2*out[source,3]
+        kappa[bad] = exception.inverse*(b[bad]-F[bad, .]*gamma)
+        gamma = gamma+factor.inverse*F[bad, .]'*kappa[bad]
     }
-    if(hasmissing(out)){
-        map.status="NONFINITE_CORRECTION";map.message="centering correction increment is nonfinite"
-        return(J(2,4,.))
+    if (rows(good)) kappa[good] = (b[good]-F[good, .]*gamma):/map.delta[good]
+    check = map.delta:*kappa+F*A*(F'*kappa)-b
+    residual = max(abs(b))
+    if (residual == 0) residual = max(abs(check))
+    else residual = vckss__norm2(check/residual)/vckss__norm2(b/residual)
+    if (hasmissing(kappa) | missing(residual) | residual>max((1e-11, 10*tolerance))) {
+        map.status = "INVERSE_RESIDUAL_FAILED"; map.message = "complete centering correction equation failed"
+        return(J(2, 4, .))
+    }
+    W = F*A; out = (map.local_increment, J(2, 1, 0))
+    for (source = 1; source <= 2; source++) {
+        index = selectindex(map.source:==source)
+        if (rows(index)) {
+            weights = kappa[index]:/(map.mass[index]:*map.multiple[index])
+            out[source, 1] = out[source, 1]+quadcross(weights, vckss__target_diagonal(W[index, .], targets.worker))
+            out[source, 2] = out[source, 2]+quadcross(weights, vckss__target_diagonal(W[index, .], targets.firm))
+            out[source, 3] = out[source, 3]+quadcross(weights, vckss__target_diagonal(W[index, .], targets.covariance))
+        }
+        out[source, 4] = out[source, 1]+out[source, 2]+2*out[source, 3]
+    }
+    if (hasmissing(out)) {
+        map.status = "NONFINITE_CORRECTION"; map.message = "centering correction increment is nonfinite"
+        return(J(2, 4, .))
     }
     return(out)
 }
@@ -5399,9 +5400,8 @@ struct vckss_result scalar vckss__jla_backend(
     out.solver_precond_applications = solver_precond_applications
     out.solver_precond_batches = solver_precond_batches
     out.solver_rhs_diagnostics = solver_rhs_diagnostics
-    /* FE-BUF-PERF-V1 measurement baseline.  The legacy implementation
-       materializes every Schur batch; the buffered candidate replaces these
-       counts without changing the scientific solver contract. */
+    /* Record solve-local buffer usage without changing the scientific
+       solver contract. */
     out.fe_workspace_applicable = 1
     out.fe_workspace_builds = fe_profile[1]
     out.fe_buffered_schur_batches = fe_profile[2]

@@ -1,4 +1,6 @@
-*! fevc example data 0.5.0-rc.1 22sep2026
+*! Generates the documented synthetic example datasets with a chosen seed
+*! and protects existing data unless clear is explicitly requested.
+
 program define fevc__simulate_data, rclass
     version 18.0
     syntax , SIMULATE_data(string) [SEED(string) CLEAR]

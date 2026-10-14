@@ -1,9 +1,9 @@
-*! fevc KSS-STREAMLINE-1 runtime-scoped RNG module
-*! version 0.4.0-alpha.1 18aug2026
+*! Manages canonical probe generation and replay, with separate random
+*! domains and explicit capture and restoration of caller RNG state.
 
 version 18.0
 
-// The main Mata module now also consumes the registered snapshot types.
+// The main Mata module also consumes the registered snapshot types.
 // Reusing an already matching module avoids redeclaring those structures.
 capture mata: assert(vckss_rng__api_level() == 4 & ///
     vckss_rng__build_id() == "vckss-rng-numeric-ranks-v4")
@@ -14,12 +14,10 @@ mata set matastrict on
 mata set matalnum off
 
 /*
-The K1 checkpoint compares two execution-path-independent contracts.  Local
-Stata 18 evidence selects the simpler qualifying fixed-domain cursor for the
-installed experimental estimator.  Both candidates use the same canonical
-semantic atom order and the registered vector-parameter call when every
-trial count is within Stata's per-call limit.  Exact scalar chunking in that
-same order is reserved for larger counts.
+Production uses a fixed-domain cursor. The retained per-probe comparison
+uses the same canonical semantic atom order. Both use the registered
+vector-parameter call when every trial count is within Stata's per-call
+limit, and exact scalar chunking in the same order for larger counts.
 */
 
 struct vckss_rng__snapshot

@@ -1,8 +1,7 @@
-*! fevc lifecycle 0.4.0-alpha.1 18aug2026
+*! Releases the Stata dataset during a numerical callback and restores it
+*! afterward, using preserve/restore or a temporary dataset on disk.
 
-// This is an internal KSS-SCALE-1 prototype.  It deliberately uses only
-// Stata's preserve/restore and tempfile save/clear/use mechanisms.  The
-// numerical callback runs while the Stata dataset is empty; compressed Mata
+// The numerical callback runs while the Stata dataset is empty; compressed Mata
 // state, named Stata matrices, and scalars survive clear and may carry the
 // numerical inputs and outputs.
 program define fevc__lifecycle, rclass

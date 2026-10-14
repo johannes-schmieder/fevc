@@ -1,3 +1,6 @@
+*! Constructs the pooled match-deletion sample from retained movers and
+*! eligible original stayers, keeping sample masks binary on every row.
+
 program define fevc__hybrid_sample
     version 18.0
     args touse complete original_stayer worker firm frequency ///

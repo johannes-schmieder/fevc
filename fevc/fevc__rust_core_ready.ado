@@ -1,4 +1,6 @@
-*! Reconcile additive native readiness and independent C transport versions.
+*! Checks native capability flags and transport versions against the
+*! features required by the selected execution route.
+
 program define fevc__rust_core_ready, rclass
     version 18.0
     args flags platform fullcmg execution componentauto resolved project autoexact exactstayer ///

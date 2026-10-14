@@ -1,4 +1,4 @@
-*! fevc display 0.5.0-rc.1 05sep2026
+*! Displays fevc estimates, inference, and numerical diagnostics from e().
 
 program define fevc__display
     version 18.0

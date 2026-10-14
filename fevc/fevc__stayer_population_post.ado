@@ -1,3 +1,6 @@
+*! Posts the requested mover/stayer population and original-history
+*! sample exclusions after successful estimation.
+
 program define fevc__stayer_population_post, eclass
     version 18.0
     if "${VCKSS_ROUTE_STAYERS_REQUESTED}"=="" | "`e(cmd)'"!="fevc" exit

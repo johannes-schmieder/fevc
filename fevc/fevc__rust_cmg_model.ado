@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 13sep2026
+*! Retrieves native CMG model-allocation accounting without changing
+*! the fixed-effect receipt layout.
+
 program define fevc__rust_cmg_model, rclass
     version 18.0
     args handle controls nuisance probes cmg_rhs numerical executed

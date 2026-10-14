@@ -1,5 +1,5 @@
-*! fevc graph selector 0.4.0-alpha.1 18aug2026
-*! API 21 PREP-MAP-1 retained-map mode
+*! Selects the retained worker-firm graph under the deletion rules and
+*! exports dense identifier maps aligned with the retained sample.
 
 version 18.0
 quietly fevc__timer load

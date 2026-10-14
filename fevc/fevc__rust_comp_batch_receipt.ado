@@ -1,4 +1,6 @@
-*! execution-only component batch reconciliation
+*! Checks native component-inference batch execution against the requested
+*! probe counts, work accounting, and thread settings.
+
 program define fevc__rust_comp_batch_receipt, rclass
     version 18.0
     args handle covariance_probes gram_probes work native_threads

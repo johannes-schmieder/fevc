@@ -1,4 +1,10 @@
-*! fevc 0.5.0-rc.1 05sep2026
+*! fevc: leave-out bias-corrected worker-firm variance decompositions.
+*! Author: Johannes F. Schmieder, Boston University.
+*! Implements the Kline-Saggio-Solvsten estimator with a source-only Mata
+*! backend and an optional Rust backend. This file validates requests,
+*! prepares the sample, dispatches computation, and posts checked results.
+*! Point estimation is the default; projection and component inference
+*! require explicit requests on supported routes.
 
 program define fevc, eclass
     version 18.0
@@ -7302,9 +7308,7 @@ program define _vckss_impl, eclass sortpreserve
         schur_actions schur_batches preconditioner_applications  ///
         preconditioner_batches leverage_batches target_batches
 
-    /* FE-BUF-PERF-V1 is diagnostic-only.  The measurement baseline records
-       every Schur batch on the legacy path; the candidate replaces these
-       fields with solve-local buffer usage.  No profile value participates
+    /* Buffer profiling is diagnostic-only. No profile value participates
        in scientific, routing, RNG, or resource-admission decisions. */
     if "`selected_algorithm'" == "jla" {
         matrix `fe_buffer_profile' = (`diagnostics'[1,33],       ///

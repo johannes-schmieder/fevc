@@ -1,4 +1,6 @@
-*! Command-local memory policy
+*! Validates optional memory budgets and initializes the command-local
+*! warning or strict-admission policy.
+
 program define fevc__memory_options, rclass
     version 18.0
     args memory_gib memorycheck

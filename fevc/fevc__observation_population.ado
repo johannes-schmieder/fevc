@@ -1,3 +1,6 @@
+*! Prepares the requested mover/stayer population for observation deletion
+*! and returns sample and routing information to the caller.
+
 program define fevc__observation_population
     version 18.0
     args deletion population touse original_stayer worker firm ///

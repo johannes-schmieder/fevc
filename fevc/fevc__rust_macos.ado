@@ -1,3 +1,6 @@
+*! Selects and loads the macOS plugin for the current Stata architecture
+*! and propagates loader failures.
+
 if strpos("`c(machine_type)'", "Apple Silicon") {
     capture program fevc__rust_macos, plugin using("fevc_rust_macos_arm64.plugin")
 }

@@ -1,3 +1,5 @@
+*! Loads the Linux x86-64 plugin and propagates loader failures.
+
 capture program fevc__rust_linux, plugin using("fevc_rust_linux_x64.plugin")
 local vckss_rust_plugin_loader_rc = _rc
 if `vckss_rust_plugin_loader_rc' & `vckss_rust_plugin_loader_rc' != 110 {

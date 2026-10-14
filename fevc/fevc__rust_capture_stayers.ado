@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 24aug2026
+*! Fetches and validates native stayer-augmentation results before they
+*! are combined with the retained mover results.
+
 program define fevc__rust_capture_stayers, rclass
     version 18.0
     args handle controls nuisance tolerance ranktol blocktol augctx

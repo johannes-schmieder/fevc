@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 23aug2026
+*! Retrieves and validates native execution-plan receipts, including
+*! batch choices, allocation forecasts, and inference work.
+
 program define fevc__rust_plan_receipt, rclass
     version 18.0
 

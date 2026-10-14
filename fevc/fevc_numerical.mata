@@ -1,4 +1,6 @@
-*! fevc numerical kernels and native validation API 4 30sep2026
+*! Computes point-estimate numerical Monte Carlo error contributions and
+*! validates numerical diagnostics returned by the native backend.
+
 version 18.0
 mata:
 real scalar vckss_nmc__center_mean(real colvector y,real colvector frequency)
@@ -111,8 +113,7 @@ real colvector vckss_nmc__block_score(real matrix gradients,
     return(quadrowsum(gradients[.,1..5]:*
         (p2,m2,p2:^2,m2:^2,p2:*m2),1)-gradients[.,6])
 }
-/* Package-owned numerical-probe kernels. The public point runtime does not
-   request these kernels until the versioned attachment preflight is wired. */
+/* Numerical-probe kernels used by the point-estimate MCSE calculation. */
 struct vckss_nmc__finite
 {
     string scalar status

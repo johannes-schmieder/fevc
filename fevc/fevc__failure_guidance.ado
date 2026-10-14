@@ -1,3 +1,5 @@
+*! Maps failure statuses to explanations and suggested checks for users.
+
 program define fevc__failure_guidance, rclass
     version 18.0
     args failure_status

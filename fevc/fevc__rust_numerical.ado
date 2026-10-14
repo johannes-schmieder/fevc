@@ -1,4 +1,6 @@
-*! Additive numerical V1 fetch; no old receipt layout is repurposed.
+*! Fetches native numerical Monte Carlo diagnostics through their separate
+*! interface and clears temporary transport state after the call.
+
 program define fevc__rust_numerical, rclass
     version 18.0
     capture noisily _fevc_rust_nmc_fetch `0'

@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 26aug2026
+*! Validates and transports full-CMG native solve requests and returns
+*! the selected route, thread settings, and request identity.
+
 program define fevc__rust_solve_v5, rclass
     version 18.0
     args plugin handle seed probes leveragebatch targetbatch route tolerance_arg ///

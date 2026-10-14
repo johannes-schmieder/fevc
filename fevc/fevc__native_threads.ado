@@ -1,3 +1,6 @@
+*! Validates native thread requests and posts requested and effective
+*! thread settings for the selected backend.
+
 program define fevc__native_threads, rclass
     version 18.0
     args requested context

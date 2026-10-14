@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 31aug2026
+*! Checks native randomized-path receipts against the requested model,
+*! sample, numerical settings, and resource policy before posting results.
+
 program define fevc__rust_reconcile_comp_v7, rclass
     version 18.0
     args probes_expected seed_expected maxiter tolerance workers firms      ///

@@ -1,5 +1,5 @@
-*! fevc production solver routing adapter
-*! version 0.4.0-alpha.1 31aug2026
+*! Routes fixed-effect solves through the available preconditioners and
+*! checks solutions against the complete original-system residual contract.
 
 version 18.0
 quietly fevc__timer load

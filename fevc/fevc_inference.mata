@@ -1,4 +1,5 @@
-*! fevc inference runtime 0.5.0-rc.1 05sep2026
+*! Computes exact-Mata projection and component inference and transfers
+*! results, model-fit diagnostics, and availability statuses to Stata.
 
 version 18.0
 

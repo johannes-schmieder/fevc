@@ -1,4 +1,6 @@
-*! version 0.5.0-rc.1 05sep2026
+*! Posts reconciled native exact estimates, sample information, and
+*! execution diagnostics into e().
+
 program define fevc__rust_post_exact_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers ///

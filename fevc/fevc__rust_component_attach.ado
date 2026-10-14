@@ -1,3 +1,6 @@
+*! Attaches a structured component-inference request to a native handle
+*! with its simulation, batching, and memory settings.
+
 program define fevc__rust_component_attach, rclass
     version 18.0
     args handle rows resident memorylimit model reference simulations batch ///

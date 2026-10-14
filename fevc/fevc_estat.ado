@@ -1,4 +1,5 @@
-*! fevc postestimation 0.5.0-rc.1 05sep2026
+*! Implements estat summaries for fevc results, including decomposition,
+*! sample selection, computation, and inference diagnostics.
 
 program define fevc_estat, rclass
     version 18.0

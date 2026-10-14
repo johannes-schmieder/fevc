@@ -1,4 +1,6 @@
-*! Runtime reporting transport; estimation options and receipts are unchanged.
+*! Transports native progress reports while preserving returned results
+*! and forwarding interrupt or failure status to the caller.
+
 program define fevc__progress, rclass
     version 18.0
     gettoken level 0 : 0

@@ -1,5 +1,5 @@
-*! fevc KSS-STREAMLINE-1 resource planning
-*! version 0.4.0-alpha.1 18aug2026
+*! Forecasts command allocations and computational work and selects
+*! resource-aware plans under the requested budget policy.
 
 version 18.0
 

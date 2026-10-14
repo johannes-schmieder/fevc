@@ -1,3 +1,6 @@
+*! Dispatches calls to a selected plugin while preserving error-message
+*! macro scope and routing eligible calls through progress reporting.
+
 program define fevc__rust_plugin_call, rclass
     version 18.0
     gettoken plugin 0 : 0, parse(" ,")

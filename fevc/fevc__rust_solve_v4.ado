@@ -1,4 +1,6 @@
-*! version 0.4.0-alpha.1 23aug2026
+*! Transports solve requests through the native fixed-effect interface
+*! and preserves returned work and failure diagnostics.
+
 program define fevc__rust_solve_v4, rclass
     version 18.0
     args plugin handle seed probes leveragebatch targetbatch route tolerance_arg ///

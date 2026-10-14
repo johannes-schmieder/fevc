@@ -1,4 +1,5 @@
-*! fevc compressed estimator engine 0.4.0-alpha.1 18aug2026
+*! Computes the no-control, match-deletion compressed estimator from a
+*! prepared design and an explicitly supplied random-probe provider.
 
 version 18.0
 quietly fevc__timer load

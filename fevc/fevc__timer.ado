@@ -1,4 +1,6 @@
-*! Private profiling bridge; no timer reservation may affect estimation.
+*! Provides the Stata bridge to private profiling timers, preserving
+*! caller results and keeping timer availability outside estimation gates.
+
 program define fevc__timer, rclass
     version 18.0
     gettoken action slot : 0
