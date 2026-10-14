@@ -45,7 +45,9 @@ requirements. `CMG-MATA-1` is implemented entirely in Mata and includes no
 compiled CMG helper, MEX file, Stata plugin, subprocess, or binary interchange
 layer. The optional Rust backend includes a compiled full-CMG implementation
 whose complete corresponding source and notices are retained under
-`rust/vendor/cmg/`. The human review gate is complete. No public release or
-tag has yet been issued; that is a release-management decision rather than a
-license or provenance blocker. This document records the owner's license
-selection and review status; it is not legal advice.
+`rust/vendor/cmg/`. The human review gate is complete. Version 0.5.0 is the
+first public GitHub release, authorized by the owner on 2026-10-14, including
+the current Windows binary with its runtime test still pending. Each release
+preserves its exact package, corresponding source, notices, and validation
+scope. This document records the owner's license selection and review status;
+it is not legal advice.

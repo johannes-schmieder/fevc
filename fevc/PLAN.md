@@ -1,3 +1,30 @@
+# GitHub release 0.5.0 — October 14, 2026
+
+The owner authorizes a regular `v0.5.0` GitHub release, including the current
+Windows binary, a runtime-only installation ZIP, `github install` and
+`net install` support, short release notes, and current documentation updates.
+The starting source is `4419a98a`. All five native binaries retain their
+October 10 hashes and build source `002205f2`; Windows Stata runtime testing
+remains pending and is not relabelled as passed.
+
+The release updates public version strings to `0.5.0`, installation metadata,
+current release wording, and packaging tools. No estimator, algorithm, native
+build input, scientific input, acceptance threshold, or binary is changed.
+The ZIP contains the same 61 installed files as the repository catalog, plus
+the two installation catalogs. Corresponding source and checksum/inventory
+records accompany it. Tagged repository archives include the plugins needed
+by the root catalog. The separate portable-source catalog remains binary-free.
+
+Validation uses the integrated local checker, deterministic ZIP and inventory
+checks, existing adoption evidence/hash checks, and fresh/replacement Stata
+installations from the extracted ZIP and published repository. The final
+release manifest binds the exact package commit, archive and installed hashes,
+original build source, and unchanged platform limitations. Original receipts
+below remain immutable. New platform builds and scientific campaigns are not
+needed for these version, documentation, and packaging changes.
+
+## Previous checkpoint
+
 # Installation documentation refresh — October 13, 2026
 
 The owner requests verification that the latest code is online, removal of the

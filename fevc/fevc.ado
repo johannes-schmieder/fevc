@@ -1207,7 +1207,7 @@ program define _fevc_rust_generic, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -4098,7 +4098,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -4290,11 +4290,11 @@ program define _vckss_impl, eclass sortpreserve
     if lower(strtrim(`"`0'"')) == ", version" {
         ereturn clear
         ereturn local cmd "fevc"
-        ereturn local version "0.5.0-rc.1"
+        ereturn local version "0.5.0"
         ereturn local model "linear"
         ereturn local correction "kss"
-        ereturn local status "ALPHA"
-        di as txt "fevc 0.5.0-rc.1 (05sep2026)"
+        ereturn local status "RELEASED"
+        di as txt "fevc 0.5.0 (14oct2026)"
         exit
     }
 
@@ -5459,7 +5459,7 @@ program define _vckss_impl, eclass sortpreserve
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 24 &                 ///
-        vckss__version() == "0.5.0-rc.1" &                         ///
+        vckss__version() == "0.5.0" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
         if `mata_runtime_loaded' {
@@ -5475,7 +5475,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss__api_level() == 24 &             ///
-            vckss__version() == "0.5.0-rc.1" &                     ///
+            vckss__version() == "0.5.0" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
             quietly _vckss_post_failure "INVALID_MATA_RUNTIME"
@@ -7735,7 +7735,7 @@ program define _vckss_impl, eclass sortpreserve
         ("`selected_algorithm'" == "jla")
     ereturn local cmd "fevc"
     ereturn local cmdline `"fevc `0'"'
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "`backend_requested'"
@@ -8749,7 +8749,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "fevc"
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -9514,7 +9514,7 @@ program define _fevc_rust_public, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "fevc"
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -9581,7 +9581,7 @@ program define _vckss_post_failure, eclass
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
     ereturn clear
     ereturn local cmd "fevc"
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"

@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-rc.1 10oct2026}{...}
+{* *! version 0.5.0 14oct2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -312,7 +312,8 @@ An older plugin may lead {cmd:backend(auto)} to Mata before preparation/RNG
 under the ordinary consent rules. Strict {cmd:backend(rust)} or explicit
 {cmd:rng(counter_v1)} requires a matching plugin. Use current source with
 {cmd:backend(mata)} or a matching qualified native build, and check its probe result.
-Repository publication does not imply a release.
+Version 0.5.0 includes native plugins for macOS, Linux x86-64, and Windows x86-64.
+Windows Stata runtime testing remains pending; build and unit checks pass.
 
 {pstd}
 The choice and MCSE assumptions are recorded in {cmd:e(centering)} and
@@ -855,7 +856,7 @@ Johannes F. Schmieder, Boston University.
 {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 
 {pstd}
-Version 0.5.0-rc.1 is prerelease software. Code is GPL-3.0-only.
+Version 0.5.0. Code is GPL-3.0-only.
 
 {title:Also see}
 

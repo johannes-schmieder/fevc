@@ -1,7 +1,7 @@
 # Using fevc
 
 `fevc` estimates leave-out bias-corrected variance components in linear
-worker–firm fixed-effects models. This source is version `0.5.0-rc.1`.
+worker–firm fixed-effects models. This source is version `0.5.0`.
 Start with [installation](../INSTALLATION.md) and `help fevc`.
 
 ## Basic use

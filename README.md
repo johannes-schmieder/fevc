@@ -56,9 +56,12 @@ is no general coverage claim.
 
 ## Installation
 
+Version [0.5.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
+is the first public release. Install it in Stata with:
+
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/main/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
 ```
 
 Alternatively, use the community-contributed
@@ -70,8 +73,11 @@ net install github, from("https://haghish.github.io/github/")
 github install johannes-schmieder/fevc
 ```
 
-Both routes install the current package from `main`, including the command,
-help, and all five native plugins.
+Both routes install the command, help, license notices, and native plugins.
+The `net install` URL above pins version 0.5.0; `github install` follows `main`,
+which currently contains 0.5.0 and may receive later development updates.
+For an offline installation, download `fevc-0.5.0.zip` from the release,
+extract it, and run `net install fevc, replace from("/path/to/extracted/fevc")`.
 Restart Stata after updating to load the new programs and native plugin.
 See [installation notes](INSTALLATION.md) if you have an older development
 installation.

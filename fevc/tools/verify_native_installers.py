@@ -56,10 +56,13 @@ def verify(catalog, test_root, output, stata, url, methods):
     assert len(entries) == len(set(entries))
     expected = {}
     for entry in entries:
-        assert entry.startswith('fevc/') and '..' not in Path(entry).parts
+        # Repository catalogs use fevc/name; extracted release ZIPs use name.
+        assert not Path(entry).is_absolute() and '..' not in Path(entry).parts
+        assert len(Path(entry).parts) == 1 or (len(Path(entry).parts) == 2 and entry.startswith('fevc/'))
         expected[Path(entry).name] = (catalog / entry).read_bytes()
     assert len(expected) == len(entries)
     assert {n for n in expected if n.endswith('.plugin')} == REPOSITORY_PLUGINS
+    expected_version = (catalog / 'stata.toc').read_text().splitlines()[0].removeprefix('v ')
     output.mkdir(parents=True, exist_ok=False)
     results = []
     with tempfile.TemporaryDirectory(prefix='fevc-installer-') as tmp:
@@ -107,6 +110,7 @@ local before `"`r(datasignature)'"'
 fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(version)'" == "{expected_version}"
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`before'"'
 estat decomposition, full
@@ -173,6 +177,7 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--stata')
     parser.add_argument('--public', action='store_true')
+    parser.add_argument('--url', help='verify a pinned public net-install URL instead of main')
     args = parser.parse_args()
     stata = args.stata or shutil.which('stata-mp')
     if not stata and platform.system() == 'Darwin':
@@ -180,7 +185,10 @@ def main():
     assert stata and Path(stata).is_file(), 'Stata executable required'
     server = None
     worker = None
-    if args.public:
+    if args.url:
+        url = args.url
+        methods = ['net']
+    elif args.public:
         url = 'https://raw.githubusercontent.com/johannes-schmieder/fevc/main/'
         methods = ['net', 'github']
     else:

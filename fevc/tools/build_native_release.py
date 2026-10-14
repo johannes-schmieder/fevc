@@ -28,8 +28,8 @@ def render_native_manifest(data: bytes, profile: str = "complete") -> bytes:
     lines = ["F " + line[2:] if line in {
         "f LICENSE", "f THIRD_PARTY_NOTICES.txt"
     } else line for line in lines]
-    lines = ["d GPL-3.0-only prerelease package with precompiled native backends."
-             if line.startswith("d GPL-3.0-only prerelease source package;") else line
+    lines = ["d GPL-3.0-only package with precompiled native backends."
+             if line.startswith("d GPL-3.0-only portable source package.") else line
              for line in lines]
     if profile == "macos-linux":
         lines.append("d Native binaries: macOS and Linux x86-64. Windows binaries are deferred.")

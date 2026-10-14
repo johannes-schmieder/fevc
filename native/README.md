@@ -1,5 +1,11 @@
 # Native package provenance
 
+Version [0.5.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
+is the first public GitHub release. It includes the existing October 10 native
+binaries and their original corresponding source. Windows Stata runtime
+testing remains pending under the owner-authorized release. The dated
+records below retain their original publication and qualification scope.
+
 ## Current pooled component inference binaries
 
 All five payloads are rebuilt from `002205f2` and adopted for repository

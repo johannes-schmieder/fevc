@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.5.0-rc.1"
+VERSION = "0.5.0"
 API_LEVEL = 24
 
 
@@ -149,10 +149,10 @@ def test_version_identifiers_agree() -> None:
     assert VERSION in help_text
     assert VERSION in readme
     assert ado.count(f'ereturn local version "{VERSION}"') >= 2
-    assert f'di as txt "fevc {VERSION} (05sep2026)"' in ado
+    assert f'di as txt "fevc {VERSION} (14oct2026)"' in ado
     assert f'return("{VERSION}")' in mata
-    assert changelog.count(f"## {VERSION} — 2026-09-05") == 1
-    assert project["project"]["version"] == "0.5.0rc1"
+    assert changelog.count(f"## {VERSION} — 2026-10-14") == 1
+    assert project["project"]["version"] == VERSION
     toc = (ROOT / "stata.toc").read_text(encoding="utf-8").splitlines()
     assert toc[0] == f"v {VERSION}"
     assert "exact or structured inference" in " ".join(toc).lower()
@@ -379,8 +379,9 @@ def test_package_records_internal_license_boundary() -> None:
     readme = " ".join(
         (ROOT / "README.md").read_text(encoding="utf-8").lower().split()
     )
-    assert "gpl-3.0-only prerelease source package" in manifest
-    assert "no public release has yet been issued" in manifest
+    assert "gpl-3.0-only portable source package" in manifest
+    assert "no public release has yet been issued" not in manifest
+    assert "distribution-date: 20261014" in manifest
     assert "gpl-3.0-only" in readme
     license_note = (ROOT.parent / "CODE_LICENSE.md").read_text(encoding="utf-8")
     assert "completed on 2026-08-29" in license_note

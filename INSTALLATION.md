@@ -1,4 +1,4 @@
-# Installing fevc
+# Installing fevc 0.5.0
 
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
 for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
@@ -15,7 +15,7 @@ Run this in Stata:
 
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/main/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
 ```
 
 Alternatively, use the community-contributed
@@ -35,8 +35,10 @@ github install johannes-schmieder/fevc
 Both routes install the same runtime, help, licenses, and five plugin files
 (macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
 appropriate native backend. `main` is the development and installation branch.
-Both routes serve the current package from `main`, including the October 10
-pooled inference update and all five rebuilt plugins.
+The `net install` URL above pins the [0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0).
+`github install johannes-schmieder/fevc` follows `main`, which currently contains
+0.5.0 and may receive later development updates. Both include pooled inference
+and the same five native plugins.
 The [current checkpoint](fevc/PLAN.md)
 tracks publication and installation verification; the
 [adoption manifest](native/pooled-component-20261010/manifest.json) binds the
@@ -50,8 +52,7 @@ fevc_run exact_controls using fevc.sthlp
 ```
 
 The example uses simulated data and restores your data afterward. Restart
-Stata after updating a loaded native plugin. This is a prerelease package;
-see [inference support and limitations](fevc/docs/INFERENCE.md).
+Stata after updating a loaded native plugin. See [inference support and limitations](fevc/docs/INFERENCE.md).
 
 ## Native capability check
 
@@ -80,6 +81,24 @@ and with both variance models. The [current checkpoint](fevc/PLAN.md) and
 [installation receipts](native/pooled-component-20261010/evidence/packaging/)
 record local HTTP and public `net`/`github` fresh/replacement results on Mac arm64.
 These installation checks do not establish Windows runtime qualification.
+
+## Release ZIP and offline installation
+
+Download `fevc-0.5.0.zip` from the
+[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0).
+The ZIP contains only the installation catalogs, runtime, help, license notices,
+and five native plugins. It does not install tests, development tools, or
+benchmark data. Extract it and run:
+
+```stata
+net install fevc, replace from("/path/to/extracted/fevc")
+```
+
+`SHA256SUMS` and `release-manifest.json` identify the exact downloads and
+installed files. The separately attached corresponding-source archive records
+the source used to build the native plugins; no compilation is needed to use
+the package. The Windows binary is included at the owner's request with its
+Stata runtime test still pending.
 
 ## Local source installation
 

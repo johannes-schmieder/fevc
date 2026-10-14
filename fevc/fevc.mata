@@ -25,7 +25,7 @@ mata set matalnum off
 
 string scalar vckss__version()
 {
-    return("0.5.0-rc.1")
+    return("0.5.0")
 }
 
 real scalar vckss__api_level()

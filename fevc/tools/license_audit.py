@@ -15,7 +15,7 @@ REQUIRED_TEXT = {
     ROOT / "CODE_LICENSE.md": (
         "GPL-3.0-only",
         "completed on 2026-08-29",
-        "No public release or",
+        "corresponding source, notices, and validation",
     ),
     ROOT / "THIRD_PARTY_NOTICES.md": (
         "rust/vendor/cmg/LICENSE",

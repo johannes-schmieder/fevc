@@ -1,4 +1,20 @@
-# Pending changes
+# Changelog
+
+## Unreleased
+
+## 0.5.0 — 2026-10-14
+
+- First public GitHub release of `fevc` for Stata 18 and 19.
+- Installable runtime ZIP and repository catalogs for `github install` and
+  `net install`, including macOS, Linux x86-64, and Windows x86-64 plugins.
+- Includes exact and randomized point estimation, numerical MCSE, projections,
+  and supported structured component inference, including pooled movers/stayers.
+- Reuses the existing native binaries from `002205f2`. Windows is included at
+  the owner's request; Windows Stata runtime testing remains pending.
+- Updates version metadata, installation instructions, and source readability.
+  Estimators, numerical tolerances, and inference assumptions are unchanged.
+
+The development entries below retain their original dates and evidence scope.
 
 ## October 10, 2026 — pooled inference package adoption
 

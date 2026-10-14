@@ -36,8 +36,8 @@ def test_repository_catalog_installs_all_platform_plugins():
     plugins = [Path(entry).name for entry in entries if entry.endswith(".plugin")]
     assert len(plugins) == len(set(plugins))
     assert set(plugins) == MODULE.REPOSITORY_PLUGINS
-    # Git source archives deliberately omit the binaries; direct repository
-    # installs download them. The portable manifest must remain binary-free.
+    # Both tagged repository archives and direct installs include binaries.
+    # The separate portable manifest remains binary-free.
     portable = (root / "fevc/fevc.pkg").read_text()
     assert ".plugin" not in portable
 

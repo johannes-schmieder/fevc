@@ -688,7 +688,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.5.0-rc.1"
+    ereturn local version "0.5.0"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
