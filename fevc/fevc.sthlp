@@ -102,83 +102,70 @@ and assumes independent errors across observations. Choose this option
 according to the dependence in your data.
 
 {phang}
-{cmd:deletionid()} is needed only when your match units differ from the
-default worker-firm pairs, for example when distinct employment spells at
-the same firm are treated as independent matches. Each ID must belong to
-one worker-firm pair. It applies to match deletion. A match-mode mover has
-more than one distinct original deletion ID, even if those IDs share a model
-firm (for example, pooled employers). Without this option, movers still have
-more than one firm. Different IDs assume independent error blocks; repeated
-spells with the same ID remain one block.
+{cmd:deletionid()} is needed only when the blocks of observations whose
+errors may be correlated differ from the default worker-firm pairs, for
+example when distinct employment spells at the same firm are treated as
+independent. Each ID must belong to one worker-firm pair, and the option
+applies to match deletion. Errors are assumed independent across IDs;
+repeated spells with the same ID remain one block. With {cmd:deletionid()},
+a worker counts as a mover when the worker has more than one ID, even if
+the IDs share a firm in the model (for example, when small employers are pooled
+into one firm group). Without the option, a mover is a worker observed at
+more than one firm. Having two IDs does not by itself guarantee that each
+deletion leaves the model identified.
 
 {phang}
 {cmd:stayers(both)}, the default, includes movers and eligible stayers.
-Match-mode stayers have one original deletion unit; observation-mode stayers
-have one model firm. With match deletion, stayer contributions use a separate
-observation-level correction and are {it:not} robust to within-match error
-correlation. Use {cmd:stayers(movers)} for a decomposition restricted to
-movers. This changes the estimation sample and the population described by
-the estimates. With observation deletion, all retained observations use the
-same observation-level correction. All retained deletions must preserve model
-and control identification; counting two blocks alone does not guarantee this.
-
-{phang}
-Mata and current Rust plugins support parallel declared blocks within a
-worker-firm cell. Older plugins use Mata under {cmd:backend(auto)}; strict
-{cmd:backend(rust)} or {cmd:rng(counter_v1)} requests require a plugin update.
-The usual inference restrictions continue to apply.
+Under match deletion, a stayer has a single match (one {cmd:deletionid()}
+value, or one firm by default), so stayer contributions are corrected one
+observation at a time. This correction assumes
+independent errors across a stayer's observations and is {it:not} robust to
+correlation within the stayer's match. Use {cmd:stayers(movers)} for a
+decomposition restricted to movers; this changes the estimation sample and
+the population described by the estimates. Under observation deletion, all
+retained observations are corrected one at a time. In either case, every
+deletion must leave the model, including the controls, identified.
 
 {phang}
 {cmd:probes()} controls the precision of the default randomized calculation
-(JLA). More probes reduce numerical approximation error but take longer.
-Start with the default 200; increase it if the reported numerical MCSE is
-large relative to the components you wish to interpret. Numerical MCSE is
-{bf:not a sampling standard error}. The default includes the local contribution
-of both leverage and target probes.
+(the Johnson-Lindenstrauss approximation, JLA). More probes reduce numerical
+approximation error but take longer. Start with the default 200; increase it
+if the reported numerical MCSE is large relative to the components you wish
+to interpret.
 
 {phang}
-{cmd:mcse(all)}, the default, reports approximate numerical MCSE for the four
-main point estimates when both point probe stages are redrawn, holding the
-observed mean fixed under {cmd:centering(mean)} and also the added increment
-fixed under {cmd:centering(corrected)}. Corrected MCSE excludes numerical
-uncertainty in that increment; see {help fevc##centering:Outcome centering}.
-It uses two
-target folds and deterministic replay of the original leverage directions.
-It excludes finite-probe bias, solver and floating-point error, and sampling
-uncertainty. Exact estimation with MCSE enabled returns zero numerical
-covariance without replay.
-A substantive negative eigenvalue or nonsmooth/failed replay withholds the
-all-probe diagnostic while retaining a valid point estimate. Raw signed
-covariance remains available when computed.
+{cmd:mcse(all)}, the default, reports a numerical Monte Carlo standard error
+(MCSE) for each of the four main estimates. Holding the data fixed, it
+approximates how much the estimates would change if the random directions
+used by JLA were drawn again. The numerical MCSE is {bf:not a sampling standard error}:
+it excludes the bias that remains with a finite number of probes,
+solver and rounding error, and sampling uncertainty. Under
+{cmd:centering(mean)} it treats the observed outcome mean as fixed; under
+{cmd:centering(corrected)} it also treats the added centering adjustment as
+fixed and so excludes the numerical uncertainty in that adjustment (see
+{help fevc##centering:Outcome centering}). Exact calculation reports an MCSE
+of zero. If the diagnostic cannot be computed reliably, the MCSE is withheld
+(missing) while the point estimates remain valid; the raw numerical
+covariance is kept when it was computed.
 
 {phang}
-{cmd:mcse(off)} skips all-probe derivative, fold and replay work and suppresses
-numerical MCSE output. Numerical MCSE returns are unavailable, rather than zero.
-{cmd:numericalmcse()} remains a compatibility alias; specifying both names is
-an error. The developer-only {cmd:mcse(conditional)} retains the earlier MCSE
-conditional on the realized leverage sketch and performs no leverage replay.
+{cmd:mcse(off)} skips this calculation; the MCSE results are then missing,
+not zero. {cmd:numericalmcse()} is accepted as a synonym for {cmd:mcse()};
+specifying both is an error. The developer option {cmd:mcse(conditional)}
+reports a narrower diagnostic that holds the leverage directions fixed.
 
 {phang}
-MCSE may accompany any otherwise supported
-{cmd:project()} or sampling-inference request. It describes the main point estimates only. No MCSE is computed for
-projection coefficients, their covariance, sampling covariance, confidence
-intervals or their additional simulations. Numerical covariance is never
-posted as econometric {cmd:e(V)}. The main display and {cmd:estat diagnostics}
-show method availability.
-
-{phang}
-Mata and numerical V2 native plugins implement the diagnostic on their supported
-point routes. For an older plugin, an omitted {cmd:mcse()} preserves the selected
-point backend and reports {cmd:unavailable_capability}; explicit {cmd:mcse(all)}
-requires the matching interface and fails before preparation and estimator RNG.
-The native interface does not expand platform support for projection, inference
-or solver routes.
+The numerical MCSE is also reported when {cmd:project()} or an inference
+option is requested, but it describes only the four main point estimates.
+It is not computed for projection coefficients, component standard errors
+or confidence intervals, and it is never posted as {cmd:e(V)}. The main display
+and {cmd:estat diagnostics} show whether it is available.
 
 {phang}
 {cmd:seed()} makes the randomized calculation reproducible within the
-selected runtime. The default is 8675309. Different backends need not give
-identical randomized estimates with the same seed. Estimation restores the
-caller's random-number state.
+selected backend. The default is 8675309. The Mata and Rust backends use
+different random-number generators, so the same seed need not give identical
+estimates in both. Estimation restores the caller's random-number state.
 
 {phang}
 {cmd:nolog} hides progress messages while retaining the final results.
@@ -196,12 +183,15 @@ a connected component beforehand need not be sufficient.
 
 {pstd}
 Under default match deletion, the command first constructs the retained
-mover sample, then includes eligible original stayers at retained firms
-with at least two observations (counting frequency weights). Removed movers are not reclassified as
-stayers. All eligibility and observation counts use the requested
-{cmd:if}/{cmd:in} sample; observations outside it never enter {cmd:e(sample)}.
-Controls must also remain identified under the requested deletions;
-if that cannot be established, the command reports a failure.
+mover sample and then adds eligible stayers: workers with a single match
+in your data (one {cmd:deletionid()} value, or one firm by default),
+employed at a retained firm, and with at least two observations (counting
+frequency weights). Movers removed during sample
+construction are not reclassified as stayers. All eligibility and
+observation counts use the requested {cmd:if}/{cmd:in} sample; observations
+outside it never enter {cmd:e(sample)}. Controls must also remain identified
+under the requested deletions; if that cannot be established, the command
+reports a failure.
 
 {pstd}
 The decomposition describes the {bf:retained sample}, which can differ from
@@ -239,90 +229,69 @@ intervals require an explicit {help fevc##inference:inference request}.
 {title:Outcome centering}
 
 {pstd}
-Use {cmd:centering(none|mean|corrected)} in exact or JLA point estimation.
-The default is {cmd:mean} for both exact and JLA. In point estimation, the modes
-change the bias-correction outcome factor and, for Corrected, its estimated-mean
-adjustment. Mean also changes the covariance proxy when {cmd:project()} is
-requested and uses a fixed-observed-mean approximation for component
-{cmd:inference()}. Fitted coefficients,
-full-sample residuals, plug-in components, sample, target weights and deletion
-units are unchanged. The {cmd:corrected} result row always means the final
-leave-out estimate, whichever centering mode is selected.
+{cmd:centering()} controls how the outcome enters the bias correction. The
+fitted coefficients, residuals, plug-in components, retained sample, weights
+and deletion units are the same under all three settings. In point
+estimation, only the estimated bias, and hence the corrected estimate,
+changes; with {cmd:project()} or an inference request, centering also
+changes the standard errors. The {cmd:corrected} row of {cmd:e(results)}
+always holds the final leave-out estimate, whatever the setting. The
+default is {cmd:mean} for both exact and JLA calculation.
 
 {phang}
-{cmd:centering(none)} selects the ordinary estimator and its MCSE calculation,
-reproducing the former default.
+{cmd:centering(mean)}, the default, subtracts the mean outcome of the
+retained sample before computing the bias correction. Centering can make
+the correction considerably more precise, particularly when the outcome
+mean is far from zero, although it is not better in every case. Because the
+sample mean depends on the same errors as the correction, it can introduce
+a bias when error variances differ across observations. The mean counts frequency
+weights but {bf:not} {cmd:targetweight()} or {cmd:projectweight()}. With
+{cmd:nuisance(fixedoffset)}, it is taken after subtracting the fitted
+controls. Centering adds only the calculation of one mean.
 
 {phang}
-{cmd:centering(mean)}, the default, subtracts the frequency-weighted mean of
-the retained working outcome in bias-correction terms. This mean uses literal-copy frequency
-mass, {bf:not} {cmd:targetweight()} or {cmd:projectweight()}. Under {cmd:nuisance(fixedoffset)}, first
-subtract the full fitted nuisance index, then take its mean. Mean adds only
-a mean calculation and subtraction; it adds no solves or random directions.
-Its numerical MCSE holds that observed mean fixed.
+{cmd:centering(none)} uses the uncentered estimator of the published KSS
+article. Because the KSS Matlab package centers the outcome, {cmd:none} does
+not reproduce that package.
 
 {phang}
-{cmd:centering(corrected)} adds an adjustment for the bias induced by estimating
-the mean. Exact reuses the fit, inverse and deletion calculations and adds one
-shared coefficient-space correction system. JLA uses the existing full
-leverage pool and its two equal halves, requiring an even {cmd:probes()} budget
-of at least four. Exact Corrected does not require an even budget; exact
-estimation does not use probes. No additional JLA directions or target solves
-are added.
+{cmd:centering(corrected)} keeps the centering and adds an adjustment for
+the bias from estimating the mean. With exact calculation and jointly
+estimated controls, this restores exact unbiasedness under the model's error
+assumptions; the adjustment need not reduce mean squared error. It applies
+to point estimates only. With exact calculation it
+solves one additional linear system. With JLA it splits the existing probes
+into two halves, so {cmd:probes()} must be even and at least 4; no extra
+probes are drawn. For a small problem where the adjustment matters, use
+{cmd:algorithm(exact) centering(corrected)}.
 
 {pstd}
-Corrected JLA reports exactly Mean's numerical MCSE and covariance for the same
-call and probes, treating the added centering increment as fixed.
-{bf:Its MCSE excludes numerical uncertainty in that increment.}
-The developer conditional diagnostic follows the same fixed-mean/increment
-convention. Exact MCSE is zero when enabled. With {cmd:mcse(off)}, diagnostics
-are unavailable/missing even in exact mode; Corrected point work is still done.
+With {cmd:centering(corrected)} and JLA, the reported MCSE and numerical
+covariance are those of {cmd:centering(mean)} for the same call and probes.
+{bf:They exclude numerical uncertainty in the centering adjustment.}
+The developer diagnostic {cmd:mcse(conditional)} follows the same convention.
+With {cmd:mcse(off)}, the diagnostics are missing even in exact mode, but
+the corrected point estimate is still computed.
 
 {pstd}
-Both exact and JLA use {cmd:centering(mean)} when the option is omitted.
-For a small exact problem, use {cmd:algorithm(exact) centering(corrected)}
-when the estimated-mean adjustment is wanted. For JLA, the default
-{cmd:centering(mean) mcse(all)} gives inexpensive centering and a numerical
-diagnostic with the observed mean fixed.
+Projections and component {cmd:inference(highrank|q1)} accept {cmd:mean}
+(the default) and {cmd:none}, but not {cmd:corrected}; requesting
+{cmd:corrected} with either stops the command before estimation. For
+projections, centering changes the standard errors but not the coefficients.
+For component inference, mean centering treats the observed mean as a known
+constant and ignores the uncertainty from estimating it. This is an
+approximation, not inference conditional on the observed mean. Component
+inference and {cmd:project()} can be requested in the same call only with
+exact Mata and without a structured model. A failed centering calculation
+returns an error and never switches to another setting.
 
 {pstd}
-Component {cmd:inference(highrank|q1)} and {cmd:project()} accept Mean (the
-default) or None on their existing supported tuples. Existing combined
-exact-Mata requests also support Mean; native combined component/projection
-requests remain unsupported. Mean component inference treats the observed retained
-working-outcome mean as a fixed constant and omits its estimation uncertainty.
-This is an approximation, not conditional validity given the observed mean.
-Corrected with either request is rejected before estimator RNG. A failed
-correction solve returns a typed error and does not substitute another mode.
-
-{pstd}
-Mata supports active centering with the current source. Rust additionally
-requires centering API 1, shown by {cmd:fevc_rust probe} as
-{cmd:r(centering_api)}. Numerical API 2 for MCSE is a separate capability.
-Mean projection additionally requires {cmd:r(projection_centering_api)} equal
-to 1; Mean component inference requires {cmd:r(component_centering_api)} equal
-to 1. These are separate native attachment capabilities; native combined
-component/projection requests remain unsupported for both Mean and None.
-Pooled match component inference additionally requires
-{cmd:r(component_mixed_api)} equal to 1. Run {cmd:fevc_rust probe} after
-installation to check the loaded plugin. Exact artifacts, platform
-qualification and installation status are recorded in the
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/RC_BINARY_PAYLOAD.md":native payload guide}.
-An older plugin may lead {cmd:backend(auto)} to Mata before preparation/RNG
-under the ordinary consent rules. Strict {cmd:backend(rust)} or explicit
-{cmd:rng(counter_v1)} requires a matching plugin. Use current source with
-{cmd:backend(mata)} or a matching qualified native build, and check its probe result.
-Version 0.5.0 includes native plugins for macOS, Linux x86-64, and Windows x86-64.
-Windows Stata runtime testing remains pending; build and unit checks pass.
-
-{pstd}
-The choice and MCSE assumptions are recorded in {cmd:e(centering)} and
-{cmd:e(mcse_centering)}. Active component requests also record
-{cmd:e(inference_centering)} and {cmd:e(inference_mean_omitted)}. For the
-formulas, local timing evidence and complete
-restrictions, see the
+{cmd:e(centering)} and {cmd:e(mcse_centering)} record the choice and the
+MCSE convention. With component inference, {cmd:e(inference_centering)} and
+{cmd:e(inference_mean_omitted)} also record the inference convention. The
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/CENTERING.md":centering guide}
-({cmd:fevc/docs/CENTERING.md} in the matching source checkout).
+({cmd:fevc/docs/CENTERING.md} in the source repository) gives the formulas,
+timing evidence and complete restrictions.
 
 {marker postestimation}
 {title:Postestimation display}
@@ -354,18 +323,20 @@ setting does not resolve an identification or dependence problem.
   {hline 76}
 
 {pstd}
-Positive integer {cmd:fweight}s represent repeated physical observations
-and affect the regression. {cmd:targetweight()} instead determines how
-retained rows contribute to the variance components. By default, target
-weights equal frequency weights (or one without weights). Explicit target
-weights are stored-row masses and are {bf:not multiplied by frequency weights}. They change the population described by the decomposition.
+Positive integer {cmd:fweight}s represent repeated observations and affect
+the regression. {cmd:targetweight()} instead determines how retained rows
+contribute to the variance components, and so the population the
+decomposition describes. By default, target weights equal frequency weights
+(or one without weights). Explicit target weights are the total weight of
+each stored row and are {bf:not multiplied by frequency weights}.
 
 {pstd}
-{cmd:nuisance(joint)} allows control coefficients to change in the leave-out
-calculation. {cmd:nuisance(fixedoffset)} first subtracts the fitted control
-index and then holds it fixed. This is a different, conditional convention.
-Controls must be identified; ordinary collinear controls are not silently
-dropped. See the
+{cmd:nuisance(joint)} re-estimates the control coefficients in each
+leave-out calculation. {cmd:nuisance(fixedoffset)} estimates the controls
+once, subtracts their fitted contribution, and then treats it as known.
+This is a conditional convention for the point estimates, not joint
+leave-out estimation. Controls must be identified; ordinary collinear
+controls are not silently dropped. See the
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/ESTIMATOR_CONTRACT.md":estimator reference}.
 
 {marker inference}
@@ -377,119 +348,120 @@ dropped. See the
     {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}optional structured variance model
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
-    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}Rust Gram probes; default 2,048
+    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}Rust variance-model probes; default 2,048
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 40}inference seed; default 8675309
     {cmd:inferencebins(}{it:#}{cmd:)}{col 40}target_lowess bins; default 1,000
   {hline 76}
 
 {pstd}
-Mean is the default. Its component inference holds the observed retained
-physical-frequency working-outcome mean fixed; use {cmd:centering(none)}
-for the uncentered calculation. The fitted model and leave-out residuals are
-unchanged. Mean affects realized influence vectors, exact-route variance
-proxies and q1 leading/remainder calculations. Gaussian inference error draws
-remain uncentered; the mean is not re-estimated within these draws.
-{cmd:inference(highrank)} requests Gaussian component intervals;
-{cmd:inference(q1)} requests intervals allowing one dominant weakly
-identified mode. These require different identification conditions; q1
-does not cover arbitrary multi-mode weakness. Successful computation does
-not establish valid coverage, and there is no automatic choice between them.
-
-{pstd}
-Pooled match inference supports default/explicit {cmd:stayers(both)} with
-independent physical stayer observations and separate mover/stayer variance
-coefficients. Select {cmd:inferencemodel(structured_common)} or
-{cmd:inferencemodel(structured_leverage)}, {cmd:deletion(match)} and
-{cmd:nuisance(fixedoffset)}. A mover has multiple original deletion units;
-a stayer has one. With {cmd:deletionid()}, distinct units at the same
-worker-firm coordinate can therefore make a worker a mover. Errors may be
-correlated within a mover unit, but mover units and every physical stayer
-observation are assumed mutually independent, including repeated observations
-of one stayer. Positive integer frequency copies of stayer rows are separate
-independent observations. Eligible stayers have at least two physical
-observations at a retained mover firm; removed movers are not reclassified.
-Use {cmd:stayers(movers)} for the mover-only target. Fitted-control and
-observed-Mean uncertainty are omitted.
-
-{pstd}
-{bf:Small and large datasets are supported through different routes.}
-For small designs within the exact-size and memory limits, explicitly select
-{cmd:backend(mata) algorithm(exact)}. For large datasets, explicitly select
-{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)} with
-{cmd:preconditioner(diagonal)} or {cmd:preconditioner(cmg)}. Both routes accept
-the two structured models, {cmd:deletionid()}, {cmd:targetweight()} and
-positive integer frequency weights. There is no Mata JLA attachment for
-structured component inference, and structured inference cannot be combined
-with {cmd:project()}. Rust requires {cmd:r(component_mixed_api)} equal to 1
-for pooled matches. See the
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_INFERENCE.md":pooled inference contract}.
-
-{pstd}
-For example, a pooled match request with outcome {cmd:y}, control {cmd:x},
-worker identifier {cmd:id} and firm identifier {cmd:firmid} is:
-
-{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset) stayers(both) backend(mata) algorithm(exact) inference(highrank) inferencemodel(structured_common)}{p_end}
-
-{pstd}
-For the scalable route, use:
-
-{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset) stayers(both) backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(diagonal) inference(highrank) inferencemodel(structured_common)}{p_end}
-
-{pstd}
-Replace {cmd:inference(highrank)} by {cmd:inference(q1)} only when the
-one-dominant-mode assumptions are appropriate. The common variance model
-uses a richer set of design features; the leverage model is a separate,
-more restrictive sensitivity specification. Neither is chosen automatically.
-Exact Mata computes the structured Gram by coefficient contractions, but
-still uses covariance simulations. {cmd:inferencesimulations()} controls
-those draws on both routes. {cmd:inferencegramprobes()} applies only to
-structured Rust inference; {cmd:inferencebins()} controls the separate
-{cmd:target_lowess} method. The JLA point-probe budget and these inference
-budgets control different numerical approximations. Numerical MCSE is not
-an econometric standard error.
-
-{pstd}
-Inspect {cmd:e(component_inference)} for Gaussian results and
-{cmd:e(q1_inference)} for q1 results. A successful command can withhold
-individual intervals: {cmd:e(q0_status)} and {cmd:e(q1_status)} record their
-availability, with zero meaning computed. Unavailable q1 endpoints are not
-replaced by Gaussian endpoints. Structured highrank posts {cmd:e(V)} only
-when all individual and joint covariance checks pass; structured q1 does not
-post {cmd:e(V)}. Thus {cmd:lincom} requires an available highrank covariance.
-Shared failures, including a failed full-system solver residual check, stop
-the command with an error. Rust's diagonal solver can make up to three
-residual corrections before that error, without relaxing the threshold.
-
-{pstd}
-The pooled unit counts are {cmd:e(inference_mover_units)},
-{cmd:e(inference_stayer_units)} and {cmd:e(inference_independent_units)}.
-Inspect {cmd:e(residual_moment_diagnostics)} and {cmd:e(component_spectrum)}
-for variance-fit and spectral diagnostics. These checks describe numerical
-availability and the realized design; they do not establish coverage.
+{cmd:inference(highrank)} requests
+normal-approximation (Gaussian) intervals for the four components. They
+require that no single direction in the data dominate a component and that
+individual observations have limited influence. {cmd:inference(q1)} allows
+one dominant, weakly identified direction with a diffuse remainder; it does
+not cover several such directions (multi-mode weakness). There is no
+automatic choice between them, and successful computation does not
+establish valid coverage. Both rely on a model for the error variances and
+on assumptions beyond those needed for point estimates. Under the default
+{cmd:centering(mean)}, the observed mean is treated as fixed, which requires
+the uncertainty in estimating it to be negligible; use {cmd:centering(none)}
+for the uncentered calculation.
 
 {pstd}
 Without {cmd:inferencemodel()}, component inference uses exact Mata
 calculation, observation deletion, and unit frequency weights.
-The explicit structured models {cmd:structured_common} and
-{cmd:structured_leverage} impose additional variance assumptions; they are
-not unrestricted heteroskedasticity-robust inference. Observation-q1
-calibration retains a documented limitation. Mean inference additionally
-omits mean-estimation uncertainty; its effect must be negligible on the
-component and q1 remainder sampling scales. No conservative-coverage guarantee
-is implied. Fixed-offset match inference is also approximate, ignoring
-nuisance-control estimation uncertainty, a separate approximation.
-The October 8 bounded assessment retains 22 exact-Mata availability-screen
-failures across three primary cells in both Mean and fixed-c0 arms. All eight
-native primary cells have complete interval availability and pass the broad
-descriptive screens, but separate numerical checks show material sensitivity
-to probe budgets. These finite designs provide no general coverage guarantee.
-Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
-and {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md":assessment}
-for supported requests, assumptions, and limitations before reporting intervals.
-The separate {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_ASSESSMENT.md":pooled mover-stayer assessment}
-reports its own finite-design results, failure cases and numerical sensitivity;
-earlier observation or mover-only evidence is not pooled coverage evidence.
-An {help fevc##component_example:illustrative example} appears below.
+Observation-q1 calibration retains a documented limitation: in the
+package's confirmation runs, its standard errors narrowly failed one
+calibration check (see the inference guide). The explicit
+structured models {cmd:structured_common} and {cmd:structured_leverage}
+impose additional assumptions on the error variances; they are not
+unrestricted heteroskedasticity-robust inference. {cmd:structured_common}
+lets the variance depend on a richer set of design features;
+{cmd:structured_leverage} is a simpler sensitivity specification. Neither is
+chosen automatically.
+
+{pstd}
+{bf:Movers and stayers together (pooled match inference).} Use
+{cmd:deletion(match)}, {cmd:nuisance(fixedoffset)}, a structured model and
+the default {cmd:stayers(both)}, or {cmd:stayers(movers)} for movers only.
+Errors may be correlated within a mover's match, but mover matches and the
+individual observations of each stayer are assumed independent, including
+repeated observations of one stayer and frequency copies of a stayer row.
+The variance model has separate coefficients for movers and stayers.
+With {cmd:deletionid()}, a worker with several IDs at one firm counts as a
+mover. Fixed-offset match inference is approximate, ignoring
+nuisance-control estimation uncertainty, and under the default centering it
+also ignores the uncertainty in the observed mean.
+
+{pstd}
+{bf:Small and large datasets use different calculations.} For small designs
+within the exact-size and memory limits, select
+{cmd:backend(mata) algorithm(exact)}. For large datasets, select
+{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)} with
+{cmd:preconditioner(diagonal)} or {cmd:preconditioner(cmg)}. Both accept the
+two structured models, {cmd:deletionid()}, {cmd:targetweight()} and positive
+integer frequency weights. Mata JLA does not support structured inference,
+and structured inference cannot be combined with {cmd:project()} in the same
+call. For example, with outcome {cmd:y}, control {cmd:x}, worker identifier
+{cmd:id} and firm identifier {cmd:firmid}, a small-sample request is
+
+{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset)}
+{cmd:stayers(both) backend(mata) algorithm(exact) inference(highrank) inferencemodel(structured_common)}{p_end}
+
+{pstd}
+and a large-sample request is
+
+{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset)}
+{cmd:stayers(both) backend(rust) rng(counter_v1) algorithm(jla) engine(generic)}
+{cmd:preconditioner(diagonal) inference(highrank) inferencemodel(structured_common)}{p_end}
+
+{pstd}
+Replace {cmd:inference(highrank)} by {cmd:inference(q1)} only when the
+one-dominant-direction assumptions are appropriate. See the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_INFERENCE.md":pooled inference guide}.
+
+{pstd}
+The inference calculations have their own numerical settings.
+{cmd:inferencesimulations()} sets the number of simulation draws used for the
+covariance on both backends; {cmd:inferencegramprobes()} sets the random
+probes Rust uses to fit the structured variance model; {cmd:inferencebins()}
+applies to the observation-level smoothing method ({cmd:target_lowess}) used
+without {cmd:inferencemodel()}. These are separate from the point-estimation
+probes set by {cmd:probes()}, and the numerical MCSE does not cover them.
+
+{pstd}
+Gaussian results are stored in {cmd:e(component_inference)} and q1 results
+in {cmd:e(q1_inference)}. A successful command can still withhold individual
+intervals: {cmd:e(q0_status)} and {cmd:e(q1_status)} record availability,
+with zero meaning computed. A withheld q1 interval is not replaced by a
+Gaussian one. Structured highrank posts {cmd:e(V)} only when its joint
+covariance and all individual checks pass; structured q1 does not post
+{cmd:e(V)}. Thus {cmd:lincom} requires an available highrank covariance.
+Failures that affect the whole calculation, such as a failed solver
+accuracy check, stop the command with an error.
+
+{pstd}
+For pooled inference, {cmd:e(inference_mover_units)},
+{cmd:e(inference_stayer_units)} and {cmd:e(inference_independent_units)}
+count the independent units. {cmd:e(residual_moment_diagnostics)} and
+{cmd:e(component_spectrum)} describe the variance-model fit and how
+concentrated each component is. These checks describe the realized design;
+they do not establish coverage.
+
+{pstd}
+In the package's simulation assessment, the exact Mata method produced
+intervals too rarely in three of its four primary designs (22 failed
+availability checks), while the native calculation produced intervals in
+all eight primary designs and passed the broad descriptive checks but was
+materially sensitive to the number of probes. These finite designs provide no general
+coverage guarantee, and no conservative-coverage guarantee is implied.
+Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide},
+the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md":assessment}
+and the separate
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_ASSESSMENT.md":pooled mover-stayer assessment}
+before reporting intervals; evidence for observation or mover-only inference
+does not establish coverage for pooled inference. An
+{help fevc##component_example:illustrative example} appears below.
 
 {dlgtab:Fixed-effect projection inference}
 
@@ -501,41 +473,36 @@ An {help fevc##component_example:illustrative example} appears below.
   {hline 76}
 
 {pstd}
-Projection uses {cmd:centering(mean)} by default; explicit {cmd:centering(none)}
-retains the uncentered covariance proxy. Corrected projection is unsupported.
 These options estimate relationships between fixed effects and observed
-characteristics, such as firm wage premiums and firm size. An intercept is
-included automatically. Slopes are invariant to the fixed-effect
-normalization; the intercept is not. The default calculation is exact and
-suited to small designs. See the {help fevc##projection_example:example}
-and the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
-for the explicit scalable alternative. Projection results are stored
-separately; Stata's {cmd:lincom} does not operate directly on these rows.
+characteristics, such as firm wage premiums and firm size, with leave-out
+standard errors that account for the estimation error in the effects. An
+intercept is included automatically. Slopes do not depend on the
+normalization of the fixed effects; the intercept does. The default
+calculation is exact and suited to small designs; see the
+{help fevc##projection_example:example} and the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide} for the large-sample
+alternative. Projection results are stored separately; Stata's {cmd:lincom}
+does not operate directly on them.
 
 {pstd}
-Mean projection uses {cmd:mu = sum(f_i*u_i)/sum(f_i)} over the retained sample,
-where {cmd:f_i} is the positive integer frequency weight and {cmd:u_i} is the
-working outcome. This is the Stata mean from
-{cmd:summarize u if e(sample) [fw=f]}; without frequency weights it is the
-ordinary observation mean. Joint nuisance handling uses the retained outcome;
-fixedoffset first subtracts the full fitted nuisance index. Centering occurs
-before match collapse or square-root scaling. Neither {cmd:targetweight()}
-nor {cmd:projectweight()} redefines the mean. Only the outcome factor in the
-leave-out covariance proxy changes; coefficients, residuals and the naive
-residual-squared covariance are unchanged.
-
-{pstd}
-For mover match {cmd:g} with {cmd:n_g} observations and mean {cmd:ubar_g},
-FEVC uses {cmd:sqrt(n_g)*(ubar_g-mu)}. The KSS Matlab main mover-match path
-instead uses {cmd:sqrt(n_g)*ubar_g-a}, where {cmd:a} is the unweighted mean
-of the transformed match outcomes. On the same mover-only sample these
-agree when match sizes are equal, but generally differ otherwise. KSS uses a
-separate proxy for eligible stayers. FEVC's convention respects literal
-frequency copies and makes the covariance invariant to adding a constant
-to the outcome. Neither convention uniformly dominates in MSE or coverage.
-The estimated mean can induce finite-sample bias under heteroskedasticity;
-Mean projection does not apply an estimated-mean correction or guarantee
-exact unbiasedness. See the {help fevc##centering:centering guide} for details.
+Projections use {cmd:centering(mean)} by default and accept
+{cmd:centering(none)}; {cmd:centering(corrected)} is not supported. The mean
+is the same retained-sample mean as for point estimates, equal to
+{cmd:summarize u if e(sample) [fw=f]}, where {cmd:u} is the outcome (net of
+the fitted controls under {cmd:nuisance(fixedoffset)}). Only the leave-out
+covariance changes; the coefficients, residuals and the conventional
+covariance based on full-sample residuals are unchanged. When a match contains
+several observations, {cmd:fevc} centers the match's average outcome at the
+overall mean. The KSS Matlab package centers the transformed match outcomes
+instead; on the same mover-only sample, the two conventions agree when all
+matches have the same number of observations and can differ otherwise. The
+KSS Matlab package also treats eligible stayers separately. The {cmd:fevc} convention treats
+frequency copies as separate observations and makes the standard errors
+invariant to adding a constant to the outcome; neither convention is
+uniformly better. Because the mean is estimated, the covariance can have a
+finite-sample bias under heteroskedasticity; mean-centered projection does
+not correct for it.
+See {help fevc##centering:Outcome centering}.
 
 {dlgtab:Computation and reproducibility}
 
@@ -552,32 +519,47 @@ exact unbiasedness. See the {help fevc##centering:centering guide} for details.
   {hline 76}
 
 {pstd}
-{cmd:nativethreads()} is independent of the Stata/MP license and does not
-change Stata's processor setting. Specify an integer from 1 to 64, no greater
-than the host processor count or {cmd:NSLOTS} on SGE. Stata's active processors
-must also fit inside {cmd:NSLOTS}. An explicit request beyond the allocation
-fails before native preparation. The option caps native work; serial routes,
-small batches and memory planning may use fewer workers. Mata does not use
-this native budget. On SCC, keep {cmd:set processors 4} and use
-{cmd:nativethreads(28)} only in an allocation of at least 28 slots.
-{cmd:e(native_threads_requested)}, {cmd:e(native_threads_selected)} and
-{cmd:e(native_threads_capacity)} distinguish the request, admitted cap and
-selected runtime capacity. {cmd:e(native_threads_active)} records concurrency
-when instrumented; missing means unavailable, not zero activity.
-
-{pstd}
 The default {cmd:algorithm(jla)} uses a randomized approximation.
 {cmd:algorithm(exact)} uses deterministic linear algebra for small designs.
-Explicit {cmd:algorithm(auto)} chooses exact when the identified dimension
+{cmd:algorithm(auto)} chooses exact when the number of identified parameters
 is within {cmd:exact_limit()}, and JLA otherwise.
 
 {pstd}
-Automatic backend selection prefers a compatible Rust plugin and otherwise
-uses Mata. {cmd:backend(mata)} selects the portable implementation;
-{cmd:backend(rust)} requires the native implementation. Leave the remaining
-settings automatic unless investigating a specific computational issue.
-The {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/RUST_MATA_PARITY.md":backend reference}
-describes specialized combinations and restrictions.
+Automatic backend selection uses the Rust plugin when it supports the
+request and otherwise uses Mata. {cmd:backend(mata)} selects the portable
+implementation; {cmd:backend(rust)} and {cmd:rng(counter_v1)} require the
+native one. The package includes native plugins for macOS, Linux (x86-64)
+and Windows (x86-64). The Windows plugin passes build and unit tests but has
+not yet been tested inside Stata on Windows. A self-built or outdated plugin
+may lack some features. In that case {cmd:backend(auto)} uses Mata if it can
+decide before estimation starts, while {cmd:backend(rust)} or
+{cmd:rng(counter_v1)} stop with an error; an omitted {cmd:mcse()} keeps the
+native point estimates and reports the MCSE as unavailable, while an
+explicit {cmd:mcse(all)} stops with an error. Run {cmd:fevc_rust probe} to
+check the loaded plugin; the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/INSTALLATION.md":installation notes} list the values to
+expect.
+Leave the remaining settings automatic unless investigating a specific
+computational issue. The
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/RUST_MATA_PARITY.md":backend reference}
+lists which features each backend supports, and the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/RC_BINARY_PAYLOAD.md":native payload guide}
+records the exact plugins and their testing.
+
+{pstd}
+{cmd:nativethreads()} limits how many threads the Rust backend uses. It is
+independent of the Stata/MP license and does not change Stata's processor
+setting; Mata does not use it. Specify an integer from 1 to 64, no greater
+than the number of processors available. On a cluster using the SGE
+scheduler, both the native threads and Stata's processors must fit within
+the job's {cmd:NSLOTS}. For example, with a four-core Stata/MP license in a
+28-slot job, use {cmd:set processors 4} and {cmd:nativethreads(28)}. A
+request beyond the allocation stops before estimation. Some steps run with
+fewer threads. {cmd:e(native_threads_requested)},
+{cmd:e(native_threads_selected)} and {cmd:e(native_threads_capacity)} record
+the request, the cap actually applied and the available capacity;
+{cmd:e(native_threads_active)} records the concurrency actually measured,
+where missing means unavailable, not zero.
 
 {dlgtab:Memory and numerical settings}
 
@@ -600,8 +582,8 @@ Without {cmd:memory_gib()}, the command assumes no memory budget. An
 explicit budget guides automatic batching. {cmd:memorycheck(warn)}, the default,
 warns and continues when the forecast exceeds that budget;
 {cmd:memorycheck(error)} stops and {cmd:memorycheck(off)} suppresses the
-warning. The forecast covers command allocations, not total Stata memory,
-and the budget is not an operating-system memory cap.
+warning. The forecast covers the command's own allocations, not total Stata
+memory, and the budget is not an operating-system memory cap.
 See the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEMORY.md":memory guide}.
 
 {pstd}
@@ -644,8 +626,9 @@ The same positive-sorting design as Example 1, with 200 workers and 61 firms.
 {dlgtab:Example 3: Frequency weights and target weights}
 
 {pstd}
-Frequency weights enter the regression; target mass weights the variance
-components. This example also illustrates holding the control index fixed.
+Frequency weights enter the regression; target weights determine how the
+variance components are weighted. This example also holds the control
+contribution fixed with {cmd:nuisance(fixedoffset)}.
 
 {cmd}{...}
         preserve
@@ -666,8 +649,8 @@ components. This example also illustrates holding the control index fixed.
 {pstd}
 Firm size is average annual employment. The true firm effect is
 {cmd:0.5*ln(firm_size)}, so the estimated projection slope should be near 0.5.
-The projection weights firms by worker-year observations and uses Mean
-centering by default. Omitted {cmd:centering()} in this example selects Mean.
+The projection weights firms by worker-year observations and uses the
+default mean centering.
 
 {cmd}{...}
         preserve
@@ -729,94 +712,81 @@ weights, recompute the truth for that population. The helper returns
 {title:Key stored results}
 
 {pstd}
-Timing diagnostics use only unused timers. If caller timers are all in use,
-estimation continues and unavailable timings and their totals are missing.
-Unexecuted phases retain zero timings; native measurements remain available.
-Caller timers are preserved on success, error, and interruption.
-
-{pstd}
-{cmd:e(b)} and {cmd:e(kss)} contain corrected worker variance, firm variance,
-raw worker-firm covariance, and total variance, in that order.
-{cmd:e(plugin)} and {cmd:e(correction)} hold their uncorrected estimates
-and bias corrections. {cmd:e(mcse)} contains four numerical MCSEs for the
-selected mode: all main point probes by default. {cmd:e(results)} has rows
-{cmd:plugin}, {cmd:bias_correction}, {cmd:corrected} and {cmd:mcse}; its last row
-matches {cmd:e(mcse)}. {cmd:e(mcse_mode)} records {cmd:all}, {cmd:off} or the
-developer mode {cmd:conditional}. {cmd:e(mcse_method)}, {cmd:e(mcse_status)}
-and {cmd:e(mcse_available)} record the method, typed status and usability.
-The method is {cmd:crossfit_if_v1} for all-probe JLA, {cmd:exact} for exact
-zero MCSE, {cmd:conditional_target_v1} for the developer diagnostic, or
-{cmd:none} when off. Use {cmd:matrix list e(mcse)} or {cmd:estat diagnostics}.
-
-{pstd}
-{cmd:e(centering)} records {cmd:none}, {cmd:mean} or {cmd:corrected}.
-{cmd:e(mcse_centering)} is {cmd:uncentered}, {cmd:fixed observed mean}, or
-{cmd:fixed observed mean and fixed centering increment}, respectively.
-These macros are recorded in exact mode and with MCSE off; availability
-remains a separate diagnostic. Centering leaves {cmd:e(plugin)} unchanged
-and changes {cmd:e(correction)}; {cmd:e(kss)} is their difference.
-
-{pstd}
-With active component inference, {cmd:e(inference_centering)} is
-{cmd:uncentered} for None or {cmd:fixed observed mean} for Mean, and
-{cmd:e(inference_mean_omitted)} is respectively 0 or 1. These returns are
-absent for point-only or projection-only requests and cleared on failure.
-Mean output and diagnostic replay state that uncertainty from estimating the
-mean is omitted. These sampling assumptions are separate from the numerical
-MCSE convention and from omitted fixed-offset nuisance uncertainty.
-
-{pstd}
-{cmd:e(mcse_cov_raw)} and {cmd:e(mcse_cov)} are raw and usable 4 by 4 numerical
-covariances in the same target order. The total target is the exact linear
-combination worker variance + firm variance + 2 x covariance. Material negative
-eigenvalues preserve raw covariance and withhold usable covariance and MCSEs.
-Off, unavailable capability and the developer conditional mode have missing
-covariance matrices; conditional mode supplies only the conditional SE vector.
-Exact all mode returns zero covariance and zero MCSE with availability one.
-These diagnostics do not create econometric {cmd:e(V)}.
-
-{pstd}
-Compatibility returns {cmd:e(numerical_mcse)} and
-{cmd:e(numerical_mcse_available)} alias the selected public diagnostic.
-{cmd:e(numerical_mcse_all)} retains the all-probe vector when calculated;
-{cmd:e(numerical_mccov_cond)}, {cmd:e(numerical_mccov_leverage)},
-{cmd:e(numerical_mccov_all_raw)} and {cmd:e(numerical_mccov_all)} retain the
-3 by 3 primitive covariance attachments. The preserved developer conditional
-vector is {cmd:e(mcse_conditional)}, with
-{cmd:e(mcse_conditional_available)}, when all or conditional mode is selected.
-Exporters should save {cmd:e(mcse)}, mode, method, status, availability and
-{cmd:e(mcse_cov_raw)}, together with {cmd:e(centering)} and
-{cmd:e(mcse_centering)}, rather than treating a withheld MCSE as zero.
-
-{pstd}
-{cmd:e(mc_replay_rhs)}, {cmd:e(mc_replay_attempted_rhs)},
-{cmd:e(mc_replay_executed_rhs)}, {cmd:e(mc_replay_generator_work)} and
-{cmd:e(mc_allocation_bound_bytes)} record additional work and scratch.
-{cmd:e(numerical_replay_rhs)} holds certified replay residuals with zero-based
-logical probe indices when present. Replay uses batches of at most four existing
-leverage directions in Rust and eight in Mata, bounded by the admitted leverage
-width, and reuses the prepared solver. {cmd:mcse(off)} skips additional work;
-{cmd:e(mcse)} and both public covariance matrices are missing and
-{cmd:e(mcse_available)} is zero, with status {cmd:off}. Legacy all-probe
-attachments and replay work are absent. A failed batch withholds the all-probe
-MCSE and reports attempted work, executor-accounted completed work and the
-certified prefix separately; {cmd:e(mc_failed_replay_probe)} identifies the
-first uncertified direction.
-
-{pstd}
+{bf:Estimates.} {cmd:e(b)} and {cmd:e(kss)} contain the corrected worker
+variance, firm variance, worker-firm covariance, and variance of the sum, in
+that order. {cmd:e(plugin)} and {cmd:e(correction)} hold the uncorrected
+estimates and the bias corrections; {cmd:e(kss)} is their difference.
 {cmd:e(decomposition)} adds the sorting row and shares; stored shares are
-proportions, while the display reports percentages.
+proportions, while the display reports percentages. Centering leaves
+{cmd:e(plugin)} unchanged and changes {cmd:e(correction)}.
 
 {pstd}
-{cmd:e(sample)} identifies retained rows. Sample counts include
-{cmd:e(N)}, {cmd:e(worker_levels)}, and {cmd:e(firm_levels)}.
-Component covariance is posted in {cmd:e(V)} only for supported successful
-inference requests; q1 intervals have separate returns.
+{bf:Numerical MCSE.} {cmd:e(mcse)} contains the four numerical MCSEs, and
+{cmd:e(results)} has rows {cmd:plugin}, {cmd:bias_correction},
+{cmd:corrected} and {cmd:mcse}; its last row matches {cmd:e(mcse)}.
+{cmd:e(mcse_cov_raw)} and {cmd:e(mcse_cov)} are the raw and usable 4 by 4
+numerical covariances in the same order; the total is the linear
+combination worker variance + firm variance + 2 x covariance. When the raw
+covariance has materially negative eigenvalues, it is kept but the usable
+covariance and MCSEs are withheld. {cmd:e(mcse_mode)} records {cmd:all},
+{cmd:off} or {cmd:conditional}; {cmd:e(mcse_method)} is
+{cmd:crossfit_if_v1} for JLA, {cmd:exact} for exact calculation,
+{cmd:conditional_target_v1} for the developer diagnostic, or {cmd:none} when
+off. {cmd:e(mcse_status)} and {cmd:e(mcse_available)} record the status and
+whether the MCSE is usable. With {cmd:mcse(off)}, {cmd:e(mcse)} and both
+covariance matrices are missing, {cmd:e(mcse_available)} is zero and the
+status is {cmd:off}. In conditional mode, or when the native plugin does
+not provide the MCSE, the covariance matrices are missing; conditional mode
+supplies only the conditional standard errors. Exact
+calculation returns zero covariance and zero MCSE with availability one.
+These diagnostics never create econometric {cmd:e(V)}. When exporting MCSEs,
+also save the mode, method, status, availability, {cmd:e(mcse_cov_raw)},
+{cmd:e(centering)} and {cmd:e(mcse_centering)}, so that a withheld MCSE is
+not mistaken for zero.
+
+{pstd}
+{bf:Centering.} {cmd:e(centering)} records {cmd:none}, {cmd:mean} or
+{cmd:corrected}, and {cmd:e(mcse_centering)} records the matching MCSE
+convention: {cmd:uncentered}, {cmd:fixed observed mean}, or
+{cmd:fixed observed mean and fixed centering increment}. Both are recorded
+in exact mode and with MCSE off. With component inference,
+{cmd:e(inference_centering)} is {cmd:uncentered} or {cmd:fixed observed mean}
+and {cmd:e(inference_mean_omitted)} is 0 or 1; these are absent for
+point-only or projection-only requests and cleared on failure. The
+inference convention is separate from the MCSE convention and from the
+omitted uncertainty in fitted controls.
+
+{pstd}
+{bf:Additional numerical diagnostics.} {cmd:e(numerical_mcse)} and
+{cmd:e(numerical_mcse_available)} repeat the selected diagnostic;
+{cmd:e(numerical_mcse_all)} holds the all-probe vector when calculated; and
+{cmd:e(numerical_mccov_cond)}, {cmd:e(numerical_mccov_leverage)},
+{cmd:e(numerical_mccov_all_raw)} and {cmd:e(numerical_mccov_all)} hold 3 by 3
+covariances for the worker variance, firm variance and covariance. The
+conditional vector is {cmd:e(mcse_conditional)}, with
+{cmd:e(mcse_conditional_available)}, when all or conditional mode is
+selected. {cmd:e(mc_replay_rhs)},
+{cmd:e(mc_replay_attempted_rhs)}, {cmd:e(mc_replay_executed_rhs)},
+{cmd:e(mc_replay_generator_work)} and {cmd:e(mc_allocation_bound_bytes)}
+record the extra work and memory used to compute the MCSE, which reuses the
+original random directions and the prepared solver.
+{cmd:e(numerical_replay_rhs)} holds the corresponding solver residuals. If
+this calculation fails, the MCSE is withheld and
+{cmd:e(mc_failed_replay_probe)} identifies the first direction that failed.
+
+{pstd}
+{bf:Sample and other results.} {cmd:e(sample)} identifies retained rows.
+Sample counts include {cmd:e(N)}, {cmd:e(worker_levels)}, and
+{cmd:e(firm_levels)}. Component covariance is posted in {cmd:e(V)} only for
+supported successful inference requests; q1 intervals have separate returns.
 {cmd:e(projection_b)}, {cmd:e(projection_V)}, and
-{cmd:e(projection_results)} contain projection results.
-Use {cmd:ereturn list} and the
+{cmd:e(projection_results)} contain projection results. Timing diagnostics
+use only Stata timers that are not already in use and leave the caller's
+timers unchanged. Phases that did not run have zero timings; timings that
+could not be measured are missing. Use
+{cmd:ereturn list} and the
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/FAILURES_AND_RETURNS.md":returned-results reference}
-for the complete diagnostic record.
+for the complete record.
 
 {marker troubleshooting}
 {title:If estimation fails}
@@ -835,9 +805,9 @@ example, together with {cmd:e(withholding_status)} and
 
 {pstd}
 Schmieder, Johannes. 2026. "fevc: Leave-out bias-corrected variance
-decompositions in Stata." Working paper, September. The companion
-fevc paper and its appendix explain the estimator, sample construction,
-and computational methods.
+decompositions in Stata." Working paper. The companion paper and its
+technical supplement explain the estimator, sample construction, and
+computational methods.
 
 {pstd}
 Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
@@ -846,7 +816,7 @@ Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
 
 {pstd}
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/README.md":Technical documentation}
-provides implementation details and current capability restrictions.
+provides implementation details and capability restrictions.
 
 {marker author}
 {title:Author}

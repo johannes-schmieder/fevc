@@ -1,13 +1,12 @@
 # Installing fevc 0.5.0
 
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
-for macOS Apple Silicon and Intel, Linux x86-64, and Windows x86-64. No
-compiler, Rust installation, or separate plugin download is needed. Native
-qualification is specific to the exact artifact and platform. Intel Mac
-qualification uses Rosetta. The current Windows artifact passes hosted build,
-unit and PE/export checks; Windows Stata runtime testing is pending with the
-owner, who explicitly requested publication before that test.
-See [native provenance](native/README.md).
+for macOS (Apple silicon and Intel), Linux x86-64, and Windows x86-64. No
+compiler, Rust installation, or separate plugin download is needed. The macOS
+and Linux plugins have been tested inside Stata (the Intel macOS plugin under
+Rosetta emulation on Apple silicon); the Windows plugin passes build and unit
+tests but has not yet been tested inside Stata on Windows.
+See the [native plugin records](native/README.md) for details.
 
 ## Installation
 
@@ -32,17 +31,12 @@ Then install `fevc` directly from this repository:
 github install johannes-schmieder/fevc
 ```
 
-Both routes install the same runtime, help, licenses, and five plugin files
-(macOS arm64, Intel, universal, Linux x86-64, and Windows x86-64). The loader selects the
-appropriate native backend. `main` is the development and installation branch.
-The `net install` URL above pins the [0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0).
-`github install johannes-schmieder/fevc` follows `main`, which currently contains
-0.5.0 and may receive later development updates. Both include pooled inference
-and the same five native plugins.
-The [current checkpoint](fevc/PLAN.md)
-tracks publication and installation verification; the
-[adoption manifest](native/pooled-component-20261010/manifest.json) binds the
-included payloads to their sources and tested routes.
+Both methods install the same programs, help, licenses, and five plugin files
+(macOS Apple silicon, Intel and universal, Linux x86-64, and Windows x86-64).
+`fevc` loads the plugin that matches your computer. The `net install` command
+above installs the [0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0);
+`github install` installs the current `main` branch, which may include later
+changes.
 
 After installation:
 
@@ -52,11 +46,16 @@ fevc_run exact_controls using fevc.sthlp
 ```
 
 The example uses simulated data and restores your data afterward. Restart
-Stata after updating a loaded native plugin. See [inference support and limitations](fevc/docs/INFERENCE.md).
+Stata after updating a loaded native plugin. See
+[inference support and limitations](fevc/docs/INFERENCE.md).
 
-## Native capability check
+## Checking the native plugin
 
-After updating the package and restarting Stata, inspect the selected plugin:
+After installing or updating the package and restarting Stata, you can
+check which features the loaded plugin supports. With the plugins included
+in version 0.5.0, all of the following assertions should hold, and the
+example should run on the Rust backend. This has been verified on macOS and
+Linux; the Windows plugin has not yet been tested inside Stata.
 
 ```stata
 fevc_rust probe
@@ -69,133 +68,86 @@ fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 ```
 
-All five included binaries are rebuilt from `002205f2` and provide the centering
-capabilities plus pooled component inference and bounded diagonal residual
-refinement. Mac arm64/Rosetta thin/universal and Linux full/installed qualification
-pass. Windows runtime qualification remains pending. See the
-[adoption manifest](native/pooled-component-20261010/manifest.json).
-
-The package contains 61 installed files, including five plugins. Installation
-checks verify every file hash and exercise pooled components on both backends
-and with both variance models. The [current checkpoint](fevc/PLAN.md) and
-[installation receipts](native/pooled-component-20261010/evidence/packaging/)
-record local HTTP and public `net`/`github` fresh/replacement results on Mac arm64.
-These installation checks do not establish Windows runtime qualification.
+The probe values correspond to live progress reporting, outcome centering,
+mean-centered projections, mean-centered component inference, and
+confidence intervals that pool movers and stayers.
 
 ## Release ZIP and offline installation
 
 Download `fevc-0.5.0.zip` from the
 [release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0).
-The ZIP contains only the installation catalogs, runtime, help, license notices,
-and five native plugins. It does not install tests, development tools, or
-benchmark data. Extract it and run:
+The ZIP contains only the installation files, programs, help, license
+notices, and five native plugins; it does not include tests, development
+tools, or benchmark data. Extract it and run:
 
 ```stata
 net install fevc, replace from("/path/to/extracted/fevc")
 ```
 
 `SHA256SUMS` and `release-manifest.json` identify the exact downloads and
-installed files. The separately attached corresponding-source archive records
-the source used to build the native plugins; no compilation is needed to use
-the package. The Windows binary is included at the owner's request with its
-Stata runtime test still pending.
+installed files. The release also attaches the source code used to build the
+native plugins; you do not need it to use the package.
 
-## Local source installation
+## Installing from a source checkout
 
-For development, the portable source package can be installed from a checkout:
+For development, the package can be installed from a local checkout:
 
 ```stata
 net install fevc, replace from("/absolute/path/to/fevc/fevc")
 ```
 
-This source manifest installs Ado/Mata files and native loaders, but no plugin
-binaries. Rust-only features require a matching native build. See the
-[native build guide](rust/stata_backend/README.md).
+This installs the Stata and Mata programs and the plugin loaders, but no
+plugin binaries, so `backend(mata)` is used unless you build a matching
+native plugin. Features that only the Rust backend provides require such a
+build; see the [native build guide](rust/stata_backend/README.md).
 
 Restart Stata after replacing a loaded native plugin. After a source update,
 restart Stata or run `discard` to clear cached programs and Mata definitions.
 
-## Outcome centering capability
+## Using a self-built or older native plugin
 
-The current repository source implements `centering(none|mean|corrected)` in
-Mata and matching Rust builds. Omitted `centering()` selects `mean` for both
-exact and JLA. Use explicit `centering(none)` to reproduce the former default.
-Projection and component `inference(highrank|q1)` support Mean or None on their
-existing supported tuples; Corrected remains unsupported with either. Mean
-component inference holds the observed retained physical-frequency
-working-outcome mean fixed and omits its estimation uncertainty. This
-approximation is separate from numerical MCSE and from omitted nuisance-offset
-uncertainty. The five included native payloads support point, projection
-and component centering API 1. Exact sources and platform qualification limits
-are in the [adoption manifest](native/pooled-component-20261010/manifest.json).
-The [completed assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
-records substantial exact-Mata interval unavailability and native numerical
-sensitivity; installation or successful computation is not a coverage claim.
+The Mata backend (`backend(mata)`) runs on every platform and supports most
+features. In Mata, projections and component inference use exact
+calculation and are therefore limited to small designs. Live progress,
+`rng(counter_v1)` and some structured component-inference requests,
+including all with observation deletion, require the Rust plugin; see the
+[backend reference](fevc/docs/RUST_MATA_PARITY.md). A self-built or older
+native plugin may lack some features. Check it with
+`fevc_rust probe` and `return list`:
 
-A current source installation can use `backend(mata)` on every platform.
-For Rust, use a matching qualified build, restart Stata, and inspect its
-capabilities:
+- `r(centering_api) == 1` is needed for outcome centering with the Rust
+  backend;
+- `r(projection_centering_api) == 1` for mean-centered projections;
+- `r(component_centering_api) == 1` for mean-centered component inference;
+- `r(component_mixed_api) == 1` for confidence intervals that pool movers and
+  stayers; and
+- `r(numerical_api) == 2` for the numerical MCSE.
 
-```stata
-fevc_rust probe
-return list
-* Active native centering requires r(centering_api) == 1
-* Mean projection also requires r(projection_centering_api) == 1
-* Mean component inference also requires r(component_centering_api) == 1
-```
-
-A missing or zero `r(centering_api)` means the plugin does not support active
-centering. Numerical API 2 for all-probe MCSE is independent of centering
-API 1: a plugin supporting MCSE can still lack centering. Mean projection
-requires the separate additive `r(projection_centering_api) == 1` capability.
-The included five-payload set exposes this capability. Earlier
-point-centering payloads may lack it.
-Use current source with `backend(mata)` or a matching qualified native build
-and inspect the probe result. Mean component inference additionally requires
-`r(component_centering_api) == 1`, which identifies matching C transport and
-Rust core readiness bit 16. It uses the existing capabilities struct/export;
-there is no new DLL export or layout. Existing combined exact-Mata requests
-support Mean; native combined component/projection requests remain unsupported
-for both Mean and None. Missing metadata is zero; None retains its
-existing capability contract.
-`backend(auto)` may use Mata before preparation/RNG if the centering
-capability is absent, subject to strict native-consent rules.
-`backend(rust)` or explicit `rng(counter_v1)` requires the matching build.
-
-The historical [centering adoption record](native/centering-20261006/manifest.json) binds
-the four October 6 plugins to full platform and explicit Rust centering
-checks. The owner authorized source publication on October 7. At that checkpoint,
-the Windows hosted build passed and the owner subsequently authorized adoption for manual
-testing while runtime qualification remained pending.
-Earlier binary records retain their original tested artifacts. See [centering](fevc/docs/CENTERING.md) and
-[native provenance](native/README.md).
+A value of 0 means the feature is not available. When a feature is
+missing, `backend(auto)` uses Mata if it can do so before estimation starts.
+An explicit `backend(rust)` or `rng(counter_v1)` stops with an error instead.
+For the numerical MCSE, an omitted `mcse()` keeps the native point estimates
+and reports the MCSE as unavailable, while an explicit `mcse(all)` stops with
+an error. Projections and component inference cannot be combined in one
+native call; they can be combined only in exact Mata without a structured
+variance model. See the
+[centering guide](fevc/docs/CENTERING.md) and the
+[native plugin records](native/README.md).
 
 ## Upgrading an older development installation
 
-The September 18 prerelease cleanup renamed the 28 `_fevc*.ado` helper files
-to `fevc__*.ado`. The public `fevc` command and plugin filenames are unchanged;
-old helper aliases are not installed. Helpers are internal interfaces.
+Some earlier development versions used helper files named `_fevc*.ado`;
+these are now named `fevc__*.ado`. The public `fevc` command and plugin
+filenames are unchanged, and the old helper names are not installed.
 
-Before installing this source over an earlier development installation:
+Before installing this version over an earlier development installation:
 
 1. Run `ado uninstall fevc` while the old installation is still registered.
-2. Install the current package from your chosen source using the commands above.
-3. Restart Stata to clear cached ado/Mata programs and loaded native plugins.
+2. Install the current package using one of the commands above.
+3. Restart Stata to clear cached programs and loaded native plugins.
 
 Using `net install ..., replace` alone leaves the old helper files behind.
-If files were copied manually or multiple installations exist, inspect `which
-fevc` and `adopath` and remove only the identified obsolete package files;
-the installer does not delete files by wildcard. Other packages can also
+If files were copied manually or several installations exist, inspect
+`which fevc` and `adopath` and remove only the identified old package files;
+the installer does not delete files by wildcard, and other packages can also
 have underscore-prefixed filenames.
-
-## Numerical MCSE interface
-
-Current source defaults to `mcse(all)` and accepts `mcse(off)` to skip the
-additional work. Native all-MCSE requires the numerical V2 interface. With an
-older plugin, an implicit default preserves point estimation and reports MCSE
-unavailable; an explicit `mcse(all)` requires a matching plugin. Restart Stata
-when replacing loaded Mata/native runtimes. Platform qualification and binary
-adoption are recorded in [native provenance](native/README.md).
-Mean's MCSE holds the observed mean fixed; Corrected's also holds its extra
-centering increment fixed. Exact enabled MCSE is zero; off is unavailable.
-See [the centering contract](fevc/docs/CENTERING.md).
