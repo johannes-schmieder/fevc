@@ -344,17 +344,17 @@ controls are not silently dropped. See the
 
   {it:Option}{col 40}Description
   {hline 76}
-    {cmd:inference(none|highrank|q1)}{col 40}component intervals; default none
+    {cmd:inference(none|highrank|q1)}{col 40}experimental intervals; default none
     {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}optional structured variance model
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
-    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}Rust variance-model probes; default 2,048
+    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}variance-model probes; default 2,048
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 40}inference seed; default 8675309
     {cmd:inferencebins(}{it:#}{cmd:)}{col 40}target_lowess bins; default 1,000
   {hline 76}
 
 {pstd}
-{cmd:inference(highrank)} requests
+Component inference is experimental. {cmd:inference(highrank)} requests
 normal-approximation (Gaussian) intervals for the four components. They
 require that no single direction in the data dominate a component and that
 individual observations have limited influence. {cmd:inference(q1)} allows

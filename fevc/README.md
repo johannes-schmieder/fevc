@@ -171,8 +171,8 @@ see `help fevc` for their names.
 
 Projection standard errors and component confidence intervals require
 explicit options and have different assumptions. Both accept mean (the
-default) and no centering. Component inference relies on a model for the
-error variances, structured models impose further
+default) and no centering. Component inference is experimental: it relies
+on a model for the error variances, structured models impose further
 assumptions, fixed-offset match inference omits the uncertainty from
 estimating the controls, and observation-q1 calibration retains a
 documented limitation. Confidence intervals that pool movers and stayers

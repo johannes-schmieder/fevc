@@ -10,8 +10,9 @@ whole worker–firm matches or single observations. It uses exact calculation
 for small problems and a randomized approximation for large ones. A native
 Rust plugin provides speed on large datasets, and a Mata implementation runs
 wherever Stata runs. Point estimation is the default. Standard errors for
-projections of fixed effects on covariates, and confidence intervals for the
-variance components, are available on request for supported models; see the
+projections of fixed effects on covariates, and experimental confidence
+intervals for the variance components, are available on request for
+supported models; see the
 [inference guide](fevc/docs/INFERENCE.md).
 
 Because the randomized approximation depends on random draws, `fevc` reports
@@ -30,8 +31,8 @@ that centering can introduce in point estimates. Projections and confidence inte
 as fixed and ignore the uncertainty from estimating it. See the
 [centering guide](fevc/docs/CENTERING.md).
 
-Confidence intervals for the variance components rely on additional
-assumptions. In the package's simulation assessment, the exact Mata method
+Confidence intervals for the variance components are experimental and rely
+on additional assumptions. In the package's simulation assessment, the exact Mata method
 produced intervals too rarely in three of its four primary designs, and the
 native calculation, which produced intervals in all eight primary designs,
 was materially sensitive to numerical settings.
