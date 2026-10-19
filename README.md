@@ -63,6 +63,15 @@ To update an existing installation:
 ssc install fevc, replace
 ```
 
+To install the tagged
+[0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
+directly from GitHub using Stata's built-in installer:
+
+```stata
+net install fevc, replace ///
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
+```
+
 Alternatively, use the community-contributed
 [`github` installer](https://github.com/haghish/github):
 
@@ -72,7 +81,7 @@ net install github, from("https://haghish.github.io/github/")
 github install johannes-schmieder/fevc
 ```
 
-Both methods install the command, help, and native plugins.
+All three methods install the command, help, and native plugins.
 SSC provides the version distributed through SSC; `github install` installs
 the current `main` branch, which may include newer changes.
 Restart Stata after updating to load the new programs and native plugin.
