@@ -1,4 +1,4 @@
-# Installing fevc 0.5.0
+# Installing fevc
 
 `fevc` requires Stata 18 or 19. The package includes precompiled native plugins
 for macOS (Apple silicon and Intel), Linux x86-64, and Windows x86-64. No
@@ -10,11 +10,16 @@ See the [native plugin records](native/README.md) for details.
 
 ## Installation
 
-Run this in Stata:
+Install `fevc` from SSC in Stata:
 
 ```stata
-net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
+ssc install fevc
+```
+
+To update an existing installation:
+
+```stata
+ssc install fevc, replace
 ```
 
 Alternatively, use the community-contributed
@@ -31,12 +36,11 @@ Then install `fevc` directly from this repository:
 github install johannes-schmieder/fevc
 ```
 
-Both methods install the same programs, help, licenses, and five plugin files
-(macOS Apple silicon, Intel and universal, Linux x86-64, and Windows x86-64).
-`fevc` loads the plugin that matches your computer. The `net install` command
-above installs the [0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0);
-`github install` installs the current `main` branch, which may include later
-changes.
+Both methods install the programs, help, and native plugins for macOS
+(Apple silicon and Intel), Linux x86-64, and Windows x86-64. `fevc` loads
+the plugin that matches your computer. SSC provides the version distributed
+through SSC; `github install` installs the current `main` branch, which may
+include newer changes.
 
 After installation:
 
@@ -71,6 +75,19 @@ assert "`e(backend_selected)'" == "rust"
 The probe values correspond to live progress reporting, outcome centering,
 mean-centered projections, mean-centered component inference, and
 confidence intervals that pool movers and stayers.
+
+## Installing a specific release
+
+To install the tagged
+[0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
+from GitHub:
+
+```stata
+net install fevc, replace ///
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
+```
+
+Restart Stata after updating to load the new programs and native plugin.
 
 ## Release ZIP and offline installation
 

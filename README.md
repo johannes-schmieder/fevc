@@ -51,12 +51,16 @@ before reporting intervals.
 
 ## Installation
 
-Version [0.5.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
-is the first public release. Install it in Stata with:
+Install `fevc` from SSC in Stata:
 
 ```stata
-net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
+ssc install fevc
+```
+
+To update an existing installation:
+
+```stata
+ssc install fevc, replace
 ```
 
 Alternatively, use the community-contributed
@@ -68,13 +72,12 @@ net install github, from("https://haghish.github.io/github/")
 github install johannes-schmieder/fevc
 ```
 
-Both methods install the command, help, license notices, and native plugins.
-The `net install` command above installs version 0.5.0; `github install`
-installs the current `main` branch, which may include later changes.
-For an offline installation, download `fevc-0.5.0.zip` from the release,
-extract it, and run `net install fevc, replace from("/path/to/extracted/fevc")`.
+Both methods install the command, help, and native plugins.
+SSC provides the version distributed through SSC; `github install` installs
+the current `main` branch, which may include newer changes.
 Restart Stata after updating to load the new programs and native plugin.
-If you previously installed a development version, see the
+For a specific release, offline installation, or upgrading an earlier
+development version, see the
 [installation notes](INSTALLATION.md).
 
 ## Example
