@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: MIT
 # Build-only test distribution: licensed Stata validation is performed by the owner.
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -42,7 +42,7 @@ Copy-Item $library (Join-Path $package $plugin)
 Copy-Item 'fevc/stata.toc' $package
 $manifest = @($manifest | ForEach-Object {
     if ($_ -eq 'f LICENSE' -or $_ -eq 'f THIRD_PARTY_NOTICES.txt') { 'F ' + $_.Substring(2) }
-    elseif ($_ -like 'd GPL-3.0-only prerelease source package;*') { 'd Windows test candidate; licensed Stata testing pending.' }
+    elseif ($_ -like 'd MIT prerelease source package;*') { 'd Windows test candidate; licensed Stata testing pending.' }
     else { $_ }
 }) + @("f $plugin")
 $manifest | Set-Content -Encoding utf8 (Join-Path $package 'fevc.pkg')
@@ -75,7 +75,7 @@ Then run:
 The log should end with FEVC WINDOWS SMOKE PASS. The help examples preserve data.
 The included test is a smoke check, not full scientific/platform qualification.
 
-Rust 1.85.1; x86_64-pc-windows-msvc; static CRT; GPL-3.0-only.
+Rust 1.85.1; x86_64-pc-windows-msvc; static CRT; MIT.
 Corresponding source and locked dependencies:
   https://github.com/johannes-schmieder/fevc/tree/$commit
 "@ | Set-Content -Encoding ascii (Join-Path $package 'README-WINDOWS.txt')

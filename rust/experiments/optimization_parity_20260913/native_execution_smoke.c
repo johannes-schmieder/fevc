@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-only
+/* SPDX-License-Identifier: MIT
  * Load the exact qualified thin/universal plugin, without Stata host services,
  * and exercise V6 through the compiled C ABI. Synthetic data only. */
 #include "vckss_rust.h"

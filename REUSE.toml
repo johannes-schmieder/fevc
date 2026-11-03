@@ -16,7 +16,7 @@ path = [
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Johannes F. Schmieder"
-SPDX-License-Identifier = "GPL-3.0-only"
+SPDX-License-Identifier = "MIT"
 
 [[annotations]]
 path = [
@@ -29,4 +29,4 @@ SPDX-FileCopyrightText = [
     "2026 Johannes F. Schmieder",
     "CMG upstream authors as recorded in fevc/cmg/docs/SOURCE_PROVENANCE.md",
 ]
-SPDX-License-Identifier = "GPL-3.0-only"
+SPDX-License-Identifier = "MIT"

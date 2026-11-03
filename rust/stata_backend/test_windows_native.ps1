@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: MIT
 param([string]$OutputDirectory = (Join-Path (Get-Location).Path 'windows-native-launcher-test'))
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest

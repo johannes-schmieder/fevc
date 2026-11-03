@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 //! Composed regressions: a correct cap alone does not prove the executed width.
 
 #[test]

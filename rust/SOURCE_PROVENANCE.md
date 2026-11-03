@@ -1,6 +1,6 @@
 # Rust numerical source provenance
 
-The Rust backend is distributed under `GPL-3.0-only`. Public binary release remains subject to the repository's required human license and provenance review.
+The Rust backend is distributed under `MIT`. Public binary release remains subject to the repository's required human license and provenance review.
 
 ## Improved CMG baseline
 
@@ -39,7 +39,7 @@ file-level upstream hashes, and the narrow FEVC integration patch classes.
 The earlier authorized source-review manifest is retained as
 `rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml`.
 
-The vendored crate and FEVC are `GPL-3.0-only`. Normal builds use the locked
+The vendored crate and FEVC are `MIT`. Normal builds use the locked
 path dependency and Rust 1.85.1; they do not read or modify a standalone CMG
 checkout. Public distribution remains subject to the repository's human
 mathematical and license/provenance review.
@@ -48,7 +48,7 @@ mathematical and license/provenance review.
 
 The ordinary third-party Stata plugin build uses the public SPI 3.0 files that
 StataCorp instructs plugin authors to download from
-`https://www.stata.com/plugins/`. They are not repository-authored GPL source
+`https://www.stata.com/plugins/`. They are not repository-authored MIT source
 and remain untracked. The files were reviewed and retrieved on 2026-08-21;
 `stplugin.c` identifies SPI 3.0 and is 198 bytes, while `stplugin.h` identifies
 version 3.0.0 and is 6,215 bytes. Run

@@ -3,7 +3,7 @@
 - Upstream repository: `https://github.com/johannes-schmieder/CMG`
 - Upstream commit: `92a12f2d572ca56b30a035220953f9dd4bced999`
 - Selected-source archive SHA-256: `708e5d1eac60fe472246ce2989c6d9753667b4ceb9f5286b48c192d16b870b34`
-- License: `GPL-3.0-only`
+- License: `MIT`
 - Imported on: 2026-08-27
 
 The import contains the upstream library crate, tests, license, README, and
@@ -48,6 +48,11 @@ FEVC modifications are kept narrow and source-visible:
    to `vckss_bridge.rs`, `pcg.rs`, `workspace.rs`, `components.rs`,
    `preconditioner.rs` and `error.rs`; scalar arithmetic is unchanged. This is
    a FEVC integration patch, not an upstream CMG update or fused-RHS port.
+
+On 2026-11-03 the license text, Cargo metadata, and current license notices
+were changed to MIT after Johannes confirmed permission from CMG's developers
+via Ioannis Koutis. The numerical source and pinned upstream identity are
+unchanged. `UPSTREAM_MANIFEST.sha256` records the original source import.
 
 The standalone `/Users/johannes/Git/CMG` checkout is not a build dependency
 and is never modified by FEVC builds.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Checked conversion from a C ABI generation value to the opaque Rust handle.
 

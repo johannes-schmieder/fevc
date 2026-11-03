@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Synchronous, additive host reporting scope. Existing estimator ABIs and
 //! error transports run unchanged inside the supplied operation.

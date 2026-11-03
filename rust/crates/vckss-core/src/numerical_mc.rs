@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Local point-probe linearization. Primitive order is worker, firm, covariance.
 //! This module changes neither point adjustments nor statistical random draws.

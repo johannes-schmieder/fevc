@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: MIT
 # Windows PowerShell 5.1 treats redirected native stderr as PowerShell errors.
 # Process-level redirection preserves informational stderr and the real exit code.
 function Invoke-FevcWindowsNative {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Deterministic CMG hierarchy, symmetric V-cycle, and full zero-sum quotient
 //! preconditioner for the worker-eliminated two-way fixed-effect system.

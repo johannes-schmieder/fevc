@@ -53,7 +53,7 @@ The KSS Matlab source is a behavior and scientific reference only.
 Its missing license means that neither its source nor its binary
 `tabulation_10K.mat` critical-value table may be copied into FEVC. Inference
 code and any critical-value table generator are repository-authored from the
-published KSS formulas and distributed under GPL-3.0-only.
+published KSS formulas and distributed under MIT.
 
 The shipped `fevc_inference.mata` runtime is an independent implementation.
 The KSS Matlab files `leave_out_COMPLETE.m`,

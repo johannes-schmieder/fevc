@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::*;
 use crate::generic_jla::NumericalRhsPhase;
 use crate::numerical_mc::{self, Covariance, FiniteDerivative, Primitive, Status, Sum};

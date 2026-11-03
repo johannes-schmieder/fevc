@@ -82,7 +82,7 @@ REQUIRED_DOCUMENTATION = {
 }
 REQUIRED_CMG_SOURCE = {
     PurePosixPath("CODE_LICENSE.md"),
-    PurePosixPath("LICENSES/GPL-3.0-only.txt"),
+    PurePosixPath("LICENSES/MIT.txt"),
     PurePosixPath("fevc/cmg/AGENTS.md"),
     PurePosixPath("fevc/cmg/README.md"),
     PurePosixPath("fevc/cmg/generated/cmg_test.mata"),

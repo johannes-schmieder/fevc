@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Residual-moment attachments, including the direct residual-probe V4 policy.
 //! The named structured model describes the variance basis; the separate

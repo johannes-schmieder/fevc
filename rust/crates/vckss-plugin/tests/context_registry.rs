@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use vckss_core::error::{BackendError, ErrorCode};
 use vckss_plugin::context::{ContextRegistry, ContextStateTag};

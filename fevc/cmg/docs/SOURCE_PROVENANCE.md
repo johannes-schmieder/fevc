@@ -1,15 +1,15 @@
 # CMG source provenance
 
-## CMG-MATA-1 boundary change
+## License and source boundary
 
-On 2026-08-18 the owner explicitly overrode the clean-room restriction for the
-CMG modernization work, authorized inspection and a Mata port of the official
-implementation, and selected GPLv3 for the code. `CMG-MATA-1` therefore uses
-SPDX identifier `GPL-3.0-only`, the conservative reading of the upstream
-notice's reference to GNU GPL Version 3.0 without an express "or later"
-grant. The pre-existing API 5 Mata implementation remains historically
-clean-room-authored; new source-informed work must not be described as
-clean-room.
+On 2026-11-03 Johannes Schmieder confirmed official permission from CMG's
+developers, communicated through Ioannis Koutis, to release CMG under MIT.
+Johannes selected MIT for CMG, fevc, and fereg.
+
+The source-informed Mata implementation is MIT-licensed under `CODE_LICENSE.md`.
+The owner authorized inspection and a Mata port of the official implementation
+on 2026-08-18. The earlier API 1–5 implementation was independently authored;
+the source-informed implementation must not be described as clean-room.
 
 The authoritative maintained source inspected for design review is:
 
@@ -19,7 +19,7 @@ The authoritative maintained source inspected for design review is:
 
 The Mata implementation must use a file-level manifest before porting code.
 It must retain the copyright of Ioannis Koutis and Gary Miller,
-the GPL Version 3 notice, modification dates, repository-authored notices, and
+the MIT permission notice, modification dates, repository-authored notices, and
 exact hashes. The immutable predecessor-era snapshot is retained as
 [`rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml`](../../../rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml);
 its former path in the archived VCKSS tree is not a live dependency.
@@ -72,6 +72,6 @@ must bind the exact source under test.
 ## Licensing boundary
 
 CMG and containing-package code covered by `CODE_LICENSE.md` is selected for
-GPL-3.0-only. Research content and data remain outside that grant. Development,
+MIT. Research content and data remain outside that grant. Development,
 internal tests, and private SCC runs are authorized. Public distribution waits
 for complete corresponding source/notices and the plan's final human review.

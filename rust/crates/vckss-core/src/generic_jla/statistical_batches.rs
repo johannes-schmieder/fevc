@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Statistical sweeps partition output rows/copies, never floating-point
 //! reductions. Each accumulator sees probes in the original logical order.

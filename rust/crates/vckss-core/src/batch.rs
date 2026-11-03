@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Batched scalar PCG for repeated two-way fixed-effect right-hand sides.
 //!

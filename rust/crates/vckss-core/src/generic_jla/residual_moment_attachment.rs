@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Private live-solver adapter. No legacy caller selects this path.
 use super::*;

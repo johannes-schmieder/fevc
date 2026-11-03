@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use vckss_core::batch_plan::{
     plan_batches, BatchPlannerCaps, BatchRequest, PhaseMemoryModel, BATCH_ARITHMETIC_CONTRACT,

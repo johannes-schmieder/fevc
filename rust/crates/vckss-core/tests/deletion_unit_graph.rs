@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 //! Small exhaustive oracle using vertex/edge removal and reachability, not
 //! production Tarjan traversals or production support counters.
 use std::collections::BTreeSet;

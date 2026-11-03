@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::*;
 use vckss_core::generic_jla::run_generic_jla_with_numerical_mc_interrupt;
 use vckss_core::memory::{MemoryBudget, MemoryCheck};

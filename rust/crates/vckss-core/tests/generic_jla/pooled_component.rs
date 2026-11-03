@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::*;
 
 fn fixture(expand: bool) -> vckss_core::stayer_hybrid::PreparedExactStayerHybrid {

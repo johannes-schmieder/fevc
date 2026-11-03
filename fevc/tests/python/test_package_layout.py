@@ -379,12 +379,12 @@ def test_package_records_internal_license_boundary() -> None:
     readme = " ".join(
         (ROOT / "README.md").read_text(encoding="utf-8").lower().split()
     )
-    assert "gpl-3.0-only portable source package" in manifest
+    assert "mit portable source package" in manifest
     assert "no public release has yet been issued" not in manifest
     assert "distribution-date: 20261014" in manifest
-    assert "gpl-3.0-only" in readme
+    assert "mit" in readme
     license_note = (ROOT.parent / "CODE_LICENSE.md").read_text(encoding="utf-8")
-    assert "completed on 2026-08-29" in license_note
+    assert "Ioannis Koutis" in license_note
     assert (ROOT.parent / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
     assert (ROOT / "THIRD_PARTY_NOTICES.txt").is_file()
 

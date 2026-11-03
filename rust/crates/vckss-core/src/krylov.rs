@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{InterruptCheck, NeverInterrupt, INTERRUPT_CHECK_CHUNK};

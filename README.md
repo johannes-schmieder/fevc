@@ -132,5 +132,5 @@ options, and more examples, or read the [usage guide](fevc/README.md).
 
 ## License
 
-GPL-3.0-only for the package code. See [LICENSE](LICENSE),
+MIT for the package code. See [LICENSE](LICENSE),
 [code licensing](CODE_LICENSE.md), and [third-party notices](THIRD_PARTY_NOTICES.md).

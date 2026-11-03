@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Execution-only inference intent. The borrowed view never copies retained
 //! variances, changes RNG domains, or mutates a prepared generation.

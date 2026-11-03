@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Deterministic routing for exact, diagonal-PCG, and CMG-PCG solves.
 //!

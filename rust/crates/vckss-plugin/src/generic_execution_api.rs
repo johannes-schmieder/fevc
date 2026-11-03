@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Additive execution-only interface. Statistical capabilities, augmentation
 //! widths and V1--V5 solve meanings are deliberately unchanged.

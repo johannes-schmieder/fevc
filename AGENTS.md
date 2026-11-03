@@ -135,8 +135,8 @@ versions, seeds, tolerances, failures, and skipped external gates.
 
 ## Licensing
 
-Follow `CODE_LICENSE.md` and the source-provenance records. GPL-3.0-only
-governs covered code. Public tagging and release remain separate owner
+Follow `CODE_LICENSE.md` and the source-provenance records. MIT governs covered code under the
+2026-11-03 permission recorded in `CODE_LICENSE.md`. Public tagging and release remain separate owner
 decisions and require the recorded human and exact-artifact checks.
 
 Use “KSS Matlab package” or “KSS Matlab code” for the comparator; distinguish

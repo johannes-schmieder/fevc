@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Direct-solver storage is charged in addition to the generic statistical
 //! engine's observation/match-specific live arrays. No memory policy changes.

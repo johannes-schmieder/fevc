@@ -2,7 +2,7 @@
 # duplicates, missing installed runtime modules, and unsorted entries.
 # relative regular file. The builder rejects symlinks, unsafe paths,
 CODE_LICENSE.md
-LICENSES/GPL-3.0-only.txt
+LICENSES/MIT.txt
 fevc/AGENTS.md
 fevc/CHANGELOG.md
 fevc/LICENSE

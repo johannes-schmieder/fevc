@@ -122,5 +122,5 @@ Current feature and platform status is in the
 [capability ledger](../fevc/docs/RUST_MATA_PARITY.md). Historical results qualify
 only their recorded sources; they do not qualify the current worktree.
 
-The code is GPL-3.0-only, subject to [source provenance](SOURCE_PROVENANCE.md)
+The code is MIT, subject to [source provenance](SOURCE_PROVENANCE.md)
 and the included third-party notices.

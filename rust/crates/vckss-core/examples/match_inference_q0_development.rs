@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Source-bound development generator for fixed-offset collapsed-match q=0 inference.
 //!

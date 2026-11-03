@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::{parallel, run_exact_estimator, ExactEstimatorOptions};
 use crate::interrupt::NeverInterrupt;
 use crate::jla::VarianceComponents;

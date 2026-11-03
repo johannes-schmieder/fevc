@@ -1,53 +1,30 @@
 # Code license
 
-## Selected license
+The covered package code is licensed under MIT. The full license is in
+[`LICENSE`](LICENSE), with identical copies in
+[`LICENSES/MIT.txt`](LICENSES/MIT.txt) and the installable package.
 
-The owner selected the GNU General Public License, Version 3 only
-(`GPL-3.0-only`) on 2026-08-18 for the CMG implementation and for any
-distributed package that forms one program with that implementation. The
-human package-boundary, corresponding-source, notice, provenance, and data
-exclusion review was completed on 2026-08-29. The canonical full license text
-is in [`LICENSE`](LICENSE), with an archival copy in
-[`LICENSES/GPL-3.0-only.txt`](LICENSES/GPL-3.0-only.txt).
+On 2026-11-03 Johannes Schmieder confirmed official permission from CMG's
+developers, communicated through Ioannis Koutis, to release CMG under MIT.
+Johannes selected MIT for CMG, fevc, and fereg.
 
 ## Covered code
 
-Subject to the file-level third-party notices and exclusions below, the grant
-covers:
+Subject to file-level third-party notices, MIT covers the repository-authored
+implementation, tests, build tools, and generated artifacts under `fevc/**`
+and `rust/**`, including the Mata CMG component and adapted Rust CMG copy.
+Preserve the original CMG authors' copyright notices and source attribution.
 
-- the installable package and repository-authored implementation code under
-  `fevc/**`, including the internal `fevc/cmg/**` component,
-  tests, build tools, and generated CMG artifacts; and
-- the Rust backend under `rust/**`, including the GPL-3.0-only full-CMG source
-  vendored with its original copyright, license, and provenance notices.
+## Other materials
 
-Repository-authored files in those covered distributions are offered under
-GPL-3.0-only. Adapted CMG files retain the copyright and GPL notices of their
-original authors. A file-level provenance manifest must identify copied and
-modified third-party source.
+This grant does not cover manuscripts, source notes, proofs, reviews,
+restricted or confidential data, or unrelated third-party dependencies.
+Those materials retain their own terms. The Stata plugin interface and native
+dependency notices are not relicensed.
 
-## Not covered by this grant
+## Distribution
 
-This is not a license for the whole repository. It does not grant rights to:
-
-- manuscripts, releases, source notes, proofs, reviews, or archived material;
-- restricted, licensed, confidential, or excluded data; or
-- third-party dependencies except under their own licenses.
-
-Those materials may appear in the same repository as a collection or
-aggregate without becoming GPL-covered. Their existing notices and use terms
-remain controlling.
-
-## Distribution condition
-
-Any conveyed object code must satisfy GPLv3's corresponding-source and notice
-requirements. `CMG-MATA-1` is implemented entirely in Mata and includes no
-compiled CMG helper, MEX file, Stata plugin, subprocess, or binary interchange
-layer. The optional Rust backend includes a compiled full-CMG implementation
-whose complete corresponding source and notices are retained under
-`rust/vendor/cmg/`. The human review gate is complete. Version 0.5.0 is the
-first public GitHub release, authorized by the owner on 2026-10-14, including
-the current Windows binary with its runtime test still pending. Each release
-preserves its exact package, corresponding source, notices, and validation
-scope. This document records the owner's license selection and review status;
-it is not legal advice.
+Include the MIT copyright and permission notices in all copies or substantial
+portions of covered software, together with required third-party notices.
+Public tags and releases remain separate owner decisions. Keep matching source,
+notices, and validation information with native distributions.

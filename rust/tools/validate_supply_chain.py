@@ -14,7 +14,6 @@ from typing import Any
 
 
 ALLOWED_LICENSES = {
-    "GPL-3.0-only",
     "MIT",
     "MIT OR Apache-2.0",
     "(MIT OR Apache-2.0) AND NCSA",

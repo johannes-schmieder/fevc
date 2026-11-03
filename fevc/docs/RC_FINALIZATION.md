@@ -28,7 +28,7 @@ and all earlier scientific receipts remain unchanged.
 - The required offset-uncertainty warning, match diagnostics, unsupported
   combinations and unresolved observation-q1 calibration failure are visible
   in help, returned metadata and display.
-- The owner-selected GPL-3.0-only package boundary and human source/provenance
+- The owner-selected MIT package boundary and human source/provenance
   review are already complete. They should not be described as an unfinished
   general license decision. Final approval of the actual distribution remains
   separate; see `../../CODE_LICENSE.md`.

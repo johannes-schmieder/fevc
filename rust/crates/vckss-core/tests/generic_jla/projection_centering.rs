@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::*;
 use vckss_core::projection::ProjectionResult;
 use vckss_core::types::Centering;

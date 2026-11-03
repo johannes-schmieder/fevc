@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: MIT
 # Invoked only by the owner-controlled guarded windows-ci.do profile.
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest

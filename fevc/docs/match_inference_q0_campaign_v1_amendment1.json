@@ -49,7 +49,7 @@
     "frozen_file_sha256": {
       "fevc/tests/python/test_match_inference_q0_campaign.py": "0cd5df0d753fdd99ba4a9d37063015d93ae876ba4817593fb14e0b53cec5cc79",
       "fevc/tools/run_match_inference_q0_campaign.py": "e300c2a928fabd81d5e6e01481583b6417199ade930688babffedbe123f735d1",
-      "rust/crates/vckss-core/examples/match_inference_q0_development.rs": "a165b57e1061d1c515e2acf9ceb84d6713db33a4592f6cb370bfbe85e0b54339"
+      "rust/crates/vckss-core/examples/match_inference_q0_development.rs": "e32b89751f5434e5ef373efa9840fd0b5f74fed48f40fabb08e6082d8ffc795a"
     }
   },
   "authority": {

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! The deletion-neutral direct FE solve used beneath generic JLA. Statistical
 //! probes, physical-copy deletion and target corrections remain in generic_jla.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Existing-outcome diagnosis, separate from the frozen confirmation executable.
 fn main() {
     let args=std::env::args().collect::<Vec<_>>();

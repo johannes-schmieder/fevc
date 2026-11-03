@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 // Compile the build helper as an ordinary test module so its hash, input, and
 // platform-policy tests run under Cargo with resolved build dependencies.

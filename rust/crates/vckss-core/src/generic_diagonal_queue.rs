@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Pre-RNG planning for the isolated diagonal estimator executor. No public
 //! option, solver choice, RNG key, or registered acceptance threshold changes.

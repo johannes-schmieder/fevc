@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use std::ffi::{c_void, CStr};
 use std::mem::{offset_of, size_of};

@@ -422,7 +422,7 @@ Physical-copy storage is used by observation leverage probes, match
 leverage probes, and target probes under literal-frequency semantics.
 `physical_limit()` supplies a typed pre-allocation boundary for every selected
 JLA route before any of that state is allocated. The package installs the
-exact Schur-diagonal and source-informed GPL CMG preconditioners behind one lockstep
+exact Schur-diagonal and source-informed CMG preconditioners behind one lockstep
 solver contract. Routing is structural and finishes before estimator RNG.
 Explicit diagonal uses B1. Explicit CMG builds the hierarchy and fails closed
 if setup or execution fails. Automatic mode uses diagonal for structurally

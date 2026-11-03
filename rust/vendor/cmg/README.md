@@ -1,7 +1,7 @@
 # CMG: Combinatorial Multigrid in Rust
 
 [![Rust CI](https://github.com/johannes-schmieder/CMG/actions/workflows/rust.yml/badge.svg)](https://github.com/johannes-schmieder/CMG/actions/workflows/rust.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 CMG is a deterministic Rust solver for large weighted graph Laplacians and
 symmetric diagonally dominant M-matrices (SDDM). It combines a reusable
@@ -288,5 +288,5 @@ Rust port and record the version or source commit used.
 
 ## License
 
-GNU GPL version 3 only. See [`LICENSE`](LICENSE) and
+MIT under the 2026-11-03 permission recorded in `VENDOR.md`. See [`LICENSE`](LICENSE) and
 [`docs/UPSTREAM.md`](docs/UPSTREAM.md).

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Campaign calls use the actual additive public native lifecycle, not a
 // modified estimator or an oracle variance attachment.
 use std::{ffi::CStr, mem::size_of, ptr};

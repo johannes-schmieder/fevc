@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use vckss_core::engine::{run_jla_no_controls, JlaEngineOptions};
 use vckss_core::types::InputColumns;

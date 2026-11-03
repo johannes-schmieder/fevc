@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Inserted inside the immutable campaign module in a disposable build only.
     pub fn audit_entry() {
         let arguments = env::args().skip(1).collect::<Vec<_>>();

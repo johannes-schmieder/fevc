@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Isolated exact-execution prototype. No legacy entrypoint or ABI selects it.
 

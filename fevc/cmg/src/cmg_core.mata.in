@@ -1,6 +1,6 @@
 *! CMG, Copyright (c) 2008-2010 Ioannis Koutis and Gary Miller
 *! Source-informed Mata port and modifications Copyright (c) 2026 Johannes Schmieder
-*! SPDX-License-Identifier: GPL-3.0-only
+*! SPDX-License-Identifier: MIT
 
 version 18.0
 

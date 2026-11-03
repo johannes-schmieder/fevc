@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::*;
 use queued_component::{inference_options, science};
 use vckss_core::component_inference::PreparedComponentInference;

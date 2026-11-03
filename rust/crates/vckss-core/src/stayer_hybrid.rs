@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Source-bound augmentation blocks shared by exact and generic-JLA
 //! mover-plus-stayer estimation.

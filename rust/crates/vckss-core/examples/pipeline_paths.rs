@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Bounded public-input attachment diagnostics, not native command timings.
 use std::{error::Error, time::Instant};

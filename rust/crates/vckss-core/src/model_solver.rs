@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Prepared diagonal- and CMG-PCG solvers for the generic W+F+Q model.
 //!

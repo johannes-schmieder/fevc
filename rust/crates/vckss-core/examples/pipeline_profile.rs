@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Diagnostic replay of already-prepared public paper inputs, not a native
 //! complete-command performance gate or a replacement for sample preparation.

@@ -9,7 +9,7 @@ CMG_COMMIT = "92a12f2d572ca56b30a035220953f9dd4bced999"
 def test_full_cmg_vendor_is_source_pinned_and_normal_build_owned() -> None:
     record = (VENDOR / "VENDOR.md").read_text(encoding="utf-8")
     assert CMG_COMMIT in record
-    assert "GPL-3.0-only" in record
+    assert "License: `MIT`" in record
     assert (VENDOR / "LICENSE").is_file()
     assert not (VENDOR / "src/bin").exists()
     assert (VENDOR / "src/cancel.rs").is_file()

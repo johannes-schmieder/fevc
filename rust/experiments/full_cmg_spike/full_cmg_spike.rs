@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Private direct-hybrid performance spike backed by the standalone CMG crate.
 //!

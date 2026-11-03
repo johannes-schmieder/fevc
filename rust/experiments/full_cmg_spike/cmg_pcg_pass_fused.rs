@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 // This file is included at the end of exact standalone CMG commit dbefbc5's
 // `pcg.rs` only inside the VCkss private performance build. It deliberately

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // New orchestration only: native_campaign and all estimator functions are unchanged.
 const NATIVE_CONFIRMATION_SEED:u64=326417;
 const NATIVE_CONFIRMATION_MASTER:u64=1956048372195603;

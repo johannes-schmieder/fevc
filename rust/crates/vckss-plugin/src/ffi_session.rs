@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Versioned C ABI for staged preparation from caller-owned numeric columns.
 //!

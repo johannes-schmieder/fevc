@@ -1,5 +1,5 @@
 CODE_LICENSE.md
-LICENSES/GPL-3.0-only.txt
+LICENSES/MIT.txt
 fevc/benchmarks/matlab_scale/common.py
 fevc/benchmarks/matlab_scale/monitor_process_tree.py
 fevc/benchmarks/matlab_scale/source_contract.json

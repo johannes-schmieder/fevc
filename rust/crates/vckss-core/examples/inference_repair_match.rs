@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Inference repair harness: frozen V1 match DGPs with explicit target diagnostics.
 //!

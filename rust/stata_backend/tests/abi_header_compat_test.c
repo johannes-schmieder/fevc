@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: MIT */
 
 #include "vckss_rust.h"
 _Static_assert(VCKSS_CORE_COMPONENT_CENTERING_V1_READY == UINT64_C(65536), "component centering capability bit");

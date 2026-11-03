@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use vckss_core::component_inference::{
     finish_component_covariance, finish_component_covariance_with_reporting, ComponentJointStatus,

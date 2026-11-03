@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the active VCkss GPL package boundary without rewriting files."""
+"""Validate the active FEVC MIT package boundary without rewriting files."""
 
 from __future__ import annotations
 
@@ -9,26 +9,26 @@ import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[2]
-CANONICAL = ROOT / "LICENSES" / "GPL-3.0-only.txt"
+CANONICAL = ROOT / "LICENSES" / "MIT.txt"
 REQUIRED_IDENTICAL = (ROOT / "LICENSE", ROOT / "fevc" / "LICENSE")
 REQUIRED_TEXT = {
     ROOT / "CODE_LICENSE.md": (
-        "GPL-3.0-only",
-        "completed on 2026-08-29",
-        "corresponding source, notices, and validation",
+        "MIT",
+        "Ioannis Koutis",
+        "source,\nnotices, and validation",
     ),
     ROOT / "THIRD_PARTY_NOTICES.md": (
         "rust/vendor/cmg/LICENSE",
         "No MATLAB source",
     ),
     ROOT / "fevc" / "THIRD_PARTY_NOTICES.txt": (
-        "GPL-3.0-only",
+        "MIT",
         "rust/vendor/cmg/",
     ),
-    ROOT / "rust" / "vendor" / "cmg" / "VENDOR.md": ("GPL",),
+    ROOT / "rust" / "vendor" / "cmg" / "VENDOR.md": ("License: `MIT`", "Ioannis Koutis"),
     ROOT / "rust" / "vendor" / "cmg" / "UPSTREAM_MANIFEST.sha256": (),
     ROOT / "REUSE.toml": (
-        'SPDX-License-Identifier = "GPL-3.0-only"',
+        'SPDX-License-Identifier = "MIT"',
         'precedence = "aggregate"',
     ),
 }
@@ -83,15 +83,13 @@ def main() -> int:
             errors.append(f"fevc.pkg: missing package entry {entry!r}")
 
     for path in cargo_manifests(ROOT):
-        if "vendor/cmg" in path.as_posix():
-            continue
         text = path.read_text(encoding="utf-8")
         has_license = (
-            'license = "GPL-3.0-only"' in text
+            'license = "MIT"' in text
             or "license.workspace = true" in text
         )
         if "[package]" in text and not has_license:
-            errors.append(f"{path}: package manifest lacks GPL-3.0-only")
+            errors.append(f"{path}: package manifest lacks MIT")
 
     if errors:
         print("LICENSE_AUDIT=FAIL")
@@ -99,7 +97,7 @@ def main() -> int:
             print(error)
         return 1
     print("LICENSE_AUDIT=PASS")
-    print(f"GPL_SHA256={digest(CANONICAL)}")
+    print(f"MIT_SHA256={digest(CANONICAL)}")
     return 0
 
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Change the covered package code, Mata CMG component, and adapted Rust CMG
+  copy to MIT after permission from CMG's developers via Ioannis Koutis,
+  confirmed by Johannes Schmieder on 2026-11-03. Preserve third-party notices,
+  source pins, historical evidence, and the numerical implementation.
+
 ## 0.5.0 — 2026-10-14
 
 - First public GitHub release of `fevc` for Stata 18 and 19.

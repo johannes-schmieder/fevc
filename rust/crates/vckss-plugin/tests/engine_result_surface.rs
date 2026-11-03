@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use vckss_core::engine::JlaEngineResult;
 use vckss_core::jla::VarianceComponents;

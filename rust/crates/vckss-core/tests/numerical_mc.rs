@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Complex-step golden values from the independent Python dense expression.
 use vckss_core::numerical_mc::{
     conditional_covariance, cross_covariance, finalize, FiniteDerivative, Primitive, Status,

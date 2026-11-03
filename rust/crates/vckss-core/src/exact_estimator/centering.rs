@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 //! Strong-system correction, shared by all exact targets. No observation square.
 use super::*;
 use std::sync::Mutex;

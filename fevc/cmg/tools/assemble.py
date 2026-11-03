@@ -92,7 +92,7 @@ def render(target: Target) -> tuple[bytes, dict[str, object]]:
         raise ValueError("unresolved generator token")
     body_hash = sha256(body)
     header = (
-        "*! generated GPL-3.0-only source-informed CMG Mata core; do not edit\n"
+        "*! generated MIT source-informed CMG Mata core; do not edit\n"
         f"*! generator_api {GENERATOR_API}\n"
         f"*! namespace {target.namespace}\n"
         f"*! canonical_template_sha256 {canonical_hash}\n"

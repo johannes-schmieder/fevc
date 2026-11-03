@@ -3,11 +3,12 @@
 ## Authorization and scope
 
 The owner authorized the source-informed `CMG-MATA-1` implementation and
-selected GPL-3.0-only for the component and containing package. CMG is owned
+selected MIT for the component and containing package on 2026-11-03,
+after confirming permission from CMG's developers via Ioannis Koutis. CMG is owned
 exclusively by `fevc`; it has no separate package, public command, or non-KSS
 runtime target.
 
-This subtree may contain the clean-room Mata core, the source-informed GPL Mata
+This subtree may contain the clean-room Mata core, the source-informed MIT Mata
 two-way fixed-effect core, independent oracles, tests, benchmarks, deterministic
 assembly tooling, and milestone evidence. It may not add a compiled CMG runtime,
 plugin, MEX file, subprocess helper, or binary interchange layer.
@@ -15,19 +16,19 @@ plugin, MEX file, subprocess helper, or binary interchange layer.
 Do not edit Git refs or the frozen manifest, manuscript, proof, release, state,
 archive, application, or imported-provenance trees while doing CMG work.
 
-## GPL and upstream-source boundary
+## License and upstream-source boundary
 
-The owner expressly authorizes using ideas from the official GPL CMG source
+The owner expressly authorizes using ideas from the official CMG source
 recorded in the provenance manifest and the maintained SCC source named by the
 active plan. Treat imported bytes as read-only. Port only algorithms needed by
 the Mata CMG hierarchy, retain notices, mark modifications, and record exact
 paths, commits, hashes, and file-level derivation in
 `docs/SOURCE_PROVENANCE.md` or its manifest.
 
-Covered code uses SPDX identifier `GPL-3.0-only`; see `CODE_LICENSE.md` and
-`LICENSES/GPL-3.0-only.txt`. Do not imply that the manuscript, data, proofs,
-or whole repository share that license. Distributed binaries require complete
-corresponding source and notices.
+Covered code uses SPDX identifier `MIT`; see `CODE_LICENSE.md` and
+`LICENSES/MIT.txt`. Do not imply that the manuscript, data, proofs,
+or whole repository share that license. Keep complete source and required
+MIT and third-party notices with distributions.
 
 ## Numerical contract
 

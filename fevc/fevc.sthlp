@@ -826,7 +826,7 @@ Johannes F. Schmieder, Boston University.
 {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 
 {pstd}
-Version 0.5.0. Code is GPL-3.0-only.
+Version 0.5.0. Code is MIT.
 
 {title:Also see}
 

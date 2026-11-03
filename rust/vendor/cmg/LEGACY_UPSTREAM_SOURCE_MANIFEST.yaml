@@ -1,7 +1,7 @@
 schema_version: 1
 milestone: CMG-MATA-1
 authorized: 2026-08-18
-license_spdx: GPL-3.0-only
+license_spdx: MIT
 copyright_holders:
   - Ioannis Koutis
   - Gary Miller

@@ -54,7 +54,7 @@ unit, or randomized approximation.
 
 The implementation follows the high-rank and rank-one procedures described by
 Kline, Saggio, and Sølvsten (2020) and the KSS Matlab package's
-observable behavior. It is repository-authored GPL-3.0-only source. No MATLAB
+observable behavior. It is repository-authored MIT source. No MATLAB
 source, critical-value table, or binary data are included.
 
 ## Fixed-observed-mean approximation

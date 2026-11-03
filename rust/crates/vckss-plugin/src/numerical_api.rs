@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Additive, opt-in numerical attachment. Frozen solve and receipt layouts
 //! retain their meanings; this transport does not advertise a Stata capability.

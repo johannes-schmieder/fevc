@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Inserted inside the unchanged match DGP module in a disposable build.
 pub fn individual_entry() {
     let args:Vec<_>=env::args().skip(1).collect();

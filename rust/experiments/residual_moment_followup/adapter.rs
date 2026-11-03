@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Appended to the independently constructed frozen RC oracle by build.py.
 // Dense coefficient inverses below are research oracles, never production routes.
 use vckss_core::residual_moments::{prepare_with_interrupt, ResidualMomentOptions};

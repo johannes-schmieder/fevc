@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Build-time-only diagnostics. Disabled guards are zero-sized no-ops; timing
 //! never enters an execution plan, a numerical decision or a public receipt.

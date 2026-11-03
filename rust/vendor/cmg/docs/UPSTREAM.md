@@ -23,7 +23,7 @@ This project is an independent Rust port of the official CMG implementation:
 - pinned commit
   [`19752fc102f8cae8e34f66457bfaccb1aaa60375`](https://github.com/ikoutis/cmg-solver/tree/19752fc102f8cae8e34f66457bfaccb1aaa60375)
 - upstream source path `matlab/cmg`
-- upstream license: GNU GPL version 3
+- license: MIT, under the permission recorded in `../VENDOR.md`
 
 The pinned commit includes the 2026 correction to the C forest-component workspace initialization.
 

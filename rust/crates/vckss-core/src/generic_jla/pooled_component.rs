@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 //! Inference units preserve the point executor's certified mixed partition.
 use super::*;
 use crate::structured_variance::{basis_row, normalized_midranks, StructuredVarianceModel};

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Four-arm paired diagnostic through unchanged internal grouped attachments.
 //! Input design, outcomes, truths, and population oracles are owned by Python.

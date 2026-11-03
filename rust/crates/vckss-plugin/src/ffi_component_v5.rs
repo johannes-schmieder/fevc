@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Additive individual-result transport. Legacy result ABIs remain strict.
 use super::*;

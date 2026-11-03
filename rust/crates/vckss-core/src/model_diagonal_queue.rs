@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Isolated, admitted execution for independent diagonal model RHSs.
 //! V6 and the public generic/diagonal route select this executor. Legacy V5

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 use vckss_core::cmg::CmgOptions;
 use vckss_core::error::{BackendError, ErrorCode, Result};

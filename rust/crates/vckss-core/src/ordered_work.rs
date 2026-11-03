@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Bounded statistical jobs on an already-owned solver pool. Numerical work
 //! and error precedence follow logical input order, not completion order.

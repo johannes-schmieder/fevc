@@ -74,7 +74,7 @@ def test_validator_normalizes_paths_and_requires_registered_licenses() -> None:
 
 def test_fuzz_workspace_declares_its_package_license() -> None:
     manifest = (ROOT / "rust/fuzz/Cargo.toml").read_text(encoding="utf-8")
-    assert 'license = "GPL-3.0-only"' in manifest
+    assert 'license = "MIT"' in manifest
     assert 'repository = "https://github.com/johannes-schmieder/fevc"' in manifest
 
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Research adapter only. Independent dense/factorized oracles remain outside core.
 use vckss_core::{
     batch_plan::BatchRequest,

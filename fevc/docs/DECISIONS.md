@@ -189,7 +189,7 @@ records the method, assumptions, local timings and evidence.
 - The KSS Matlab package is a behavioral reference only. Its source and
   critical-value table are not licensed for copying and are not included.
   The implementation follows the published formulas and ships as
-  GPL-3.0-only repository-authored source.
+  MIT repository-authored source under the 2026-11-03 license decision.
 - Materially negative smoothed variances or indefinite covariance estimates
   withhold the complete request. Only tiny registered roundoff values may be
   set to zero, and all such cleanups are receipted.
@@ -385,7 +385,7 @@ records the method, assumptions, local timings and evidence.
 - Advisory timing, headroom or memory-budget misses do not withhold an
   otherwise admissible command. Actual allocation failures and malformed
   resource receipts remain errors under every memory policy.
-- GPL-3.0-only governs covered code. The human package-boundary,
+- MIT governs covered code under the 2026-11-03 permission in `CODE_LICENSE.md`. The human package-boundary,
   corresponding-source, notice, provenance, and data-exclusion review was
   completed on 2026-08-29. Public tagging and release remain separate owner
   decisions, with a fresh exact-artifact check required before conveyance.

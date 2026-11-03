@@ -1,6 +1,6 @@
 # Internal CMG component
 
-This directory contains the GPL-3.0-only CMG numerical component used by the
+This directory contains the MIT CMG numerical component used by the
 `fevc` Stata/Mata package. It is not a shared library, separate Stata
 package, or public command.
 

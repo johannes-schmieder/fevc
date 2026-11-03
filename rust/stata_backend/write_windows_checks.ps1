@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: MIT
 # Called only after the source-bound Windows driver's complete Stata assertions.
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest

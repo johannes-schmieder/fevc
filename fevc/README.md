@@ -228,4 +228,4 @@ The companion paper, *fevc: Leave-out bias-corrected variance decompositions
 in Stata* (Schmieder, 2026), and its technical supplement explain the method
 and sample construction.
 
-The package code is GPL-3.0-only; see [licensing](../CODE_LICENSE.md).
+The package code is MIT; see [licensing](../CODE_LICENSE.md).

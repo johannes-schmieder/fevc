@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 //! Shared point correction. Auxiliary systems use ordinary weighted model solves.
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck};

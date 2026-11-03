@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 //! Private complete-run adapter. Python owns manifests, semantic keys and audits.
 //! Each call uses the existing point executor with fresh solver preparation.
 

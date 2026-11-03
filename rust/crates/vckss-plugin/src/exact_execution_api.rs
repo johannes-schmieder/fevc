@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Opt-in experimental exact executor. No V1--V8 entrypoint selects it.
 use super::*;

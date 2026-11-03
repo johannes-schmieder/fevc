@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Requested Rust heap payload, independent of allocator residency and RSS.
 //! Only preparation uses a scoped peak. All requests still reach System

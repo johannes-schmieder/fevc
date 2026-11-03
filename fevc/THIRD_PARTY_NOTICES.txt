@@ -1,13 +1,21 @@
 FEVC third-party notices
 =========================
 
-FEVC package code is GPL-3.0-only. The complete license is included as
+FEVC package code is MIT. The complete license is included as
 LICENSE.
 
-The optional Rust backend contains an adapted GPL-3.0-only CMG implementation.
+The optional Rust backend contains an adapted MIT CMG implementation.
 Original notices, the exact upstream identity, and corresponding source are
 preserved in the source distribution under rust/vendor/cmg/. The package-owned
 Mata CMG provenance is recorded under fevc/cmg/docs/.
+
+On 2026-11-03 Johannes Schmieder confirmed that CMG's developers had granted
+official permission, communicated through Ioannis Koutis, to release CMG under
+the MIT license. Johannes selected MIT for CMG, fevc, and fereg on that basis.
+
+CMG copyright (c) 2008-2020 Ioannis Koutis and Gary Miller.
+Rust port copyright (c) 2026 Johannes Schmieder and contributors.
+The accompanying MIT LICENSE supplies the permission and warranty terms.
 
 The maintained LeaveOutTwoWay MATLAB package is used only as an external
 behavioral comparator. Its source and binary data files are not included.

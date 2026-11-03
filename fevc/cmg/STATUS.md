@@ -4,7 +4,7 @@
 - Runtime namespace: `vckss_cmg`
 - Component API: 9
 - Generator API: 5
-- Numerical basis: API-6-qualified source-informed GPL Mata core
+- Numerical basis: API-6-qualified source-informed MIT Mata core
 - Standalone release: disabled; source ships only inside the FEVC prerelease
 
 API 9 propagates the public optional warning/error/off memory policy.

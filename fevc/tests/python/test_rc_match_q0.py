@@ -156,7 +156,9 @@ def test_post_confirmation_repair_changes_only_rust_test_module():
         pattern, "", (ROOT / relative).read_text(), flags=re.DOTALL,
     )
     assert original_count == current_count == 1
-    assert current == original
+    # License comments do not change the confirmed numerical implementation.
+    strip_license = lambda text: re.sub(r"^// SPDX-License-Identifier: [^\n]+\n", "", text)
+    assert strip_license(current) == strip_license(original)
 
 
 @pytest.mark.parametrize("status, exit_code", [("PASS", 0), ("COMPLETE", 0), ("FAIL", 1)])

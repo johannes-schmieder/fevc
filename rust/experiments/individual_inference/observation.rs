@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 // Appended to the frozen independent observation fixture/oracle module.
 fn main() {
     let args:Vec<_>=env::args().skip(1).collect();

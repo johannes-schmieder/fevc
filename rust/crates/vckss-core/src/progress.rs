@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 //! Optional observational state, scoped to a host call. No host callback,
 //! clock, allocation, or scheduling decision belongs in a numerical publisher.

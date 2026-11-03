@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-3.0-only
+/* SPDX-License-Identifier: MIT
  * Diagnostic only: inspect public synthetic smoke arguments, never data. */
 #include "stplugin.h"
 #include <stdio.h>

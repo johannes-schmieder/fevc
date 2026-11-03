@@ -247,7 +247,7 @@
     "frozen_file_sha256": {
       "fevc/tests/python/test_match_inference_q1_campaign.py": "294a114ca1bc7d01603eefff6f3e39c22a2b19a4dec63f88c14b20926622a612",
       "fevc/tools/run_match_inference_q1_campaign.py": "99932292b5f2d73b33bb1d04f0cfb2a26ea9b0500703b3598b53ef066ebf870d",
-      "rust/crates/vckss-core/examples/match_inference_q1_development.rs": "8ed8b3af042cc73e3ca51036addffacbc7882acca92d8d7e89c6f2f613aadd95",
+      "rust/crates/vckss-core/examples/match_inference_q1_development.rs": "7f0a9b2a1b31d5739ca0ef323ff3c639f92457598e45ed1aa52d08feea69e06d",
       "rust/stata_backend/scc/deploy_match_inference_q1_campaign.sh": "3921b060bb7f1540408ed557d967a17e0b850dab160cc8b917c4ed6a949f0e14",
       "rust/stata_backend/scc/run_match_inference_q1_aggregate.sge": "0570d548da52a5518d55cfc364928085ab47793129606dadca4b9ac34a0795fd",
       "rust/stata_backend/scc/run_match_inference_q1_build.sge": "67557833c2bc04ed783d2356b3aa75e58cb2991df540a895c62ffb0e9daa3c74",

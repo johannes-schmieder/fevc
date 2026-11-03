@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT
 use super::{finish_q1_target, finish_q1_target_with_solve_defect};
 use crate::error::ErrorCode;
 

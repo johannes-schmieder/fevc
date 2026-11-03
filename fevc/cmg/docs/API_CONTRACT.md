@@ -21,7 +21,7 @@ mode, generated-section hash, complete-artifact hash, and output path.
 ## Version boundary
 
 API 9 adds the command's optional budget and warning/error/off policy to the
-API 8 package identity. Its source-informed GPL numerical core derives from
+API 8 package identity. Its source-informed MIT numerical core derives from
 the API-6 implementation qualified under `CMG-MATA-1`. Hierarchy algebra,
 V-cycle, deterministic tie-breaking, terminal cap and numerical status
 meanings are unchanged. A package loader must require:
@@ -59,5 +59,5 @@ per-right-hand-side recurrence gates, worker reconstruction, and complete
 worker-plus-firm residual check. A post-RNG CMG failure withholds the affected
 calculation; it never triggers a route change.
 
-All covered source is GPL-3.0-only under `CODE_LICENSE.md`. Public distribution
+All covered source is MIT under `CODE_LICENSE.md`. Public distribution
 still requires the documented human license/provenance review.
