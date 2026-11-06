@@ -27,7 +27,7 @@ def check(root: Path = ROOT) -> None:
     workspace = tomllib.loads((root / 'rust/Cargo.toml').read_text())['workspace']
     if 'vendor/cmg' in workspace['members'] or 'vendor/cmg' not in workspace['exclude']:
         raise ValueError('upstream CMG must be an excluded standalone dependency')
-    for lockfile in ('rust/Cargo.lock', 'rust/stata_backend/Cargo.lock'):
+    for lockfile in ('rust/Cargo.lock', 'rust/stata_backend/Cargo.lock', 'rust/fuzz/Cargo.lock'):
         rows = tomllib.loads((root / lockfile).read_text())['package']
         rows = [row for row in rows if row['name'] == 'cmg']
         if len(rows) != 1 or rows[0]['version'] != vendor['package']['version']:
