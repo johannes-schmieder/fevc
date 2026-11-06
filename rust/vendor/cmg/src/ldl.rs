@@ -279,6 +279,7 @@ impl LowerFactor {
     /// Add the forward correction of `row` to `sum` term by term, in the
     /// order of the reference `Iterator::sum`; seed `sum` with [`empty_sum()`].
     /// A polling progress counts the row in segments while it runs.
+    #[inline]
     fn forward_correction_into<P: Progress>(
         &self,
         row: usize,
@@ -307,8 +308,11 @@ impl LowerFactor {
             } => {
                 let start = row_offsets[row];
                 chunked(progress, PHASE, row_offsets[row + 1] - start, 1, |range| {
-                    *sum = (start + range.start..start + range.end)
-                        .map(|index| row_values[index] * forward[columns[index] as usize])
+                    let segment = start + range.start..start + range.end;
+                    *sum = row_values[segment.clone()]
+                        .iter()
+                        .zip(&columns[segment])
+                        .map(|(&value, &column)| value * forward[column as usize])
                         .fold(*sum, |total, term| total + term);
                     Ok(())
                 })
@@ -318,6 +322,7 @@ impl LowerFactor {
 
     /// Add the backward correction of `row` to `sum` as
     /// [`Self::forward_correction_into`] does for the forward solve.
+    #[inline]
     fn backward_correction_into<P: Progress>(
         &self,
         row: usize,
@@ -335,12 +340,8 @@ impl LowerFactor {
                 let first = row + 1;
                 let count = solution.len().saturating_sub(first);
                 chunked(progress, PHASE, count, 1, |range| {
-                    for (later, &value) in solution
-                        .iter()
-                        .enumerate()
-                        .take(first + range.end)
-                        .skip(first + range.start)
-                    {
+                    let start = first + range.start;
+                    for (later, &value) in (start..).zip(&solution[start..first + range.end]) {
                         *sum += values[index] * value;
                         index += later;
                     }
@@ -360,8 +361,11 @@ impl LowerFactor {
                     column_offsets[row + 1] - start,
                     1,
                     |range| {
-                        *sum = (start + range.start..start + range.end)
-                            .map(|index| column_values[index] * solution[rows[index] as usize])
+                        let segment = start + range.start..start + range.end;
+                        *sum = column_values[segment.clone()]
+                            .iter()
+                            .zip(&rows[segment])
+                            .map(|(&value, &row)| value * solution[row as usize])
                             .fold(*sum, |total, term| total + term);
                         Ok(())
                     },

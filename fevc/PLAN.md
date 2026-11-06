@@ -1,29 +1,31 @@
 # CMG consolidation — November 6, 2026
 
-The owner authorizes consolidation onto one CMG main revision, new 0.5.1
-plugins and release packages, publication after qualification, and removal of
-abandoned CMG branches. Candidate CMG is
-`a4c927f49eb7a5391a63963d2c4c651a51cf1af5`; it is not yet frozen on main.
-FEVC now owns its pool and dynamically claimed RHS queue and uses unmodified
-upstream public contexts, explicit 128-level configuration, and checked
-caller-buffer PCG. Root, plugin and fuzz lockfiles and vendor provenance agree.
+The owner authorizes one common CMG main revision, new 0.5.1 plugins and
+release packages after qualification, and removal of abandoned CMG branches.
+The replacement candidate is `e5613e81fb3b03c78de98658b372646fa802aabb`;
+it is not frozen on main. The vendor payload is byte-identical to upstream.
+FEVC owns its pool and input-ordered dynamically claimed RHS queue and uses
+public contexts, explicit 128-level configuration, and checked caller-buffer PCG.
+Root, plugin and fuzz lockfiles use CMG 0.2.0.
 
-The initial native candidate `dcfb9d64` passes Mac arm64/Rosetta qualification
-and hosted Rust/platform checks. Its fixed complete-command comparison passes
-scientific criteria but fails match timing (+12.1% one worker, +7.0% four);
-observation timing passes. These results remain failed, without resampling.
-Private Windows qualification failed at build_native without compiler logs;
-its cause remains unproven. Linux native qualification is still running.
-No new plugins or release have been published.
+Source `b773a94d` with earlier CMG `a4c927f4` passes Mac arm64/Rosetta and
+Linux native/installed qualification, hosted Rust and Windows build checks,
+and a private Windows smoke. Windows full qualification is still required for
+an accepted replacement artifact. The established shared full-CMG public route
+is Mac/Unix only; the new Windows boundary fixture verifies the existing native
+compressed/exact route, original residual and caller-state restoration.
 
-Bounded development profiling attributes the slowdown to solver kernels;
-caller-buffer validation/gather/scatter are negligible. The standalone plugin
-workspace omitted the Rust workspace's release profile. The candidate now
-aligns those profiles; a diagnostic match replay improved without changing
-observed results. This is not acceptance evidence. Register a new fixed
-comparison for these changed build inputs, and qualify all native artifacts
-from the accepted exact source before adoption. Keep the initial failures and
-all historical receipts unchanged.
+The [three frozen comparisons](../native/cmg-consolidation-20261106/evidence/performance/README.md)
+retain the initial timing failures, the development-binary pass and the exact
+final-artifact match-1 failure (+9.2502%). All scientific gates passed. No timings
+were excluded or resampled. The replacement dependency changes narrow scalar
+kernels without changing arithmetic order, storage or polling counts. Development
+profiles show lower vector-update cost; no release acceptance is inferred.
+
+Next: build and qualify the replacement artifacts; freeze their exact hashes
+and run one new fixed comparison. A scientific or timing failure remains a
+blocker. Keep previous failures, receipts and historical distributions unchanged.
+No new plugins, main update or release has been published.
 
 ## Previous checkpoint
 

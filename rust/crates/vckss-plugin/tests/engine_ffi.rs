@@ -4871,7 +4871,7 @@ fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
     assert_eq!(receipt.probe_initial_inner_tolerance, 1.0e-6);
     assert_eq!(
         std::str::from_utf8(&receipt.cmg_source_commit).expect("source commit"),
-        "a4c927f49eb7a5391a63963d2c4c651a51cf1af5"
+        "e5613e81fb3b03c78de98658b372646fa802aabb"
     );
     assert!(receipt.hierarchy_levels > 0);
     assert!(receipt.rhs_count > 0);

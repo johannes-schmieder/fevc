@@ -2516,7 +2516,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `cmg_generation'==`handle' & `cmg_backend_identity'==2 & ///
             `"`cmg_backend'"'=="CMG_FULL_V2" &                 ///
             `"`cmg_source_commit'"'==                           ///
-                "a4c927f49eb7a5391a63963d2c4c651a51cf1af5" &  ///
+                "e5613e81fb3b03c78de98658b372646fa802aabb" &  ///
             `cmg_threads_requested'==`native_threads' &              ///
             `cmg_threads_used'==`native_threads' &                    ///
             `cmg_fit_tol'==`expected_cmg_fit_tol' &                ///

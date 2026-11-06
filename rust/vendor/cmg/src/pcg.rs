@@ -1721,9 +1721,14 @@ impl<'a> Pcg<'a> {
                     ..
                 } = &mut *workspace;
                 chunked(meter, "PCG update", dimension, 2, |range| {
-                    for index in range {
-                        solution[index] += alpha * direction[index];
-                        residual[index] -= alpha * matrix_direction[index];
+                    for (((x, &p), r), &ap) in solution[range.clone()]
+                        .iter_mut()
+                        .zip(&direction[range.clone()])
+                        .zip(&mut residual[range.clone()])
+                        .zip(&matrix_direction[range])
+                    {
+                        *x += alpha * p;
+                        *r -= alpha * ap;
                     }
                     Ok(())
                 })?
@@ -1863,8 +1868,11 @@ impl<'a> Pcg<'a> {
                         ..
                     } = &mut *workspace;
                     chunked(meter, "PCG direction", dimension, 1, |range| {
-                        for index in range {
-                            direction[index] = preconditioned[index] + beta * direction[index];
+                        for (direction, &preconditioned) in direction[range.clone()]
+                            .iter_mut()
+                            .zip(&preconditioned[range])
+                        {
+                            *direction = preconditioned + beta * *direction;
                         }
                         Ok(())
                     })?
@@ -1995,8 +2003,8 @@ impl<'a> Pcg<'a> {
     ) -> Result<f64, CmgError> {
         self.matvec(solution, residual, meter)?;
         chunked(meter, "PCG residual", residual.len(), 1, |range| {
-            for index in range {
-                residual[index] = rhs[index] - residual[index];
+            for (residual, &rhs) in residual[range.clone()].iter_mut().zip(&rhs[range]) {
+                *residual = rhs - *residual;
             }
             Ok(())
         })?;

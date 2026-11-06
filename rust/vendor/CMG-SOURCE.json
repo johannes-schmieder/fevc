@@ -1,6 +1,6 @@
 {
   "files": {
-    "CHANGELOG.md": "42172b6880ee8ac894e1cb72ed21dc74e3d0b10d123cf78384c320336fc4ad04",
+    "CHANGELOG.md": "4090784fa31793afeadc03ca774476905334a4469d9cf0c625a9135bcf65d7d1",
     "Cargo.lock": "93d2b252d97b17fcfcd172f55e27e81f45ca14077ba55d77b81cda20813334fc",
     "Cargo.toml": "8a3d427900543062e7804413d8d284f7004f3d6e0d2f969e1cfdb4b7b68d50ef",
     "LICENSE": "15b983b2b66ec8af0749a993ab4ccbd2577e643c9bd4783c3feb991b67216f4d",
@@ -68,16 +68,16 @@
     "src/graph/edge_sort.rs": "9f6788fd51c9a0a678dd99ffc6543a1735efa00b842446e7fb5224aaf9496e94",
     "src/graph/hosted.rs": "de868aec2a6a01d2df7e3327b7a43fa821909ca728e5ebd7c35ed9843574b870",
     "src/hierarchy.rs": "cae23d52f96308257ecec5d4c8dc0155643b3cb6185193d47b237675b6f82125",
-    "src/ldl.rs": "13dfbbeb50848d4e341a63c1aed99cedd714e1d312c01a4367b0adba454b3ab7",
+    "src/ldl.rs": "45bed801d9816250ae3005b0447dacff28edfd3f76a8eba21797d8e181479a93",
     "src/lib.rs": "4046d57caa34e289edce502f6551d899930a752d373c032ca56946c57a05737e",
     "src/memory.rs": "99ae8fdfe565ab41c88302ab0094248190cfa269d2367838ae41a5cfb3458d1a",
     "src/options.rs": "ec7599a78c46c2b783c1b5acbed619c1d7132e91417b2e793e9dfb24ecf479cb",
     "src/parallel_solver.rs": "7d322b3761b486cd1609ab2a58be0fdfaef0885f150deee3eac57bf84df27634",
-    "src/pcg.rs": "6fb1fdf4eac704bc63b2c08c9d649e7b6e736f72c1b912a220242840a8241552",
+    "src/pcg.rs": "4087a0111ad8c96abdb0c576ca2d9fdb1dd57aad3801afbb68885cdbb3b54373",
     "src/pcg_profile.rs": "5fcee93536b1663a390151f8263ad09dc6616cbb30df2f7f200ac2d62d88db7c",
     "src/preconditioner.rs": "eb14f6238e0c75f1456308af4e3f2067232e4c58aa3a6fb559ddd22b5276b928",
     "src/preconditioner/batch.rs": "bf781ce7ce1b7106d70c5466293b27e92cba5df1386cce956994b84b18da77be",
-    "src/preconditioner/cycle.rs": "bf4e7eb2aaa63a61e9365e2c04db1f9f6fa0a7028f26fb06705318edb02ddb16",
+    "src/preconditioner/cycle.rs": "65a76ff5438c34dfd1cdab04b920186c1a751a7a8543342682518439eaa24990",
     "src/prepared.rs": "d163237475e6337293a7d699c484950eec1f0af84aecfef3104736df24d74b5f",
     "src/sddm.rs": "df7f7aa9b65f5ee00385a47742348e8504e3ba49664b1d71dc9964be421f106d",
     "src/sddm_solver.rs": "3a5490f161e05471250139a892bf633cf79f72360f5ecda52b7df259b0e33e0a",
@@ -121,5 +121,5 @@
     "tests/worker_independent.rs": "1fa98d321883cccf967ce491dbd3b932164788923616db4351a150c0dfe1aa3f"
   },
   "repository": "https://github.com/johannes-schmieder/CMG",
-  "revision": "a4c927f49eb7a5391a63963d2c4c651a51cf1af5"
+  "revision": "e5613e81fb3b03c78de98658b372646fa802aabb"
 }

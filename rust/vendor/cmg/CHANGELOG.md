@@ -18,6 +18,8 @@ semantic-style version numbers; release dates use ISO `YYYY-MM-DD` format.
 - Replace the superseded controlled work-budget APIs with the unified contexts;
   controlled scalar and interleaved workspace allocation remain supported.
 - Provide reproducible, byte-verified vendor snapshots for downstream packaging.
+- Reduce scalar PCG vector-update and terminal-correction loop overhead while
+  preserving arithmetic order, storage, and bounded cancellation counts.
 
 
 ### Changed

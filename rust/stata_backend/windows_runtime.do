@@ -53,6 +53,7 @@ file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "projection_mean" _n
 file close `rc_stage'
 do "fevc/tests/stata/test_projection_mean_native.do" `"`rc_plus'/f"'
+do "fevc/tests/stata/test_windows_full_cmg_boundary.do" `"`rc_plus'/f"'
 if `"`rc_profile'"' == "full" {
 file open `rc_stage' using "windows-ci.stage", write text replace
 file write `rc_stage' "observation_component" _n

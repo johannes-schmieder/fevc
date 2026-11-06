@@ -1759,7 +1759,7 @@ program define fevc_rust, rclass
         // scope across the rclass wrapper boundary.
         return local cmg_backend "CMG_FULL_V2"
         return local cmg_source_commit ///
-            "a4c927f49eb7a5391a63963d2c4c651a51cf1af5"
+            "e5613e81fb3b03c78de98658b372646fa802aabb"
         return local backend "rust"
         return local subcommand "fullcmgreceipt"
         capture macro drop __vckss_cmg_backend

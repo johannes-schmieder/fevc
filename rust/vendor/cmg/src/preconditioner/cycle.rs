@@ -366,6 +366,21 @@ impl<S: Store> Cycle<'_, S> {
             }
         }
         let _ = parallel;
+        if columns == 1 {
+            // Slice each counted segment once so scalar lanes expose equal
+            // bounds to the vectorizer. Counts and per-entry arithmetic match
+            // the general row/lane kernel below.
+            return crate::cancel::chunked(meter, "CMG cycle diagonal", output.len(), 1, |range| {
+                for ((value, &diagonal), &rhs) in output[range.clone()]
+                    .iter_mut()
+                    .zip(&inverse_diagonal[range.clone()])
+                    .zip(&rhs[range])
+                {
+                    *value = diagonal * rhs;
+                }
+                Ok(())
+            });
+        }
         rows_serial(meter, "CMG cycle diagonal", output, columns, operation)
     }
 
@@ -399,6 +414,25 @@ impl<S: Store> Cycle<'_, S> {
             }
         }
         let _ = parallel;
+        if columns == 1 {
+            return crate::cancel::chunked(
+                meter,
+                "CMG cycle smoothing",
+                output.len(),
+                1,
+                |range| {
+                    for (((value, &diagonal), &rhs), &product) in output[range.clone()]
+                        .iter_mut()
+                        .zip(&inverse_diagonal[range.clone()])
+                        .zip(&rhs[range.clone()])
+                        .zip(&product[range])
+                    {
+                        *value += diagonal * (rhs - product);
+                    }
+                    Ok(())
+                },
+            );
+        }
         rows_serial(meter, "CMG cycle smoothing", output, columns, operation)
     }
 
