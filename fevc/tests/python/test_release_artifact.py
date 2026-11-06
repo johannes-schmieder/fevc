@@ -47,14 +47,14 @@ def test_release_receipt_binds_source_archive_and_files() -> None:
     source_commit = "a" * 40
     receipt = json.loads(
         MODULE.render_receipt(
-            archive_name="fevc-0.5.0.tar.gz",
+            archive_name="fevc-0.5.1.tar.gz",
             archive=archive,
             files=files,
             source_commit=source_commit,
         )
     )
     assert receipt["format"] == "FEVC-PORTABLE-SOURCE-ARTIFACT-V1"
-    assert receipt["version"] == "0.5.0"
+    assert receipt["version"] == "0.5.1"
     assert receipt["source_commit"] == source_commit
     assert receipt["archive_sha256"] == MODULE.sha256(archive)
     assert [row["path"] for row in receipt["files"]] == [

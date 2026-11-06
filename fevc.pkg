@@ -3,7 +3,7 @@ d fevc: KSS point estimates, structured observation-deletion component inference
 d Also explicit fixed-offset match q0/q1 inference, omitting nuisance-control estimation uncertainty.
 d Pooled movers and independent stayer observations: exact Mata or scalable Rust/JLA.
 d MIT package with precompiled native backends.
-d Distribution-Date: 20261014
+d Distribution-Date: 20261106
 F fevc/LICENSE
 F fevc/THIRD_PARTY_NOTICES.txt
 f fevc/fevc.ado

@@ -538,7 +538,7 @@ impl FullCmgDirectSolver {
         {
             return Err(BackendError::invariant(
                 "cmg_full_v2_memory_reconcile",
-                "retained full-CMG allocation exceeded its pre-RNG component forecast",
+                format!("retained CMG exceeds pre-RNG forecast: hierarchy {hierarchy_bytes}/{}, plan {plan_bytes}/{}, workspace {admitted_workspace_pool_bytes}/{}, command {admitted_peak_bytes}/{}", prebuild.hierarchy_bytes, prebuild.plan_bytes, prebuild.workspace_pool_bytes, prebuild.whole_command_peak_bytes),
             ));
         }
         if plan.memory_budget == crate::memory::MemoryBudget::Legacy
@@ -1630,7 +1630,12 @@ fn prebuild_memory_forecast_counts(
     // initial matrix nonzeros before its deterministic fill guard terminates.
     // The byte multipliers cover graph/aggregation/centering metadata, CSR
     // plan copies, and every vector owned by one PCG/V-cycle workspace.
-    let hierarchy_bytes = checked_product_u64(&[initial_nonzeros, 512])?;
+    // Unified controlled construction reserves the level descriptor bank up
+    // front. Its capacity persists even when a tiny graph terminates at level 1.
+    let hierarchy_bytes = checked_sum_u64(&[
+        checked_product_u64(&[initial_nonzeros, 512])?,
+        checked_product_u64(&[128, std::mem::size_of::<cmg::HierarchyLevel>() as u64])?,
+    ])?;
     let plan_bytes = checked_product_u64(&[initial_nonzeros, 128])?;
     let workspace_each = checked_product_u64(&[initial_nonzeros, 512])?;
     let workspace_count = to_u64(plan.threads.min(plan.maximum_batch_rhs), "workspace count")?;
