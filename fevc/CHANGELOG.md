@@ -10,6 +10,8 @@ No unreleased changes.
   checks. Preserve the established 128-level setting explicitly.
 - Move the host pool, dynamic RHS queue, warm-start buffers and cancellation
   integration into FEVC, using public CMG construction and solve contexts.
+- Apply the core workspace release profile to standalone native plugins,
+  including link-time optimization and checked integer arithmetic.
 - Account separately for CMG storage, FEVC batch buffers and host runtime
   allowances. Preserve pre-RNG admission and original-system certification.
 

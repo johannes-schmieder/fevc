@@ -59,6 +59,14 @@ preflight, while `backend(rust)` remains strict and `backend(mata)` remains
 explicit Mata. The nested portable source manifest omits native binaries;
 the root repository installation manifest includes them.
 
+## Release builds
+
+The standalone plugin workspace declares the same release profile as the Rust
+workspace: one code-generation unit, fat link-time optimization, optimization
+level 3, checked integer arithmetic, unwinding and stripped symbols. Cargo does
+not inherit profiles across these workspace boundaries. Keep both declarations
+aligned so production plugins receive the optimization policy used by core builds.
+
 ## Boundary and lifecycle
 
 The versioned boundary provides:

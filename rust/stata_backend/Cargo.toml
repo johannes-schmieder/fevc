@@ -27,3 +27,12 @@ unsafe_op_in_unsafe_fn = "deny"
 
 [lints.clippy]
 all = "deny"
+
+# This crate is a standalone workspace; it cannot inherit the core profile.
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+overflow-checks = true
+panic = "unwind"
+strip = "symbols"

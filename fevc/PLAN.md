@@ -1,3 +1,32 @@
+# CMG consolidation — November 6, 2026
+
+The owner authorizes consolidation onto one CMG main revision, new 0.5.1
+plugins and release packages, publication after qualification, and removal of
+abandoned CMG branches. Candidate CMG is
+`a4c927f49eb7a5391a63963d2c4c651a51cf1af5`; it is not yet frozen on main.
+FEVC now owns its pool and dynamically claimed RHS queue and uses unmodified
+upstream public contexts, explicit 128-level configuration, and checked
+caller-buffer PCG. Root, plugin and fuzz lockfiles and vendor provenance agree.
+
+The initial native candidate `dcfb9d64` passes Mac arm64/Rosetta qualification
+and hosted Rust/platform checks. Its fixed complete-command comparison passes
+scientific criteria but fails match timing (+12.1% one worker, +7.0% four);
+observation timing passes. These results remain failed, without resampling.
+Private Windows qualification failed at build_native without compiler logs;
+its cause remains unproven. Linux native qualification is still running.
+No new plugins or release have been published.
+
+Bounded development profiling attributes the slowdown to solver kernels;
+caller-buffer validation/gather/scatter are negligible. The standalone plugin
+workspace omitted the Rust workspace's release profile. The candidate now
+aligns those profiles; a diagnostic match replay improved without changing
+observed results. This is not acceptance evidence. Register a new fixed
+comparison for these changed build inputs, and qualify all native artifacts
+from the accepted exact source before adoption. Keep the initial failures and
+all historical receipts unchanged.
+
+## Previous checkpoint
+
 # GitHub release 0.5.0 — October 14, 2026
 
 The owner authorizes a regular `v0.5.0` GitHub release, including the current
