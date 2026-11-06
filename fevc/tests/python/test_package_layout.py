@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 API_LEVEL = 24
 
 
@@ -112,7 +112,7 @@ def test_macos_qualifier_hashes_vendored_cmg_runtime() -> None:
     for relative in (
         "rust/vendor/cmg/Cargo.toml",
         "rust/vendor/cmg/src",
-        "rust/vendor/cmg/VENDOR.md",
+        "rust/vendor/CMG-SOURCE.json",
     ):
         assert f'"${{repo_root}}/{relative}"' in inputs
 
@@ -149,7 +149,7 @@ def test_version_identifiers_agree() -> None:
     assert VERSION in help_text
     assert VERSION in readme
     assert ado.count(f'ereturn local version "{VERSION}"') >= 2
-    assert f'di as txt "fevc {VERSION} (14oct2026)"' in ado
+    assert f'di as txt "fevc {VERSION} (06nov2026)"' in ado
     assert f'return("{VERSION}")' in mata
     assert changelog.count(f"## {VERSION} — 2026-10-14") == 1
     assert project["project"]["version"] == VERSION
@@ -381,7 +381,7 @@ def test_package_records_internal_license_boundary() -> None:
     )
     assert "mit portable source package" in manifest
     assert "no public release has yet been issued" not in manifest
-    assert "distribution-date: 20261014" in manifest
+    assert "distribution-date: 20261106" in manifest
     assert "mit" in readme
     license_note = (ROOT.parent / "CODE_LICENSE.md").read_text(encoding="utf-8")
     assert "Ioannis Koutis" in license_note

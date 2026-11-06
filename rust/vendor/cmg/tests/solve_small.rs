@@ -1,6 +1,6 @@
 use cmg::{
     CmgError, CmgOptions, CmgPreconditioner, Laplacian, PcgOptions, PcgWorkspace, solve_pcg,
-    solve_pcg_batch, solve_pcg_with_workspace,
+    solve_pcg_batch,
 };
 
 fn path(vertex_count: usize) -> Laplacian {
@@ -163,11 +163,24 @@ fn explicit_workspace_can_be_reused_across_distinct_rhs() {
         )
         .unwrap();
     let options = PcgOptions::default();
-    let first_result =
-        solve_pcg_with_workspace(&graph, &preconditioner, &first, options, &mut workspace).unwrap();
-    let second_result =
-        solve_pcg_with_workspace(&graph, &preconditioner, &second, options, &mut workspace)
-            .unwrap();
+    let first_result = cmg::solve_pcg_with(
+        &graph,
+        &preconditioner,
+        &first,
+        options,
+        &mut workspace,
+        cmg::SolveContext::default(),
+    )
+    .unwrap();
+    let second_result = cmg::solve_pcg_with(
+        &graph,
+        &preconditioner,
+        &second,
+        options,
+        &mut workspace,
+        cmg::SolveContext::default(),
+    )
+    .unwrap();
     assert!(first_result.residual_norm() <= first_result.tolerance());
     assert!(second_result.residual_norm() <= second_result.tolerance());
 }

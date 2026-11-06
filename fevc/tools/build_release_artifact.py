@@ -206,6 +206,8 @@ def write_artifact(output_dir: Path, *, source_commit: str) -> tuple[Path, Path,
 
 
 def main() -> int:
+    from check_cmg_vendor import check
+    check()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="verify determinism without writing")
     parser.add_argument("--output-dir", type=Path, help="directory for the archive and receipt")

@@ -12,19 +12,19 @@ use std::time::Instant;
 
 use cmg::{
     CmgError, CmgOptions as FullCmgOptions, Laplacian, ParallelOptions, ParallelPcgExecution,
-    ParallelPcgSolver, PcgOptions as FullPcgOptions, PcgResult, ValidationOptions,
-    VckssContiguousPcgWorkspace,
+    PcgOptions as FullPcgOptions, ValidationOptions,
 };
 
 use crate::cmg::{AggregationMethod, CmgLevelReceipt, CmgReceipt, HybridGraph};
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::full_cmg_host::{ColumnResult, HostCmg, HostPool, WorkspacePool};
 use crate::interrupt::{CancellationInterrupt, CancellationToken, InterruptCheck, NeverInterrupt};
 use crate::krylov::{PcgOptions, PcgReceipt};
 use crate::operator::{stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 use crate::problem::CompressedProblem;
 
 pub const FULL_CMG_SCHEMA: &str = "CMG_FULL_V2";
-pub const CMG_SOURCE_COMMIT: &str = "92a12f2d572ca56b30a035220953f9dd4bced999";
+pub const CMG_SOURCE_COMMIT: &str = "a4c927f49eb7a5391a63963d2c4c651a51cf1af5";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const DEFAULT_PROBE_TOLERANCE: f64 = 1.0e-6;
 // The deterministic fit remains deliberately tighter because it has no Monte
@@ -138,6 +138,10 @@ pub struct FullCmgSetupReceipt {
     pub hierarchy_levels: usize,
     pub terminal_vertices: usize,
     pub graph_copy_bytes: u64,
+    /// Host worker handles, requested stacks, and heuristic Rayon heap allowance.
+    pub runtime_allowance_bytes: u64,
+    /// Requested OS stacks; excluded from allocator-only measurements.
+    pub runtime_stack_bytes: u64,
     pub hierarchy_bytes: u64,
     pub plan_bytes: u64,
     pub workspace_bytes_each: u64,
@@ -162,6 +166,7 @@ pub struct FullCmgSetupReceipt {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct FullCmgPrebuildMemory {
     pub hybrid_bytes: u64,
+    pub runtime_allowance_bytes: u64,
     pub graph_bytes: u64,
     pub hierarchy_bytes: u64,
     pub plan_bytes: u64,
@@ -343,8 +348,8 @@ struct FullCmgExtractedColumn {
 #[derive(Debug)]
 pub(crate) struct FullCmgDirectSolver {
     hybrid: HybridGraph,
-    solver: ParallelPcgSolver,
-    workspace: Mutex<VckssContiguousPcgWorkspace>,
+    solver: HostCmg,
+    workspace: Mutex<WorkspacePool>,
     setup: FullCmgSetupReceipt,
     pools_deferred: bool,
     receipt: Mutex<FullCmgReceipt>,
@@ -364,7 +369,7 @@ impl FullCmgDirectSolver {
         Output: Send,
         Operation: Fn(Input) -> Output + Send + Sync,
     {
-        self.solver.vckss_map_ordered(input, operation)
+        self.solver.map_ordered(input, operation)
     }
 
     #[cfg(test)]
@@ -433,37 +438,41 @@ impl FullCmgDirectSolver {
                 )
             })?;
 
-        let graph_start = Instant::now();
-        let hybrid = HybridGraph::from_problem_degree_four_with_interrupt(problem, interrupt)?;
-        let graph = Laplacian::from_edges(
-            hybrid.vertices(),
-            hybrid.edges().iter().map(|edge| {
-                (
-                    usize::try_from(edge.u).expect("validated compact endpoint"),
-                    usize::try_from(edge.v).expect("validated compact endpoint"),
-                    edge.weight,
-                )
-            }),
-        )
-        .map_err(|error| map_setup_error(error, "graph conversion"))?;
-        let graph_nanoseconds = graph_start.elapsed().as_nanos();
-        interrupt.checkpoint("cmg_full_v2_graph_complete")?;
-
-        let solver_start = Instant::now();
         let parallel_options = ParallelOptions {
             threads: plan.threads,
             workspace_memory_budget_bytes: workspace_budget,
             ..ParallelOptions::default()
         };
-        let solver = match &cancellation {
-            Some(cancellation) => ParallelPcgSolver::build_cancellable(
-                &graph,
-                FullCmgOptions::default(),
-                parallel_options,
-                cancellation.atomic_flag(),
-            ),
-            None => ParallelPcgSolver::build(&graph, FullCmgOptions::default(), parallel_options),
-        }
+        let runtime = HostPool::new(parallel_options)
+            .map_err(|error| map_setup_error(error, "host pool construction"))?;
+        let graph_start = Instant::now();
+        let hybrid = HybridGraph::from_problem_degree_four_with_interrupt(problem, interrupt)?;
+        let graph = runtime
+            .graph(
+                hybrid.vertices(),
+                hybrid.edges().iter().map(|edge| {
+                    (
+                        usize::try_from(edge.u).expect("validated compact endpoint"),
+                        usize::try_from(edge.v).expect("validated compact endpoint"),
+                        edge.weight,
+                    )
+                }),
+                cancellation.as_ref().map(CancellationToken::atomic_flag),
+            )
+            .map_err(|error| map_setup_error(error, "graph conversion"))?;
+        let graph_nanoseconds = graph_start.elapsed().as_nanos();
+        interrupt.checkpoint("cmg_full_v2_graph_complete")?;
+
+        let solver_start = Instant::now();
+        let solver = HostCmg::build(
+            &graph,
+            FullCmgOptions {
+                max_levels: 128,
+                ..FullCmgOptions::default()
+            },
+            runtime,
+            cancellation.as_ref().map(CancellationToken::atomic_flag),
+        )
         .map_err(|error| map_setup_error(error, "hierarchy construction"))?;
         let solver_nanoseconds = solver_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_v2_solver_complete")?;
@@ -472,15 +481,11 @@ impl FullCmgDirectSolver {
             .select_batch_execution(plan.maximum_batch_rhs)
             .map_err(|error| map_setup_error(error, "batch admission"))?;
         let graph_copy_bytes = graph_storage_bytes(&graph)?;
-        let hierarchy_bytes = if plan.memory_budget == crate::memory::MemoryBudget::Legacy {
-            hierarchy_storage_bytes(&solver)?
-        } else {
-            to_u64(
-                solver.preconditioner().retained_bytes(),
-                "retained hierarchy capacity",
-            )?
-        };
-        let plan_bytes = to_u64(solver.plan().byte_len(), "standalone plan bytes")?;
+        let (hierarchy_bytes, plan_bytes) = solver
+            .storage_bytes()
+            .map_err(|error| map_setup_error(error, "CMG ownership accounting"))?;
+        let hierarchy_bytes = to_u64(hierarchy_bytes, "retained hierarchy capacity")?;
+        let plan_bytes = to_u64(plan_bytes, "unique plan capacity")?;
         let workspace_bytes_each = to_u64(
             maximum_batch.workspace_bytes_each(),
             "standalone workspace bytes",
@@ -494,7 +499,14 @@ impl FullCmgDirectSolver {
             to_u64(problem.workers(), "worker count")?,
             plan,
         )?;
+        let runtime_allowance_bytes = to_u64(
+            solver
+                .runtime_bytes()
+                .map_err(|error| map_setup_error(error, "host runtime accounting"))?,
+            "host runtime allowance",
+        )?;
         let full_cmg_retained = checked_sum_u64(&[
+            runtime_allowance_bytes,
             hybrid.predicted_bytes(),
             if plan.memory_budget == crate::memory::MemoryBudget::Legacy {
                 graph_copy_bytes
@@ -557,6 +569,11 @@ impl FullCmgDirectSolver {
                 .graph()
                 .vertex_count(),
             graph_copy_bytes,
+            runtime_stack_bytes: checked_product_u64(&[
+                to_u64(plan.threads, "host workers")?,
+                crate::full_cmg_host::STACK_BYTES as u64,
+            ])?,
+            runtime_allowance_bytes,
             hierarchy_bytes,
             plan_bytes,
             workspace_bytes_each,
@@ -583,9 +600,14 @@ impl FullCmgDirectSolver {
         };
         let compatibility_receipt = compatibility_receipt(&solver, &setup)?;
         let workspace = Mutex::new(if defer_pools {
-            solver.vckss_empty_contiguous_workspace()
+            WorkspacePool::default()
         } else {
-            solver.vckss_contiguous_workspace()
+            solver
+                .prepared_workspace(
+                    maximum_batch.concurrency(),
+                    cancellation.as_ref().map(CancellationToken::atomic_flag),
+                )
+                .map_err(|error| map_setup_error(error, "scalar pool allocation"))?
         });
         let receipt = Mutex::new(FullCmgReceipt::new(setup));
         let prepared = Self {
@@ -675,7 +697,12 @@ impl FullCmgDirectSolver {
             .get_mut()
             .map_err(|_| BackendError::invariant("cmg_capacity", "workspace poisoned"))? = self
             .solver
-            .vckss_prepared_contiguous_workspace(self.setup.workspace_count)
+            .prepared_workspace(
+                self.setup.workspace_count,
+                self.cancellation
+                    .as_ref()
+                    .map(CancellationToken::atomic_flag),
+            )
             .map_err(|error| map_setup_error(error, "selected scalar pool allocation"))?;
         self.pools_deferred = false;
         self.refresh_capacity_receipts()
@@ -830,7 +857,7 @@ impl FullCmgDirectSolver {
                 )
             })?;
             column_indices.extend(0..columns);
-            let schur_columns = self.solver.vckss_map_ordered(column_indices, |column| {
+            let schur_columns = self.solver.map_ordered(column_indices, |column| {
                 let worker_begin = column * operator.problem().workers();
                 let firm_begin = column * operator.problem().firms();
                 match &self.cancellation {
@@ -1101,43 +1128,19 @@ impl FullCmgDirectSolver {
                 "standalone CMG workspace mutex is poisoned",
             )
         })?;
-        let solved = match (&self.cancellation, initial_guesses) {
-            (Some(cancellation), Some(initial_guesses)) => self
-                .solver
-                .vckss_solve_contiguous_columns_from_initial_guesses_with_workspace_cancellable(
-                    right_hand_sides,
-                    initial_guesses,
-                    columns,
-                    options,
-                    &mut workspace,
-                    cancellation.atomic_flag(),
-                ),
-            (None, Some(initial_guesses)) => self
-                .solver
-                .vckss_solve_contiguous_columns_from_initial_guesses_with_workspace(
-                    right_hand_sides,
-                    initial_guesses,
-                    columns,
-                    options,
-                    &mut workspace,
-                ),
-            (Some(cancellation), None) => self
-                .solver
-                .vckss_solve_contiguous_columns_with_workspace_cancellable(
-                    right_hand_sides,
-                    columns,
-                    options,
-                    &mut workspace,
-                    cancellation.atomic_flag(),
-                ),
-            (None, None) => self.solver.vckss_solve_contiguous_columns_with_workspace(
+        let solved = self
+            .solver
+            .solve_columns(
                 right_hand_sides,
+                initial_guesses,
                 columns,
                 options,
                 &mut workspace,
-            ),
-        }
-        .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
+                self.cancellation
+                    .as_ref()
+                    .map(CancellationToken::atomic_flag),
+            )
+            .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
         let execution = scalar_execution(report.execution());
         let mut columns = Vec::new();
         columns.try_reserve_exact(solved.len()).map_err(|_| {
@@ -1200,31 +1203,33 @@ impl FullCmgDirectSolver {
             if chunk.is_empty() {
                 break;
             }
-            let extracted = self.solver.vckss_map_ordered(
-                chunk,
-                |(rhs_column, (source_column, solved_column))| match &self.cancellation {
-                    Some(cancellation) => self.extract_solved_column(
-                        operator,
-                        worker_rhs,
-                        firm_rhs,
-                        right_hand_sides,
-                        source_column,
-                        rhs_column,
-                        solved_column,
-                        &mut CancellationInterrupt::new(cancellation.clone()),
-                    ),
-                    None => self.extract_solved_column(
-                        operator,
-                        worker_rhs,
-                        firm_rhs,
-                        right_hand_sides,
-                        source_column,
-                        rhs_column,
-                        solved_column,
-                        &mut NeverInterrupt,
-                    ),
-                },
-            );
+            let extracted =
+                self.solver
+                    .map_ordered(
+                        chunk,
+                        |(rhs_column, (source_column, solved_column))| match &self.cancellation {
+                            Some(cancellation) => self.extract_solved_column(
+                                operator,
+                                worker_rhs,
+                                firm_rhs,
+                                right_hand_sides,
+                                source_column,
+                                rhs_column,
+                                solved_column,
+                                &mut CancellationInterrupt::new(cancellation.clone()),
+                            ),
+                            None => self.extract_solved_column(
+                                operator,
+                                worker_rhs,
+                                firm_rhs,
+                                right_hand_sides,
+                                source_column,
+                                rhs_column,
+                                solved_column,
+                                &mut NeverInterrupt,
+                            ),
+                        },
+                    );
             for extracted_column in extracted {
                 interrupt.checkpoint("cmg_full_v2_extract_complete")?;
                 output.push(extracted_column?);
@@ -1483,10 +1488,7 @@ fn fallible_zeroed(length: usize, context: &'static str) -> Result<Vec<f64>> {
     Ok(values)
 }
 
-fn compatibility_receipt(
-    solver: &ParallelPcgSolver,
-    setup: &FullCmgSetupReceipt,
-) -> Result<CmgReceipt> {
+fn compatibility_receipt(solver: &HostCmg, setup: &FullCmgSetupReceipt) -> Result<CmgReceipt> {
     let levels = solver.preconditioner().hierarchy().levels();
     let fine_edges = levels[0].graph().edge_count();
     let fine_vertices = levels[0].graph().vertex_count();
@@ -1544,7 +1546,7 @@ fn compatibility_receipt(
     })
 }
 
-fn scalar_column(result: PcgResult) -> FullCmgSolvedColumn {
+fn scalar_column(result: ColumnResult) -> FullCmgSolvedColumn {
     FullCmgSolvedColumn {
         iterations: result.iterations(),
         restarts: result.restarts(),
@@ -1634,7 +1636,13 @@ fn prebuild_memory_forecast_counts(
     let workspace_count = to_u64(plan.threads.min(plan.maximum_batch_rhs), "workspace count")?;
     let workspace_pool_bytes = checked_product_u64(&[workspace_each, workspace_count])?;
     let batch_vectors_bytes = admitted_batch_vector_bytes(vertices, workers, plan)?;
+    let runtime_allowance_bytes = to_u64(
+        crate::full_cmg_host::runtime_bytes(plan.threads)
+            .map_err(|error| map_setup_error(error, "host runtime forecast"))?,
+        "host runtime allowance",
+    )?;
     let retained = checked_sum_u64(&[
+        runtime_allowance_bytes,
         hybrid_bytes,
         graph_bytes,
         hierarchy_bytes,
@@ -1649,6 +1657,7 @@ fn prebuild_memory_forecast_counts(
         full_cmg_peak_bytes,
     ])?);
     Ok(FullCmgPrebuildMemory {
+        runtime_allowance_bytes,
         hybrid_bytes,
         graph_bytes,
         hierarchy_bytes,
@@ -1694,62 +1703,10 @@ fn admitted_batch_vector_bytes(
 
 pub(crate) fn queue_metadata_bytes(columns: usize) -> Result<u64> {
     to_u64(
-        ParallelPcgSolver::vckss_queue_metadata_bytes(columns)
+        HostCmg::queue_metadata_bytes(columns)
             .map_err(|error| map_setup_error(error, "queue metadata forecast"))?,
         "queue metadata bytes",
     )
-}
-
-fn hierarchy_storage_bytes(solver: &ParallelPcgSolver) -> Result<u64> {
-    let mut bytes = 0_u64;
-    for level in solver.preconditioner().hierarchy().levels() {
-        let level_bytes = checked_sum_u64(&[
-            checked_product_u64(&[
-                to_u64(level.graph().edge_count(), "hierarchy edge count")?,
-                32,
-            ])?,
-            checked_product_u64(&[
-                to_u64(level.graph().vertex_count(), "hierarchy vertex count")?,
-                64,
-            ])?,
-        ])?;
-        bytes = bytes.checked_add(level_bytes).ok_or_else(|| {
-            BackendError::new(
-                ErrorCode::ResourceLimit,
-                "cmg_full_v2",
-                "standalone hierarchy byte forecast overflow",
-            )
-        })?;
-    }
-    let terminal_bytes = to_u64(
-        solver
-            .preconditioner()
-            .terminal_factor()
-            .map_or(0, cmg::GroundedLdl::byte_len),
-        "terminal factor bytes",
-    )?;
-    let repeat_bytes = checked_product_u64(&[
-        to_u64(
-            solver.preconditioner().repeat_counts().len(),
-            "repeat count length",
-        )?,
-        to_u64(std::mem::size_of::<usize>(), "usize bytes")?,
-    ])?;
-    bytes = bytes
-        .checked_add(to_u64(
-            solver.preconditioner().component_metadata_bytes(),
-            "component metadata bytes",
-        )?)
-        .and_then(|value| value.checked_add(terminal_bytes))
-        .and_then(|value| value.checked_add(repeat_bytes))
-        .ok_or_else(|| {
-            BackendError::new(
-                ErrorCode::ResourceLimit,
-                "cmg_full_v2",
-                "standalone hierarchy metadata forecast overflow",
-            )
-        })?;
-    Ok(bytes)
 }
 
 fn to_u64(value: usize, context: &'static str) -> Result<u64> {

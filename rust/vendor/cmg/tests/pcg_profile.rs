@@ -2,7 +2,7 @@
 
 use cmg::{
     CmgOptions, CmgPreconditioner, Laplacian, ParallelCmgPlan, ParallelExecutor, ParallelOptions,
-    PcgOptions, profile_pcg_with_plan, solve_pcg_with_plan,
+    PcgOptions,
 };
 
 fn worker_firm_graph(per_side: usize) -> Laplacian {
@@ -34,16 +34,19 @@ fn profiled_planned_pcg_matches_production_bit_for_bit() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let preconditioner = CmgPreconditioner::build_with_executor(
+    let preconditioner = CmgPreconditioner::build_with(
         &graph,
-        CmgOptions {
+        cmg::BuildOptions::from(CmgOptions {
             direct_threshold: 32,
             ..CmgOptions::default()
+        }),
+        cmg::BuildContext {
+            team: Some(executor.team()),
+            ..cmg::BuildContext::default()
         },
-        &executor,
     )
     .unwrap();
-    let plan = ParallelCmgPlan::build(&preconditioner, &executor).unwrap();
+    let plan = ParallelCmgPlan::build(&preconditioner, executor.team()).unwrap();
     assert!(plan.operator_count() > 0);
 
     let mut target: Vec<f64> = (0..graph.vertex_count())
@@ -59,10 +62,31 @@ fn profiled_planned_pcg_matches_production_bit_for_bit() {
         ..PcgOptions::default()
     };
 
-    let production =
-        solve_pcg_with_plan(&graph, &preconditioner, &plan, &rhs, options, &executor).unwrap();
-    let profiled =
-        profile_pcg_with_plan(&graph, &preconditioner, &plan, &rhs, options, &executor).unwrap();
+    let production = cmg::solve_pcg_with(
+        &graph,
+        &preconditioner,
+        &rhs,
+        options,
+        &mut cmg::PcgWorkspace::new(&preconditioner),
+        cmg::SolveContext {
+            plan: Some(&plan),
+            team: Some(executor.team()),
+            ..cmg::SolveContext::default()
+        },
+    )
+    .unwrap();
+    let profiled = cmg::profile_pcg(
+        &graph,
+        &preconditioner,
+        &rhs,
+        options,
+        cmg::SolveContext {
+            plan: Some(&plan),
+            team: Some(executor.team()),
+            ..cmg::SolveContext::default()
+        },
+    )
+    .unwrap();
 
     assert_eq!(production.iterations(), profiled.iterations());
     assert_eq!(

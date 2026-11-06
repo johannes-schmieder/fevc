@@ -4,9 +4,9 @@ FEVC third-party notices
 FEVC package code is MIT. The complete license is included as
 LICENSE.
 
-The optional Rust backend contains an adapted MIT CMG implementation.
+The optional Rust backend contains an unmodified MIT CMG implementation.
 Original notices, the exact upstream identity, and corresponding source are
-preserved in the source distribution under rust/vendor/cmg/. The package-owned
+preserved in the source distribution under rust/vendor/cmg/ with provenance at rust/vendor/CMG-SOURCE.json. The package-owned
 Mata CMG provenance is recorded under fevc/cmg/docs/.
 
 On 2026-11-03 Johannes Schmieder confirmed that CMG's developers had granted

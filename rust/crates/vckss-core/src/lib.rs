@@ -21,6 +21,7 @@ pub mod exact;
 pub mod exact_estimator;
 pub mod full_cmg;
 mod full_cmg_batch_policy;
+mod full_cmg_host;
 pub mod generic_batch;
 pub mod generic_jla;
 pub mod graph;

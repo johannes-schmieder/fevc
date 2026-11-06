@@ -3,7 +3,7 @@
 use crate::graph::compensated_sum;
 use crate::{
     CmgError, CmgOptions, CmgPreconditioner, PcgOptions, PcgWorkspace, SddmAugmentation,
-    SddmMatrix, ValidationOptions, solve_pcg_with_workspace,
+    SddmMatrix, ValidationOptions,
 };
 
 const MAX_CERTIFICATE_REFINEMENTS: usize = 3;
@@ -112,16 +112,20 @@ impl SddmSolver {
         let mut total_restarts = 0_usize;
 
         loop {
-            let augmented = solve_pcg_with_workspace(
+            let augmented = crate::pcg::solve_pcg_in_workspace(
                 self.augmentation.graph(),
                 &self.preconditioner,
                 &workspace.lifted_rhs,
+                None,
                 solve_options,
                 &mut workspace.pcg,
+                crate::SolveContext::default(),
             )?;
             total_iterations += augmented.iterations();
             total_restarts += augmented.restarts();
-            let solution = self.augmentation.extract_solution(augmented.solution())?;
+            let solution = self
+                .augmentation
+                .extract_solution(workspace.pcg.solution())?;
 
             self.matrix
                 .matvec_into(&solution, &mut workspace.original_residual)?;

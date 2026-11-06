@@ -1,0 +1,4 @@
+level,vertices,edges,matrix_nnz,repeat,terminal
+0,34862,39652,114166,9,
+1,2132,4584,11300,1,
+2,216,1367,2950,0,Direct

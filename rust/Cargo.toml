@@ -2,8 +2,8 @@
 members = [
     "crates/vckss-core",
     "crates/vckss-plugin",
-    "vendor/cmg",
 ]
+exclude = ["vendor/cmg"]
 resolver = "2"
 
 [workspace.package]

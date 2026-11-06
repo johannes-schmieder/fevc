@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0 14oct2026}{...}
+{* *! version 0.5.1 06nov2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -826,7 +826,7 @@ Johannes F. Schmieder, Boston University.
 {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 
 {pstd}
-Version 0.5.0. Code is MIT.
+Version 0.5.1. Code is MIT.
 
 {title:Also see}
 

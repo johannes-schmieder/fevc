@@ -25,8 +25,7 @@ REQUIRED_TEXT = {
         "MIT",
         "rust/vendor/cmg/",
     ),
-    ROOT / "rust" / "vendor" / "cmg" / "VENDOR.md": ("License: `MIT`", "Ioannis Koutis"),
-    ROOT / "rust" / "vendor" / "cmg" / "UPSTREAM_MANIFEST.sha256": (),
+    ROOT / "rust" / "vendor" / "CMG-SOURCE.json": ("https://github.com/johannes-schmieder/CMG",),
     ROOT / "REUSE.toml": (
         'SPDX-License-Identifier = "MIT"',
         'precedence = "aggregate"',
@@ -57,6 +56,8 @@ def cargo_manifests(root: Path) -> tuple[Path, ...]:
 
 
 def main() -> int:
+    from check_cmg_vendor import check
+    check()
     errors: list[str] = []
     if not CANONICAL.is_file():
         errors.append(f"missing canonical license: {CANONICAL}")

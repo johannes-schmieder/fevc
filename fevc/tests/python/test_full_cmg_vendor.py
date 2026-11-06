@@ -1,46 +1,20 @@
+import importlib.util
+import json
+import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[3]
-VENDOR = ROOT / "rust/vendor/cmg"
-CMG_COMMIT = "92a12f2d572ca56b30a035220953f9dd4bced999"
+sys.path.insert(0, str(ROOT / "fevc/tools"))
+from check_cmg_vendor import check
+from cmg_vendor import inventory
 
 
-def test_full_cmg_vendor_is_source_pinned_and_normal_build_owned() -> None:
-    record = (VENDOR / "VENDOR.md").read_text(encoding="utf-8")
-    assert CMG_COMMIT in record
-    assert "License: `MIT`" in record
-    assert (VENDOR / "LICENSE").is_file()
-    assert not (VENDOR / "src/bin").exists()
-    assert (VENDOR / "src/cancel.rs").is_file()
-    assert "cooperative atomic cancellation" in record
-
-    workspace = (ROOT / "rust/Cargo.toml").read_text(encoding="utf-8")
-    core = (ROOT / "rust/crates/vckss-core/Cargo.toml").read_text(encoding="utf-8")
-    assert '"vendor/cmg"' in workspace
-    assert 'cmg = { path = "../../vendor/cmg", features = ["parallel"] }' in core
-
-    library = (VENDOR / "src/lib.rs").read_text(encoding="utf-8")
-    assert "solve_pcg_with_workspace_cancellable" in library
-    assert "solve_pcg_with_plan_and_workspace_cancellable" in library
-
-
-def test_upstream_manifest_names_every_imported_upstream_file() -> None:
-    entries: dict[str, str] = {}
-    for line in (VENDOR / "UPSTREAM_MANIFEST.sha256").read_text(
-        encoding="utf-8"
-    ).splitlines():
-        digest, relative = line.split("  ", 1)
-        assert len(digest) == 64
-        assert all(character in "0123456789abcdef" for character in digest)
-        assert relative not in entries
-        entries[relative] = digest
-        assert (VENDOR / relative).is_file()
-    assert "Cargo.toml" in entries
-    assert "LICENSE" in entries
-    assert "src/lib.rs" in entries
-    assert "src/parallel_solver.rs" in entries
-    assert len(entries) == 42
+def test_full_cmg_vendor_is_unmodified_and_source_pinned() -> None:
+    check()
+    record = json.loads((ROOT / "rust/vendor/CMG-SOURCE.json").read_text())
+    assert inventory(ROOT / "rust/vendor/cmg") == record["files"]
+    assert {"Cargo.toml", "LICENSE", "src/lib.rs", "src/parallel_solver.rs"} <= record["files"].keys()
+    assert not (ROOT / "rust/vendor/cmg/src/vckss_bridge.rs").exists()
 
 
 def test_rust_185_is_the_normal_and_standalone_msrv() -> None:

@@ -1,19 +1,38 @@
 [package]
 name = "cmg"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
+autobins = false
 license = "MIT"
 description = "Deterministic Rust implementation of stationary Combinatorial Multigrid with certified PCG"
 repository = "https://github.com/johannes-schmieder/CMG"
 readme = "README.md"
 keywords = ["laplacian", "multigrid", "preconditioner", "pcg", "sparse"]
 categories = ["algorithms", "mathematics", "science"]
+include = [
+    "src/**",
+    "examples/**",
+    "tests/**",
+    "Cargo.toml",
+    "Cargo.lock",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "RELEASING.md",
+    "docs/**",
+]
 
 [features]
 default = []
 parallel = ["dep:rayon"]
 profiling = ["parallel"]
+cycle-profiling = ["profiling"]
+experimental-components = []
 
 [dependencies]
 rayon = { version = "1.12", optional = true }
+
+# Keep this standalone package independent of an embedding checkout workspace.
+[workspace]
+exclude = ["benchmarks", "benchmarks/c-kernel"]

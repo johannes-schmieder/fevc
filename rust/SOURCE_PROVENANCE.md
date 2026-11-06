@@ -29,15 +29,38 @@ No MEX interface, compiled upstream binary, or imported runtime is used.
 
 ## Vendored full CMG backend
 
-The production `CMG_FULL_V2` route vendors the deterministic Rust CMG library
-from `https://github.com/johannes-schmieder/CMG` at exact commit
-`92a12f2d572ca56b30a035220953f9dd4bced999`. The imported library source,
-tests, license, README, and upstream provenance document live under
-`rust/vendor/cmg/`; upstream benchmark programs and generated benchmark
-artifacts are excluded. `rust/vendor/cmg/VENDOR.md` records the archive hash,
-file-level upstream hashes, and the narrow FEVC integration patch classes.
-The earlier authorized source-review manifest is retained as
-`rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml`.
+The production `CMG_FULL_V2` route uses unmodified CMG 0.2.0 from
+`https://github.com/johannes-schmieder/CMG`, pinned to the full revision in
+`rust/vendor/CMG-SOURCE.json`. That external record inventories every vendored
+file, including the unchanged standalone Cargo manifest. The vendor directory
+is excluded from FEVC's workspace; all integration code lives in
+`rust/crates/vckss-core/src/full_cmg_host.rs`.
+
+Refresh and verify from a local upstream checkout with:
+
+```sh
+./.venv/bin/python fevc/tools/cmg_vendor.py refresh --source /path/to/CMG --rev FULL_SHA --destination rust/vendor/cmg --record rust/vendor/CMG-SOURCE.json
+./.venv/bin/python fevc/tools/cmg_vendor.py check --source /path/to/CMG --rev FULL_SHA --destination rust/vendor/cmg --record rust/vendor/CMG-SOURCE.json
+```
+
+The offline check omits `--source` and `--rev`; it compares the entire inventory
+to the committed provenance. Release validation also runs the upstream-backed
+check. Update the Rust and Stata source-identity constants with each refresh.
+The former private vendor patches and their provenance remain in Git history.
+
+FEVC owns one joined Rayon pool and uses it both for CMG teams and statistical
+work. The public CMG contexts carry only the atomic cancellation query; Stata
+callbacks stay on the caller. A fixed, admitted batch-workspace bank services
+the dynamically claimed RHS queue. Input ordering, warm starts, and complete
+original-system certification remain FEVC contracts. `max_levels = 128` is
+explicit, preserving FEVC's established option.
+
+Memory admission counts CMG workspace payload and descriptors, FEVC RHS/output
+and queue buffers, and host worker handles. Requested 2 MiB worker stacks and
+128 KiB per-worker Rayon heap allowances are separate runtime planning charges,
+not measured allocation bounds or process-RSS guarantees. Allocator-only
+accuracy checks exclude requested OS stack reservations while retaining the
+registered tolerance; command admission includes them.
 
 The vendored crate and FEVC are `MIT`. Normal builds use the locked
 path dependency and Rust 1.85.1; they do not read or modify a standalone CMG

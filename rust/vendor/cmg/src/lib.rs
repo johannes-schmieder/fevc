@@ -2,19 +2,25 @@
 //! preconditioner.
 //!
 //! The implementation is developed against the pinned upstream source recorded
-//! in `UPSTREAM.md`. Numerical modules are added in recoverable checkpoints; the
-//! live status is maintained in `PLAN.md`.
+//! in `docs/UPSTREAM.md`.
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
-#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
+#[cfg(all(test, feature = "parallel"))]
+mod bounded_team_tests;
+mod build;
 mod cancel;
+mod cmg_profile;
 mod coarsen;
+#[cfg(feature = "experimental-components")]
+mod component_experiment;
 mod components;
 mod csr;
 mod error;
 mod execution;
+#[cfg(feature = "parallel")]
+mod execution_stage;
 mod forest;
 mod graph;
 mod hierarchy;
@@ -27,60 +33,65 @@ mod pcg;
 #[cfg(feature = "profiling")]
 mod pcg_profile;
 mod preconditioner;
+mod prepared;
 mod sddm;
 mod sddm_solver;
-#[cfg(feature = "parallel")]
-mod vckss_bridge;
+mod storage;
 mod workspace;
 
+pub use build::{BuildContext, BuildOptions};
+pub use cancel::Cancellation;
+#[cfg(feature = "cycle-profiling")]
+pub use cmg_profile::{CmgApplyLevelProfile, CmgApplyPhase, CmgApplyProfile};
 pub use coarsen::Aggregation;
+#[cfg(feature = "experimental-components")]
+pub use component_experiment::{ComponentBuildOptions, PrunedTransfer};
 pub use components::Components;
 pub use csr::CsrLaplacian;
 pub use error::CmgError;
-#[cfg(feature = "parallel")]
-pub use execution::ParallelExecutor;
 pub use execution::ParallelOptions;
+#[cfg(feature = "parallel")]
+pub use execution::{ParallelExecutor, ParallelRuntimeAllowance, ParallelRuntimeEstimate, Team};
+#[cfg(feature = "parallel")]
+pub use execution_stage::{AdmittedStage, ControlledStage};
 pub use forest::{
     ForestGrouping, build_forest_grouping, forest_components, maximum_weight_forest, split_forest,
 };
-#[cfg(feature = "parallel")]
-pub use forest::{build_forest_grouping_with_executor, maximum_weight_forest_with_executor};
 pub use graph::{Edge, Laplacian};
 pub use hierarchy::{CmgHierarchy, HierarchyBuildReport, HierarchyLevel, TerminalReason};
 pub use ldl::GroundedLdl;
-pub use memory::{CmgMemoryEstimate, CmgMemoryReport, CmgProblemSize};
+pub use memory::{
+    CmgMemoryEstimate, CmgMemoryReport, CmgProblemSize, RepeatedPcgMemoryEstimate,
+    RepeatedPcgMemoryReport,
+};
 pub use options::{CmgOptions, PcgOptions, ValidationOptions};
 #[cfg(feature = "parallel")]
 pub use parallel_solver::{
     DEFAULT_MIN_PLANNED_EDGES, ParallelPcgBatchReport, ParallelPcgBatchResult,
     ParallelPcgExecution, ParallelPcgPolicy, ParallelPcgSolver, ParallelPcgWorkspace,
 };
-pub use pcg::{PcgResult, PcgWorkspace, solve_pcg, solve_pcg_batch, solve_pcg_with_workspace};
 #[cfg(feature = "parallel")]
+pub use pcg::solve_pcg_batch_concurrent;
 pub use pcg::{
-    solve_pcg_batch_parallel, solve_pcg_batch_with_executor, solve_pcg_with_plan,
-    solve_pcg_with_plan_and_initial_guess_and_workspace,
-    solve_pcg_with_plan_and_initial_guess_and_workspace_cancellable,
-    solve_pcg_with_plan_and_workspace, solve_pcg_with_plan_and_workspace_cancellable,
-};
-pub use pcg::{
-    solve_pcg_with_initial_guess_and_workspace,
-    solve_pcg_with_initial_guess_and_workspace_cancellable, solve_pcg_with_workspace_cancellable,
+    PcgBatchMut, PcgBatchRef, PcgBatchWorkspace, PcgDiagnostics, PcgResult, PcgWorkspace,
+    SolveContext, solve_pcg, solve_pcg_batch, solve_pcg_batch_into, solve_pcg_into, solve_pcg_with,
 };
 #[cfg(feature = "profiling")]
-pub use pcg_profile::{PcgPhaseProfile, PcgPhaseSample, ProfiledPcgResult, profile_pcg_with_plan};
-pub use preconditioner::CmgPreconditioner;
+pub use pcg::{PcgBatchPhaseProfile, profile_pcg_batch_into};
+#[cfg(feature = "profiling")]
+pub use pcg_profile::{PcgPhaseProfile, PcgPhaseSample, ProfiledPcgResult, profile_pcg};
 #[cfg(feature = "parallel")]
 pub use preconditioner::ParallelCmgPlan;
+pub use preconditioner::{ApplyContext, CmgBatchWorkspace, CmgPreconditioner};
 #[cfg(feature = "profiling")]
 pub use preconditioner::{
     HierarchyPhaseProfile, ParallelPlanBuildProfile, ParallelPlanLevelProfile,
     PreconditionerBuildProfile,
 };
+pub use prepared::{PreparedLaplacianTopology, PreparedLaplacianWorkspace};
 pub use sddm::{SddmAugmentation, SddmMatrix};
 pub use sddm_solver::{SddmResult, SddmSolver, SddmWorkspace, solve_sddm};
-#[cfg(feature = "parallel")]
-pub use vckss_bridge::VckssContiguousPcgWorkspace;
+pub use storage::{CmgStorage, CmgStorageReport};
 pub use workspace::CmgWorkspace;
 
 /// Return the pinned upstream CMG commit used as the behavioral reference.

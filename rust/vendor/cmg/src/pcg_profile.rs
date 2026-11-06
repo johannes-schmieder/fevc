@@ -1,14 +1,10 @@
-//! Opt-in phase profiling for the exact planned-PCG arithmetic path.
+//! Opt-in phase profiling of the one certified PCG recurrence.
 
 use std::time::Instant;
 
-use crate::components::ComponentWorkspace;
-use crate::graph::compensated_sum;
-use crate::pcg::{dot_with_executor, euclidean_norm_with_executor};
-use crate::{
-    CmgError, CmgPreconditioner, CmgWorkspace, Laplacian, ParallelCmgPlan, ParallelExecutor,
-    PcgOptions,
-};
+use crate::pcg::{Pcg, PcgPhase, PcgRecorder};
+use crate::preconditioner::with_meter;
+use crate::{CmgError, CmgPreconditioner, Laplacian, PcgOptions, PcgWorkspace, SolveContext};
 
 /// Accumulated wall-clock time and invocation count for one PCG phase.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -36,12 +32,16 @@ impl PcgPhaseSample {
     }
 }
 
-/// Phase-level timing from one exact planned-PCG solve.
+/// Phase-level timing from one profiled PCG solve.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PcgPhaseProfile {
     total_nanoseconds: u128,
     setup: PcgPhaseSample,
     preconditioner: PcgPhaseSample,
+    #[cfg(feature = "cycle-profiling")]
+    cycle: crate::CmgApplyProfile,
+    #[cfg(not(feature = "cycle-profiling"))]
+    cycle: (),
     matvec: PcgPhaseSample,
     dot_products: PcgPhaseSample,
     vector_updates: PcgPhaseSample,
@@ -70,13 +70,20 @@ impl PcgPhaseProfile {
         self.preconditioner
     }
 
+    /// Return exclusive phase attribution within the measured CMG applications.
+    #[must_use]
+    #[cfg(feature = "cycle-profiling")]
+    pub fn cycle(&self) -> &crate::CmgApplyProfile {
+        &self.cycle
+    }
+
     /// Return ordinary finest-level matrix-vector timing outside residual replacement.
     #[must_use]
     pub const fn matvec(&self) -> PcgPhaseSample {
         self.matvec
     }
 
-    /// Return compensated dot-product timing.
+    /// Return compensated dot-product timing outside experimental centering fusion.
     #[must_use]
     pub const fn dot_products(&self) -> PcgPhaseSample {
         self.dot_products
@@ -89,6 +96,8 @@ impl PcgPhaseProfile {
     }
 
     /// Return finest-component centering timing.
+    /// With `experimental-components`, includes the paired preconditioned-vector
+    /// centering and residual dot product, measured together even on the parallel fallback.
     #[must_use]
     pub const fn centering(&self) -> PcgPhaseSample {
         self.centering
@@ -139,7 +148,7 @@ impl PcgPhaseProfile {
     }
 }
 
-/// Numerical result and phase profile from one exact planned-PCG solve.
+/// Numerical result and phase profile from one profiled PCG solve.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProfiledPcgResult {
     solution: Vec<f64>,
@@ -216,467 +225,75 @@ impl ProfiledPcgResult {
     }
 }
 
-struct ProfileWorkspace {
-    projected_rhs: Vec<f64>,
-    solution: Vec<f64>,
-    residual: Vec<f64>,
-    preconditioned: Vec<f64>,
-    direction: Vec<f64>,
-    matrix_direction: Vec<f64>,
-    component: ComponentWorkspace,
-    cmg: CmgWorkspace,
-}
+impl PcgRecorder for PcgPhaseProfile {
+    type Stamp = Instant;
+    #[cfg(feature = "cycle-profiling")]
+    type Cycle = crate::CmgApplyProfile;
+    #[cfg(not(feature = "cycle-profiling"))]
+    type Cycle = ();
 
-impl ProfileWorkspace {
-    fn new(preconditioner: &CmgPreconditioner) -> Self {
-        let dimension = preconditioner.hierarchy().levels()[0]
-            .graph()
-            .vertex_count();
-        Self {
-            projected_rhs: vec![0.0; dimension],
-            solution: vec![0.0; dimension],
-            residual: vec![0.0; dimension],
-            preconditioned: vec![0.0; dimension],
-            direction: vec![0.0; dimension],
-            matrix_direction: vec![0.0; dimension],
-            component: preconditioner.finest_components().workspace(),
-            cmg: preconditioner.workspace(),
-        }
+    fn start() -> Instant {
+        Instant::now()
+    }
+
+    fn finish(&mut self, phase: PcgPhase, start: Instant) {
+        let sample = match phase {
+            PcgPhase::Setup => &mut self.setup,
+            PcgPhase::Preconditioner => &mut self.preconditioner,
+            PcgPhase::Matvec => &mut self.matvec,
+            PcgPhase::DotProducts => &mut self.dot_products,
+            PcgPhase::VectorUpdates => &mut self.vector_updates,
+            PcgPhase::Centering => &mut self.centering,
+            PcgPhase::Norms => &mut self.norms,
+            PcgPhase::ResidualRecompute => &mut self.residual_recompute,
+            PcgPhase::Certification => &mut self.certification,
+            PcgPhase::Gather | PcgPhase::Solve | PcgPhase::Scatter => return,
+        };
+        sample.add(start.elapsed().as_nanos());
+    }
+
+    fn cycle(&mut self) -> &mut Self::Cycle {
+        &mut self.cycle
     }
 }
 
-/// Run the exact production planned-PCG arithmetic while accumulating phase timing.
+/// Run the production PCG recurrence under `context` while accumulating
+/// phase timing.
 ///
-/// This diagnostic is compiled only by the opt-in `profiling` feature. It uses
-/// the same operation order, recursive CMG schedule, residual replacement, and
-/// original-system certification as `solve_pcg_with_plan`. Callers should still
-/// compare its result with the ordinary solver before interpreting timings.
-pub fn profile_pcg_with_plan(
+/// This diagnostic is compiled only by the opt-in `profiling` feature. It runs
+/// the same recurrence, cycle schedule, residual replacement and
+/// original-system certification as [`crate::solve_pcg_into`]; only timers are
+/// added. Callers should still compare its result with the ordinary solver
+/// before interpreting timings.
+pub fn profile_pcg(
     graph: &Laplacian,
     preconditioner: &CmgPreconditioner,
-    plan: &ParallelCmgPlan,
     rhs: &[f64],
     options: PcgOptions,
-    executor: &ParallelExecutor,
+    context: SolveContext<'_>,
 ) -> Result<ProfiledPcgResult, CmgError> {
     let overall_start = Instant::now();
-    let options = options.validate()?;
-    let dimension = graph.vertex_count();
-    if !preconditioner.matches_graph(graph) {
-        return Err(CmgError::InvalidHierarchy {
-            context: "profiled PCG graph differs from the preconditioner's finest graph",
-        });
-    }
-    if rhs.len() != dimension {
-        return Err(CmgError::dimension(
-            "profile_pcg_with_plan rhs",
-            dimension,
-            rhs.len(),
-        ));
-    }
-    plan.validate(preconditioner)?;
-
     let mut profile = PcgPhaseProfile::default();
-    let mut workspace = ProfileWorkspace::new(preconditioner);
-    let components = preconditioner.finest_components();
-
-    let rhs_projection_norm = measure(&mut profile.setup, || {
-        workspace.projected_rhs.copy_from_slice(rhs);
-        let projection = components.project_rhs_in_place_with_workspace(
-            &mut workspace.projected_rhs,
-            options.validation,
-            &mut workspace.component,
-        )?;
-        workspace.solution.fill(0.0);
-        workspace.residual.copy_from_slice(&workspace.projected_rhs);
-        Ok::<f64, CmgError>(projection)
-    })?;
-
-    let initial_residual_norm = measure(&mut profile.norms, || {
-        euclidean_norm_with_executor(rhs, executor)
-    });
-    let projected_initial_norm = measure(&mut profile.norms, || {
-        euclidean_norm_with_executor(&workspace.projected_rhs, executor)
-    });
-    let operator_bound = graph.operator_norm_bound();
-    let initial_tolerance = allowed_residual(options, initial_residual_norm, operator_bound, 0.0);
-    if initial_residual_norm <= initial_tolerance {
-        return Ok(finish_result(
-            workspace.solution,
-            0,
-            initial_residual_norm,
-            initial_residual_norm,
-            initial_tolerance,
-            operator_bound,
-            0,
-            rhs_projection_norm,
-            profile,
-            overall_start,
-        ));
+    #[cfg(feature = "cycle-profiling")]
+    {
+        profile.cycle = crate::CmgApplyProfile::new(preconditioner.hierarchy().levels().len());
     }
-    if projected_initial_norm == 0.0 {
-        return Err(CmgError::ResidualVerificationFailed {
-            iteration: 0,
-            residual_norm: initial_residual_norm,
-            tolerance: initial_tolerance,
-        });
-    }
-
-    measure(&mut profile.preconditioner, || {
-        preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
-            &workspace.residual,
-            &mut workspace.preconditioned,
-            &mut workspace.cmg,
-            options.validation,
-            plan,
-            executor,
-            None,
-        )
+    let mut workspace = PcgWorkspace::try_new(preconditioner)?;
+    let solve = Pcg::new(graph, preconditioner, context);
+    let diagnostics = with_meter!(context.cancel, meter => {
+        solve.run(rhs, None, options, &mut workspace, meter, &mut profile)
     })?;
-    measure(&mut profile.centering, || {
-        components.center_in_place_with_workspace_and_executor(
-            &mut workspace.preconditioned,
-            &mut workspace.component,
-            executor,
-        )
-    })?;
-    let mut rho = measure(&mut profile.dot_products, || {
-        dot_with_executor(&workspace.residual, &workspace.preconditioned, executor)
-    });
-    validate_positive_pcg(0, "r^T M r", rho)?;
-    measure(&mut profile.vector_updates, || {
-        workspace
-            .direction
-            .copy_from_slice(&workspace.preconditioned);
-    });
-
-    let mut restarts = 0_usize;
-    let mut last_tolerance = initial_tolerance;
-
-    for iteration in 1..=options.max_iterations {
-        measure(&mut profile.matvec, || {
-            plan.finest_matvec_into(
-                graph,
-                &workspace.direction,
-                &mut workspace.matrix_direction,
-                executor,
-            )
-        })?;
-        let direction_curvature = measure(&mut profile.dot_products, || {
-            dot_with_executor(&workspace.direction, &workspace.matrix_direction, executor)
-        });
-        validate_positive_pcg(iteration, "p^T A p", direction_curvature)?;
-        let alpha = rho / direction_curvature;
-        validate_finite_pcg(iteration, "alpha", alpha)?;
-
-        measure(&mut profile.vector_updates, || {
-            for (((solution, residual), direction), matrix_direction) in workspace
-                .solution
-                .iter_mut()
-                .zip(&mut workspace.residual)
-                .zip(&workspace.direction)
-                .zip(&workspace.matrix_direction)
-            {
-                *solution += alpha * *direction;
-                *residual -= alpha * *matrix_direction;
-            }
-        });
-        measure(&mut profile.centering, || {
-            components.center_in_place_with_workspace_and_executor(
-                &mut workspace.solution,
-                &mut workspace.component,
-                executor,
-            )
-        })?;
-
-        let solution_norm = measure(&mut profile.norms, || {
-            euclidean_norm_with_executor(&workspace.solution, executor)
-        });
-        last_tolerance = allowed_residual(
-            options,
-            initial_residual_norm,
-            operator_bound,
-            solution_norm,
-        );
-        let recursive_residual_norm = measure(&mut profile.norms, || {
-            euclidean_norm_with_executor(&workspace.residual, executor)
-        });
-        let candidate = recursive_residual_norm <= last_tolerance;
-        let scheduled_recompute = iteration % options.residual_recompute_interval == 0;
-        let mut restarted = false;
-
-        if candidate || scheduled_recompute {
-            let projected_fresh_norm = measure(&mut profile.residual_recompute, || {
-                recompute_residual_with_plan(
-                    plan,
-                    executor,
-                    graph,
-                    &workspace.projected_rhs,
-                    &workspace.solution,
-                    &mut workspace.matrix_direction,
-                )
-            })?;
-            measure(&mut profile.vector_updates, || {
-                workspace
-                    .residual
-                    .copy_from_slice(&workspace.matrix_direction);
-            });
-            restarted = true;
-            restarts += 1;
-            if projected_fresh_norm <= last_tolerance {
-                let original_norm = measure(&mut profile.certification, || {
-                    original_residual_norm(
-                        rhs,
-                        &workspace.projected_rhs,
-                        &workspace.matrix_direction,
-                    )
-                });
-                if original_norm <= last_tolerance {
-                    return Ok(finish_result(
-                        workspace.solution,
-                        iteration,
-                        initial_residual_norm,
-                        original_norm,
-                        last_tolerance,
-                        operator_bound,
-                        restarts,
-                        rhs_projection_norm,
-                        profile,
-                        overall_start,
-                    ));
-                }
-                if iteration == options.max_iterations {
-                    return Err(CmgError::ResidualVerificationFailed {
-                        iteration,
-                        residual_norm: original_norm,
-                        tolerance: last_tolerance,
-                    });
-                }
-            }
-        }
-
-        if iteration == options.max_iterations {
-            break;
-        }
-
-        measure(&mut profile.centering, || {
-            components.center_in_place_with_workspace_and_executor(
-                &mut workspace.residual,
-                &mut workspace.component,
-                executor,
-            )
-        })?;
-        measure(&mut profile.preconditioner, || {
-            preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
-                &workspace.residual,
-                &mut workspace.preconditioned,
-                &mut workspace.cmg,
-                options.validation,
-                plan,
-                executor,
-                None,
-            )
-        })?;
-        measure(&mut profile.centering, || {
-            components.center_in_place_with_workspace_and_executor(
-                &mut workspace.preconditioned,
-                &mut workspace.component,
-                executor,
-            )
-        })?;
-        let new_rho = measure(&mut profile.dot_products, || {
-            dot_with_executor(&workspace.residual, &workspace.preconditioned, executor)
-        });
-        validate_positive_pcg(iteration, "new r^T M r", new_rho)?;
-
-        if restarted {
-            measure(&mut profile.vector_updates, || {
-                workspace
-                    .direction
-                    .copy_from_slice(&workspace.preconditioned);
-            });
-        } else {
-            let beta = new_rho / rho;
-            validate_finite_pcg(iteration, "beta", beta)?;
-            measure(&mut profile.vector_updates, || {
-                for (direction, preconditioned) in workspace
-                    .direction
-                    .iter_mut()
-                    .zip(&workspace.preconditioned)
-                {
-                    *direction = *preconditioned + beta * *direction;
-                }
-            });
-        }
-        rho = new_rho;
-    }
-
-    measure(&mut profile.residual_recompute, || {
-        recompute_residual_with_plan(
-            plan,
-            executor,
-            graph,
-            &workspace.projected_rhs,
-            &workspace.solution,
-            &mut workspace.matrix_direction,
-        )
-    })?;
-    let residual_norm = measure(&mut profile.certification, || {
-        original_residual_norm(rhs, &workspace.projected_rhs, &workspace.matrix_direction)
-    });
-    Err(CmgError::MaximumIterations {
-        iterations: options.max_iterations,
-        residual_norm,
-        tolerance: last_tolerance,
-    })
-}
-
-fn measure<Output, Operation>(sample: &mut PcgPhaseSample, operation: Operation) -> Output
-where
-    Operation: FnOnce() -> Output,
-{
-    let start = Instant::now();
-    let output = operation();
-    sample.add(start.elapsed().as_nanos());
-    output
-}
-
-#[allow(clippy::too_many_arguments)]
-fn finish_result(
-    solution: Vec<f64>,
-    iterations: usize,
-    initial_residual_norm: f64,
-    residual_norm: f64,
-    tolerance: f64,
-    operator_bound: f64,
-    restarts: usize,
-    rhs_projection_norm: f64,
-    mut profile: PcgPhaseProfile,
-    overall_start: Instant,
-) -> ProfiledPcgResult {
-    let certification_start = Instant::now();
-    let solution_norm = euclidean_norm(&solution);
-    let denominator = initial_residual_norm + operator_bound * solution_norm;
-    let relative_residual = if initial_residual_norm > 0.0 {
-        residual_norm / initial_residual_norm
-    } else {
-        residual_norm
-    };
-    let backward_error = if denominator > 0.0 {
-        residual_norm / denominator
-    } else {
-        0.0
-    };
-    profile
-        .certification
-        .add(certification_start.elapsed().as_nanos());
     profile.total_nanoseconds = overall_start.elapsed().as_nanos();
-    ProfiledPcgResult {
-        solution,
-        iterations,
-        initial_residual_norm,
-        residual_norm,
-        relative_residual,
-        backward_error,
-        tolerance,
-        restarts,
-        rhs_projection_norm,
+    Ok(ProfiledPcgResult {
+        solution: workspace.solution().to_vec(),
+        iterations: diagnostics.iterations(),
+        initial_residual_norm: diagnostics.initial_residual_norm(),
+        residual_norm: diagnostics.residual_norm(),
+        relative_residual: diagnostics.relative_residual(),
+        backward_error: diagnostics.backward_error(),
+        tolerance: diagnostics.tolerance(),
+        restarts: diagnostics.restarts(),
+        rhs_projection_norm: diagnostics.rhs_projection_norm(),
         profile,
-    }
-}
-
-fn allowed_residual(
-    options: PcgOptions,
-    rhs_norm: f64,
-    operator_bound: f64,
-    solution_norm: f64,
-) -> f64 {
-    options.absolute_tolerance
-        + options.relative_tolerance * (rhs_norm + operator_bound * solution_norm)
-}
-
-fn recompute_residual_with_plan(
-    plan: &ParallelCmgPlan,
-    executor: &ParallelExecutor,
-    graph: &Laplacian,
-    rhs: &[f64],
-    solution: &[f64],
-    residual: &mut [f64],
-) -> Result<f64, CmgError> {
-    plan.finest_matvec_into(graph, solution, residual, executor)?;
-    for (value, rhs_value) in residual.iter_mut().zip(rhs) {
-        *value = *rhs_value - *value;
-    }
-    Ok(euclidean_norm_with_executor(residual, executor))
-}
-
-fn original_residual_norm(
-    original_rhs: &[f64],
-    projected_rhs: &[f64],
-    projected_residual: &[f64],
-) -> f64 {
-    let values = || {
-        original_rhs
-            .iter()
-            .zip(projected_rhs)
-            .zip(projected_residual)
-            .map(|((&original, &projected), &residual)| residual + (original - projected))
-    };
-    let scale = values().map(f64::abs).fold(0.0, f64::max);
-    if scale == 0.0 {
-        0.0
-    } else {
-        scale
-            * compensated_sum(values().map(|value| {
-                let scaled = value / scale;
-                scaled * scaled
-            }))
-            .sqrt()
-    }
-}
-
-fn euclidean_norm(values: &[f64]) -> f64 {
-    let scale = values.iter().map(|value| value.abs()).fold(0.0, f64::max);
-    if scale == 0.0 {
-        0.0
-    } else {
-        scale
-            * compensated_sum(values.iter().map(|value| {
-                let scaled = *value / scale;
-                scaled * scaled
-            }))
-            .sqrt()
-    }
-}
-
-fn validate_positive_pcg(
-    iteration: usize,
-    quantity: &'static str,
-    value: f64,
-) -> Result<(), CmgError> {
-    if value.is_finite() && value > 0.0 {
-        Ok(())
-    } else {
-        Err(CmgError::PcgBreakdown {
-            iteration,
-            quantity,
-            value,
-        })
-    }
-}
-
-fn validate_finite_pcg(
-    iteration: usize,
-    quantity: &'static str,
-    value: f64,
-) -> Result<(), CmgError> {
-    if value.is_finite() {
-        Ok(())
-    } else {
-        Err(CmgError::PcgBreakdown {
-            iteration,
-            quantity,
-            value,
-        })
-    }
+    })
 }

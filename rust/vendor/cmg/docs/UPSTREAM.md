@@ -23,9 +23,19 @@ This project is an independent Rust port of the official CMG implementation:
 - pinned commit
   [`19752fc102f8cae8e34f66457bfaccb1aaa60375`](https://github.com/ikoutis/cmg-solver/tree/19752fc102f8cae8e34f66457bfaccb1aaa60375)
 - upstream source path `matlab/cmg`
-- license: MIT, under the permission recorded in `../VENDOR.md`
+- license: MIT; see the permission below
 
 The pinned commit includes the 2026 correction to the C forest-component workspace initialization.
+
+## MIT permission — 2026-11-03
+
+On 2026-11-03 Johannes Schmieder confirmed that CMG's developers had granted
+official permission, communicated through Ioannis Koutis, to release CMG under
+the MIT license. Johannes selected MIT for CMG, fevc, and fereg on that basis.
+
+The MIT grant covers the Rust port and the adapted CMG benchmark kernels in
+this repository. Preserve the original authors' copyright notices and the
+full text in [`LICENSE`](../LICENSE).
 
 ## Source-of-truth order
 
@@ -68,6 +78,13 @@ The benchmark-only `benchmarks/c-kernel/` crate compiles isolated pinned C kerne
 
 The Rust API allows relevant constants to be overridden for testing while keeping the upstream values as defaults.
 
+The official MATLAB hierarchy's status flag 3 means construction stopped at a
+guard rather than the ordinary direct-terminal threshold: either contraction
+removed fewer than two vertices (`n_coarse >= n_fine - 1`) or cumulative
+hierarchy nonzeros exceeded five times the finest-level nonzeros. This is a
+hierarchy-construction warning, distinct from MATLAB PCG's convergence flag.
+Benchmarks retain it explicitly and still validate the final solve independently.
+
 ## Deliberate Rust extensions
 
 The Rust package supports several behaviors beyond the original MATLAB-facing interface while preserving the stationary CMG algorithm:
@@ -79,6 +96,9 @@ The Rust package supports several behaviors beyond the original MATLAB-facing in
 - repeated and batched right-hand sides;
 - deterministic compact storage and memory accounting;
 - optional package-owned parallel execution and automatic routing.
+- a hierarchy depth limit (`CmgOptions::max_levels`, default 32) that stops
+  construction with an iterative `MaximumLevels` terminal and bounds every
+  pre-build memory admission; upstream has no level limit.
 
 ## Attribution
 

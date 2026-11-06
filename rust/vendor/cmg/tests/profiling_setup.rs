@@ -19,11 +19,24 @@ fn profiled_setup_preserves_production_objects() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let production =
-        CmgPreconditioner::build_with_executor(&graph, CmgOptions::default(), &executor).unwrap();
-    let (profiled, setup_profile) =
-        CmgPreconditioner::build_with_executor_profiled(&graph, CmgOptions::default(), &executor)
-            .unwrap();
+    let production = CmgPreconditioner::build_with(
+        &graph,
+        cmg::BuildOptions::from(CmgOptions::default()),
+        cmg::BuildContext {
+            team: Some(executor.team()),
+            ..cmg::BuildContext::default()
+        },
+    )
+    .unwrap();
+    let (profiled, setup_profile) = CmgPreconditioner::build_with_profiled(
+        &graph,
+        cmg::BuildOptions::from(CmgOptions::default()),
+        cmg::BuildContext {
+            team: Some(executor.team()),
+            ..cmg::BuildContext::default()
+        },
+    )
+    .unwrap();
     assert_eq!(profiled, production);
     assert!(setup_profile.total_nanoseconds() >= setup_profile.hierarchy_nanoseconds());
     assert!(setup_profile.total_nanoseconds() >= setup_profile.finalization_nanoseconds());
@@ -37,9 +50,9 @@ fn profiled_setup_preserves_production_objects() {
                 .sum::<u128>()
     );
 
-    let plan = ParallelCmgPlan::build(&production, &executor).unwrap();
+    let plan = ParallelCmgPlan::build(&production, executor.team()).unwrap();
     let (profiled_plan, plan_profile) =
-        ParallelCmgPlan::build_profiled(&production, &executor).unwrap();
+        ParallelCmgPlan::build_profiled(&production, executor.team()).unwrap();
     assert_eq!(profiled_plan.operator_count(), plan.operator_count());
     assert_eq!(profiled_plan.byte_len(), plan.byte_len());
     assert_eq!(

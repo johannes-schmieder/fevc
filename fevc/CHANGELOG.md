@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+No unreleased changes.
+
+## 0.5.1 — 2026-11-06
+
+- Adopt unmodified CMG 0.2.0, with an exact source pin and reproducible vendor
+  checks. Preserve the established 128-level setting explicitly.
+- Move the host pool, dynamic RHS queue, warm-start buffers and cancellation
+  integration into FEVC, using public CMG construction and solve contexts.
+- Account separately for CMG storage, FEVC batch buffers and host runtime
+  allowances. Preserve pre-RNG admission and original-system certification.
+
 - Change the covered package code, Mata CMG component, and adapted Rust CMG
   copy to MIT after permission from CMG's developers via Ioannis Koutis,
   confirmed by Johannes Schmieder on 2026-11-03. Preserve third-party notices,

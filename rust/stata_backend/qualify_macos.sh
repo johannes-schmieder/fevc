@@ -299,7 +299,7 @@ source_inputs=(
   "${repo_root}/rust/crates/vckss-plugin"
   "${repo_root}/rust/vendor/cmg/Cargo.toml"
   "${repo_root}/rust/vendor/cmg/src"
-  "${repo_root}/rust/vendor/cmg/VENDOR.md"
+  "${repo_root}/rust/vendor/CMG-SOURCE.json"
   "${script_dir}/Cargo.toml"
   "${script_dir}/Cargo.lock"
   "${script_dir}/build.rs"

@@ -143,7 +143,10 @@ pub(super) fn route_memory(
             canonical_edges: setup.edges,
             right_hand_sides: 1,
         },
-        cmg::CmgOptions::default(),
+        cmg::CmgOptions {
+            max_levels: 128,
+            ..cmg::CmgOptions::default()
+        },
         cmg::ParallelOptions {
             threads: setup.threads,
             ..Default::default()
@@ -152,6 +155,7 @@ pub(super) fn route_memory(
     .map_err(|error| resource(format!("direct construction forecast: {error}")))?;
     let construction = checked_sum(&[
         construction.build_peak_bytes() as u64,
+        setup.runtime_allowance_bytes,
         setup.graph_copy_bytes,
         checked_product(&[setup.vertices as u64, 48], "hybrid vertex setup")?,
         checked_product(&[setup.edges as u64, 40], "hybrid edge setup")?,

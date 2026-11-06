@@ -126,6 +126,8 @@ def write_repository(directory: Path, files: tuple[portable.PackageFile, ...]) -
 
 
 def main() -> int:
+    from check_cmg_vendor import check
+    check()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary-dir", required=True, type=Path)
     parser.add_argument("--manifest", required=True, type=Path)

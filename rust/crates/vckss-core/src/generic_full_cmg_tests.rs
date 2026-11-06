@@ -231,10 +231,19 @@ fn budgets_reduce_widths_and_exact_boundary_is_reconciled() {
     let problem = fixture(false, true);
     let free = run(&problem, options(DeletionMode::Observation, 200), 28).unwrap();
     let peak = free.receipt.execution.memory.peak_bytes;
+    let runtime = free
+        .receipt
+        .execution
+        .full_cmg
+        .as_ref()
+        .unwrap()
+        .setup
+        .runtime_allowance_bytes;
+    let fixed = runtime + runtime / 5;
     let mut reduced = false;
     for percent in [100, 95, 90, 80, 70, 60, 50, 40] {
         let mut request = options(DeletionMode::Observation, 200);
-        let limit = peak * percent / 100;
+        let limit = fixed + (peak - fixed) * percent / 100;
         request.estimator.memory_limit_bytes = limit;
         request.estimator.memory_budget = MemoryBudget::Explicit {
             bytes: limit,

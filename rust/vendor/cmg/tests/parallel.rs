@@ -1,11 +1,10 @@
 #![cfg(feature = "parallel")]
 
 use cmg::{
-    Aggregation, CmgError, CmgHierarchy, CmgOptions, CmgPreconditioner, Laplacian, ParallelCmgPlan,
-    ParallelExecutor, ParallelOptions, ParallelPcgExecution, ParallelPcgPolicy, ParallelPcgSolver,
-    PcgOptions, PcgWorkspace, build_forest_grouping, build_forest_grouping_with_executor,
-    maximum_weight_forest, maximum_weight_forest_with_executor, solve_pcg_batch,
-    solve_pcg_batch_with_executor, solve_pcg_with_plan_and_workspace, solve_pcg_with_workspace,
+    Aggregation, BuildContext, BuildOptions, CmgError, CmgHierarchy, CmgOptions, CmgPreconditioner,
+    Laplacian, ParallelCmgPlan, ParallelExecutor, ParallelOptions, ParallelPcgExecution,
+    ParallelPcgPolicy, ParallelPcgSolver, PcgOptions, PcgWorkspace, solve_pcg_batch,
+    solve_pcg_batch_concurrent,
 };
 
 fn worker_firm_problem(per_side: usize) -> (Laplacian, Vec<f64>) {
@@ -54,12 +53,12 @@ fn parallel_batch_matches_serial_results_and_input_order() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let parallel = solve_pcg_batch_with_executor(
+    let parallel = solve_pcg_batch_concurrent(
         &graph,
         &preconditioner,
         &right_hand_sides,
         options,
-        &executor,
+        executor.team(),
     )
     .unwrap();
 
@@ -78,13 +77,19 @@ fn workspace_budget_limits_concurrency_and_rejects_too_small_budget() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    assert_eq!(executor.batch_concurrency(workspace_bytes, 8).unwrap(), 2);
-    let results = solve_pcg_batch_with_executor(
+    assert_eq!(
+        executor
+            .team()
+            .batch_concurrency(workspace_bytes, 8)
+            .unwrap(),
+        2
+    );
+    let results = solve_pcg_batch_concurrent(
         &graph,
         &preconditioner,
         &right_hand_sides,
         PcgOptions::default(),
-        &executor,
+        executor.team(),
     )
     .unwrap();
     assert_eq!(results.len(), right_hand_sides.len());
@@ -95,12 +100,12 @@ fn workspace_budget_limits_concurrency_and_rejects_too_small_budget() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let error = solve_pcg_batch_with_executor(
+    let error = solve_pcg_batch_concurrent(
         &graph,
         &preconditioner,
         &right_hand_sides,
         PcgOptions::default(),
-        &too_small,
+        too_small.team(),
     )
     .unwrap_err();
     assert_eq!(
@@ -128,12 +133,12 @@ fn one_thread_executor_preserves_serial_behavior() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let parallel = solve_pcg_batch_with_executor(
+    let parallel = solve_pcg_batch_concurrent(
         &graph,
         &preconditioner,
         &right_hand_sides,
         PcgOptions::default(),
-        &executor,
+        executor.team(),
     )
     .unwrap();
     assert_eq!(serial, parallel);
@@ -162,46 +167,24 @@ fn parallel_edge_sorting_matches_serial_canonicalization() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let parallel = Laplacian::from_edges_with_executor(4_000, raw_edges, &executor).unwrap();
+    let parallel = Laplacian::from_edges_with(
+        4_000,
+        raw_edges,
+        cmg::BuildContext {
+            team: Some(executor.team()),
+            ..cmg::BuildContext::default()
+        },
+    )
+    .unwrap();
 
     assert_eq!(serial, parallel);
 }
 
 #[test]
-fn parallel_heavy_edge_selection_and_grouping_match_serial_exactly() {
-    let raw_edges: Vec<(usize, usize, f64)> = (0usize..80_000)
-        .flat_map(|index| {
-            let left = index % 12_000;
-            let right = (index.wrapping_mul(48_271).wrapping_add(7) % 12_000 + 1) % 12_000;
-            let right = if right == left {
-                (right + 1) % 12_000
-            } else {
-                right
-            };
-            let weight = 1.0 + (index % 11) as f64;
-            [(left, right, weight), (right, left, weight)]
-        })
-        .collect();
-    let graph = Laplacian::from_edges(12_000, raw_edges).unwrap();
-    let executor = ParallelExecutor::new(ParallelOptions {
-        threads: 4,
-        min_parallel_len: 1,
-        ..ParallelOptions::default()
-    })
-    .unwrap();
-
-    let serial_forest = maximum_weight_forest(&graph);
-    let parallel_forest = maximum_weight_forest_with_executor(&graph, &executor).unwrap();
-    assert_eq!(serial_forest, parallel_forest);
-
-    let serial_grouping = build_forest_grouping(&graph, 0.125).unwrap();
-    let parallel_grouping = build_forest_grouping_with_executor(&graph, 0.125, &executor).unwrap();
-    assert_eq!(serial_grouping, parallel_grouping);
-}
-
-#[test]
 fn parallel_contraction_and_hierarchy_match_serial_exactly() {
-    let (graph, _) = path_problem(20_000, 1);
+    // Above the 65,536-edge parallel setup threshold, so the finest
+    // contraction runs the team's sort.
+    let (graph, _) = path_problem(70_000, 1);
     let labels: Vec<usize> = (0..graph.vertex_count()).map(|vertex| vertex / 3).collect();
     let aggregation = Aggregation::new(labels, graph.vertex_count().div_ceil(3)).unwrap();
     let executor = ParallelExecutor::new(ParallelOptions {
@@ -212,22 +195,34 @@ fn parallel_contraction_and_hierarchy_match_serial_exactly() {
     .unwrap();
 
     let serial_coarse = aggregation.contract(&graph).unwrap();
-    let parallel_coarse = aggregation
-        .contract_with_executor(&graph, &executor)
-        .unwrap();
-    assert_eq!(serial_coarse, parallel_coarse);
+    assert!(serial_coarse.edge_count() > 0);
 
     let options = CmgOptions {
         direct_threshold: 64,
         ..CmgOptions::default()
     };
     let serial_hierarchy = CmgHierarchy::build(&graph, options).unwrap();
-    let parallel_hierarchy = CmgHierarchy::build_with_executor(&graph, options, &executor).unwrap();
+    let parallel_hierarchy = CmgHierarchy::build_with(
+        &graph,
+        BuildOptions::from(options),
+        BuildContext {
+            team: Some(executor.team()),
+            ..BuildContext::default()
+        },
+    )
+    .unwrap();
     assert_eq!(serial_hierarchy, parallel_hierarchy);
 
     let serial_preconditioner = CmgPreconditioner::build(&graph, options).unwrap();
-    let parallel_preconditioner =
-        CmgPreconditioner::build_with_executor(&graph, options, &executor).unwrap();
+    let parallel_preconditioner = CmgPreconditioner::build_with(
+        &graph,
+        cmg::BuildOptions::from(options),
+        cmg::BuildContext {
+            team: Some(executor.team()),
+            ..cmg::BuildContext::default()
+        },
+    )
+    .unwrap();
     assert_eq!(serial_preconditioner, parallel_preconditioner);
 }
 
@@ -245,7 +240,7 @@ fn parallel_cmg_plan_matches_stationary_cycle_and_rejects_other_hierarchies() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let plan = ParallelCmgPlan::build(&preconditioner, &executor).unwrap();
+    let plan = ParallelCmgPlan::build(&preconditioner, executor.team()).unwrap();
     assert!(plan.operator_count() > 0);
     assert!(plan.byte_len() > 0);
 
@@ -257,14 +252,18 @@ fn parallel_cmg_plan_matches_stationary_cycle_and_rejects_other_hierarchies() {
 
     let mut parallel_output = vec![0.0; graph.vertex_count()];
     let mut parallel_workspace = preconditioner.workspace();
-    plan.apply_compatible_into(
-        &preconditioner,
-        &rhs,
-        &mut parallel_output,
-        &mut parallel_workspace,
-        &executor,
-    )
-    .unwrap();
+    preconditioner
+        .apply_compatible_into_with(
+            &rhs,
+            &mut parallel_output,
+            &mut parallel_workspace,
+            cmg::ApplyContext {
+                plan: Some(&plan),
+                team: Some(executor.team()),
+                cancel: None,
+            },
+        )
+        .unwrap();
 
     for (serial, parallel) in serial_output.iter().zip(&parallel_output) {
         let scale = 1.0_f64.max(serial.abs()).max(parallel.abs());
@@ -280,13 +279,16 @@ fn parallel_cmg_plan_matches_stationary_cycle_and_rejects_other_hierarchies() {
     )
     .unwrap();
     let other_preconditioner = CmgPreconditioner::build(&rebuilt, options).unwrap();
-    let error = plan
-        .apply_compatible_into(
-            &other_preconditioner,
+    let error = other_preconditioner
+        .apply_compatible_into_with(
             &rhs,
             &mut parallel_output,
             &mut parallel_workspace,
-            &executor,
+            cmg::ApplyContext {
+                plan: Some(&plan),
+                team: Some(executor.team()),
+                cancel: None,
+            },
         )
         .unwrap_err();
     assert_eq!(
@@ -297,6 +299,9 @@ fn parallel_cmg_plan_matches_stationary_cycle_and_rejects_other_hierarchies() {
     );
 }
 
+// Below the fixed-chunk reduction threshold (4,000 vertices against 131,072),
+// a one-worker team performs the serial arithmetic; above it every team uses
+// the fixed-chunk tree (`tests/worker_independent.rs`).
 #[test]
 fn one_thread_parallel_cmg_plan_is_bitwise_serial() {
     let (graph, right_hand_sides) = path_problem(4_000, 1);
@@ -311,7 +316,7 @@ fn one_thread_parallel_cmg_plan_is_bitwise_serial() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let plan = ParallelCmgPlan::build(&preconditioner, &executor).unwrap();
+    let plan = ParallelCmgPlan::build(&preconditioner, executor.team()).unwrap();
     assert_eq!(plan.operator_count(), 0);
     assert_eq!(plan.byte_len(), 0);
 
@@ -324,14 +329,18 @@ fn one_thread_parallel_cmg_plan_is_bitwise_serial() {
 
     let mut parallel_output = vec![0.0; graph.vertex_count()];
     let mut parallel_workspace = preconditioner.workspace();
-    plan.apply_compatible_into(
-        &preconditioner,
-        rhs,
-        &mut parallel_output,
-        &mut parallel_workspace,
-        &executor,
-    )
-    .unwrap();
+    preconditioner
+        .apply_compatible_into_with(
+            rhs,
+            &mut parallel_output,
+            &mut parallel_workspace,
+            cmg::ApplyContext {
+                plan: Some(&plan),
+                team: Some(executor.team()),
+                cancel: None,
+            },
+        )
+        .unwrap();
 
     assert_eq!(serial_output, parallel_output);
 }
@@ -350,27 +359,31 @@ fn planned_parallel_pcg_matches_serial_certification() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let plan = ParallelCmgPlan::build(&preconditioner, &executor).unwrap();
+    let plan = ParallelCmgPlan::build(&preconditioner, executor.team()).unwrap();
     assert!(plan.operator_count() > 0);
 
     let mut serial_workspace = PcgWorkspace::new(&preconditioner);
-    let serial = solve_pcg_with_workspace(
+    let serial = cmg::solve_pcg_with(
         &graph,
         &preconditioner,
         &rhs,
         PcgOptions::default(),
         &mut serial_workspace,
+        cmg::SolveContext::default(),
     )
     .unwrap();
     let mut parallel_workspace = PcgWorkspace::new(&preconditioner);
-    let parallel = solve_pcg_with_plan_and_workspace(
+    let parallel = cmg::solve_pcg_with(
         &graph,
         &preconditioner,
-        &plan,
         &rhs,
         PcgOptions::default(),
         &mut parallel_workspace,
-        &executor,
+        cmg::SolveContext {
+            plan: Some(&plan),
+            team: Some(executor.team()),
+            ..cmg::SolveContext::default()
+        },
     )
     .unwrap();
 
@@ -383,6 +396,9 @@ fn planned_parallel_pcg_matches_serial_certification() {
     }
 }
 
+// Below the fixed-chunk reduction threshold (4,000 vertices against 131,072),
+// a one-worker team performs the serial arithmetic; above it every team uses
+// the fixed-chunk tree (`tests/worker_independent.rs`).
 #[test]
 fn one_thread_planned_pcg_is_bitwise_serial() {
     let (graph, right_hand_sides) = path_problem(4_000, 1);
@@ -397,28 +413,32 @@ fn one_thread_planned_pcg_is_bitwise_serial() {
         ..ParallelOptions::default()
     })
     .unwrap();
-    let plan = ParallelCmgPlan::build(&preconditioner, &executor).unwrap();
+    let plan = ParallelCmgPlan::build(&preconditioner, executor.team()).unwrap();
     assert_eq!(plan.operator_count(), 0);
 
     let rhs = &right_hand_sides[0];
     let mut serial_workspace = PcgWorkspace::new(&preconditioner);
-    let serial = solve_pcg_with_workspace(
+    let serial = cmg::solve_pcg_with(
         &graph,
         &preconditioner,
         rhs,
         PcgOptions::default(),
         &mut serial_workspace,
+        cmg::SolveContext::default(),
     )
     .unwrap();
     let mut planned_workspace = PcgWorkspace::new(&preconditioner);
-    let planned = solve_pcg_with_plan_and_workspace(
+    let planned = cmg::solve_pcg_with(
         &graph,
         &preconditioner,
-        &plan,
         rhs,
         PcgOptions::default(),
         &mut planned_workspace,
-        &executor,
+        cmg::SolveContext {
+            plan: Some(&plan),
+            team: Some(executor.team()),
+            ..cmg::SolveContext::default()
+        },
     )
     .unwrap();
 
@@ -465,7 +485,7 @@ fn routing_rhs(graph: &Laplacian, offset: usize) -> Vec<f64> {
     graph.matvec(&target).unwrap()
 }
 
-fn routing_solver(graph: &Laplacian, threshold: usize) -> ParallelPcgSolver {
+fn routing_solver(graph: &Laplacian, threshold: usize) -> (ParallelExecutor, ParallelPcgSolver) {
     routing_solver_with_options(
         graph,
         threshold,
@@ -481,45 +501,67 @@ fn routing_solver_with_options(
     graph: &Laplacian,
     threshold: usize,
     parallel_options: ParallelOptions,
-) -> ParallelPcgSolver {
-    ParallelPcgSolver::build_with_policy(
+) -> (ParallelExecutor, ParallelPcgSolver) {
+    let executor = ParallelExecutor::new(parallel_options).unwrap();
+    let solver = ParallelPcgSolver::build_with_policy(
         graph,
         CmgOptions {
             direct_threshold: 32,
             ..CmgOptions::default()
         },
-        parallel_options,
+        executor.team(),
         ParallelPcgPolicy {
             min_planned_edges: threshold,
             min_across_rhs_concurrency: 2,
         },
     )
-    .unwrap()
+    .unwrap();
+    (executor, solver)
 }
 
 #[test]
 fn prepared_solver_routes_single_and_batch_workloads() {
     let path = routing_path_graph(1_001);
-    let path_solver = routing_solver(&path, 2_000);
-    assert_eq!(path_solver.plan().operator_count(), 0);
+    let (path_solver_executor, path_solver) = routing_solver(&path, 2_000);
     assert_eq!(
-        path_solver.select_batch_execution(1).unwrap().execution(),
+        path_solver
+            .try_plan(path_solver_executor.team())
+            .unwrap()
+            .operator_count(),
+        0
+    );
+    assert_eq!(
+        path_solver
+            .select_batch_execution(1, path_solver_executor.team())
+            .unwrap()
+            .execution(),
         ParallelPcgExecution::Serial
     );
     assert_eq!(
-        path_solver.select_batch_execution(2).unwrap().execution(),
+        path_solver
+            .select_batch_execution(2, path_solver_executor.team())
+            .unwrap()
+            .execution(),
         ParallelPcgExecution::AcrossRightHandSides
     );
 
     let small = routing_worker_firm_graph(500, 3);
-    let small_solver = routing_solver(&small, 2_000);
-    let small_report = small_solver.select_batch_execution(1).unwrap();
+    let (small_solver_executor, small_solver) = routing_solver(&small, 2_000);
+    let small_report = small_solver
+        .select_batch_execution(1, small_solver_executor.team())
+        .unwrap();
     assert_eq!(small_report.execution(), ParallelPcgExecution::Serial);
     assert_eq!(small_report.plan_bytes(), 0);
-    assert!(small_solver.plan().operator_count() > 0);
+    assert!(
+        small_solver
+            .try_plan(small_solver_executor.team())
+            .unwrap()
+            .operator_count()
+            > 0
+    );
 
     let vector_only_path = routing_path_graph(3_001);
-    let vector_only_solver = routing_solver_with_options(
+    let (vector_only_solver_executor, vector_only_solver) = routing_solver_with_options(
         &vector_only_path,
         2_000,
         ParallelOptions {
@@ -529,8 +571,16 @@ fn prepared_solver_routes_single_and_batch_workloads() {
             ..ParallelOptions::default()
         },
     );
-    assert_eq!(vector_only_solver.plan().operator_count(), 0);
-    let vector_only_report = vector_only_solver.select_batch_execution(1).unwrap();
+    assert_eq!(
+        vector_only_solver
+            .try_plan(vector_only_solver_executor.team())
+            .unwrap()
+            .operator_count(),
+        0
+    );
+    let vector_only_report = vector_only_solver
+        .select_batch_execution(1, vector_only_solver_executor.team())
+        .unwrap();
     assert_eq!(
         vector_only_report.execution(),
         ParallelPcgExecution::Planned
@@ -538,7 +588,7 @@ fn prepared_solver_routes_single_and_batch_workloads() {
     assert_eq!(vector_only_report.plan_bytes(), 0);
 
     let disconnected_paths = routing_disconnected_paths(1_501);
-    let disconnected_solver = routing_solver_with_options(
+    let (disconnected_solver_executor, disconnected_solver) = routing_solver_with_options(
         &disconnected_paths,
         2_000,
         ParallelOptions {
@@ -548,44 +598,63 @@ fn prepared_solver_routes_single_and_batch_workloads() {
             ..ParallelOptions::default()
         },
     );
-    assert_eq!(disconnected_solver.plan().operator_count(), 0);
     assert_eq!(
         disconnected_solver
-            .select_batch_execution(1)
+            .try_plan(disconnected_solver_executor.team())
+            .unwrap()
+            .operator_count(),
+        0
+    );
+    assert_eq!(
+        disconnected_solver
+            .select_batch_execution(1, disconnected_solver_executor.team())
             .unwrap()
             .execution(),
         ParallelPcgExecution::Serial
     );
 
     let large = routing_worker_firm_graph(1_000, 3);
-    let large_solver = routing_solver(&large, 2_000);
-    let report = large_solver.select_batch_execution(4).unwrap();
+    let (large_solver_executor, large_solver) = routing_solver(&large, 2_000);
+    let report = large_solver
+        .select_batch_execution(4, large_solver_executor.team())
+        .unwrap();
     assert_eq!(
         report.execution(),
         ParallelPcgExecution::AcrossRightHandSides
     );
     assert_eq!(report.concurrency(), 4);
     assert_eq!(report.plan_bytes(), 0);
-    let single_report = large_solver.select_batch_execution(1).unwrap();
+    let single_report = large_solver
+        .select_batch_execution(1, large_solver_executor.team())
+        .unwrap();
     assert_eq!(single_report.execution(), ParallelPcgExecution::Planned);
     assert!(single_report.plan_bytes() > 0);
-    assert!(large_solver.plan().operator_count() > 0);
+    assert!(
+        large_solver
+            .try_plan(large_solver_executor.team())
+            .unwrap()
+            .operator_count()
+            > 0
+    );
 }
 
 #[test]
 fn prepared_solver_matches_explicit_certified_results() {
     let graph = routing_worker_firm_graph(2_000, 3);
-    let solver = routing_solver(&graph, 2_000);
+    let (solver_executor, solver) = routing_solver(&graph, 2_000);
     let rhs = routing_rhs(solver.graph(), 0);
-    let serial = solve_pcg_with_workspace(
+    let serial = cmg::solve_pcg_with(
         solver.graph(),
         solver.preconditioner(),
         &rhs,
         PcgOptions::default(),
         &mut PcgWorkspace::new(solver.preconditioner()),
+        cmg::SolveContext::default(),
     )
     .unwrap();
-    let planned = solver.solve(&rhs, PcgOptions::default()).unwrap();
+    let planned = solver
+        .solve(&rhs, PcgOptions::default(), solver_executor.team())
+        .unwrap();
     assert_eq!(serial.iterations(), planned.iterations());
     assert_eq!(serial.restarts(), planned.restarts());
     assert_eq!(serial.residual_norm(), planned.residual_norm());
@@ -607,7 +676,12 @@ fn prepared_solver_matches_explicit_certified_results() {
     .unwrap();
     let mut workspace = solver.workspace();
     let actual = solver
-        .solve_batch_with_workspace(&right_hand_sides, PcgOptions::default(), &mut workspace)
+        .solve_batch_with_workspace(
+            &right_hand_sides,
+            PcgOptions::default(),
+            &mut workspace,
+            solver_executor.team(),
+        )
         .unwrap();
     assert_eq!(
         actual.report().execution(),
@@ -638,14 +712,14 @@ fn prepared_solver_obeys_workspace_budget() {
     .unwrap();
     let solver = ParallelPcgSolver::from_preconditioner(
         preconditioner,
-        executor,
+        executor.team(),
         ParallelPcgPolicy {
             min_planned_edges: 0,
             min_across_rhs_concurrency: 2,
         },
     )
     .unwrap();
-    let report = solver.select_batch_execution(4).unwrap();
+    let report = solver.select_batch_execution(4, executor.team()).unwrap();
     assert_eq!(report.execution(), ParallelPcgExecution::Planned);
     assert_eq!(report.concurrency(), 1);
     assert_eq!(report.workspace_pool_bytes(), workspace_bytes);
@@ -654,11 +728,16 @@ fn prepared_solver_obeys_workspace_budget() {
 #[test]
 fn prepared_solver_empty_batch_is_observable_and_allocation_free() {
     let graph = routing_path_graph(128);
-    let solver = routing_solver(&graph, 2_000);
+    let (solver_executor, solver) = routing_solver(&graph, 2_000);
     let mut workspace = solver.workspace();
     let initial_bytes = workspace.byte_len();
     let result = solver
-        .solve_batch_with_workspace(&[], PcgOptions::default(), &mut workspace)
+        .solve_batch_with_workspace(
+            &[],
+            PcgOptions::default(),
+            &mut workspace,
+            solver_executor.team(),
+        )
         .unwrap();
     assert!(result.results().is_empty());
     assert_eq!(result.report().rhs_count(), 0);

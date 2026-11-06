@@ -156,7 +156,18 @@ fn compressed_forecast_allocation_measurement() {
         .unwrap();
         let peak = PEAK.load(Ordering::SeqCst).saturating_sub(baseline);
         TRACKING.store(false, Ordering::SeqCst);
-        let forecast = result.estimator.receipt.memory.expected_peak_forecast_bytes;
+        let command_forecast = result.estimator.receipt.memory.expected_peak_forecast_bytes;
+        // OS stack reservations are charged to command admission, but the
+        // counting allocator observes heap allocations only. Keep the registered
+        // heap accuracy tolerance and compare matching ownership scopes.
+        let stack = result
+            .execution
+            .full_cmg
+            .as_ref()
+            .unwrap()
+            .setup
+            .runtime_stack_bytes;
+        let forecast = command_forecast - stack - stack / 5;
         eprintln!("MEMORY n={n} threads={threads} degree={degree} prepared={live} observed={peak} forecast={forecast}");
         assert!(
             forecast >= peak as u64,

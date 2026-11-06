@@ -6,10 +6,11 @@ use core::fmt;
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum CmgError {
-    /// A checked caller-owned workspace or result allocation failed.
-    AllocationFailed {
-        /// Allocation being attempted.
-        context: &'static str,
+    /// A cancellable construction or stage observed its caller's cancellation
+    /// request. All dispatched work joined first; no partial result is returned.
+    Cancelled {
+        /// Phase containing the next unstarted bounded operation.
+        phase: &'static str,
     },
     /// A vector or matrix dimension did not match the expected dimension.
     DimensionMismatch {
@@ -141,12 +142,6 @@ pub enum CmgError {
         /// Required residual tolerance.
         tolerance: f64,
     },
-    /// A caller-owned atomic cancellation flag was observed at a bounded
-    /// hierarchy, plan, V-cycle, or PCG checkpoint.
-    Cancelled {
-        /// Native CMG phase that observed cancellation.
-        phase: &'static str,
-    },
     /// A package-owned parallel runtime could not be constructed.
     ParallelRuntime {
         /// Runtime-construction diagnostic.
@@ -158,6 +153,11 @@ pub enum CmgError {
         required_bytes: usize,
         /// Configured workspace-memory budget.
         budget_bytes: usize,
+    },
+    /// A new fallible preparation path could not reserve its required storage.
+    AllocationFailed {
+        /// Allocation or preparation stage that could not reserve storage.
+        context: &'static str,
     },
     /// An option was non-finite or outside its allowed range.
     InvalidOption {
@@ -183,7 +183,9 @@ impl CmgError {
 impl fmt::Display for CmgError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::AllocationFailed { context } => write!(formatter, "allocation failed: {context}"),
+            Self::Cancelled { phase } => {
+                write!(formatter, "CMG construction was cancelled during {phase}")
+            }
             Self::DimensionMismatch {
                 context,
                 expected,
@@ -277,7 +279,6 @@ impl fmt::Display for CmgError {
                 formatter,
                 "PCG residual verification failed at iteration {iteration}: residual {residual_norm}, tolerance {tolerance}"
             ),
-            Self::Cancelled { phase } => write!(formatter, "CMG work cancelled during {phase}"),
             Self::ParallelRuntime { message } => {
                 write!(
                     formatter,
@@ -291,6 +292,9 @@ impl fmt::Display for CmgError {
                 formatter,
                 "workspace memory budget {budget_bytes} bytes is below the required {required_bytes} bytes"
             ),
+            Self::AllocationFailed { context } => {
+                write!(formatter, "allocation failed while preparing {context}")
+            }
             Self::InvalidOption { name, value } => {
                 write!(formatter, "option {name} has invalid value {value}")
             }

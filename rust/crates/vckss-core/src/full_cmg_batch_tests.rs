@@ -6,11 +6,19 @@ fn selected_capacity_tracks_budget_reductions_before_any_solve() {
     let problem = fixture(false, None);
     let free = run_jla_no_controls_planned(&problem, options(200, 64)).unwrap();
     let peak = free.execution.memory.solve_peak_forecast_bytes;
+    let runtime = free
+        .execution
+        .full_cmg
+        .as_ref()
+        .unwrap()
+        .setup
+        .runtime_allowance_bytes;
+    let fixed = runtime + runtime / 5;
     let mut reduced = false;
     for step in 1..20 {
         let mut request = options(200, 64);
         request.estimator.memory_budget = MemoryBudget::Explicit {
-            bytes: peak * (100 - step * 4) / 100,
+            bytes: fixed + (peak - fixed) * (100 - step * 4) / 100,
             check: MemoryCheck::Error,
         };
         match run_jla_no_controls_planned(&problem, request) {

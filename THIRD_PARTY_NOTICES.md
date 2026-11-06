@@ -5,13 +5,12 @@ provenance records described in `CODE_LICENSE.md`.
 
 ## CMG
 
-The optional Rust backend contains an adapted copy of the MIT CMG
-implementation. Its original and modified-source notices, exact upstream
+The optional Rust backend contains an unmodified copy of the MIT CMG
+implementation. Its upstream notices, exact source
 identity, file manifest, and license are preserved in:
 
 - `rust/vendor/cmg/LICENSE`
-- `rust/vendor/cmg/VENDOR.md`
-- `rust/vendor/cmg/UPSTREAM_MANIFEST.sha256`
+- `rust/vendor/CMG-SOURCE.json`
 - `rust/vendor/cmg/docs/UPSTREAM.md`
 
 The package-owned Mata implementation records its source-informed provenance

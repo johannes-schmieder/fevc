@@ -92,20 +92,21 @@ sets, or calculate bias-corrected variance components by itself.
 
 ## Installation
 
-CMG is currently a development crate at version `0.1.0`. It has not yet been
-published on crates.io and does not have a final GitHub release. Install the
-current development version directly from `main`:
+CMG 0.2.0 is distributed from this repository, not crates.io. Pin an exact
+reviewed commit on `main` for reproducible builds; the `v0.2.0` release identifies
+the consolidated API. For example, resolve the tag to its full commit SHA and
+use it as `rev`:
 
 ```toml
 [dependencies]
-cmg = { git = "https://github.com/johannes-schmieder/CMG", branch = "main" }
+cmg = { git = "https://github.com/johannes-schmieder/CMG", rev = "<full-reviewed-commit-sha>" }
 ```
 
 Enable the optional parallel implementation with:
 
 ```toml
 [dependencies]
-cmg = { git = "https://github.com/johannes-schmieder/CMG", branch = "main", features = ["parallel"] }
+cmg = { git = "https://github.com/johannes-schmieder/CMG", rev = "<full-reviewed-commit-sha>", features = ["parallel"] }
 ```
 
 The crate requires Rust 1.85 or newer. See [`RELEASING.md`](RELEASING.md) for
@@ -156,29 +157,30 @@ cargo run --example laplacian_pcg
 ## Reusable parallel and batch solves
 
 For application code, `ParallelPcgSolver` is the preferred high-level parallel
-API. It retains the graph, CMG hierarchy, selective parallel plan, package-owned
-Rayon pool, and reusable workspaces. Depending on the workload, it chooses
-serial PCG, parallelizes one sufficiently large solve, or solves independent
-right-hand sides concurrently within the configured memory budget.
+API. It retains the graph, CMG hierarchy, selective parallel plan and the shape
+of the team it was built for; it owns no pool. Every parallel operation borrows
+a `Team`: a host's own Rayon pool via `Team::new`, or a standalone
+`ParallelExecutor` created once and lent with `executor.team()`. Depending on
+the workload, the solver chooses serial PCG, parallelizes one sufficiently
+large solve, or solves independent right-hand sides concurrently within the
+configured memory budget.
 
 ```rust,ignore
-use cmg::{CmgOptions, ParallelOptions, ParallelPcgSolver, PcgOptions};
+use cmg::{CmgOptions, ParallelExecutor, ParallelOptions, ParallelPcgSolver, PcgOptions};
 
-let solver = ParallelPcgSolver::build(
-    &graph,
-    CmgOptions::default(),
-    ParallelOptions {
-        threads: 16,
-        workspace_memory_budget_bytes: Some(8 * 1024 * 1024 * 1024),
-        ..ParallelOptions::default()
-    },
-)?;
+let executor = ParallelExecutor::new(ParallelOptions {
+    threads: 16,
+    workspace_memory_budget_bytes: Some(8 * 1024 * 1024 * 1024),
+    ..ParallelOptions::default()
+})?;
+let solver = ParallelPcgSolver::build(&graph, CmgOptions::default(), executor.team())?;
 
 let mut workspace = solver.workspace();
 let batch = solver.solve_batch_with_workspace(
     &right_hand_sides,
     PcgOptions::default(),
     &mut workspace,
+    executor.team(),
 )?;
 println!("execution = {:?}", batch.report().execution());
 println!(
@@ -200,34 +202,93 @@ raw submitted edges, the complete bounded hierarchy, an optional parallel plan,
 and the requested reusable workspace pool. `memory_report` provides exact
 principal retained bytes after construction without changing solver behavior.
 
+### Fixed-cycle multi-RHS applications
+
+Outer Krylov solvers can apply the stationary preconditioner to a small tile of
+component-compatible right-hand sides without starting an inner PCG solve:
+
+```rust
+use cmg::{ApplyContext, CmgBatchWorkspace, CmgOptions, CmgPreconditioner, Laplacian};
+
+# fn main() -> Result<(), cmg::CmgError> {
+let graph = Laplacian::from_edges(3, [(0, 1, 1.0), (1, 2, 1.0)])?;
+let cmg = CmgPreconditioner::build(&graph, CmgOptions::default())?;
+let required = CmgBatchWorkspace::allocation_bytes(&cmg, 4)?;
+let mut workspace = CmgBatchWorkspace::try_new(&cmg, 4, required)?;
+// Two columns, vertex-major: [b0(vertex0), b1(vertex0), b0(vertex1), ...].
+let rhs = [1.0, 2.0, 0.0, -1.0, -1.0, -1.0];
+let mut output = [0.0; 6];
+cmg.apply_compatible_batch_into(&rhs, &mut output, 2, &mut workspace, ApplyContext::default())?;
+# Ok(())
+# }
+```
+
+Each application uses its actual column count as the row stride, so the same
+workspace accepts smaller tiles and tails. Sparse matrix, transfer and terminal
+factor passes share their traversal across the columns. An `ApplyContext` may
+supply a `ParallelCmgPlan` with its borrowed `Team` and a cancellation query;
+there is no pool or per-column CMG-owned allocation. The checked
+workspace budget includes all retained numerical buffers and descriptor banks,
+but excludes the borrowed hierarchy, caller input/output and parallel runtime.
+`CmgStorageReport` includes the new workspace in capacity-based ownership reports.
+
+Callers must supply component-compatible columns: this API does not validate or
+project the fine-level null space. It applies the fixed cycle and its configured
+recursive repeats, without tolerance-based stopping. Capacity one preserves the
+existing scalar workspace and cycle exactly. Larger-capacity tiles use serial
+compensated coarse-component sums independently in each lane, including when a
+parallel plan is supplied; this can differ by rounding from scalar parallel
+chunk reductions. Existing scalar and PCG APIs retain their routing. Any
+team-carrying solve or application, including a one-worker team and every
+`ParallelPcgSolver` mode, uses the same fixed-chunk reductions and centering
+above their thresholds, so its bits do not depend on the worker count. Tile width is a caller resource choice, not an automatic performance
+claim.
+
 ## Validated benchmarks
 
-A controlled study on Intel Xeon Gold 6242 nodes compared this crate with the
-official MATLAB solver and its C MEX kernels on five deterministic connected
-graph families, three sizes from 100,000 to 1,000,000 vertices, and matched
-application CPU counts.
-
-Across the 15 cases at 32 application CPUs, the geometric-mean results were:
+A current-code qualification on Intel Xeon Gold 6242 nodes compared this crate
+with the official MATLAB solver and its C MEX kernels on identical
+one-million-vertex inputs from five deterministic connected graph families.
+Both implementations ran on the same host for each family. At 16 application
+CPUs, the geometric-mean results were:
 
 | Measurement | Rust relative to MATLAB | Plain-language interpretation |
 |---|---:|---|
-| CMG setup | `0.265x` | Rust setup was about 3.8 times faster |
-| Reused-preconditioner PCG | `0.783x` | Rust PCG was about 1.3 times faster |
-| Setup plus one solve | `0.666x` | Rust took about two-thirds of MATLAB's time |
-| Process peak RSS | `0.150x` | Rust used about one-sixth of MATLAB's memory |
+| CMG hierarchy setup | `0.182x` | Rust setup was about 5.5 times faster |
+| Stationary CMG application | `0.379x` | Rust application was about 2.6 times faster |
+| Reused-preconditioner PCG | `0.388x` | Rust PCG was about 2.6 times faster |
+| Setup, parallel plan, and one solve | `0.391x` | Rust was about 2.6 times faster end to end |
+| Process peak RSS | `0.227x` | Rust used about 23% of MATLAB's process memory |
 
-All primary cases converged under each package's native stopping rule, with
-independently recomputed accuracy diagnostics retained. Complete single-RHS
-scaling was modest and sometimes nonmonotone: allocating 32 CPUs should not be
-interpreted as a proportional speedup. In the separate 16-RHS supplement,
+All 40 implementation/thread configurations passed scheduler, identity,
+timing, and numerical validation. Rust was faster end to end for every family
+at 16 CPUs, from `0.656x` MATLAB time on the weighted path to `0.248x` on the
+dense worker–firm graph. Sixteen CPUs gave the best geometric mean; grid and
+weak-community were individually fastest at 8 CPUs, while the other three
+families were fastest at 16. Every family regressed at 32 CPUs: the
+geometric-mean Rust total rose from 1.334 seconds at 16 CPUs to 1.803 seconds,
+where Rust still took `0.505x` MATLAB time. Single-RHS scaling therefore remains
+nonmonotone at high core counts.
+
+The packages retain their native stopping rules. Rust's maximum certified
+backward error was `9.24e-9`; MATLAB's maximum native relative residual was
+`9.73e-9`. Rust used fewer PCG iterations in these cases, so the timings compare
+validated package workflows rather than identical iteration counts or residual
+definitions.
+
+The broader first study covers all 15 graph/size cases from 100,000 to
+1,000,000 vertices and a separate 16-RHS supplement. In that supplement,
 Rust's across-RHS executor achieved 7.76-fold geometric-mean scaling from 1 to
 32 CPUs and `0.122x` MATLAB's normalized per-RHS time at 32 CPUs.
 
 These are measurements from one controlled environment, not universal hardware
 guarantees. See the [performance guide](docs/PERFORMANCE.md), the
-[technical benchmark report](output/pdf/benchmarks.pdf), and the
-[machine-readable summary](.ci/performance/scc-latest.json) for methodology,
-accuracy conventions, detailed results, and limitations.
+[technical benchmark report](https://github.com/johannes-schmieder/CMG/blob/main/output/pdf/benchmarks.pdf),
+and the
+[current machine-readable qualification](https://github.com/johannes-schmieder/CMG/blob/main/.ci/performance/scc-rust-matlab-current.json)
+for the latest numbers. The report and the
+[first-study machine record](https://github.com/johannes-schmieder/CMG/blob/main/.ci/performance/scc-first-study-2026-08.json)
+preserve the broader graph-size and repeated-RHS evidence.
 
 ## Project status and scope
 
@@ -257,13 +318,18 @@ cargo build --release --manifest-path benchmarks/Cargo.toml --all-targets
   behavioral constants, and implementation coverage.
 - [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — benchmark evidence, routing
   guidance, bottlenecks, and limitations.
+- [Component-aware experiments](docs/component-aware-cmg.md) — opt-in kernel
+  options, integration and qualification limits.
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — code map, repository policy,
   and performance-change discipline.
+- [CMG teaching supplement](docs/teaching/README.md) — a visual, step-by-step
+  introduction to graph Laplacians, CG, PCG, the CMG hierarchy, and a public
+  Veneto worker–firm example.
 - [`CHANGELOG.md`](CHANGELOG.md) — user-facing release history.
 - [`RELEASING.md`](RELEASING.md) — version, tag, GitHub Release, and future SSC
   publication process.
-- [`benchmarks/README.md`](benchmarks/README.md) — reproducible benchmark and
-  profiling harnesses.
+- [Benchmark and profiling tools](https://github.com/johannes-schmieder/CMG/blob/main/benchmarks/README.md)
+  — reproducible benchmark and profiling harnesses.
 
 ## Citation
 
@@ -288,5 +354,7 @@ Rust port and record the version or source commit used.
 
 ## License
 
-MIT under the 2026-11-03 permission recorded in `VENDOR.md`. See [`LICENSE`](LICENSE) and
+MIT. See [`LICENSE`](LICENSE) and
 [`docs/UPSTREAM.md`](docs/UPSTREAM.md).
+
+Controlled serial candidate construction, cooperative cancellation, and scalar workspace preparation are documented in [controlled construction](docs/controlled-construction.md).

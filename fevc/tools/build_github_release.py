@@ -68,6 +68,8 @@ def zip_package(files: tuple[portable.PackageFile, ...]) -> bytes:
 
 
 def main() -> int:
+    from check_cmg_vendor import check
+    check()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--adoption-manifest", required=True, type=Path)
     parser.add_argument("--allow-pending-windows", action="store_true",

@@ -50,7 +50,7 @@ assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(preconditioner_selected)'"' == "CMG"
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
 assert `"`e(cmg_source_commit)'"' == ///
-    "92a12f2d572ca56b30a035220953f9dd4bced999"
+    "a4c927f49eb7a5391a63963d2c4c651a51cf1af5"
 assert e(cmg_threads_requested) == c(processors)
 assert e(cmg_threads_used) == c(processors)
 assert e(cmg_admitted_peak_bytes) > 0

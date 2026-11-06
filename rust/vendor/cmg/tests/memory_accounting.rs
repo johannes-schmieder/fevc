@@ -30,7 +30,8 @@ fn exact_report_is_bounded_by_the_conservative_estimate() {
         parallel,
     )
     .unwrap();
-    let solver = ParallelPcgSolver::build(&graph, CmgOptions::default(), parallel).unwrap();
+    let executor = cmg::ParallelExecutor::new(parallel).unwrap();
+    let solver = ParallelPcgSolver::build(&graph, CmgOptions::default(), executor.team()).unwrap();
     let workspace = solver.workspace();
     let report = solver.memory_report(&workspace);
     assert!(report.preconditioner_bytes() > 0);
