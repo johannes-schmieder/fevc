@@ -2,8 +2,8 @@
 
 The owner authorizes one common CMG main revision, new 0.5.1 plugins and
 release packages after qualification, and removal of abandoned CMG branches.
-The replacement candidate is `e5613e81fb3b03c78de98658b372646fa802aabb`;
-it is not frozen on main. The vendor payload is byte-identical to upstream.
+The common revision is `e5613e81fb3b03c78de98658b372646fa802aabb`,
+now frozen on CMG main. The vendor payload is byte-identical to upstream.
 FEVC owns its pool and input-ordered dynamically claimed RHS queue and uses
 public contexts, explicit 128-level configuration, and checked caller-buffer PCG.
 Root, plugin and fuzz lockfiles use CMG 0.2.0.
@@ -27,9 +27,10 @@ are assembled in the local package. All 913 Python tests, 28 independent CMG
 tests, integrated Stata quick/full checks, and fresh/replacement installations
 pass. The 63-file ZIP matches the tested 61-file installed payload exactly.
 See the prepublication checks and installation records beside the adoption manifest.
-Cross-consumer release remains gated on common-revision qualification and the
-owner's decision on fereg's inconclusive performance evidence. No new plugins,
-main update or release has been published.
+Johannes accepted fereg's two inconclusive Mac timing cells as explicit release
+exceptions on November 6. Their measured status and all prior adverse evidence
+remain unchanged. Common-revision qualification is complete; publication and
+actual published-install verification are now in progress.
 ## Previous checkpoint
 
 # GitHub release 0.5.0 — October 14, 2026

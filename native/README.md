@@ -1,10 +1,10 @@
 # Native package provenance
 
-Version [0.5.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
-is the first public GitHub release. It includes the existing October 10 native
-binaries and their original corresponding source. Windows Stata runtime
-testing remains pending under the owner-authorized release. The dated
-records below retain their original publication and qualification scope.
+Version 0.5.1 is qualified for publication with CMG 0.2.0 at
+`e5613e81fb3b03c78de98658b372646fa802aabb`. All five plugins share build source
+`94d94999be54e9a2309497d5fbe9899e2822cd51`; Mac, Linux and private Windows
+native qualification pass. The dated records below retain their original
+publication and qualification scope, including earlier pending Windows results.
 
 ## CMG consolidation in 0.5.1
 
