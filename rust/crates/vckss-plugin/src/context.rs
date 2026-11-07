@@ -8,6 +8,7 @@
 //! in one solve, export a validated result, and release resources idempotently.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -307,16 +308,24 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
             cancellation.cancel();
         }
         let (callback_error, worker_outcome) = vckss_core::progress::with_current(|progress| {
+            let completed = AtomicBool::new(false);
+            let caller = thread::current();
             thread::scope(|scope| {
                 let worker = scope.spawn(|| {
-                    catch_unwind(AssertUnwindSafe(|| {
+                    let outcome = catch_unwind(AssertUnwindSafe(|| {
                         vckss_core::progress::with_progress(progress, || {
                             solve(&prepared, worker_cancellation)
                         })
-                    }))
+                    }));
+                    // Publish completion before waking the caller, including
+                    // a finish that races with its next park. The join below
+                    // still retires the worker before publishing any result.
+                    completed.store(true, Ordering::Release);
+                    caller.unpark();
+                    outcome
                 });
                 let mut callback_error = initial_callback_error;
-                while !worker.is_finished() {
+                while !completed.load(Ordering::Acquire) {
                     if callback_error.is_none() {
                         if let Err(error) = poll() {
                             cancellation.cancel();

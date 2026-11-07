@@ -1,0 +1,78 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-SCHEDULING-FIX-V1",
+  "status": "SOURCE_GATES_PASS_NEW_PLATFORM_QUALIFICATION_REQUIRED",
+  "base_source": "05f806ce94f53423f1b901fd8cda73a8c2622428",
+  "development_pilot": "evidence/development-D/pilot-review.json",
+  "confirmation_started": false,
+  "changes": [
+    {
+      "path": "rust/crates/vckss-core/src/full_cmg_host.rs",
+      "reason": "Single-lane and singleton extraction work has no available parallelism. Execute it locally instead of paying one Rayon handoff for each RHS. Preserve input order and the existing pool for parallel work."
+    },
+    {
+      "path": "rust/crates/vckss-plugin/src/context.rs",
+      "reason": "Notify the caller when the coordinated solve completes, including a caught panic. Publish the completion flag before unpark to cover the finish/park race. Retain the 5 ms host-cancellation polling interval and mandatory join before result publication."
+    }
+  ],
+  "unchanged": [
+    "Unmodified CMG S and explicit 128 levels",
+    "public APIs and binary ABI",
+    "algorithms, solver selection, tolerances and certificates",
+    "memory admission and pool/workspace bounds",
+    "input-order values and errors",
+    "callbacks only on caller thread",
+    "all benchmark data, seeds, schedule and acceptance rules"
+  ],
+  "memory_review": "Pool and workspace ownership remain unchanged. Serial mapping removes dispatch overhead without increasing output capacity. The completion flag and caller thread reference occupy bounded stack state; no new solver or result buffers are allocated.",
+  "diagnostics": {
+    "classification": "NOT_CONFIRMATION_OR_PLATFORM_QUALIFICATION",
+    "handoff_probe": {
+      "calls": 10000,
+      "before_handoffs": 10000,
+      "after_handoffs": 0,
+      "before_ms": 114.489041,
+      "after_ms_one_worker": 2.035583,
+      "after_ms_two_workers": 1.942458
+    },
+    "pooled_complete_command_mac_ms": {
+      "result_export_fix_only": 586,
+      "plus_serial_map": 535,
+      "plus_completion_wakeup": 514
+    },
+    "registry_tests": "11 passed, including caller-thread polling, cancellation, success/release and contained panic",
+    "stata_tests": "Lifecycle, attachments, controlled CMG, residual certificates, export-count regression, cancellation/corruption, memory policies and caller restoration pass at 1/2 workers"
+  },
+  "diagnostic_log_hashes": {
+    "red.log": "62f016058e21846970fe35157762022174a538260fd0eca34b46559580eb34d3",
+    "green.log": "e7b1d88e42878926cf049b7da710f350f13cfc1e5faf0648107e2bccd432c91d",
+    "coordinator-tests.log": "c4947bd4bcbc5a4ed58d05d5037f84e935aad88ff683834814f4656fc5913003",
+    "profile.sanitized.log": "90f7ee07cb4b747a3413ef700aa900c290db4975c24829052355b25163cbb3a6",
+    "profile-wakeup.sanitized.log": "e42f91fb9dcb15223d8a6d8cc4babafb5b9e9f3c5664e780ad13a4a29d52a359",
+    "affected-wakeup.sanitized.log": "2971bfa9844e05eb3fe0ba3244b0745028aafb14d23894bd779a6944ad9107dc"
+  },
+  "source_gate_attempts": [
+    {
+      "status": "FAIL_OLD_SERIAL_DISPATCH_EXPECTATION",
+      "log_sha256": "25ae1ad559bb675154cb8b50c22c1a105d7dca27fd617de7b263f17a98bc4ea7",
+      "test": "compressed_statistical_pool_preserves_order_cancellation_and_inert_parallelism",
+      "diagnosis": "The old assertion required a non-caller worker even with threads=1. It now requires all one-worker operations to remain local and all multi-worker operations to run in the owned pool. Ordered values, first-error and cancellation assertions remain unchanged."
+    }
+  ],
+  "source_gates": {
+    "rust_workspace_all_targets": {
+      "status": "PASS",
+      "reported_passes": 623,
+      "reported_ignored": 2,
+      "result_summaries": 68,
+      "log_sha256": "75f727b26f20f233fc8d56631094554ce51f3871d2a2fdec986bbe9e0d7cc859"
+    },
+    "rust_1_85_1_clippy": "PASS",
+    "rust_format": "PASS",
+    "python": "952 passed",
+    "assembly": "PASS",
+    "cmg_vendor": "PASS",
+    "parity_render": "PASS",
+    "python_log_sha256": "fcee5d309da419d946f5ab8978ea712d37ff579bb758014aaaabaa461944bec8",
+    "clippy_log_sha256": "456766276f7f1e751a17201f9c209a17616d3dcac846d499d8f1e3a0bba4050a"
+  }
+}

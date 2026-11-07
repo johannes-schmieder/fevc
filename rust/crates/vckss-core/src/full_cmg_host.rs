@@ -333,6 +333,11 @@ impl HostCmg {
         Output: Send,
         Operation: Fn(Input) -> Output + Send + Sync,
     {
+        // There is no parallel work for a single lane or item. Keep these
+        // operations on the executing thread instead of handing each RHS to Rayon.
+        if self.runtime.options.threads == 1 || input.len() <= 1 {
+            return input.into_iter().map(operation).collect();
+        }
         self.runtime
             .pool()
             .install(|| input.into_par_iter().map(operation).collect())
@@ -490,6 +495,34 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn ordered_maps_keep_serial_work_local_and_parallel_work_in_the_owned_pool() {
+        let caller = std::thread::current().id();
+        for workers in [1, 2, 3] {
+            let graph = Laplacian::from_edges(3, [(0, 1, 1.0), (1, 2, 1.0)]).unwrap();
+            let runtime = HostPool::new(ParallelOptions {
+                threads: workers,
+                ..ParallelOptions::default()
+            })
+            .unwrap();
+            let solver = HostCmg::build(&graph, CmgOptions::default(), runtime, None).unwrap();
+            for items in [0, 1, 2, 5, 17] {
+                let results = solver.map_ordered((0..items).collect(), |index| {
+                    (index * 3, std::thread::current().id())
+                });
+                assert_eq!(results.len(), items);
+                for (index, (value, executing_thread)) in results.into_iter().enumerate() {
+                    assert_eq!(value, index * 3);
+                    if workers == 1 || items <= 1 {
+                        assert_eq!(executing_thread, caller);
+                    } else {
+                        assert_ne!(executing_thread, caller);
+                    }
+                }
+            }
+        }
+    }
+
     #[test]
     fn queued_columns_are_ordered_across_odd_and_partial_batches() {
         for workers in [1, 2, 3, 4, 7, 14, 28, 64] {

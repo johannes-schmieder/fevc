@@ -92,3 +92,8 @@ native/windows-cmg-20261107/evidence/windows-performance-attempt1/receipt.json -
 native/windows-cmg-20261107/evidence/windows-supported-pilot/receipt.json -text whitespace=cr-at-eol
 
 native/windows-cmg-20261107/evidence/confirmation-attempt1/*/controller.json -text whitespace=cr-at-eol
+
+native/windows-cmg-20261107/evidence/development-D/*/controller.json -text whitespace=cr-at-eol
+
+# Preserve the intermediate development run scheduler receipts.
+native/windows-cmg-20261107/evidence/development-D/*-qacct.txt whitespace=-blank-at-eol

@@ -1,0 +1,11 @@
+{
+  "macos": "INTENTIONALLY_STOPPED_INCOMPLETE",
+  "macos_stata_exit": 143,
+  "macos_released_plugins_restored": true,
+  "linux": "INTENTIONALLY_STOPPED_INCOMPLETE",
+  "linux_job": 8501380,
+  "linux_accounting_failed": 100,
+  "linux_exit_status": 137,
+  "linux_wall_seconds": 859,
+  "scientific_or_runtime_pass_claim": false
+}

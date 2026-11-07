@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-gd4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      linux-D-full-guard.sge
+jobnumber    8501380             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Sat Nov  7 11:21:04 2026
+start_time   Sat Nov  7 11:36:46 2026
+end_time     Sat Nov  7 11:51:05 2026
+granted_pe   omp                 
+slots        4                   
+failed       100 : assumedly after job
+exit_status  137                 
+ru_wallclock 859          
+ru_utime     0.305        
+ru_stime     0.150        
+ru_maxrss    20472               
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    22958               
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   6056                
+ru_oublock   32                  
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1261                
+ru_nivcsw    22                  
+cpu          2337.730     
+mem          1880.184          
+io           64.357            
+iow          0.000             
+maxvmem      2.842G
+arid         undefined

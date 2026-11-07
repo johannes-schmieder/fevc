@@ -479,11 +479,13 @@ fn compressed_statistical_pool_preserves_order_cancellation_and_inert_parallelis
             )
             .unwrap();
         assert_eq!(values, core::array::from_fn(|index| index));
-        assert!(workers
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|&thread| thread != owner));
+        let executing_threads = workers.lock().unwrap();
+        if threads == 1 {
+            assert!(executing_threads.iter().all(|&thread| thread == owner));
+        } else {
+            assert!(executing_threads.iter().all(|&thread| thread != owner));
+        }
+        drop(executing_threads);
         let error = solver
             .statistical_work(
                 0..17,

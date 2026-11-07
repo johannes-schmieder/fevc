@@ -1,3 +1,25 @@
+# Windows full-CMG scheduling fix — November 7, 2026
+
+The result-export fix at `05f806ce` passes the Windows development scientific
+checks, but paired pilot timings still show small-case regressions. No new
+confirmation was started. Its completed hosted builds, Windows smoke/pilot and
+Linux smoke are retained; the remaining Mac/Linux qualifiers were intentionally
+stopped as incomplete when this candidate was superseded. Released plugins
+remain unchanged.
+
+The next candidate keeps the validated result export and adds two narrow fixes:
+execute single-lane/single-item independent work locally, and wake the caller
+when its coordinated solve completes. Callback ownership, cancellation polling,
+worker joining, memory admission, solver behavior and scientific/performance
+criteria stay unchanged. Focused Rust and Stata diagnostics, the full Rust workspace, Clippy,
+952 Python tests, assembly, vendor and parity checks pass. Freeze the new
+candidate, rebuild matching artifacts and pass a new
+Windows development pilot before registering confirmation. See the
+[scheduling review](../native/windows-cmg-20261107/scheduling-fix.json).
+Publication remains blocked until all required qualification passes.
+
+## Previous checkpoint
+
 # Windows full-CMG qualification — November 7, 2026
 
 The Windows implementation and all six runtime/installation groups pass at

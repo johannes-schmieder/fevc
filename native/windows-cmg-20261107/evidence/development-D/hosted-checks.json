@@ -1,0 +1,102 @@
+{
+  "classification": "SUPERSEDED_DEVELOPMENT_CANDIDATE",
+  "runs": [
+    {
+      "run_id": 42390764860,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42390764860",
+      "status": "PASS",
+      "source_commit": "05f806ce94f53423f1b901fd8cda73a8c2622428",
+      "jobs": [
+        {
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "metadata_sha256": "db3f117198d932fd65d071e99d69c34b332f6a55c60c54129e902d16db83f98f"
+    },
+    {
+      "run_id": 42390767733,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42390767733",
+      "status": "PASS",
+      "source_commit": "05f806ce94f53423f1b901fd8cda73a8c2622428",
+      "jobs": [
+        {
+          "name": "Standalone dependency policy",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "macos-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "windows-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "windows-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "macos-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ubuntu-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "ubuntu-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "metadata_sha256": "66e5e4d426a99f6a087500861c4d7dbe336367c7d9d8a8be952ff7a2a5ef017f"
+    },
+    {
+      "run_id": 42390770133,
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42390770133",
+      "status": "PASS",
+      "source_commit": "05f806ce94f53423f1b901fd8cda73a8c2622428",
+      "jobs": [
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust 1.85.1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust stable",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ],
+      "metadata_sha256": "1310a6c46697bbc8da6d69166496f046895f336edf505b756737a01af1f0439b"
+    }
+  ]
+}

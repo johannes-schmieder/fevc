@@ -1,0 +1,130 @@
+{
+  "classification": "DEVELOPMENT_ONLY_NOT_CONFIRMATION",
+  "status": "PERFORMANCE_CONCERNS_NEW_FIX_REQUIRED",
+  "candidate_commit": "05f806ce94f53423f1b901fd8cda73a8c2622428",
+  "campaign_sha256": "18af62a9a5605e22abaac7074094241aceaa688f49e93115ee352da343a1fb73",
+  "cells": [
+    {
+      "case": 0,
+      "workers": 1,
+      "incumbent_ms": 122,
+      "candidate_ms": 136,
+      "prospective_allowance_ms": 6.1000000000000005,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.0559771220072631e-08
+    },
+    {
+      "case": 0,
+      "workers": 2,
+      "incumbent_ms": 125,
+      "candidate_ms": 125,
+      "prospective_allowance_ms": 6.25,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.0559771220072631e-08
+    },
+    {
+      "case": 1,
+      "workers": 1,
+      "incumbent_ms": 3017,
+      "candidate_ms": 497,
+      "prospective_allowance_ms": 150.85,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 8.03892772127188e-07
+    },
+    {
+      "case": 1,
+      "workers": 2,
+      "incumbent_ms": 3016,
+      "candidate_ms": 465,
+      "prospective_allowance_ms": 150.8,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 8.03892772127188e-07
+    },
+    {
+      "case": 2,
+      "workers": 1,
+      "incumbent_ms": 18618,
+      "candidate_ms": 1742,
+      "prospective_allowance_ms": 930.9000000000001,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.29750148698623e-06
+    },
+    {
+      "case": 2,
+      "workers": 2,
+      "incumbent_ms": 18729,
+      "candidate_ms": 1610,
+      "prospective_allowance_ms": 936.45,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.29750148698623e-06
+    },
+    {
+      "case": 3,
+      "workers": 1,
+      "incumbent_ms": 108,
+      "candidate_ms": 125,
+      "prospective_allowance_ms": 5.4,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 5.111301151745187e-09
+    },
+    {
+      "case": 3,
+      "workers": 2,
+      "incumbent_ms": 124,
+      "candidate_ms": 124,
+      "prospective_allowance_ms": 6.2,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 5.111301151745187e-09
+    },
+    {
+      "case": 4,
+      "workers": 1,
+      "incumbent_ms": 406,
+      "candidate_ms": 436,
+      "prospective_allowance_ms": 20.3,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 3.5076244021164338e-12
+    },
+    {
+      "case": 4,
+      "workers": 2,
+      "incumbent_ms": 407,
+      "candidate_ms": 444,
+      "prospective_allowance_ms": 20.35,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 3.5076244021164338e-12
+    },
+    {
+      "case": 5,
+      "workers": 1,
+      "incumbent_ms": 894,
+      "candidate_ms": 1032,
+      "prospective_allowance_ms": 44.7,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 2.996466186327748e-10
+    },
+    {
+      "case": 5,
+      "workers": 2,
+      "incumbent_ms": 890,
+      "candidate_ms": 901,
+      "prospective_allowance_ms": 44.5,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 2.996466186327748e-10
+    }
+  ],
+  "confirmation_started": false,
+  "next_change": "Avoid single-lane or singleton Rayon handoffs; notify the caller on coordinated worker completion while retaining the 5 ms cancellation polling bound and mandatory join."
+}

@@ -1,0 +1,9 @@
+{
+  "classification": "SUPERSEDED_INTERMEDIATE_CANDIDATE_NOT_QUALIFIED",
+  "source_commit": "05f806ce94f53423f1b901fd8cda73a8c2622428",
+  "reason": "Development paired Windows pilot retains small-case timing regressions. Isolated serial-dispatch and completion-notification fixes pass focused checks; freeze a new candidate before confirmation.",
+  "macos_signal": "SIGTERM to this qualifier descendant only",
+  "linux_job_to_cancel": 8501380,
+  "created_at": "2026-11-07T16:51:05.375792+00:00",
+  "confirmation_started": false
+}
