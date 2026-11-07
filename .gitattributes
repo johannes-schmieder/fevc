@@ -82,3 +82,6 @@ native/cmg-consolidation-20261106/*.tar.gz export-ignore
 # Preserve exact scheduler accounting for the pending Windows CMG qualification.
 native/windows-cmg-20261107/evidence/*-qacct.txt whitespace=-blank-at-eol
 native/windows-cmg-20261107/evidence/windows-hosted-build-receipt.json -text whitespace=cr-at-eol
+
+# Preserve the full-CMG private Windows controller receipt byte-for-byte.
+native/windows-cmg-20261107/evidence/windows-smoke/receipt.json -text whitespace=cr-at-eol

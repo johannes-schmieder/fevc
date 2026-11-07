@@ -22,24 +22,27 @@ Windows-target Rust compilation passes, but is not Windows runtime evidence.
 The [status and binary hashes](qualification-status.json) bind these claims to
 the exact build source. Original source-bound receipts are copied under
 `evidence/` without modification. Qualified binaries, the corresponding-source
-archive, full sanitized logs, local validation logs and the undeployed collector
-patch are retained in ignored local storage `.local/windows-cmg-20261107/`.
+archive, full sanitized logs, local validation logs and the accepted collector
+update are retained in ignored local storage `.local/windows-cmg-20261107/`.
 
 Hosted Windows package build and the complete Rust and SPI matrices now pass.
 The [hosted checkpoint](hosted-checkpoint.json) records exact runs, binary hashes,
 all three failed CI attempts and the [test-only compatibility review](hosted-compatibility.json).
 The owner approved temporary branch `qualify/windows-cmg-20261107`, to be deleted
-after release. The requested AWS login expired before browser authorization;
-a direct authentication check still requires login. No collector update or
-private Windows run has started.
+after release. Owner-maintenance authentication, collector repair cycle 1
+and the required restricted backend acceptance now pass. The first private
+full-CMG smoke also passes at exact build source C and candidate DLL hash; see
+the [source-bound smoke record](evidence/windows-smoke/runtime.json). It covers
+PE audit, clean installation, lifecycle, point/projection estimates, CMG boundary
+checks and idle registry, with independently verified cleanup and stopped state.
 
 Remaining work follows the [Windows qualification workflow](../../rust/stata_backend/WINDOWS_CMG_QUALIFICATION.md):
-complete browser login, bounded collector maintenance and backend acceptance,
-execute the six runtime groups and twelve frozen
+finish the five remaining runtime groups and twelve frozen
 performance groups, adopt all five exact binaries, publish 0.5.2, and verify
 actual published fresh/replacement installations. The release command rejects
 legacy Windows evidence for this version. No confirmation result has been
-resampled or excluded; Windows confirmation has not started.
+resampled or excluded. The frozen campaign is executing serially and stops
+on the first failed group.
 
 Native Intel hardware remains untested; the Mac x86-64 evidence is Rosetta.
 The initial development harness failures and superseded smoke are identified in
