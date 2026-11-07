@@ -141,3 +141,11 @@ def test_generic_adoption_retains_all_verified_binaries(adopted):
 def test_legacy_adoption_retains_runtime_limitation(adopted):
     _, manifest = release.adopted_package(*adopted, allow_pending_windows=True)
     assert any("Windows" in x and "pending" in x for x in release.qualification_limitations(manifest))
+
+
+def test_generic_adoption_preserves_declared_platform_limitations(adopted):
+    _, path = qualified(adopted)
+    manifest = json.loads(path.read_text())
+    limitation = "Full shared-CMG Stata routes are Mac/Unix only."
+    manifest["limitations"] = [limitation]
+    assert limitation in release.qualification_limitations(manifest)

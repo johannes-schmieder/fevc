@@ -76,6 +76,11 @@ def zip_package(files: tuple[portable.PackageFile, ...]) -> bytes:
 def qualification_limitations(adoption: dict) -> list[str]:
     limitations = ["Mac x86-64 runtime qualification uses Rosetta.",
                    "Package validation does not expand scientific or platform claims."]
+    for limitation in adoption.get("limitations", []):
+        if not isinstance(limitation, str) or not limitation.strip():
+            raise ValueError("invalid adoption limitation")
+        if limitation not in limitations:
+            limitations.append(limitation)
     if any(row["name"] == "fevc_rust_windows_x64.plugin"
            and row["runtime_qualification"] != "PASS" for row in adoption["binaries"]):
         limitations.insert(0, "Windows Stata runtime testing remains pending.")
