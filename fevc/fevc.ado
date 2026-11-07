@@ -2343,6 +2343,14 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `component_requested' {
         matrix `component_point_snapshot' = r(result)[3,1..4]
     }
+    // Auxiliary receipt getters replace r(), but the solved generation is
+    // immutable. Move its already validated export aside while fetching those
+    // receipts; tempname ownership also releases it on any failed exit.
+    local saved_cmg_result = `native_result_engine'==2 & !`resolved_execution' & ///
+        (`fullcmg'==1 | `generic_execution'==2 | ///
+         (`numerical_all' & `phase_batch_code'==0 & `native_result_route'==3))
+    tempname saved_cmg_returns
+    if `saved_cmg_result' _return hold `saved_cmg_returns'
     if `resolved_execution' {
         if `native_result_engine'==2 {
             capture noisily fevc__rust_public_call executionreceipt `handle'
@@ -2402,16 +2410,18 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             exit `failure_rc'
         }
         local ci_result_peak = r(peak)
-        // componentresult replaces r(). Re-export the immutable solved
-        // result before any generic-result reconciliation or posting.
-        capture noisily fevc__rust_public_call result `handle',           ///
-            componentinference(1) execution(`generic_execution') componentprobes(`inferencesimulations') ///
-            componentgramprobes(`component_gram_probes')
-        if _rc {
-            local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc')            ///
-                handle(`handle') phase(component_result_refresh)
-            exit _rc
+        // Other routes retain their existing export path. Full CMG restores
+        // the first validated export after all auxiliary receipts are checked.
+        if !`saved_cmg_result' {
+            capture noisily fevc__rust_public_call result `handle',           ///
+                componentinference(1) execution(`generic_execution') componentprobes(`inferencesimulations') ///
+                componentgramprobes(`component_gram_probes')
+            if _rc {
+                local failure_rc = _rc
+                capture noisily _fevc_rust_abort, rc(`failure_rc')            ///
+                    handle(`handle') phase(component_result_refresh)
+                exit _rc
+            }
         }
     }
 
@@ -2928,7 +2938,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         }
         exit `compressed_post_rc'
     }
-    if `full_cmg_active' {
+    if `saved_cmg_result' _return restore `saved_cmg_returns'
+    if `full_cmg_active' & !`saved_cmg_result' {
         capture noisily fevc__rust_public_call result `handle', ///
             componentinference(`component_requested') execution(`generic_execution') componentprobes(`component_result_probes') ///
             componentgramprobes(`component_gram_probes')

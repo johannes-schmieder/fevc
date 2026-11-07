@@ -1,0 +1,77 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-RESULT-EXPORT-FIX-V1",
+  "status": "LOCAL_CHECKS_PASS_NEW_PLATFORM_CONFIRMATION_REQUIRED",
+  "failed_campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+  "prior_production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "diagnosis": "Explicit generic full CMG exported and validated the immutable RHS result twice for point/projection and three times for pooled inference. Auxiliary receipt getters replaced r(), causing redundant complete Stata row validation.",
+  "fix": "Hold the already validated r() result with a tempname while checking auxiliary receipts, then restore it before independent result reconciliation. Limit reuse to explicit already-resolved generic full-CMG requests.",
+  "unchanged": [
+    "CMG revision and payload",
+    "Rust/C implementation and ABI",
+    "all scientific and memory gates",
+    "solver routing and options",
+    "benchmark driver, data, seeds, schedule, repetitions and acceptance thresholds"
+  ],
+  "memory_review": {
+    "ownership": "_return hold moves r() and clears the active return namespace; restore moves it back and drops the hold. Tempname ownership releases the object on failed exits.",
+    "forecast": "generic_jla.rs memory_forecast already admits the native result, C row buffer and caller RHS/projection matrices together. Component inference adds its complete allocation bound to that existing command peak, including synchronous export copies. Retaining the caller result during receipt retrieval fits that admitted coexistence; no new result copy is introduced.",
+    "source_locations": [
+      "rust/crates/vckss-core/src/generic_jla.rs:1768",
+      "rust/crates/vckss-core/src/generic_jla.rs:7948",
+      "rust/crates/vckss-core/src/generic_jla.rs:9761"
+    ]
+  },
+  "local_checks": {
+    "red": "Old candidate fails the new regression with two exports in the first cell.",
+    "green": "Point, projection and pooled fixtures each export once at one/two workers; original-system certificates and idle registry pass.",
+    "affected": "Lifecycle, attachment and controlled full-CMG tests pass at one/two workers, including corruption/cancellation, memory policies and caller restoration."
+  },
+  "diagnostic_only": {
+    "platform": "Mac arm64",
+    "qualification_claim": false,
+    "single_command_ms_before_after": {
+      "weighted": [
+        100,
+        78
+      ],
+      "projection": [
+        374,
+        247
+      ],
+      "pooled": [
+        857,
+        586
+      ]
+    },
+    "warning": "Development observations diagnose overhead; they are not Windows performance acceptance or replacements for the failed confirmation."
+  },
+  "diagnostic_logs": [
+    {
+      "name": "cache-red.sanitized.log",
+      "sha256": "60b8d00b239e6e41c1d233f5e917347d9e243aed525a7aa2e07fa3e774b1ebb2"
+    },
+    {
+      "name": "cache-green.sanitized.log",
+      "sha256": "2b23fc71342d4e1560e9bf5f82dca3a6d419e77ca79c17e51abbb97214851731"
+    },
+    {
+      "name": "profile.sanitized.log",
+      "sha256": "3b94c70c33ae761855a98e5ed3e75c5e37f4cbe9caebd7ba5c87dc16992780cf"
+    },
+    {
+      "name": "profile-after.sanitized.log",
+      "sha256": "9262493145a0c5a87069e08ec885019f82e5493f02754da589852a345e8e684d"
+    },
+    {
+      "name": "affected-cache-checks.sanitized.log",
+      "sha256": "c22ae4591c1815fafaacd4b916a1af2066d699d7be15c8854d67ac1726d50653"
+    }
+  ],
+  "source_checks": {
+    "python": "952 passed",
+    "log_sha256": "5edd3b4264b603cbf52964d8d94fae9ef2e48b8db6fbd76b26abd515866c6980",
+    "assembly": "PASS",
+    "vendor": "PASS",
+    "parity_render": "PASS"
+  }
+}

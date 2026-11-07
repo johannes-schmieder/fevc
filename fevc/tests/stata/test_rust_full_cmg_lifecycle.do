@@ -94,4 +94,5 @@ assert "`e(cmg_backend)'"=="CMG_FULL_V2"
 assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
 quietly fevc_rust snapshot
 assert r(state)==0 & r(handle)==0
+do "fevc/tests/stata/test_rust_full_cmg_result_cache.do" `"`package_dir'"' `test_threads'
 display as result "PASS test_rust_full_cmg_lifecycle.do"

@@ -11,8 +11,13 @@ All 144 timed commands and the original failed registration/development pilot
 are retained. See the [complete result](../native/windows-cmg-20261107/confirmation-result.json)
 and [raw comparisons](../native/windows-cmg-20261107/evidence/confirmation-attempt1/comparison.json).
 
-Publication and binary adoption remain blocked. Diagnose the small-system
-overhead; do not resample the unchanged candidate, relax thresholds or silently
+Publication and binary adoption remain blocked. A narrow Stata result-export
+fix is ready for source checks and new platform qualification. It holds and
+restores the already validated immutable result across auxiliary receipt getters,
+avoiding duplicate exports. The red/green regression and affected one/two-worker
+cancellation, memory and numerical tests pass. See the
+[fix review](../native/windows-cmg-20261107/result-export-fix.json).
+Preserve the failed confirmation; do not resample the unchanged candidate, relax thresholds or silently
 change solver routes. A justified implementation fix requires a new source,
 matching platform artifacts and a newly registered affected confirmation.
 The installation payload still contains the released 0.5.1 plugins. Mac/Rosetta,

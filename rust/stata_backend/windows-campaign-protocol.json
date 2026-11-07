@@ -1,6 +1,6 @@
 {
   "schema": "FEVC-WINDOWS-CMG-PROTOCOL-V1",
-  "status": "FROZEN_COMMON_SUPPORT_CORRECTION_BEFORE_NEW_CONFIRMATION",
+  "status": "FROZEN_UNCHANGED_COMPARISON_FOR_RESULT_EXPORT_FIX",
   "platform": {
     "os": "Windows Server 2022",
     "arch": "x86_64",
@@ -172,5 +172,14 @@
     "diagnosis": "Local no-timing reproduction with Windows platform selection rejects case 1 forced generic CMG with UNSUPPORTED_FEATURE [engine_full_cmg_receipt]. All 12 corrected automatic/diagonal common-support requests pass the local diagnostic.",
     "correction": "Use the accepted incumbent diagonal route for explicit generic comparisons. The weighted-observation performance request is mover-only in both arms; broader candidate observation/both support remains covered by native runtime qualification.",
     "unchanged": "Candidate/CMG/source/binary, generated data, seeds, probes, worker counts, schedule, warmups, repetitions and acceptance thresholds."
+  },
+  "previous_performance_failure": {
+    "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+    "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+    "status": "FAIL",
+    "scientific_cells_passed": 12,
+    "timing_cells_failed": 6,
+    "evidence": "native/windows-cmg-20261107/confirmation-result.json",
+    "change": "Reuse the immutable validated Stata result across full-CMG auxiliary receipt getters. New exact candidate and artifacts required; every comparison input and acceptance rule stays fixed."
   }
 }
