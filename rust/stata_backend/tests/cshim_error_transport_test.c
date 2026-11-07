@@ -7,6 +7,11 @@
 static int mock_cleanup_release(uint64_t generation);
 static int mock_cleanup_clear(void);
 
+#include "stplugin.h"
+/* This fixture calls individual shim paths, not the complete plugin dispatcher.
+   Internal linkage lets every platform omit its unmocked, unreachable paths. */
+static ST_retcode vckss_stata_call_impl(int argc, char *argv[]);
+
 #define VCKSS_CSHIM_TEST 1
 #define VCKSS_CLEANUP_RELEASE(generation) mock_cleanup_release((generation))
 #define VCKSS_CLEANUP_CLEAR() mock_cleanup_clear()
