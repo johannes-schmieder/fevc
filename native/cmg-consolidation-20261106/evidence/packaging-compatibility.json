@@ -1,0 +1,57 @@
+{
+  "schema": "FEVC-PACKAGING-COMPATIBILITY-V1",
+  "status": "PASS",
+  "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "package_parent_commit": "f9add5367e95c34fcb635233e8cec91a3a59abd7",
+  "package_identity": "Exact ZIP hash 6e055b375ef9124fb3c1ac5496c77f3f4058c7f1a374e831b1d86bdf74a6e9ef; final release manifest binds the subsequent clean package commit.",
+  "unchanged_source_files": 555,
+  "unchanged_source_manifest_sha256": "af7d5693eef099a00edd762509f949da7a94dc83ea245212571d5196be82b72a",
+  "changed_paths": [
+    ".gitattributes",
+    "INSTALLATION.md",
+    "README.md",
+    "fevc/PLAN.md",
+    "fevc/docs/RUST_MATA_PARITY.md",
+    "fevc/docs/rust_mata_parity.json",
+    "fevc/fevc_rust_linux_x64.plugin",
+    "fevc/fevc_rust_macos.plugin",
+    "fevc/fevc_rust_macos_arm64.plugin",
+    "fevc/fevc_rust_macos_x86_64.plugin",
+    "fevc/fevc_rust_windows_x64.plugin",
+    "fevc/tests/python/test_github_release.py",
+    "fevc/tests/python/test_rust_mata_parity.py",
+    "fevc/tools/build_github_release.py",
+    "fevc/tools/verify_native_installers.py",
+    "native/README.md",
+    "native/cmg-consolidation-20261106/evidence/hosted-rust.json",
+    "native/cmg-consolidation-20261106/evidence/linux-collection.json",
+    "native/cmg-consolidation-20261106/evidence/linux-qacct.txt",
+    "native/cmg-consolidation-20261106/evidence/linux-qualification.txt",
+    "native/cmg-consolidation-20261106/evidence/linux-wrapper.txt",
+    "native/cmg-consolidation-20261106/evidence/macos-qualification.txt",
+    "native/cmg-consolidation-20261106/evidence/performance/README.md",
+    "native/cmg-consolidation-20261106/evidence/performance/fevc-e561-final-native-comparison.json",
+    "native/cmg-consolidation-20261106/evidence/supply-chain-compatibility.json",
+    "native/cmg-consolidation-20261106/evidence/windows-controller.json",
+    "native/cmg-consolidation-20261106/evidence/windows-hosted-build.json",
+    "native/cmg-consolidation-20261106/evidence/windows-project-checks.json",
+    "native/cmg-consolidation-20261106/fevc-corresponding-source-94d94999.tar.gz",
+    "native/cmg-consolidation-20261106/manifest.json"
+  ],
+  "affected_surface": "Package assembly, publication tooling/tests, current documentation, exact qualification evidence and native distributions. No estimator, CMG, runtime build inputs, scientific inputs or acceptance tolerances changed since the binary build source.",
+  "checks": [
+    "All tracked Rust and CI sources plus Stata/Mata/help bytes match build source Git blobs.",
+    "All five binary bytes match their passed platform receipts.",
+    "119 upstream CMG files including standalone Cargo.toml exactly match e5613e81.",
+    "Current package: 913 Python tests and 28 independent CMG tests pass; integrated Stata and final installs recorded separately."
+  ],
+  "reused_claims": [
+    "Exact-binary native qualification",
+    "Frozen scientific and performance comparisons",
+    "Unchanged dependency audit per supply-chain-compatibility.json"
+  ],
+  "limitations": [
+    "A package/source SHA does not identify the actual native build; each binary retains build source 94d94999.",
+    "Final published HTTP installation is a separate release gate."
+  ]
+}

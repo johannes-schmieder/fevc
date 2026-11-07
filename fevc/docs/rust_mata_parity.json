@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-10",
-  "release_target": "0.5.0-rc.1",
-  "qualification_scope": "Current pooled-inference and bounded diagonal-refinement binaries are all rebuilt from 002205f2 and adopted under explicit owner authorization. Clean Mac arm64/Rosetta thin/universal and SCC Linux job 8015131 qualification pass. Windows hosted build/unit/PE/export checks pass, but private Stata runtime was not run; the owner requests publication and will test Windows later. All five binaries provide mixed component capability bit17 and unit receipt V2. Exact source, hashes, corresponding source and separate installation receipts are in native/pooled-component-20261010/manifest.json. No native Intel hardware, controlled scale-performance, general coverage, tag or release claim. Historical dated receipts qualify only their recorded binaries.",
+  "updated": "2026-11-06",
+  "release_target": "0.5.1",
+  "qualification_scope": "CMG consolidation plugins are built from 94d94999 with unmodified upstream CMG e5613e81. Mac arm64/Rosetta, SCC Linux 8488094 and private Windows full native/installed qualification pass. Exact hashes, corresponding source and evidence are in native/cmg-consolidation-20261106/manifest.json. Shared full-CMG Stata routes remain Mac/Unix only; Windows retains its established native routes. No native Intel hardware or general coverage claim. Historical dated receipts qualify only their recorded binaries; final package installation evidence is separate.",
   "statuses": [
     "qualified",
     "implemented",
@@ -16,7 +16,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Explicit exact Mata and scalable Rust/JLA, fixed offsets and independent physical stayers. Separate type variance coefficients in one residual-moment Gram; dense and literal-expansion oracles pass. The 16000-call assessment has full primary availability and passes its descriptive screens; stress failures and numerical sensitivity remain in POOLED_COMPONENT_ASSESSMENT.md. All five distributed plugins are rebuilt at 002205f2 with mixed capability bit17 and unit receipt V2 and bounded diagonal residual refinement. Clean Mac arm64/Rosetta thin/universal qualification includes 16 pooled cases; SCC Linux job 8015131 includes eight staged/installed pooled cases. Windows build/unit/PE checks pass, but owner manual runtime testing is pending. native/pooled-component-20261010/manifest.json; POOLED_COMPONENT_INFERENCE.md."
+      "evidence": "Explicit exact Mata and scalable Rust/JLA, fixed offsets and independent physical stayers. Separate type variance coefficients in one residual-moment Gram; dense and literal-expansion oracles pass. The 16000-call assessment has full primary availability and passes its descriptive screens; stress failures and numerical sensitivity remain in POOLED_COMPONENT_ASSESSMENT.md. All five current plugins are rebuilt at 94d94999 with the existing capability/receipt contracts and bounded residual refinement. Mac arm64/Rosetta, SCC Linux and private Windows full native/installed checks pass; shared full-CMG Stata routes remain Mac/Unix only. native/cmg-consolidation-20261106/manifest.json; POOLED_COMPONENT_INFERENCE.md."
     },
     {
       "id": "mean-centering",
@@ -168,7 +168,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean 002205f2 candidate qualification: Stata 19 MP native arm64 and Rosetta x86-64, thin and universal payloads; formal plugin-build receipt success, complete runtime/ABI checks, 16 pooled component cases and two clean installations. Source-manifest and three binary hashes bound by native/pooled-component-20261010/manifest.json. No native Intel hardware claim. Earlier exact-artifact receipts retain their historical scope."
+      "evidence": "Clean 94d94999 native arm64 and Rosetta x86-64 thin/universal full native and installed checks pass. Exact three hashes and receipt: native/cmg-consolidation-20261106/manifest.json. No native Intel hardware claim; historical receipts keep their recorded scope."
     },
     {
       "id": "linux-scc",
@@ -176,15 +176,15 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean 002205f2 qualification in SCC job 8015131: full Stata suite, isolated installation, and eight staged/installed pooled component cases; scheduler failed=0 and exit_status=0. All 63 collected hashes and 1590 source-manifest entries verified against the deployed bundle. Candidate hash and original receipts in native/pooled-component-20261010/manifest.json. Earlier exact-artifact receipts retain their historical scope."
+      "evidence": "Clean 94d94999 SCC smoke 8488089 and full 8488094 pass, including native and installed checks; failed=0 and exit_status=0. All 66 collected files hash-verified. Exact plugin and receipt: native/cmg-consolidation-20261106/manifest.json."
     },
     {
       "id": "windows",
       "surface": "Windows qualification",
-      "mata": "pending",
-      "rust": "pending",
+      "mata": "qualified",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "002205f2 hosted build/unit and PE/import/export checks pass. Private Windows Stata runtime was not run. The owner explicitly requests adoption and publication of this exact build and will test Windows later; authentication is left unchanged. native/pooled-component-20261010/windows-manual-adoption.json. Prior Windows runtime successes qualify only their prior binary hashes and do not qualify the new payload."
+      "evidence": "Clean 94d94999 hosted static-CRT artifact, smoke win-20261106T235058Z-83f6dbe7 and full win-20261107T000031Z-bd8dad24 pass on private Windows x86-64 Stata. All 18 platform gates pass or are satisfied by hosted CI. Exact plugin and receipts: native/cmg-consolidation-20261106/manifest.json. Shared full-CMG Stata route remains Mac/Unix only; established Windows native routes are qualified."
     },
     {
       "id": "all-point-probe-numerical-mcse",

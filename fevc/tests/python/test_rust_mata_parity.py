@@ -28,18 +28,25 @@ def test_every_alpha_gap_is_explicit() -> None:
         for row in rows
         if row["alpha_required"] and row["rust"] != "qualified"
     }
-    # Repository adoption is owner-authorized before Windows runtime testing;
-    # do not let the ledger silently turn that exception into qualification.
-    assert gaps == {"windows"}
+    assert gaps == set()
     windows = next(row for row in rows if row["id"] == "windows")
-    assert windows["mata"] == windows["rust"] == "pending"
-    record = "native/pooled-component-20261010/windows-manual-adoption.json"
+    assert windows["mata"] == windows["rust"] == "qualified"
+    record = "native/cmg-consolidation-20261106/manifest.json"
     assert record in windows["evidence"]
-    adoption = json.loads((REPO_ROOT / record).read_text(encoding="utf-8"))
-    assert adoption["status"] == "ADOPTED_FOR_OWNER_MANUAL_TEST_RUNTIME_UNQUALIFIED"
-    assert adoption["automated_private_runtime"] == "NOT_RUN"
-    assert adoption["owner_manual_runtime_test"] == "PENDING"
-    assert adoption["owner_authorization"]
-    assert adoption["sha256"] == hashlib.sha256(
-        (REPO_ROOT / adoption["path"]).read_bytes()
+    manifest_path = REPO_ROOT / record
+    adoption = json.loads(manifest_path.read_text(encoding="utf-8"))
+    evidence = adoption["windows_qualification"]
+    payload = (manifest_path.parent / evidence["path"]).read_bytes()
+    assert hashlib.sha256(payload).hexdigest() == evidence["sha256"]
+    checks = json.loads(payload)
+    assert checks["status"] == "PASS" and checks["runtime_profile"] == "full"
+    assert set(checks["gates"].values()) <= {"PASS", "HOSTED_CI_PASS"}
+    assert checks["production_commit"] == adoption["build_source_commit"]
+    binary = next(row for row in adoption["binaries"] if "windows" in row["name"])
+    assert checks["binary_sha256"] == binary["sha256"] == hashlib.sha256(
+        (REPO_ROOT / "fevc" / binary["name"]).read_bytes()
     ).hexdigest()
+    # The previous adoption remains an unqualified historical exception.
+    previous = json.loads((REPO_ROOT / "native/pooled-component-20261010/windows-manual-adoption.json").read_text())
+    assert previous["automated_private_runtime"] == "NOT_RUN"
+    assert previous["owner_manual_runtime_test"] == "PENDING"

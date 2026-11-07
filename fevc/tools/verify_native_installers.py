@@ -165,8 +165,8 @@ exit 0
                'catalog_sha256': sha((catalog / 'fevc.pkg').read_bytes()),
                'verifier_sha256': sha(Path(__file__).read_bytes()),
                'scope': ('Installed payload hashes cover all five plugins; runtime checks '
-                         'apply only to the recorded execution platform. Windows Stata '
-                         'testing is performed separately by the owner.')}
+                         'apply only to the recorded execution platform. Other platforms '
+                         'require their separate exact-binary qualification receipts.')}
     (output / 'verification.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 

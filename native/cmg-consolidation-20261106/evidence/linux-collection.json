@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "verified_files": 66,
+  "native_job": 8488094,
+  "smoke_job": 8488089,
+  "failed": 0,
+  "exit_status": 0,
+  "source": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "transfer": "bounded regular-file tar; every payload matches remote SHA-256 inventory"
+}

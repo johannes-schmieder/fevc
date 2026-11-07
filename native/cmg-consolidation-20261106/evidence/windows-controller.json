@@ -1,0 +1,44 @@
+{
+    "schema_version":  3,
+    "run_id":  "win-20261107T000031Z-bd8dad24",
+    "project":  "fevc",
+    "profile":  "stata-do",
+    "source_revision":  "dirty-db3d05df277ccaab8b076eb84b8bfeb003ca973c286d3191dc735132e211f3ed",
+    "source_sha256":  "e0034f147094b09a2ef3dc1ebf8b34f52ec369894c00805631c1b00b03921cab",
+    "windows_target":  "x86_64",
+    "execution_identity":  "SYSTEM",
+    "status":  "PASS",
+    "error_code":  null,
+    "checks":  {
+                   "execution_identity":  true,
+                   "source_hash":  true,
+                   "archive_paths":  true,
+                   "source_manifest":  true,
+                   "shutdown_backstop":  true,
+                   "stata":  true,
+                   "project_test":  true
+               },
+    "completed_at_utc":  "2026-11-07T00:09:12.4790145Z",
+    "controller_sha256":  "e635d58609f24fa8564ce4c3b6787eccd9df36892edb636069cdc2ebcdfdaf00",
+    "artifact_guard_sha256":  "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+    "artifacts":  [
+                      {
+                          "bytes":  5552128,
+                          "name":  "fevc_rust_windows_x64.plugin",
+                          "sha256":  "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+                      },
+                      {
+                          "bytes":  6856,
+                          "name":  "windows-build.json",
+                          "sha256":  "0e1e7107e684508c3e6008fb7fb381e48358ac146a4a7c563a07687ae7817a0c"
+                      },
+                      {
+                          "bytes":  816,
+                          "name":  "windows-project-checks.json",
+                          "sha256":  "84d1969ca1bae9c42389bef78e6b1f95136ccdbd094028b4b5f8619cf233985d"
+                      }
+                  ],
+    "failure_stage":  "complete",
+    "stata_rc":  null,
+    "input_identity_sha256":  "ea26dd63a649cf45cbf40ebbde54250c113f32fe54e4d8a7715ac7c47ae040a2"
+}

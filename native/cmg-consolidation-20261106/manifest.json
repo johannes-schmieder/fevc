@@ -1,0 +1,141 @@
+{
+  "schema": "FEVC-CMG-ADOPTION-V1",
+  "status": "QUALIFIED_LOCAL_PACKAGE_NOT_PUBLISHED",
+  "owner_authorization": "Implement the approved CMG consolidation and publish qualified 0.5.1 packages.",
+  "owner_authorization_date": "2026-11-06",
+  "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "features": [
+    "cmg-full-v2",
+    "explicit-128-level-limit"
+  ],
+  "binaries": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9",
+      "bytes": 4033328,
+      "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "a74464823c80a19c5175b674219e81796ad74880b60b618cd729b3c56ba0fce4"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532",
+      "bytes": 4796304,
+      "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "2a77d91efbf36996270862d5cbbaf65ea119eadec0c8612ee62051216dd7627a"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98",
+      "bytes": 8850224,
+      "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "817381e80567bbf59692780cde7da1f7e3552893723973260a8a9f62ad8a2017"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5",
+      "bytes": 5069848,
+      "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "355491380b9f47580c5cc6eca2b02aeaa9ce5bb579965152b1421eb0d7745af8"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+      "bytes": 5552128,
+      "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+      "runtime_qualification": "PASS",
+      "replaces_sha256": "163a1d06c07d2ec409cbca9c9737c71539b28b952ef6c77b010a527f26e1ca63"
+    }
+  ],
+  "corresponding_source": {
+    "path": "fevc-corresponding-source-94d94999.tar.gz",
+    "sha256": "e1f86851e5babdc9e0d176a1c80df3166cd2613b2f319f2ad54473b5911f38b7"
+  },
+  "evidence": [
+    {
+      "path": "evidence/hosted-rust.json",
+      "sha256": "cc60f3c9e3681be448fd0ab5a3e48fb2ccf7230a6a01b108049cb3d404ccc6fc"
+    },
+    {
+      "path": "evidence/linux-collection.json",
+      "sha256": "f9331c4e59267f2f0626dc87b10e63624d3ce718678b31e789bc1f4e2b123c2e"
+    },
+    {
+      "path": "evidence/linux-qacct.txt",
+      "sha256": "edeaff60a83464a7eb64e798653363c2108c4219f56447dda9008d1872410a5f"
+    },
+    {
+      "path": "evidence/linux-qualification.txt",
+      "sha256": "30104fc313f49e4c841251f7b7f93f6eb3e68f2141744bff88527747cab565a7"
+    },
+    {
+      "path": "evidence/linux-wrapper.txt",
+      "sha256": "26fcf4c9c4c9f48c17e2fc767a306753d66a3a6761daa0222c681ebaad4250fe"
+    },
+    {
+      "path": "evidence/macos-qualification.txt",
+      "sha256": "e4bd3e3193b3f033873c15dbda406a2b7800b0706ed38c3755cf6c16921cecdd"
+    },
+    {
+      "path": "evidence/performance/README.md",
+      "sha256": "c372a5a93c988becde6622ef61333ad80dd1cfec4f42e773a994ca27c4f8bd49"
+    },
+    {
+      "path": "evidence/performance/fevc-comparison.json",
+      "sha256": "3cbb669b25a99160e7132ef7247862936690db6f57761fbd42d4694e204f4b7d"
+    },
+    {
+      "path": "evidence/performance/fevc-e561-final-native-comparison.json",
+      "sha256": "0bfa84f538402776a30cca0b35a4b253ca6400b16ff4b13b47fd6656e1bdc29d"
+    },
+    {
+      "path": "evidence/performance/fevc-final-native-comparison.json",
+      "sha256": "c4caed404d163b4f88fbc8cecb54bd8553d54538a007fb1283ab122eb3ee129e"
+    },
+    {
+      "path": "evidence/performance/fevc-release-profile-comparison.json",
+      "sha256": "7d3523f1fe9103e34bd524b128e148c8035ad926cb2054f923ceb627f475b9ee"
+    },
+    {
+      "path": "evidence/supply-chain-compatibility.json",
+      "sha256": "e26ba67477ba939e02f749268c8eae2d003367008baecad80c6f9a1965f99250"
+    },
+    {
+      "path": "evidence/windows-hosted-build.json",
+      "sha256": "0e1e7107e684508c3e6008fb7fb381e48358ac146a4a7c563a07687ae7817a0c"
+    },
+    {
+      "path": "evidence/windows-controller.json",
+      "sha256": "69ffa19f495240430a4878c1361e09bd428a12519476fbae3f119b91988ec996"
+    },
+    {
+      "path": "evidence/windows-project-checks.json",
+      "sha256": "84d1969ca1bae9c42389bef78e6b1f95136ccdbd094028b4b5f8619cf233985d"
+    },
+    {
+      "path": "evidence/packaging-compatibility.json",
+      "sha256": "d3147a7dc5ca94fbd353016c9d8f80643c6f2dd9651f5cb6dc6433898552872f"
+    }
+  ],
+  "windows_qualification": {
+    "path": "evidence/windows-project-checks.json",
+    "sha256": "84d1969ca1bae9c42389bef78e6b1f95136ccdbd094028b4b5f8619cf233985d"
+  },
+  "source_checks": [
+    "908 Python checks at build source",
+    "CMG vendor: 119 exact upstream files",
+    "CMG assembly verification",
+    "Rust/MSRV hosted matrix"
+  ],
+  "qualification_scope": "Exact recorded plugins: Mac arm64, Mac x86-64 under Rosetta, universal aliases, SCC Linux x86-64 and private Windows x86-64 native/installed qualification. Final package source checks and installations are recorded separately.",
+  "limitations": [
+    "Mac x86-64 runtime qualification uses Rosetta.",
+    "Shared full-CMG Stata routes remain Mac/Unix only; Windows qualification covers its established native routes, including compressed JLA with exact preconditioning.",
+    "Bounded performance comparisons qualify their declared cells only; previous adverse studies remain in evidence/performance.",
+    "No general coverage, representative-scale or native Intel hardware claim."
+  ]
+}

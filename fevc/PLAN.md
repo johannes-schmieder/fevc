@@ -13,7 +13,8 @@ full Mac arm64/Rosetta native and installation qualification, hosted Rust/MSRV
 checks, and private Windows smoke/full qualification. The shared full-CMG
 public route remains Mac/Unix only; Windows boundary coverage verifies its
 existing compressed/exact route, residuals and caller-state restoration.
-SCC Linux smoke 8488089 passes; full native job 8488094 is in progress.
+SCC Linux smoke 8488089 and full native job 8488094 pass; all 66 collected
+files match their remote inventory hashes.
 
 The [four frozen comparisons](../native/cmg-consolidation-20261106/evidence/performance/README.md)
 retain the earlier timing failures and development-binary pass. The exact new
@@ -21,8 +22,9 @@ qualified Mac arm64 binary passes all four cells (+0.6% to +3.3%) and all
 scientific gates under the unchanged max(5%, 1 ms) allowance. Every study
 retains all 96 observations; no adverse measurements were repeated or excluded.
 
-Next: collect Linux qualification, assemble the five exact source-bound plugins,
-corresponding source and adoption evidence, and validate the final packages.
+The five exact source-bound plugins, corresponding source and platform evidence
+are assembled in the local package. Final package checks and installations
+remain before publication.
 Cross-consumer release remains gated on common-revision qualification and the
 owner's decision on fereg's inconclusive performance evidence. No new plugins,
 main update or release has been published.

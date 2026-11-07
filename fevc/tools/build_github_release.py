@@ -19,7 +19,7 @@ import build_release_artifact as portable
 def adopted_package(repo: Path, manifest_path: Path, *, allow_pending_windows: bool = False):
     adoption = json.loads(manifest_path.read_bytes())
     if adoption.get("schema") not in {"FEVC-POOLED-COMPONENT-ADOPTION-V1",
-                                      "FEVC-NATIVE-ADOPTION-V1"}:
+                                      "FEVC-CMG-ADOPTION-V1"}:
         raise ValueError("unsupported adoption manifest")
     source = adoption.get("build_source_commit", "")
     if not portable.COMMIT_RE.fullmatch(source):
@@ -42,7 +42,7 @@ def adopted_package(repo: Path, manifest_path: Path, *, allow_pending_windows: b
             raise ValueError("binary hash or size mismatch: " + row["name"])
         files.append(portable.PackageFile(PurePosixPath(row["name"]), payload))
     windows = (adoption.get("windows_qualification")
-               if adoption["schema"] == "FEVC-NATIVE-ADOPTION-V1"
+               if adoption["schema"] == "FEVC-CMG-ADOPTION-V1"
                else adoption.get("windows_manual_adoption"))
     if not windows:
         raise ValueError("missing Windows qualification or explicit manual-adoption evidence")

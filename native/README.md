@@ -6,7 +6,26 @@ binaries and their original corresponding source. Windows Stata runtime
 testing remains pending under the owner-authorized release. The dated
 records below retain their original publication and qualification scope.
 
-## Current pooled component inference binaries
+## CMG consolidation in 0.5.1
+
+The [adoption manifest](cmg-consolidation-20261106/manifest.json) identifies all
+five plugins, their common build source `94d94999`, corresponding source,
+platform receipts, and the unchanged CMG payload at
+`e5613e81fb3b03c78de98658b372646fa802aabb`. fevc owns its worker pool and uses
+CMG's public contexts. It explicitly retains a 128-level hierarchy limit.
+
+Mac arm64, Mac x86-64 under Rosetta, both universal aliases, SCC Linux, and
+private Windows native qualification pass for the recorded bytes. Windows
+uses the exact hosted static-CRT build. Native Intel hardware is not qualified.
+The shared full-CMG Stata route remains Mac/Unix only; Windows qualification
+covers its established native routes, including compressed JLA with exact
+preconditioning. The separate Mata and package-owned Rust implementations
+remain supported.
+The original failed performance comparison and the later changed-build studies
+are retained separately. Installation checks identify the package commit and
+installed hashes; they do not expand the scientific scope of the native tests.
+
+## Historical pooled component inference binaries
 
 All five payloads are rebuilt from `002205f2` and adopted for repository
 installation under explicit owner authorization. They include pooled mover–stayer

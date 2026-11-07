@@ -4,8 +4,8 @@
 for macOS (Apple silicon and Intel), Linux x86-64, and Windows x86-64. No
 compiler, Rust installation, or separate plugin download is needed. The macOS
 and Linux plugins have been tested inside Stata (the Intel macOS plugin under
-Rosetta emulation on Apple silicon); the Windows plugin passes build and unit
-tests but has not yet been tested inside Stata on Windows.
+Rosetta emulation on Apple silicon). The Windows plugin also passes native
+Stata qualification on the private Windows x86-64 test host.
 See the [native plugin records](native/README.md) for details.
 
 ## Installation
@@ -57,9 +57,9 @@ Stata after updating a loaded native plugin. See
 
 After installing or updating the package and restarting Stata, you can
 check which features the loaded plugin supports. With the plugins included
-in version 0.5.0, all of the following assertions should hold, and the
-example should run on the Rust backend. This has been verified on macOS and
-Linux; the Windows plugin has not yet been tested inside Stata.
+in version 0.5.1, all of the following assertions should hold, and the
+example should run on the Rust backend. This has been verified on macOS,
+Linux, and Windows.
 
 ```stata
 fevc_rust probe
@@ -79,20 +79,20 @@ confidence intervals that pool movers and stayers.
 ## Installing a specific release
 
 To install the tagged
-[0.5.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
+[0.5.1 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1)
 from GitHub:
 
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.0/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.1/")
 ```
 
 Restart Stata after updating to load the new programs and native plugin.
 
 ## Release ZIP and offline installation
 
-Download `fevc-0.5.0.zip` from the
-[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0).
+Download `fevc-0.5.1.zip` from the
+[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1).
 The ZIP contains only the installation files, programs, help, license
 notices, and five native plugins; it does not include tests, development
 tools, or benchmark data. Extract it and run:

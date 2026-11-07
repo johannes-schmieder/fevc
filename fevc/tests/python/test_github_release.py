@@ -96,15 +96,14 @@ def test_tagged_repository_archive_keeps_installable_plugins():
 
 def test_current_adopted_payload_and_catalogs_agree():
     root = TOOLS.parents[1]
-    files, _ = release.adopted_package(root, root / "native/pooled-component-20261010/manifest.json",
-                                     allow_pending_windows=True)
+    files, _ = release.adopted_package(root, root / "native/cmg-consolidation-20261106/manifest.json")
     assert len(files) == 63
 
 
 def qualified(adopted):
     root, path = adopted
     manifest = json.loads(path.read_text())
-    manifest["schema"] = "FEVC-NATIVE-ADOPTION-V1"
+    manifest["schema"] = "FEVC-CMG-ADOPTION-V1"
     for row in manifest["binaries"]:
         row["runtime_qualification"] = "PASS"
     manifest["windows_qualification"] = manifest.pop("windows_manual_adoption")

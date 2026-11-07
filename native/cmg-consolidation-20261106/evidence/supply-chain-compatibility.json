@@ -1,0 +1,25 @@
+{
+  "status": "DEPENDENCY_AUDIT_REUSE_SUPPORTED",
+  "tested_source": "2c4ad55e4649a872efc9c80b55f4a5414cb7e5ef",
+  "current_source": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "tested_receipt": "fevc-supply-chain.txt",
+  "unchanged_exact_files": {
+    "rust/Cargo.lock": "c31ca33dd087ea7c90b70536e8d32e50f97a57390296a6c1602f9b4b15c14519",
+    "rust/stata_backend/Cargo.lock": "a46b34d9a6472593258b92b2e19f71abd62a253e2d7012e46ce7a017c24fe726",
+    "rust/fuzz/Cargo.lock": "4824f32c467e8aee5f307ad513213ce009a5a2951083040a4679241491305e64",
+    "rust/vendor/cmg/LICENSE": "15b983b2b66ec8af0749a993ab4ccbd2577e643c9bd4783c3feb991b67216f4d",
+    "rust/vendor/cmg/Cargo.toml": "8a3d427900543062e7804413d8d284f7004f3d6e0d2f969e1cfdb4b7b68d50ef"
+  },
+  "manifest_dependency_tables": "identical; standalone release profile is the only manifest difference",
+  "changed_runtime": "New upstream CMG loop implementation and consumer/public provenance IDs; does not change dependency versions, license bytes, or SBOM component identities. Exact119-file upstream vendor verification passes.",
+  "carried_claims": [
+    "three locked dependency sets have the same package advisory result against retained RustSec309392b18f6b17022f82c701f300433126901068",
+    "four SBOM component and license inventories remain applicable"
+  ],
+  "not_carried": [
+    "native binary qualification",
+    "scientific or performance acceptance",
+    "security audit of changed algorithm source",
+    "a newly refreshed advisory database"
+  ]
+}

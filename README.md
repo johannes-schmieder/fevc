@@ -45,8 +45,8 @@ before reporting intervals.
 - Stata 18 or 19.
 - Precompiled native plugins for macOS (Apple silicon and Intel), Linux
   x86-64, and Windows x86-64 are included; no compiler or Rust installation
-  is needed. The Windows plugin passes build and unit tests but has not yet
-  been tested inside Stata on Windows. See the
+  is needed. The plugins pass native Stata qualification on macOS, Linux,
+  and Windows; Intel macOS tests use Rosetta on Apple silicon. See the
   [native plugin records](native/README.md) for platform testing details.
 
 ## Installation
