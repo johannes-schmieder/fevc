@@ -1,0 +1,73 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-BENCHMARK-CORRECTION-V1",
+  "status": "LOCAL_COMPATIBILITY_PILOT_PASS_WINDOWS_PILOT_REQUIRED",
+  "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "common_cmg": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "original_campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+  "original_windows_failure": "win-20261107T133151Z-6316cc50",
+  "original_failure_preserved": true,
+  "source_runtime_binary_changes": false,
+  "changed_benchmark_inputs": [
+    "Incumbent generic cases use its supported diagonal solver.",
+    "Weighted-observation request uses movers in both arms; generated dataset remains unchanged."
+  ],
+  "unchanged": [
+    "All numerical and statistical acceptance thresholds",
+    "Complete-command max(5%, 1 ms) timing allowance",
+    "Candidate DLL and build source",
+    "CMG payload/pin/128-level configuration",
+    "Fixtures other than declared weighted-observation population",
+    "Seeds, 6x2 cells, 6 paired blocks, workers, probes, warmups and schedule"
+  ],
+  "diagnostic": {
+    "status": "DIAGNOSTIC_ONLY_NOT_QUALIFICATION",
+    "platform": "macOS; Stata route-platform predicates forced false to reproduce Windows selection; original Mac incumbent DLL unchanged",
+    "modified_predicates": 5,
+    "incumbent_package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
+    "original_ado_sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3",
+    "diagnostic_ado_sha256": "8b078eb9690b97888a9d3e8fd929a08d180c3c26ba7be748e1839bab2ee994e6",
+    "measurements": "NONE: first warmup call only per cell; no timer",
+    "markers": [
+      "DIAGNOSTIC_CELL=0 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=0 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=1 THREADS=1",
+      "DIAGNOSTIC_RC=198 REASON= DETAIL="
+    ],
+    "returncode": 0
+  },
+  "corrected_local_pilot": {
+    "status": "DIAGNOSTIC_ONLY_NOT_QUALIFICATION",
+    "platform": "Mac; original incumbent DLL, platform predicates forced to Windows route selection",
+    "purpose": "Check accepted incumbent diagonal routes and common mover-only weighted-observation request before registering a corrected Windows comparison",
+    "timing_measurements": false,
+    "markers": [
+      "DIAGNOSTIC_CELL=0 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=0 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=1 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=1 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=2 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=2 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=3 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=3 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=4 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=4 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=5 THREADS=1",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL=",
+      "DIAGNOSTIC_CELL=5 THREADS=2",
+      "DIAGNOSTIC_RC=0 REASON= DETAIL="
+    ]
+  },
+  "next": "Run a separate native Windows development pilot, then freeze a new full 18-group confirmation campaign. Prior receipts and failed registration remain unchanged."
+}

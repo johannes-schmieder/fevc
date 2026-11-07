@@ -193,7 +193,7 @@ def test_new_release_requires_complete_windows_cmg_evidence(adopted):
         release.require_windows_cmg_qualification(root, path, adoption)
 
 
-@pytest.mark.parametrize('change', ['missing', 'failed', 'binary', 'source', 'hash', 'cmg', 'protocol'])
+@pytest.mark.parametrize('change', ['missing', 'failed', 'binary', 'source', 'hash', 'cmg', 'protocol', 'development'])
 def test_new_release_rejects_unqualified_campaign(adopted, change):
     root, path, adoption = windows_cmg_adopted(adopted)
     index_path = path.parent / adoption['windows_cmg_campaign']['path']
@@ -213,6 +213,12 @@ def test_new_release_rejects_unqualified_campaign(adopted, change):
             next(r for r in adoption['binaries'] if 'windows' in r['name'])['sha256'] = '0'*64
         else:
             adoption['build_source_commit'] = '0'*40
+    elif change == 'development':
+        campaign_path = path.parent / index['campaign']['path']
+        value = json.loads(campaign_path.read_bytes())
+        value['schema'] = 'FEVC-WINDOWS-CMG-DEVELOPMENT-V1'
+        campaign_path.write_text(json.dumps(value))
+        index['campaign']['sha256'] = portable.sha256(campaign_path.read_bytes())
     elif change in ('cmg', 'protocol'):
         campaign_path = path.parent / index['campaign']['path']
         value = json.loads(campaign_path.read_bytes())

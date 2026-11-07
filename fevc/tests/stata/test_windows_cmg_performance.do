@@ -62,7 +62,7 @@ forvalues cell=0/5 {
             generate double mass=.7+mod(13*key,11)/7
             local controls x z [fw=copies]
             local deletion observation
-            local extra targetweight(mass) nuisance(joint) stayers(both)
+            local extra targetweight(mass) nuisance(joint) stayers(movers)
         }
         if `cell'==4 {
             set obs 240
@@ -95,7 +95,10 @@ forvalues cell=0/5 {
             local extra stayers(both) nuisance(fixedoffset) targetweight(tw) inference(highrank) inferencemodel(structured_common) inferencesimulations(100) inferenceseed(1791) centering(none)
             local probes 200
         }
+        // Windows 0.5.1 does not provide the full-CMG generic route. Compare
+        // the same estimator request through its supported diagonal solver.
         local route engine(generic) preconditioner(cmg)
+        if "`arm'"=="incumbent" local route engine(generic) preconditioner(diagonal)
         if `cell'==0 local route engine(auto) preconditioner(auto)
         local options worker(worker) firm(firm) deletion(`deletion') backend(rust) rng(counter_v1) algorithm(jla) `route' batch(auto) probes(`probes') seed(`seed') tolerance(`tolerance') `extra' nodisplay
         quietly fevc y `controls', `options'

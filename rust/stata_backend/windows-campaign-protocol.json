@@ -1,6 +1,6 @@
 {
   "schema": "FEVC-WINDOWS-CMG-PROTOCOL-V1",
-  "status": "FROZEN_AT_CANDIDATE_COMMIT_BEFORE_CONFIRMATION",
+  "status": "FROZEN_COMMON_SUPPORT_CORRECTION_BEFORE_NEW_CONFIRMATION",
   "platform": {
     "os": "Windows Server 2022",
     "arch": "x86_64",
@@ -10,7 +10,7 @@
       2
     ]
   },
-  "scope": "Same four corrected targets, retained sample, deletion, nuisance, weights, projections and component inference; accepted 0.5.1 Windows routes versus full shared CMG.",
+  "scope": "Same four corrected targets, retained sample, deletion, nuisance, weights, projections and component inference within each paired request. Compare accepted 0.5.1 Windows automatic/diagonal routes with full shared CMG. Weighted observation deletion uses the mover population supported by both versions.",
   "candidate_cmg": "e5613e81fb3b03c78de98658b372646fa802aabb",
   "candidate_levels": 128,
   "incumbent_package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
@@ -115,10 +115,11 @@
     },
     {
       "case": 3,
-      "name": "controlled weighted observation",
+      "name": "controlled weighted mover-only observation",
       "rows": 288,
       "probes": 32,
-      "tolerance": 1e-10
+      "tolerance": 1e-10,
+      "stayers": "movers"
     },
     {
       "case": 4,
@@ -149,6 +150,27 @@
   },
   "qualification_limitations": [
     "One/two native Windows workers; higher concurrency covered only by Rust tests.",
-    "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested."
-  ]
+    "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested.",
+    "Performance compares requests supported by both versions. Weighted observation deletion uses movers; broader observation/both capability is qualified by runtime/oracle tests without an incumbent Windows native timing comparison."
+  ],
+  "routes": {
+    "candidate": {
+      "case_0": "engine(auto) preconditioner(auto)",
+      "cases_1_to_5": "engine(generic) preconditioner(cmg)"
+    },
+    "incumbent": {
+      "case_0": "engine(auto) preconditioner(auto)",
+      "cases_1_to_5": "engine(generic) preconditioner(diagonal)"
+    },
+    "batch": "auto",
+    "weighted_observation_population": "movers in both arms; identical generated data and retained sample"
+  },
+  "previous_failed_registration": {
+    "campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+    "run_id": "win-20261107T133151Z-6316cc50",
+    "result": "First incumbent block failed with r(198); no candidate performance run started. Failed-run collection returns no artifacts, so partial measurements are unavailable and are not passing evidence.",
+    "diagnosis": "Local no-timing reproduction with Windows platform selection rejects case 1 forced generic CMG with UNSUPPORTED_FEATURE [engine_full_cmg_receipt]. All 12 corrected automatic/diagonal common-support requests pass the local diagnostic.",
+    "correction": "Use the accepted incumbent diagonal route for explicit generic comparisons. The weighted-observation performance request is mover-only in both arms; broader candidate observation/both support remains covered by native runtime qualification.",
+    "unchanged": "Candidate/CMG/source/binary, generated data, seeds, probes, worker counts, schedule, warmups, repetitions and acceptance thresholds."
+  }
 }

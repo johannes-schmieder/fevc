@@ -28,6 +28,15 @@ Windows artifact. It has schema `FEVC-WINDOWS-CMG-CAMPAIGN-V1`, `cmg_commit`,
 and the full protocol as well. Hash the complete bytes; every group binds that
 same campaign hash. Never modify it after the first confirmation run.
 
+The first registration failed in its first incumbent block because forced
+full-CMG generic execution was unavailable in Windows 0.5.1. Its receipt and
+original registration remain under `native/windows-cmg-20261107/`. The corrected
+comparison uses the incumbent's accepted diagonal solver for generic cases and
+mover-only weighted observation deletion in both arms. Candidate observation/both
+support remains covered by independent runtime/oracle tests. Inputs, acceptance
+thresholds and the new confirmation schedule are fixed before new measurement.
+A development pilot uses a separate campaign schema that the release gate rejects.
+
 The incumbent package source is the released 0.5.1 payload at `117d09c5`, whose
 binary build source is `94d94999`. Its accepted Windows routes are compared with
 new full CMG using the same estimator requests and inputs. The driver asserts
