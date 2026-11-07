@@ -85,3 +85,6 @@ native/windows-cmg-20261107/evidence/windows-hosted-build-receipt.json -text whi
 
 # Preserve the full-CMG private Windows controller receipt byte-for-byte.
 native/windows-cmg-20261107/evidence/windows-smoke/receipt.json -text whitespace=cr-at-eol
+
+# Preserve the failed first Windows performance controller receipt.
+native/windows-cmg-20261107/evidence/windows-performance-attempt1/receipt.json -text whitespace=cr-at-eol

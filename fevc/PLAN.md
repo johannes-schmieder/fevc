@@ -25,7 +25,10 @@ concurrent-run rejection and verified cleanup/stopped state. The frozen
 18-group private campaign is now running. All six runtime and installation
 groups passed, including exact-binary full-CMG point, controls, attachments,
 pooled inference, MCSE, cancellation, memory policies and replacement installs.
-The twelve paired performance runs remain; see the
+The first incumbent performance block failed with Stata r(198) during command
+execution; cleanup passed and the campaign stopped. The failure is preserved
+in the [performance checkpoint](../native/windows-cmg-20261107/performance-checkpoint.json).
+Its diagnosis and a valid complete comparison remain; see the
 [runtime checkpoint](../native/windows-cmg-20261107/runtime-checkpoint.json) and the
 [private checkpoint](../native/windows-cmg-20261107/private-checkpoint.json). The owner approved temporary
 qualification branch, which will be deleted after release. New plugin bytes

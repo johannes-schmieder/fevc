@@ -1,0 +1,14 @@
+{
+  "status": "FAILED_FIRST_INCUMBENT_PERFORMANCE_BLOCK_DIAGNOSIS_PENDING",
+  "created_at": "2026-11-07T13:40:03.724850+00:00",
+  "run_id": "win-20261107T133151Z-6316cc50",
+  "failure_stage": "complete_command_measurements",
+  "stata_rc": 198,
+  "cleanup_verified": true,
+  "six_runtime_installation_groups": "PASS",
+  "campaign": "evidence/windows-campaign.json",
+  "performance_result": "UNAVAILABLE; failed collector returns no artifacts, so any partial timed cells were not collected and cannot be treated as passing evidence",
+  "candidate_performance_runs": 0,
+  "publication": "BLOCKED_PENDING_VALID_COMPARISON",
+  "retries_or_exclusions": 0
+}
