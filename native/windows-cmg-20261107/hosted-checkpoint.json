@@ -1,0 +1,298 @@
+{
+  "schema": "FEVC-WINDOWS-HOSTED-CHECKPOINT-V1",
+  "recorded_utc": "2026-11-07T11:28:05.256969+00:00",
+  "status": "HOSTED_PASS_PRIVATE_WINDOWS_AUTH_BLOCKED",
+  "candidate_version": "0.5.2",
+  "binary_build_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "final_test_commit": "366d3e1a76193934b0f2059289fec0bd50364ca1",
+  "temporary_branch": {
+    "name": "qualify/windows-cmg-20261107",
+    "owner_approved": true,
+    "delete_after_release": true,
+    "head": "366d3e1a76193934b0f2059289fec0bd50364ca1"
+  },
+  "windows_candidate": {
+    "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+    "bytes": 5553152,
+    "source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+    "archive_sha256": "2832a085ab1aeec4a20c861e01d9d500ef6c8b9a8e62fcfff7e52e2cd086e164",
+    "files_verified": 61,
+    "runtime_qualification": "NOT_RUN",
+    "adopted": false
+  },
+  "hosted_runs": [
+    {
+      "databaseId": 42366984005,
+      "name": "Windows test package",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366984005",
+      "createdAt": "2026-11-07T11:09:33Z",
+      "updatedAt": "2026-11-07T11:12:15Z",
+      "jobs": [
+        {
+          "name": "build",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366984005/job/128387002424"
+        }
+      ]
+    },
+    {
+      "databaseId": 42366985923,
+      "name": "Rust backend",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923",
+      "createdAt": "2026-11-07T11:09:34Z",
+      "updatedAt": "2026-11-07T11:23:50Z",
+      "jobs": [
+        {
+          "name": "Standalone dependency policy",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008021"
+        },
+        {
+          "name": "macos-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008255"
+        },
+        {
+          "name": "windows-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008270"
+        },
+        {
+          "name": "macos-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008290"
+        },
+        {
+          "name": "ubuntu-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008298"
+        },
+        {
+          "name": "ubuntu-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008314"
+        },
+        {
+          "name": "windows-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366985923/job/128387008327"
+        }
+      ]
+    },
+    {
+      "databaseId": 42366987708,
+      "name": "Rust Stata SPI build candidates",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708",
+      "createdAt": "2026-11-07T11:09:36Z",
+      "updatedAt": "2026-11-07T11:11:34Z",
+      "jobs": [
+        {
+          "name": "SPI candidate / macos-latest / Rust stable",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708/job/128387012897"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust 1.85.1",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708/job/128387012932"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust 1.85.1",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708/job/128387012936"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust 1.85.1",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708/job/128387012963"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust stable",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708/job/128387012982"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust stable",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42366987708/job/128387012989"
+        }
+      ]
+    },
+    {
+      "databaseId": 42367339396,
+      "name": "Rust Stata SPI build candidates",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "8e3c152c186aebc1caf98dd7366f03bb28f6ec80",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396",
+      "createdAt": "2026-11-07T11:14:30Z",
+      "updatedAt": "2026-11-07T11:16:25Z",
+      "jobs": [
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust 1.85.1",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396/job/128388080858"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust 1.85.1",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396/job/128388081034"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396/job/128388081037"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396/job/128388081045"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust stable",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396/job/128388081046"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust stable",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367339396/job/128388081047"
+        }
+      ]
+    },
+    {
+      "databaseId": 42367602262,
+      "name": "Rust Stata SPI build candidates",
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "569016f9579c2967cb7c610463b00717c20582ed",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262",
+      "createdAt": "2026-11-07T11:18:15Z",
+      "updatedAt": "2026-11-07T11:21:25Z",
+      "jobs": [
+        {
+          "name": "SPI candidate / macos-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262/job/128388863213"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262/job/128388863344"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262/job/128388863354"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262/job/128388863405"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262/job/128388863447"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust stable",
+          "conclusion": "failure",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367602262/job/128388863456"
+        }
+      ]
+    },
+    {
+      "databaseId": 42367941176,
+      "name": "Rust Stata SPI build candidates",
+      "status": "completed",
+      "conclusion": "success",
+      "headSha": "366d3e1a76193934b0f2059289fec0bd50364ca1",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176",
+      "createdAt": "2026-11-07T11:22:53Z",
+      "updatedAt": "2026-11-07T11:26:15Z",
+      "jobs": [
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176/job/128389877069"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176/job/128389877251"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176/job/128389877254"
+        },
+        {
+          "name": "SPI candidate / ubuntu-latest / Rust stable",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176/job/128389877326"
+        },
+        {
+          "name": "SPI candidate / macos-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176/job/128389877334"
+        },
+        {
+          "name": "SPI candidate / windows-latest / Rust 1.85.1",
+          "conclusion": "success",
+          "url": "https://github.com/johannes-schmieder/fevc/actions/runs/42367941176/job/128389877351"
+        }
+      ]
+    }
+  ],
+  "failed_attempts": [
+    {
+      "run_id": 42366987708,
+      "diagnosis": "Unreachable C fixture dispatcher retained unmocked dependencies on Windows; missing-SPI diagnostic and ABI-header paths were stale."
+    },
+    {
+      "run_id": 42367339396,
+      "diagnosis": "Windows workflow lacked the MSVC environment; Linux audit inspected the regular symbol table of a stripped library."
+    },
+    {
+      "run_id": 42367602262,
+      "diagnosis": "Stable Windows Rust retained Stata-only exports in unit-test executables, which do not link the C SPI objects. Other five SPI jobs passed."
+    }
+  ],
+  "owner_login": {
+    "schema": "FEVC-OWNER-MAINTENANCE-LOGIN-V1",
+    "checked_utc": "2026-11-07T11:23:09.360245+00:00",
+    "command": "aws login --profile windows-ci",
+    "status": "FAILED",
+    "exit_code": 255,
+    "reason": "BROWSER_AUTHORIZATION_EXPIRED",
+    "credentials_exposed": false,
+    "maintenance_deployed": false,
+    "windows_started_by_task": false
+  },
+  "maintenance_repair_cycles_used": 0,
+  "collector_deployed": false,
+  "windows_started_by_task": false,
+  "private_windows_runtime": "NOT_RUN",
+  "confirmation_performance": "NOT_RUN",
+  "published": false,
+  "distributed_plugins": "UNCHANGED_RELEASED_0.5.1_PAYLOAD",
+  "build_receipt": {
+    "path": "evidence/windows-hosted-build-receipt.json",
+    "sha256": "f1ac43418243b2c752fd01723f6aa9394a764325f1c58f6357190f3be46a4643"
+  },
+  "compatibility": {
+    "path": "hosted-compatibility.json",
+    "sha256": "b04d77605a0c023f1869d5bbc56ba89ef64e920070cacd7c6882d0a0d6b9d077"
+  },
+  "local_evidence_directory": ".local/windows-cmg-20261107/hosted"
+}

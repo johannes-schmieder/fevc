@@ -25,9 +25,17 @@ the exact build source. Original source-bound receipts are copied under
 archive, full sanitized logs, local validation logs and the undeployed collector
 patch are retained in ignored local storage `.local/windows-cmg-20261107/`.
 
+Hosted Windows package build and the complete Rust and SPI matrices now pass.
+The [hosted checkpoint](hosted-checkpoint.json) records exact runs, binary hashes,
+all three failed CI attempts and the [test-only compatibility review](hosted-compatibility.json).
+The owner approved temporary branch `qualify/windows-cmg-20261107`, to be deleted
+after release. The requested AWS login expired before browser authorization;
+a direct authentication check still requires login. No collector update or
+private Windows run has started.
+
 Remaining work follows the [Windows qualification workflow](../../rust/stata_backend/WINDOWS_CMG_QUALIFICATION.md):
-complete the bounded collector maintenance and backend acceptance, run hosted
-Windows builds/tests, execute the six runtime groups and twelve frozen
+complete browser login, bounded collector maintenance and backend acceptance,
+execute the six runtime groups and twelve frozen
 performance groups, adopt all five exact binaries, publish 0.5.2, and verify
 actual published fresh/replacement installations. The release command rejects
 legacy Windows evidence for this version. No confirmation result has been

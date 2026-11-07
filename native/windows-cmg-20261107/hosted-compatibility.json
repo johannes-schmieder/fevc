@@ -1,0 +1,44 @@
+{
+  "schema": "FEVC-WINDOWS-HOSTED-COMPATIBILITY-V1",
+  "binary_build_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "final_test_commit": "366d3e1a76193934b0f2059289fec0bd50364ca1",
+  "changed_paths": [
+    ".gitattributes",
+    ".github/workflows/rust-stata-backend.yml",
+    "fevc/PLAN.md",
+    "native/windows-cmg-20261107/README.md",
+    "native/windows-cmg-20261107/evidence/linux-collection.json",
+    "native/windows-cmg-20261107/evidence/linux-native-qacct.txt",
+    "native/windows-cmg-20261107/evidence/linux-qualification.txt",
+    "native/windows-cmg-20261107/evidence/linux-smoke-qacct.txt",
+    "native/windows-cmg-20261107/evidence/linux-smoke.txt",
+    "native/windows-cmg-20261107/evidence/linux-wrapper.txt",
+    "native/windows-cmg-20261107/evidence/macos-qualification.txt",
+    "native/windows-cmg-20261107/evidence/macos-source-manifest.sha256",
+    "native/windows-cmg-20261107/qualification-status.json",
+    "rust/stata_backend/src/lib.rs",
+    "rust/stata_backend/tests/cshim_error_transport_test.c"
+  ],
+  "production_review": {
+    "status": "PASS",
+    "detail": "All non-test production, vendor, ABI, lock, numerical, Stata, native-build, input and acceptance sources are byte-identical, except the two Rust entry-point export annotations in src/lib.rs. Their non-test expansion remains #[no_mangle]. The two added explanatory comments and the exact cfg_attr substitutions normalize byte-for-byte to the build-source file.",
+    "normalized_standalone_source_sha256": "facff2ce9e2597570761f967092de5c2cd928b14114387846241cd0cb59c97e9",
+    "cmg_commit": "e5613e81fb3b03c78de98658b372646fa802aabb"
+  },
+  "affected_surface": "C fixture linkage, hosted MSVC environment and export audits, and Stata-only symbol retention in Rust unit-test executables. No plugin ABI or runtime algorithm change.",
+  "claims": "The recorded Mac/Linux candidates and hosted Windows candidate retain build source C and their original hashes. The final SPI workflow checks equivalent non-test production at H, including stable Windows unit-test linkage. No binary is relabelled as a build from H.",
+  "checks": [
+    "951 Python tests after the C fixture/workflow repair",
+    "Generated CMG assembly check",
+    "C error-transport fixture",
+    "Missing-SPI failure diagnostic",
+    "20 standalone boundary tests after cfg_attr change",
+    "Rust 1.85.1 standalone formatting and strict Clippy",
+    "All seven original-source Rust matrix jobs",
+    "All six final-source SPI matrix jobs"
+  ],
+  "limitations": [
+    "No licensed Windows Stata runtime or confirmation performance execution yet.",
+    "Native Intel Mac hardware remains untested; x86-64 evidence uses Rosetta."
+  ]
+}

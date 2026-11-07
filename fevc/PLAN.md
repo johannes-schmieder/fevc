@@ -15,8 +15,14 @@ Implementation source `7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20` passes
 arm64/Rosetta thin/universal/installed qualification, and SCC Linux native/full/
 installed qualification (smoke 8496384, full 8496385). See the
 [checkpoint and exact binary hashes](../native/windows-cmg-20261107/README.md).
-Windows compilation passes; hosted/private Windows execution, confirmation
-performance and publication remain pending. New plugin bytes are not adopted.
+Hosted Windows package build and all Rust/SPI matrix jobs pass; the
+[hosted checkpoint](../native/windows-cmg-20261107/hosted-checkpoint.json) records
+three CI repairs and their original failed attempts. Private Windows Stata
+execution, confirmation performance and publication remain pending. The
+requested owner-maintenance login expired before browser authorization;
+no controller update or private run started. The owner approved temporary
+qualification branch, which will be deleted after release. New plugin bytes
+are not adopted.
 The installation payload retains all five released 0.5.1 plugin hashes.
 Use source-bound Windows smoke and bounded point, attachment, lifecycle/memory,
 performance and installation groups; one/two native workers on the existing
