@@ -19,8 +19,11 @@ Hosted Windows package build and all Rust/SPI matrix jobs pass; the
 [hosted checkpoint](../native/windows-cmg-20261107/hosted-checkpoint.json) records
 three CI repairs and their original failed attempts. Private Windows Stata
 execution, confirmation performance and publication remain pending. The
-requested owner-maintenance login expired before browser authorization;
-no controller update or private run started. The owner approved temporary
+owner-maintenance authentication is confirmed. Collector repair cycle 1 and
+restricted backend acceptance passed, including smoke, deliberate failure,
+concurrent-run rejection and verified cleanup/stopped state. The frozen
+18-group private campaign is now running; see the
+[private checkpoint](../native/windows-cmg-20261107/private-checkpoint.json). The owner approved temporary
 qualification branch, which will be deleted after release. New plugin bytes
 are not adopted.
 The installation payload retains all five released 0.5.1 plugin hashes.

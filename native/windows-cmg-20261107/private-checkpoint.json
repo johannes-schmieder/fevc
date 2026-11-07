@@ -1,0 +1,98 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-PRIVATE-CHECKPOINT-V1",
+  "created_at": "2026-11-07T12:53:04.895969+00:00",
+  "status": "BACKEND_ACCEPTED_PROJECT_SMOKE_RUNNING",
+  "owner_maintenance_authentication": "PASS",
+  "repair_cycles_used": 1,
+  "offline_maintenance_checks": 55,
+  "offline_transport_checks": 7,
+  "maintenance": [
+    "MAINTENANCE_ARRAY_REGRESSION=PASS",
+    "MAINTENANCE_BASELINE=PASS",
+    "MAINTENANCE_SYNTAX=PASS",
+    "MAINTENANCE_HASHES=PASS",
+    "MAINTENANCE_ACL=UNCHANGED",
+    "MAINTENANCE_INSTALL=PASS",
+    "MAINTENANCE_RUN=win-20261107T124508Z-ed2fc4e7",
+    "MAINTENANCE_PAYLOAD_SHA256=81db6f513b4c8001a4291e3eaf6713032f0b72aea0f7748b7053dd99ca6bc216",
+    "MAINTENANCE_DEPLOYMENT=PASS",
+    "MAINTENANCE_INSTANCE_STOPPED=yes",
+    "MAINTENANCE_LOCK_RELEASED=yes",
+    "MAINTENANCE_COMMAND_TERMINAL=yes"
+  ],
+  "proposal": {
+    "schema": "FEVC-WINDOWS-COLLECTOR-PROPOSAL-V1",
+    "purpose": "Bounded CMG qualification input V3/checks V4; unchanged privileges, artifacts, deadlines, locking and cleanup",
+    "expected_controller_baseline": "e635d58609f24fa8564ce4c3b6787eccd9df36892edb636069cdc2ebcdfdaf00",
+    "expected_wrapper_baseline": "61d1a7a736d81c401cfd9941c928012274e405b871586f1e155c6a46d35700b9",
+    "baseline_files": {
+      "artifact_guard.py": "fbadfd3afce2d6c0bec04a414e2ef31d5c7cbfc4cd5e0adc35793c1df0aa0940",
+      "pe_audit.py": "8437ad361b5ec9d9e22d03297d7ebb1def47b85c4eb28c74381e5dd228f3e190",
+      "required_exports.json": "6c1451c21bf28fb688b7371a8e314dcda1bde7d9aef51391147f0c01760e9a92",
+      "freeze_inputs.py": "a7641259326f140ce8e688d51ebad39bf16b8e8c1191c1f705aec108b4d0865a",
+      "Invoke-WindowsCI.ps1": "e635d58609f24fa8564ce4c3b6787eccd9df36892edb636069cdc2ebcdfdaf00",
+      "windows_ci.sh": "61d1a7a736d81c401cfd9941c928012274e405b871586f1e155c6a46d35700b9"
+    },
+    "remote_files": {
+      "Invoke-WindowsCI.ps1": "e88ed0308472dc87d8767915dde7532a105891645cdfe7593202d5b92a75a09e",
+      "artifact_guard.py": "7dd09f9b07f8ef8c759cc2a39cfb7f42bdd42244ceaa103225e8cac6c9ce636c",
+      "pe_audit.py": "8437ad361b5ec9d9e22d03297d7ebb1def47b85c4eb28c74381e5dd228f3e190",
+      "required_exports.json": "6c1451c21bf28fb688b7371a8e314dcda1bde7d9aef51391147f0c01760e9a92"
+    },
+    "local_files": {
+      "artifact_guard.py": "7dd09f9b07f8ef8c759cc2a39cfb7f42bdd42244ceaa103225e8cac6c9ce636c",
+      "pe_audit.py": "8437ad361b5ec9d9e22d03297d7ebb1def47b85c4eb28c74381e5dd228f3e190",
+      "required_exports.json": "6c1451c21bf28fb688b7371a8e314dcda1bde7d9aef51391147f0c01760e9a92",
+      "freeze_inputs.py": "22625553e0b4839fb62007b50619457682679f36d387e61f728d30625e6af097",
+      "Invoke-WindowsCI.ps1": "e88ed0308472dc87d8767915dde7532a105891645cdfe7593202d5b92a75a09e",
+      "windows_ci.sh": "9ee64b16499780cb2a044c466ca2da6d9f5dc40b721bb7224aaae8130bd3b1ef"
+    }
+  },
+  "backend_acceptance": {
+    "all_started_wrappers_terminal": true,
+    "authentication_denial": "PASS",
+    "concurrency": "PASS",
+    "kind": "infrastructure",
+    "maintenance_proof_sha256": "01455532489c34feabd118d5e49e6de7274062eff0c07cfa5df2868aed9fe6a2",
+    "proposal_manifest_sha256": "1bc1dfa655d04a516e5ea5d1718d220f6e3f64e982369b09497119ae1d514ddb",
+    "runs": [
+      {
+        "cleanup_verified": true,
+        "expected_exit": 0,
+        "original_receipt_sha256": "3d25d2dae1dd6ffc4e29142c1f4fe159779143c4d161e65497e09e71a4786bb9",
+        "profile": "stata-smoke",
+        "run_id": "win-20261107T124638Z-aca1ecb5",
+        "source_archive_sha256": "816c79567b3c2c857cc87c0b926152837bb2b0b1e061fa08084cb72d0214a70d",
+        "source_revision": "commit-9994ad10c3429176bc465d699a03ec490e60d64a",
+        "status": "PASS"
+      },
+      {
+        "cleanup_verified": true,
+        "expected_exit": 50,
+        "original_receipt_sha256": "6eba839975781e396af15a85fd53c662fd0a1cbf39fab66a65f949f4bc54c672",
+        "profile": "fail-smoke",
+        "run_id": "win-20261107T124825Z-20cc7a48",
+        "source_archive_sha256": "df35498343e5b108c12a60d00ad4fa88a025bc4d2ad6e8c7e361e586756a3088",
+        "source_revision": "commit-9994ad10c3429176bc465d699a03ec490e60d64a",
+        "status": "PASS"
+      }
+    ],
+    "schema": "FEVC-WINDOWS-COLLECTOR-ACCEPTANCE-V1",
+    "source_commit": "9994ad10c3429176bc465d699a03ec490e60d64a",
+    "status": "PASS"
+  },
+  "campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+  "transport_review": {
+    "status": "PRE_MEASUREMENT_INPUT_FIX",
+    "reason": "Use released root installation catalog; portable source catalog omits plugins. Flat staging strips only fevc/ path prefix. All 61 installed payload files are exact released bytes.",
+    "root_catalog_sha256": "431497a5edc3e02a811f99719722e68bc71eee847f49fd15cebde5894b10e3b1",
+    "previous_portable_catalog_sha256": "6b5c68c1f16aea7ac027e427fcd1f80537077b5a387e85c5a205a499f94fd8f3",
+    "staged_catalog_sha256": "3fe071223dd92b7ef82dc2a40e21e950289a122ea9ae63ee40c5e728db07c206",
+    "installed_files": 61,
+    "production_harness_or_campaign_changes": []
+  },
+  "qualification_groups_passed": 0,
+  "qualification_groups_required": 18,
+  "native_plugins_adopted": false,
+  "publication": "NOT_STARTED"
+}

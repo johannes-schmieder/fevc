@@ -64,10 +64,11 @@ Non-performance groups use candidate/block zero. For incumbent performance,
 incumbent binary. The `windows-candidate/` slot holds the selected arm's binary.
 The frozen-input helper derives the smoke/full profile from the group.
 
-The prepared shared collector adds input V3/checks V4 support while retaining
-legacy input V2/checks V3 validation. It has not been deployed. Installation
-requires the existing owner-maintenance authentication and bounded repair
-workflow, followed by the prescribed backend acceptance checks. Do not bypass
+The shared collector now accepts input V3/checks V4 while retaining legacy
+input V2/checks V3 validation. Owner-authorized repair cycle 1 passed native
+PowerShell/hash/ACL checks and restricted backend acceptance on November 7:
+authentication denial, clean smoke, deliberate failure, concurrency rejection,
+cleanup and stopped-state verification. Project qualification remains separate. Do not bypass
 that boundary or relax its artifact inventory, 900-second timeout, cleanup,
 source checks, single-process lock, or automatic stop.
 
