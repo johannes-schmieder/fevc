@@ -486,7 +486,7 @@ fn numerical_v2_schema_preflight_intent_and_short_buffers_are_atomic() {
     );
     let mut good = VckssNumericalRequestV2 {
         v1: prefix,
-        execution_mode: if cfg!(target_os = "windows") { 0 } else { 1 },
+        execution_mode: 1,
         ..VckssNumericalRequestV2::default()
     };
     good.v1.struct_size = bytes::<VckssNumericalRequestV2>();
@@ -644,7 +644,7 @@ fn numerical_v2_coordinated_interrupt_stays_on_caller_and_releases() {
             VCKSS_NUISANCE_JOINT,
             1,
         ),
-        execution_mode: if cfg!(target_os = "windows") { 0 } else { 1 },
+        execution_mode: 1,
         ..VckssNumericalRequestV2::default()
     };
     request.v1.struct_size = bytes::<VckssNumericalRequestV2>();

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import importlib.util
 import json
 from pathlib import Path, PurePosixPath
 import zipfile
@@ -60,6 +61,59 @@ def adopted_package(repo: Path, manifest_path: Path, *, allow_pending_windows: b
     return files, adoption
 
 
+
+def require_windows_cmg_qualification(repo: Path, manifest_path: Path, adoption: dict):
+    """New Windows CMG distributions require the complete, revalidated campaign."""
+    version = tuple(map(int, portable.package_version(repo / "fevc").split(".")))
+    if version < (0, 5, 2):
+        return
+    row = adoption.get("windows_cmg_campaign")
+    if not isinstance(row, dict):
+        raise ValueError("missing complete Windows CMG qualification")
+    base = manifest_path.parent
+
+    def evidence(item):
+        data = portable._read_regular(base, portable._safe_relative(item["path"]))
+        if portable.sha256(data) != item["sha256"]:
+            raise ValueError("Windows CMG evidence hash mismatch")
+        return data
+
+    spec = importlib.util.spec_from_file_location(
+        "fevc_windows_qualification", portable.REPO_ROOT / "rust/stata_backend/windows_qualification.py")
+    contract = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(contract)
+    index = contract.strict_json(evidence(row))
+    if set(index) != {"schema", "campaign", "checks"} or index["schema"] != "FEVC-WINDOWS-CMG-ADOPTION-V1":
+        raise ValueError("Windows CMG adoption schema")
+    campaign_data = evidence(index["campaign"])
+    campaign = contract.strict_json(campaign_data)
+    if campaign.get("schema") != "FEVC-WINDOWS-CMG-CAMPAIGN-V1" or campaign.get("cmg_commit") != contract.CMG:
+        raise ValueError("Windows CMG campaign identity")
+    protocol = portable.REPO_ROOT / "rust/stata_backend/windows-campaign-protocol.json"
+    driver = portable.REPO_ROOT / "fevc/tests/stata/test_windows_cmg_performance.do"
+    if (campaign.get("protocol_sha256") != portable.sha256(protocol.read_bytes()) or
+            campaign.get("performance_driver_sha256") != portable.sha256(driver.read_bytes())):
+        raise ValueError("Windows CMG frozen protocol mismatch")
+    checks = [contract.strict_json(evidence(item)) for item in index["checks"]]
+    result = contract.aggregate(checks)
+    if result["status"] != "PASS" or result["campaign_sha256"] != portable.sha256(campaign_data):
+        raise ValueError("Windows CMG scientific/performance qualification failed")
+    binary = next(row for row in adoption["binaries"] if row["name"] == "fevc_rust_windows_x64.plugin")
+    for arm in ("candidate", "incumbent"):
+        expected = campaign[arm]
+        for check in checks:
+            if check["performance_arm"] != arm:
+                continue
+            if (check["production_commit"] != expected["production_commit"] or
+                    check["binary_sha256"] != expected["binary_sha256"] or
+                    check["harness_sha256"] != campaign["harness_sha256"]):
+                raise ValueError("Windows CMG campaign source/binary mismatch")
+        if arm == "candidate" and (expected["production_commit"] != adoption["build_source_commit"] or
+                                   expected["binary_sha256"] != binary["sha256"]):
+            raise ValueError("Windows CMG adopted candidate mismatch")
+    return result
+
+
 def zip_package(files: tuple[portable.PackageFile, ...]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -100,6 +154,7 @@ def main() -> int:
     args = parser.parse_args()
     files, adoption = adopted_package(portable.REPO_ROOT, args.adoption_manifest,
                                      allow_pending_windows=args.allow_pending_windows)
+    require_windows_cmg_qualification(portable.REPO_ROOT, args.adoption_manifest, adoption)
     archive = zip_package(files)
     if archive != zip_package(files):
         raise RuntimeError("nondeterministic release ZIP")

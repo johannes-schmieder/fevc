@@ -11,9 +11,7 @@ adopath ++ `"`package_dir'"'
 quietly run `"`package_dir'/fevc.ado"'
 quietly fevc_rust clear
 
-// This same mover fixture selects full CMG on Mac/Unix. The established
-// Windows platform boundary selects the package-owned compressed route.
-// Keep that distinction explicit; dependency consolidation does not expand it.
+// An installed Windows candidate must execute the shared CMG runtime.
 assert `"`c(os)'"' == "Windows"
 set obs 2048
 generate long observation_key = _n
@@ -36,21 +34,28 @@ local caller_sortedby : sortedby
 quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 
+foreach threads in 1 2 {
+set processors `threads'
+foreach route in auto cmg {
+foreach mcse in all conditional off {
 quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(auto)  ///
-    preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
-    maxiter(10000) memory_gib(1) mcse(conditional) nodisplay
+    preconditioner(`route') batch(auto) probes(4) seed(81227)  ///
+    maxiter(10000) memory_gib(1) mcse(`mcse') nodisplay
 
 assert `"`e(cmd)'"' == "fevc"
-assert `"`e(version)'"' == "0.5.1"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(algorithm)'"' == "jla"
 assert `"`e(engine_selected)'"' == "compressed"
-assert `"`e(preconditioner_selected)'"' == "EXACT"
-assert `"`e(cmg_backend)'"' == ""
+assert `"`e(preconditioner_selected)'"' == "CMG"
+assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
+assert `"`e(cmg_source_commit)'"' == "e5613e81fb3b03c78de98658b372646fa802aabb"
+assert e(full_cmg_receipt)[1,2] == 3
+assert e(full_cmg_receipt)[1,3] == 2
+assert e(cmg_threads_requested) == `threads' & e(cmg_threads_used) == `threads'
 assert e(backend_fallback) == 0
 assert e(complete_residual_max) <= e(residual_acceptance_tolerance)
 assert `"`c(rng)'"' == `"`caller_rng'"'
@@ -63,5 +68,8 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
+}
+}
+}
 display as result "PASS test_windows_full_cmg_boundary.do"
 exit 0

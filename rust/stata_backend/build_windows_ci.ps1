@@ -12,6 +12,12 @@ if ($identity.PSObject.Properties.Name -contains 'runtime_profile') {
     $runtimeProfile = [string]$identity.runtime_profile
 }
 if ($runtimeProfile -notin @('smoke', 'full')) { throw 'Invalid runtime profile' }
+$qualificationGroup = if ($runtimeProfile -eq 'smoke') { 'smoke' } else { 'legacy' }
+if ($identity.schema -eq 'FEVC-WINDOWS-INPUT-V3') { $qualificationGroup = [string]$identity.qualification_group }
+if ($qualificationGroup -notin @('smoke','legacy','cmg_point','cmg_attachments','cmg_lifecycle','performance','installation')) {
+    throw 'Invalid qualification group'
+}
+
 $providedCandidate = $identity.PSObject.Properties.Name -contains 'candidate_sha256'
 $rustTestScope = 'PRIVATE_BUILD_AND_TEST_PASS'
 if ($runtimeProfile -eq 'smoke') { $rustTestScope = 'PRIVATE_BUILD_ONLY_SMOKE' }
@@ -91,15 +97,19 @@ Copy-Item $candidate (Join-Path $projectRoot $plugin)
 Copy-Item $candidate (Join-Path $projectRoot "fevc/$plugin")
 $stage = Join-Path $projectRoot 'windows-package'
 New-Item -ItemType Directory -Path $stage -ErrorAction Stop | Out-Null
-$manifest = Get-Content (Join-Path $projectRoot 'fevc/fevc.pkg')
+$payload = Join-Path $projectRoot 'fevc'
+if ($qualificationGroup -eq 'performance' -and $identity.performance_arm -eq 'incumbent') {
+    $payload = Join-Path $projectRoot 'windows-incumbent'
+}
+$manifest = Get-Content (Join-Path $payload 'fevc.pkg')
 foreach ($line in $manifest) {
     if ($line.StartsWith('f ')) {
         $name = $line.Substring(2).Trim()
         if ($name -notmatch '^[A-Za-z0-9_.-]+$') { throw 'Unsafe package path' }
-        Copy-Item (Join-Path $projectRoot "fevc/$name") (Join-Path $stage $name)
+        Copy-Item (Join-Path $payload $name) (Join-Path $stage $name)
     }
 }
-Copy-Item (Join-Path $projectRoot 'fevc/stata.toc') $stage
+Copy-Item (Join-Path $payload 'stata.toc') $stage
 Copy-Item $candidate (Join-Path $stage $plugin)
 $manifest = @($manifest | ForEach-Object {
     if ($_ -eq 'f LICENSE' -or $_ -eq 'f THIRD_PARTY_NOTICES.txt') { 'F ' + $_.Substring(2) }
@@ -114,4 +124,9 @@ $digest = (Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
   status='BUILD_ONLY_NOT_QUALIFICATION'} |
   ConvertTo-Json | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-build.json')
 $runtimeProfile | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-runtime.profile')
+$qualificationGroup | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-qualification.group')
+if ($qualificationGroup -eq 'performance') {
+    $identity.performance_block | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-performance.block')
+    $identity.performance_arm | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-performance.arm')
+}
 'FEVC_WINDOWS_BUILD=PASS' | Set-Content -Encoding ASCII $statusPath

@@ -149,17 +149,20 @@ pub const VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY: u64 = 1 << 15;
 /// Component inference supports Mean with the observed centering mean fixed.
 pub const VCKSS_CORE_COMPONENT_CENTERING_V1_READY: u64 = 1 << 16;
 pub const VCKSS_CORE_MIXED_COMPONENT_V1_READY: u64 = 1 << 17;
-const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 =
-    if cfg!(any(target_os = "macos", target_os = "linux")) {
-        VCKSS_CORE_FULL_CMG_V2_READY
-            | VCKSS_CORE_FULL_CMG_POINT_ROUTING_V1_READY
-            | VCKSS_CORE_FULL_CMG_MODEL_V1_READY
-            | VCKSS_CORE_GENERIC_EXECUTION_V1_READY
-            | VCKSS_CORE_AUTOMATIC_COMPONENT_BATCH_V1_READY
-            | VCKSS_CORE_RESOLVED_EXECUTION_V1_READY
-    } else {
-        0
-    };
+const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 = if cfg!(any(
+    target_os = "macos",
+    target_os = "linux",
+    target_os = "windows"
+)) {
+    VCKSS_CORE_FULL_CMG_V2_READY
+        | VCKSS_CORE_FULL_CMG_POINT_ROUTING_V1_READY
+        | VCKSS_CORE_FULL_CMG_MODEL_V1_READY
+        | VCKSS_CORE_GENERIC_EXECUTION_V1_READY
+        | VCKSS_CORE_AUTOMATIC_COMPONENT_BATCH_V1_READY
+        | VCKSS_CORE_RESOLVED_EXECUTION_V1_READY
+} else {
+    0
+};
 pub const VCKSS_SUPPORT_EXACT: u64 = 1 << 0;
 pub const VCKSS_SUPPORT_JLA: u64 = 1 << 1;
 pub const VCKSS_SUPPORT_MATCH_DELETION: u64 = 1 << 2;
@@ -10294,11 +10297,15 @@ fn validate_full_cmg_v2_request(
             "CMG_FULL_V2 requires a positive caller-declared thread count",
         ));
     }
-    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+    if !cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "cmg_full_v2",
-            "CMG_FULL_V2 is currently qualified only on macOS and Linux",
+            "CMG_FULL_V2 is currently supported only on macOS, Linux and Windows",
         ));
     }
     let value = request.v4;

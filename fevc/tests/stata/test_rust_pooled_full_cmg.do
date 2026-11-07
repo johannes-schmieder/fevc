@@ -2,7 +2,8 @@ version 18.0
 clear all
 set more off
 set varabbrev off
-args package_dir
+args package_dir thread_grid
+if "`thread_grid'"=="" local thread_grid "1 4"
 adopath ++ `"`package_dir'"'
 quietly run `"`package_dir'/fevc.ado"'
 foreach stayer_rows in 0 512 {
@@ -23,7 +24,7 @@ foreach stayer_rows in 0 512 {
         preconditioner(cmg) batch(1) probes(33) seed(81227) tolerance(1e-10) nodisplay
     matrix reference = e(kss)
     generate byte reference_sample = e(sample)
-    foreach threads in 1 4 {
+    foreach threads in `thread_grid' {
         set processors `threads'
         foreach population in default both {
             local population_option

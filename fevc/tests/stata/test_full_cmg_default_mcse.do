@@ -6,16 +6,13 @@ version 18.0
 clear all
 set more off
 set varabbrev off
-args pkgroot
+args pkgroot test_threads
+if "`test_threads'"=="" local test_threads = 4
 if `"`pkgroot'"'=="" local pkgroot `"`c(pwd)'/fevc"'
 adopath ++ `"`pkgroot'"'
 quietly fevc_rust probe
 assert r(numerical_api)==2
-if "`c(os)'"=="Windows" {
-    di as result "SKIP test_full_cmg_default_mcse.do: CMG_FULL_V2 is not a Windows automatic route"
-    exit 0
-}
-set processors 4
+set processors `test_threads'
 quietly fevc, simulate_data(ex1) clear
 quietly fevc log_wage, worker(worker_id) firm(firm_id) nolog nodisplay
 assert "`e(cmg_backend)'"=="CMG_FULL_V2"

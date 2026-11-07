@@ -3,7 +3,7 @@ version 18.0
 capture noisily fevc, version
 assert _rc == 0
 assert "`e(cmd)'" == "fevc"
-assert "`e(version)'" == "0.5.1"
+assert "`e(version)'" == "0.5.2"
 assert "`e(status)'" == "RELEASED"
 assert "`e(model)'" == "linear"
 assert "`e(correction)'" == "kss"
@@ -11,7 +11,7 @@ assert "`e(correction)'" == "kss"
 capture findfile fevc.mata
 assert _rc == 0
 quietly do `"`r(fn)'"'
-mata: assert(vckss__version() == "0.5.1")
+mata: assert(vckss__version() == "0.5.2")
 mata: assert(vckss__api_level() == 24)
 mata: assert(vckss__build_id() == "vckss-api25-control-posterior-nmc4-timers1-centering1")
 mata: assert(vckss__rounding_gamma(0) == 0)

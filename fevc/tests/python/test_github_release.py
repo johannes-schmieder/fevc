@@ -148,3 +148,80 @@ def test_generic_adoption_preserves_declared_platform_limitations(adopted):
     limitation = "Full shared-CMG Stata routes are Mac/Unix only."
     manifest["limitations"] = [limitation]
     assert limitation in release.qualification_limitations(manifest)
+
+
+def windows_cmg_adopted(adopted):
+    import importlib.util
+    root, path = qualified(adopted)
+    (root / 'fevc/stata.toc').write_text('v 0.5.2\np fevc\n')
+    spec = importlib.util.spec_from_file_location(
+        'qualification_fixture', Path(__file__).with_name('test_windows_qualification.py'))
+    fixture = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fixture)
+    adoption = json.loads(path.read_bytes())
+    binary = next(r for r in adoption['binaries'] if 'windows' in r['name'])
+    campaign = {'schema': 'FEVC-WINDOWS-CMG-CAMPAIGN-V1', 'cmg_commit': fixture.contract.CMG,
+                'candidate': {'production_commit': 'a'*40, 'binary_sha256': binary['sha256']},
+                'incumbent': {'production_commit': 'b'*40, 'binary_sha256': 'f'*64},
+                'harness_sha256': 'c'*64,
+                'protocol_sha256': portable.sha256((portable.REPO_ROOT / 'rust/stata_backend/windows-campaign-protocol.json').read_bytes()),
+                'performance_driver_sha256': portable.sha256((portable.REPO_ROOT / 'fevc/tests/stata/test_windows_cmg_performance.do').read_bytes())}
+
+    def save(name, value):
+        data = (json.dumps(value, sort_keys=True) + '\n').encode()
+        (path.parent / name).write_bytes(data)
+        return {'path': name, 'sha256': portable.sha256(data)}
+
+    row = save('campaign.json', campaign)
+    checks = fixture.campaign()
+    for record in checks:
+        record['campaign_sha256'] = row['sha256']
+        if record['performance_arm'] == 'candidate':
+            record['binary_sha256'] = binary['sha256']
+    index = {'schema': 'FEVC-WINDOWS-CMG-ADOPTION-V1', 'campaign': row,
+             'checks': [save(f'check-{i}.json', value) for i, value in enumerate(checks)]}
+    adoption['windows_cmg_campaign'] = save('windows-cmg.json', index)
+    path.write_text(json.dumps(adoption))
+    return root, path, adoption
+
+
+def test_new_release_requires_complete_windows_cmg_evidence(adopted):
+    root, path, adoption = windows_cmg_adopted(adopted)
+    assert release.require_windows_cmg_qualification(root, path, adoption)['status'] == 'PASS'
+    adoption.pop('windows_cmg_campaign')
+    with pytest.raises(ValueError, match='missing complete Windows CMG'):
+        release.require_windows_cmg_qualification(root, path, adoption)
+
+
+@pytest.mark.parametrize('change', ['missing', 'failed', 'binary', 'source', 'hash', 'cmg', 'protocol'])
+def test_new_release_rejects_unqualified_campaign(adopted, change):
+    root, path, adoption = windows_cmg_adopted(adopted)
+    index_path = path.parent / adoption['windows_cmg_campaign']['path']
+    index = json.loads(index_path.read_bytes())
+    if change == 'missing':
+        index['checks'].pop()
+    elif change == 'failed':
+        # Fail all six blocks so the median cannot hide the adverse observation.
+        for check_row in index['checks'][6:12]:
+            check_path = path.parent / check_row['path']
+            value = json.loads(check_path.read_bytes())
+            value['measurements'][0][2] = 100000
+            check_path.write_text(json.dumps(value))
+            check_row['sha256'] = portable.sha256(check_path.read_bytes())
+    elif change in ('binary', 'source'):
+        if change == 'binary':
+            next(r for r in adoption['binaries'] if 'windows' in r['name'])['sha256'] = '0'*64
+        else:
+            adoption['build_source_commit'] = '0'*40
+    elif change in ('cmg', 'protocol'):
+        campaign_path = path.parent / index['campaign']['path']
+        value = json.loads(campaign_path.read_bytes())
+        value['cmg_commit' if change == 'cmg' else 'protocol_sha256'] = '0'*(40 if change == 'cmg' else 64)
+        campaign_path.write_text(json.dumps(value))
+        index['campaign']['sha256'] = portable.sha256(campaign_path.read_bytes())
+    else:
+        index['checks'][0]['sha256'] = '0'*64
+    index_path.write_text(json.dumps(index))
+    adoption['windows_cmg_campaign']['sha256'] = portable.sha256(index_path.read_bytes())
+    with pytest.raises(ValueError):
+        release.require_windows_cmg_qualification(root, path, adoption)

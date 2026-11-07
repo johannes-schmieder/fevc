@@ -142,6 +142,7 @@ static VckssEngineSolveRequestInterruptV4 captured_solve_v4;
 static VckssEngineSolveRequestInterruptV5 captured_solve_v5;
 static int full_cmg_receipt_status;
 static int corrupt_full_cmg_receipt;
+static uint32_t full_cmg_platform_os = 1u;
 static int corrupt_full_cmg_model_receipt;
 static char saved_cmg_backend[32];
 static char saved_cmg_source[64];
@@ -702,7 +703,7 @@ int32_t vckss_rust_engine_full_cmg_receipt_v1(
     output->schema_version = 1u;
     output->generation = generation;
     output->backend_identity = VCKSS_FULL_CMG_BACKEND_IDENTITY;
-    output->platform_os = 1u;
+    output->platform_os = full_cmg_platform_os;
     output->platform_arch = 1u;
     output->batch_strategy_mask = 2u;
     memcpy(output->cmg_source_commit, VCKSS_FULL_CMG_SOURCE_COMMIT, 40);
@@ -945,6 +946,7 @@ static void reset_transport(void)
     memset(&captured_solve_v5, 0, sizeof(captured_solve_v5));
     full_cmg_receipt_status = 0;
     corrupt_full_cmg_receipt = 0;
+    full_cmg_platform_os = 1u;
     corrupt_full_cmg_model_receipt = 0;
     saved_cmg_backend[0] = '\0';
     saved_cmg_source[0] = '\0';
@@ -1366,6 +1368,19 @@ int main(void)
         assert(clear_calls == 0);
     }
 
+    for (uint32_t platform = 0; platform <= 4; ++platform) {
+        reset_transport();
+        active_generation = UINT64_C(704);
+        full_cmg_platform_os = platform;
+        if (platform >= 1 && platform <= 3) {
+            assert(vckss_full_cmg_receipt(UINT64_C(704)) == 0);
+            assert(strcmp(saved_cmg_source, VCKSS_FULL_CMG_SOURCE_COMMIT) == 0);
+            assert(release_calls == 0);
+        } else {
+            assert(vckss_full_cmg_receipt(UINT64_C(704)) == 498);
+            assert_released_idle(UINT64_C(704));
+        }
+    }
     reset_transport();
     active_generation = UINT64_C(704);
     corrupt_full_cmg_receipt = 1;

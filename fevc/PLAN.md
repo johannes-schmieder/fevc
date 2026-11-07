@@ -1,3 +1,30 @@
+# Windows full-CMG qualification — November 7, 2026
+
+The owner authorizes implementation and publication of the next patch release
+after full Windows CMG qualification. The baseline is clean main 57eb055a and
+released 0.5.1 package 117d09c5, built at 94d94999. CMG stays byte-identical to
+e5613e81fb3b03c78de98658b372646fa802aabb with explicit 128-level configuration.
+
+Enable automatic/explicit full CMG, controlled point estimates and CMG
+projection/component execution on Windows. Preserve unrelated exact and
+explicit diagonal routing. Update Stata, Rust capabilities/request validation,
+C receipts and Windows-skipped tests together. No ABI layout changes.
+
+Qualification is pending. New plugin bytes are not yet adopted or published.
+Use source-bound Windows smoke and bounded point, attachment, lifecycle/memory,
+performance and installation groups; one/two native workers on the existing
+Windows x86-64 Stata/MP 19 machine. Preserve the 900-second limit and strict
+artifact collection. Rebuild all distributed platform plugins and validate
+affected Mac/Rosetta/Linux paths before release.
+
+Apply registered scientific/residual criteria and a frozen complete-command
+incumbent comparison with max(5%, 1 ms) allowance. Preserve failures and do not
+resample unchanged candidates. Publish only after all required groups pass,
+then verify actual published fresh/replacement installations and audit exact
+source, binary, vendor and evidence identities.
+
+## Previous checkpoint
+
 # CMG consolidation — November 6, 2026
 
 The owner authorizes one common CMG main revision, new 0.5.1 plugins and

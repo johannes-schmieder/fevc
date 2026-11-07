@@ -124,7 +124,7 @@ use vckss_plugin::ffi_engine::{
     VCKSS_COMPONENT_REFERENCE_Q0, VCKSS_COMPONENT_REFERENCE_Q1,
     VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
 };
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 use vckss_plugin::ffi_engine::{
     vckss_rust_engine_default_solve_request_interrupt_v5, vckss_rust_engine_solve_interrupt_v5,
 };
@@ -134,7 +134,7 @@ static TEST_LOCK: Mutex<()> = Mutex::new(());
 #[path = "engine_ffi/exact_execution.rs"]
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod exact_execution;
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 #[path = "engine_ffi/generic_execution.rs"]
 mod generic_execution;
 #[path = "engine_ffi/numerical.rs"]
@@ -563,7 +563,11 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     );
     assert_eq!(capabilities.struct_size, 32);
     assert_eq!(capabilities.abi_version, ABI_VERSION);
-    let expected_ready_flags = if cfg!(any(target_os = "macos", target_os = "linux")) {
+    let expected_ready_flags = if cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         262143
     } else {
         230143
@@ -575,7 +579,11 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
         0
     );
     assert_ne!(capabilities.core_ready_flags & VCKSS_CORE_JLA_PLAN_READY, 0);
-    if cfg!(any(target_os = "macos", target_os = "linux")) {
+    if cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         assert_ne!(
             capabilities.core_ready_flags & VCKSS_CORE_FULL_CMG_V2_READY,
             0
@@ -4831,7 +4839,11 @@ fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
     };
     request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
     let solve_status = vckss_rust_engine_solve_v5(generation, &request);
-    if cfg!(not(any(target_os = "macos", target_os = "linux"))) {
+    if cfg!(not(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    ))) {
         assert_eq!(
             solve_status,
             ErrorCode::UnsupportedFeature as i32,
@@ -4862,6 +4874,20 @@ fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
     );
     assert_eq!(receipt.schema_version, 1);
     assert_eq!(receipt.backend_identity, 2);
+    assert_eq!(
+        receipt.platform_os,
+        if cfg!(target_os = "windows") {
+            3
+        } else if cfg!(target_os = "linux") {
+            2
+        } else {
+            1
+        }
+    );
+    assert_eq!(
+        receipt.platform_arch,
+        if cfg!(target_arch = "aarch64") { 1 } else { 2 }
+    );
     assert_eq!(receipt.generation, generation);
     assert_eq!(receipt.threads_requested, 2);
     assert_eq!(receipt.threads_used, 2);
@@ -4894,7 +4920,11 @@ fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
 
 #[test]
 fn v5_observation_direct_keeps_generic_family_and_phase_residual_gates() {
-    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+    if !cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         return;
     }
     let _guard = TEST_LOCK.lock().expect("test lock");
@@ -4974,7 +5004,11 @@ fn v5_observation_direct_keeps_generic_family_and_phase_residual_gates() {
 
 #[test]
 fn v5_point_full_cmg_preserves_explicit_routes_weights_and_declared_matches() {
-    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+    if !cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         return;
     }
     let _guard = TEST_LOCK.lock().expect("test lock");
@@ -5077,7 +5111,7 @@ fn v5_point_full_cmg_preserves_explicit_routes_weights_and_declared_matches() {
 }
 
 #[test]
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 fn v5_controlled_point_model_accounting_and_strict_rank_gates() {
     use vckss_plugin::ffi_engine::{
         vckss_rust_engine_full_cmg_model_receipt_v1, VckssFullCmgModelReceiptV1,
@@ -5277,7 +5311,7 @@ fn v5_point_explicit_diagonal_rejects_full_cmg_but_keeps_legacy_thread_semantics
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);
 }
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 #[test]
 fn v5_full_cmg_user_break_is_coordinated_and_generation_is_releasable_once() {
     let _guard = TEST_LOCK.lock().expect("test lock");
@@ -5620,7 +5654,11 @@ fn generic_jla_stayer_augmentation_is_the_primary_combined_result() {
 
 #[test]
 fn v5_direct_stayer_augmentation_preserves_generic_family_and_pooled_memory() {
-    if cfg!(any(target_os = "macos", target_os = "linux")) {
+    if cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         check_generic_jla_stayer_primary_result(true);
     }
 }

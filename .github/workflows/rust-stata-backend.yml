@@ -84,7 +84,6 @@ jobs:
             -c rust/stata_backend/tests/abi_header_compat_test.c \
             -o "${object}"
       - name: Compile and run C error-transport injection harness
-        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -94,6 +93,10 @@ jobs:
           if [[ "${RUNNER_OS}" == "macOS" ]]; then
             system_define=APPLEMAC
             linker_gc=-dead_strip
+          elif [[ "${RUNNER_OS}" == "Windows" ]]; then
+            system_define=STWIN32
+            linker_gc=/OPT:REF
+            test_binary="${test_binary}.exe"
           fi
           clang -std=c11 -Wall -Wextra -Werror -ffunction-sections \
             "-DSYSTEM=${system_define}" \

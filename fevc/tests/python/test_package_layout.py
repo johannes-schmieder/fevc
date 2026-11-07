@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 API_LEVEL = 24
 
 
@@ -149,9 +149,9 @@ def test_version_identifiers_agree() -> None:
     assert VERSION in help_text
     assert VERSION in readme
     assert ado.count(f'ereturn local version "{VERSION}"') >= 2
-    assert f'di as txt "fevc {VERSION} (06nov2026)"' in ado
+    assert f'di as txt "fevc {VERSION} (07nov2026)"' in ado
     assert f'return("{VERSION}")' in mata
-    assert changelog.count(f"## {VERSION} — 2026-11-06") == 1
+    assert changelog.count(f"## {VERSION} — 2026-11-07") == 1
     assert project["project"]["version"] == VERSION
     toc = (ROOT / "stata.toc").read_text(encoding="utf-8").splitlines()
     assert toc[0] == f"v {VERSION}"

@@ -2,7 +2,10 @@ version 18.0
 clear all
 set more off
 set varabbrev off
-args pkgroot backend model
+args pkgroot backend model solver test_threads
+if "`solver'"=="" local solver diagonal
+assert inlist("`solver'","diagonal","cmg")
+if "`test_threads'"!="" set processors `test_threads'
 if `"`pkgroot'"'=="" local pkgroot `"`c(pwd)'/fevc"'
 if "`backend'"=="" local backend mata
 if "`model'"=="" local model structured_leverage
@@ -21,13 +24,17 @@ generate double tw=fw*(1+mod(_n,7)/10)
 generate double control=sin(_n/7)+mod(_n,5)/3
 generate double shifted=y+100
 local route backend(mata) algorithm(exact)
-if "`backend'"=="rust" local route backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(diagonal) probes(200) mcse(off)
+if "`backend'"=="rust" local route backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(`solver') probes(200) mcse(off)
 local common worker(worker) firm(firm) deletion(match) nuisance(fixedoffset) targetweight(tw) `route' nodisplay
 local inference inferencemodel(`model') inferencesimulations(100) inferenceseed(1791)
 local rng0 `"`c(rngstate)'"'
 fevc y control [fw=fw], `common'
 matrix point=e(b)
 fevc y control [fw=fw], `common' `inference' inference(highrank)
+if "`backend'"=="rust" & "`solver'"=="cmg" {
+    assert "`e(cmg_backend)'"=="CMG_FULL_V2"
+    assert "`e(rust_execution_mode)'"=="direct_attachments"
+}
 assert mreldif(point,e(b))<1e-9
 assert `"`rng0'"'==`"`c(rngstate)'"'
 assert e(inference_mover_units)==128
@@ -42,6 +49,10 @@ fevc shifted control [fw=fw], `common' `inference' inference(highrank)
 assert mreldif(basepoint,e(b))<1e-9
 assert mreldif(baseinterval,e(component_inference))<1e-8
 fevc y control [fw=fw], `common' `inference' inference(q1)
+if "`backend'"=="rust" & "`solver'"=="cmg" {
+    assert "`e(cmg_backend)'"=="CMG_FULL_V2"
+    assert "`e(rust_execution_mode)'"=="direct_attachments"
+}
 capture matrix list e(V)
 assert _rc!=0
 assert rowsof(e(q1_inference))==4

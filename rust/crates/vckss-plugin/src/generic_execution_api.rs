@@ -331,9 +331,13 @@ fn validate(
             "V6 requires positive permitted threads",
         ));
     }
-    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+    if !cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         return Err(unsupported(
-            "V6 execution is enabled only on macOS and Linux",
+            "V6 execution is enabled only on macOS, Linux and Windows",
         ));
     }
     if v4.v3.v2.algorithm != VCKSS_ALGORITHM_JLA
@@ -592,9 +596,13 @@ fn validate_v8(request: VckssEngineSolveRequestV8) -> Result<GenericExecutionPla
     {
         return Err(abi_error("invalid V8 resolved execution request"));
     }
-    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+    if !cfg!(any(
+        target_os = "macos",
+        target_os = "linux",
+        target_os = "windows"
+    )) {
         return Err(unsupported(
-            "V8 execution is enabled only on macOS and Linux",
+            "V8 execution is enabled only on macOS, Linux and Windows",
         ));
     }
     if v6.threads == 0

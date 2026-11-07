@@ -493,7 +493,7 @@ static int vckss_full_cmg_receipt(uint64_t generation)
         receipt.schema_version != 1u || receipt.generation != generation ||
         receipt.backend_identity != VCKSS_FULL_CMG_BACKEND_IDENTITY ||
         memcmp(receipt.cmg_source_commit, VCKSS_FULL_CMG_SOURCE_COMMIT, 40) != 0 ||
-        (receipt.platform_os != 1u && receipt.platform_os != 2u) ||
+        (receipt.platform_os != 1u && receipt.platform_os != 2u && receipt.platform_os != 3u) ||
         (receipt.platform_arch != 1u && receipt.platform_arch != 2u) ||
         receipt.batch_strategy_mask == 0u ||
         (receipt.batch_strategy_mask & ~UINT32_C(7)) != 0u ||

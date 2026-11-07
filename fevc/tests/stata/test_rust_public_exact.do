@@ -69,7 +69,7 @@ foreach nuisance in joint fixedoffset {
                 nuisance(`nuisance') targetweight(target)            ///
                 backend(rust) `rng_option' engine(`exact_engine')    ///
                 stayers(movers) nodisplay
-            assert `"`e(version)'"' == "0.5.1"
+            assert `"`e(version)'"' == "0.5.2"
             assert `"`e(backend_selected)'"' == "rust"
             assert `"`e(algorithm)'"' == "exact"
             assert `"`e(deletion)'"' == "match"

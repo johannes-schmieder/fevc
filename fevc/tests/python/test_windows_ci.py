@@ -38,7 +38,12 @@ def test_windows_smoke_keeps_full_profile_and_distinguishes_qualification():
     assert "-notin @('smoke', 'full')" in build
     assert "PRIVATE_BUILD_ONLY_SMOKE" in build and "PRIVATE_BUILD_ONLY_SMOKE" in receipt
     assert "runtime_profile=$build.runtime_profile" in receipt
-    assert "'projection_mean'" in receipt and "'point_mean'" in receipt
+    groups = (ROOT / "rust/stata_backend/windows-qualification-groups.json").read_text()
+    assert '"projection_mean"' in groups and '"point_mean"' in groups
+    assert "windows-completed-tests.txt" in receipt
+    assert "Incomplete or duplicate tests" in receipt
+    assert "FEVC-WINDOWS-CHECKS-V4" in receipt
+    assert "8190" in receipt
 
 
 def test_windows_failure_diagnostics_are_bounded_and_cannot_claim_pass():

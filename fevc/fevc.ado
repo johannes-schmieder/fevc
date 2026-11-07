@@ -1207,7 +1207,7 @@ program define _fevc_rust_generic, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.5.1"
+    ereturn local version "0.5.2"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -1347,16 +1347,18 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         inlist(lower(strtrim("`inferencemodel'")),                 ///
             "structured_common", "structured_leverage"))
     local generic_execution = 0
+    local legacy_execution_platform = strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix"
+    local cmg_execution_platform = `legacy_execution_platform' | `"`c(os)'"'=="Windows"
     if `fullcmg'==0 & "`algorithm_requested'"=="jla" & "`enginerequested'"=="generic" & ///
-        (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
-        if "`preconditionerrequested'"=="diagonal" local generic_execution = 1
+        `cmg_execution_platform' {
+        if "`preconditionerrequested'"=="diagonal" & `legacy_execution_platform' local generic_execution = 1
         if "`preconditionerrequested'"=="cmg" & "`batchrequested'"=="auto" & ///
             (`projection_requested' | `component_requested') local generic_execution = 2
     }
     if `fullcmg'==0 & inlist("`algorithm_requested'","auto","jla") & ///
         inlist("`enginerequested'","auto","generic") & ///
         "`preconditionerrequested'"=="auto" & "`batchrequested'"=="auto" & ///
-        (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
+        `cmg_execution_platform' {
         local generic_execution = 3
     }
     local numerical_all = ("$VCKSS_NMC_MODE"=="all" & "`algorithm_requested'"!="exact")
@@ -2090,6 +2092,10 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     local exact_plan_complexity =                              ///
         `result_workers'+`p_firms'-1+`control_count'
     local exact_execution = 0
+    if `exact_selected_pre_rng' & `"`c(os)'"'=="Windows" {
+        local generic_execution = 0
+        local fullcmg = 0
+    }
     if `exact_selected_pre_rng' & ///
         (strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix") {
         local exact_execution = cond("`algorithm_requested'"=="exact",1,2)
@@ -4098,7 +4104,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.5.1"
+    ereturn local version "0.5.2"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -4290,11 +4296,11 @@ program define _vckss_impl, eclass sortpreserve
     if lower(strtrim(`"`0'"')) == ", version" {
         ereturn clear
         ereturn local cmd "fevc"
-        ereturn local version "0.5.1"
+        ereturn local version "0.5.2"
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "RELEASED"
-        di as txt "fevc 0.5.1 (06nov2026)"
+        di as txt "fevc 0.5.2 (07nov2026)"
         exit
     }
 
@@ -4660,9 +4666,12 @@ program define _vckss_impl, eclass sortpreserve
 
 
     // Preflight the qualified CMG cell before sample transformation.
-    local rust_full_cmg_platform =                         ///
+    // Exact and explicitly diagonal execution retain their existing platform scope.
+    local rust_legacy_execution_platform =                         ///
         strpos(lower(`"`c(machine_type)'"'),"mac") > 0 | ///
         `"`c(os)'"' == "Unix"
+    local rust_full_cmg_platform = `rust_legacy_execution_platform' | ///
+        `"`c(os)'"' == "Windows"
     local rust_full_cmg_common =                           ///
         `rust_public' & `rust_full_cmg_platform' &         ///
         "`algorithm'"=="jla" &                           ///
@@ -4676,7 +4685,7 @@ program define _vckss_impl, eclass sortpreserve
     local rust_full_cmg_eligible = `rust_full_cmg_common'
     local rust_execution_eligible = `rust_public' & `rust_full_cmg_platform' & ///
         "`algorithm'"=="jla" & "`engine_requested'"=="generic" & ///
-        ("`preconditioner'"=="diagonal" | ///
+        (("`preconditioner'"=="diagonal" & `rust_legacy_execution_platform') | ///
             ("`preconditioner'"=="cmg" & "`batch_requested'"=="auto" & ///
                 (strtrim(`"`project'"')!="" | "`inference'"!="none")))
     local rust_comp_auto_eligible = `rust_execution_eligible' & ///
@@ -4869,7 +4878,7 @@ program define _vckss_impl, eclass sortpreserve
         if !`rust_probe_rc' & "$VCKSS_CENTERING"=="mean" & "`inference'"!="none" {
             if r(component_centering_api)!=1 local rust_probe_rc=498
         }
-        if !`rust_probe_rc' & `rust_full_cmg_platform' & inlist("`algorithm'","auto","exact") {
+        if !`rust_probe_rc' & `rust_legacy_execution_platform' & inlist("`algorithm'","auto","exact") {
             if r(exact_api)!=1 | ("`algorithm'"=="auto" & r(exact_resolved_api)!=2) | ///
                 ("`algorithm'"=="exact" & r(exact_legacy_api)!=1) ///
                 local rust_probe_rc = 498
@@ -5459,7 +5468,7 @@ program define _vckss_impl, eclass sortpreserve
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 24 &                 ///
-        vckss__version() == "0.5.1" &                         ///
+        vckss__version() == "0.5.2" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
         if `mata_runtime_loaded' {
@@ -5475,7 +5484,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss__api_level() == 24 &             ///
-            vckss__version() == "0.5.1" &                     ///
+            vckss__version() == "0.5.2" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
             quietly _vckss_post_failure "INVALID_MATA_RUNTIME"
@@ -7735,7 +7744,7 @@ program define _vckss_impl, eclass sortpreserve
         ("`selected_algorithm'" == "jla")
     ereturn local cmd "fevc"
     ereturn local cmdline `"fevc `0'"'
-    ereturn local version "0.5.1"
+    ereturn local version "0.5.2"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "`backend_requested'"
@@ -8749,7 +8758,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "fevc"
-    ereturn local version "0.5.1"
+    ereturn local version "0.5.2"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -9514,7 +9523,7 @@ program define _fevc_rust_public, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "fevc"
-    ereturn local version "0.5.1"
+    ereturn local version "0.5.2"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -9581,7 +9590,7 @@ program define _vckss_post_failure, eclass
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
     ereturn clear
     ereturn local cmd "fevc"
-    ereturn local version "0.5.1"
+    ereturn local version "0.5.2"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"

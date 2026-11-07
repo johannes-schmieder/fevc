@@ -4,6 +4,17 @@
 
 No unreleased changes.
 
+## 0.5.2 — 2026-11-07
+
+- Enable shared full-CMG point estimation and supported projection/component
+  execution on Windows, including automatic routing and default numerical MCSE.
+- Preserve the common unmodified CMG revision, explicit 128-level configuration,
+  exact selection boundaries, and explicitly selected diagonal execution.
+- Add bounded Windows qualification groups, source/binary-bound receipts,
+  one/two-worker native tests, and fixed complete-command comparisons.
+- Windows qualification and publication are pending; distributed plugin files
+  still belong to 0.5.1 until the candidate passes its release gates.
+
 ## 0.5.1 — 2026-11-06
 
 - Adopt unmodified CMG 0.2.0, with an exact source pin and reproducible vendor

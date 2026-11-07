@@ -1,0 +1,57 @@
+{
+  "common": [
+    "pe_import_export",
+    "clean_install",
+    "lifecycle",
+    "point_mean",
+    "projection_mean",
+    "registry_idle"
+  ],
+  "groups": {
+    "smoke": [
+      "cmg_boundary"
+    ],
+    "legacy": [
+      "observation_component",
+      "individual_component",
+      "match_component",
+      "pooled_deletion",
+      "mcse_modes",
+      "mcse_attachments",
+      "centering_mean",
+      "centering_exact",
+      "centering_jla",
+      "centering_options"
+    ],
+    "cmg_point": [
+      "cmg_boundary",
+      "cmg_point_1",
+      "cmg_point_2",
+      "cmg_controlled_1",
+      "cmg_controlled_2",
+      "cmg_pooled",
+      "cmg_mcse_1",
+      "cmg_mcse_2",
+      "cmg_v2"
+    ],
+    "cmg_attachments": [
+      "cmg_attachments_1",
+      "cmg_attachments_2",
+      "cmg_pooled_common_1",
+      "cmg_pooled_common_2",
+      "cmg_pooled_leverage_1",
+      "cmg_pooled_leverage_2"
+    ],
+    "cmg_lifecycle": [
+      "cmg_lifecycle_1",
+      "cmg_lifecycle_2"
+    ],
+    "performance": [
+      "complete_command_measurements"
+    ],
+    "installation": [
+      "replacement_install",
+      "cmg_boundary"
+    ]
+  }
+}

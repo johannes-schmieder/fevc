@@ -10,7 +10,8 @@ $allowed = @('startup','build','build_spi','build_toolchain','build_native',
     'clean_install','lifecycle','point_mean','projection_mean','observation_component',
     'individual_component','match_component','pooled_deletion','mcse_modes',
     'mcse_attachments','centering_mean','centering_exact','centering_jla',
-    'centering_options','registry_idle','project_receipt','complete')
+    'centering_options','registry_idle','project_receipt','complete',
+    'cmg_boundary','cmg_point_1','cmg_point_2','cmg_controlled_1','cmg_controlled_2','cmg_pooled','cmg_mcse_1','cmg_mcse_2','cmg_v2','cmg_attachments_1','cmg_attachments_2','cmg_lifecycle_1','cmg_lifecycle_2','complete_command_measurements','replacement_install','cmg_pooled_common_1','cmg_pooled_common_2','cmg_pooled_leverage_1','cmg_pooled_leverage_2')
 if (Test-Path -LiteralPath $stagePath) {
     $item = Get-Item -LiteralPath $stagePath
     if ($item.Length -le 128 -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {

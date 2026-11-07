@@ -2,10 +2,11 @@ version 18.0
 clear all
 set more off
 set varabbrev off
-args package_dir
+args package_dir test_threads
+if "`test_threads'"=="" local test_threads = 4
 adopath ++ `"`package_dir'"'
 quietly run `"`package_dir'/fevc.ado"'
-set processors 4
+set processors `test_threads'
 set obs 2112
 generate long key = _n
 generate long worker = ceil(key/8)
@@ -56,7 +57,7 @@ foreach deletion in match observation {
                 assert `"`e(stayers)'"'=="both"
                 assert e(N_retained)==`retained'
                 assert e(sample)==reference_sample
-                assert e(cmg_threads_used)==4
+                assert e(cmg_threads_used)==`test_threads'
                 assert e(rust_probeorder_supplied)==0
                 assert e(memory_budget_supplied)==0
                 assert e(full_cmg_receipt)[1,25]==1+3*e(probes)
@@ -105,7 +106,7 @@ assert `"`e(rng_selected)'"'=="counter_v1"
 assert e(algorithm_option_supplied)==0
 assert e(preconditioner_option_supplied)==0
 assert e(batch_option_supplied)==0
-assert e(cmg_threads_used)==4
+assert e(cmg_threads_used)==`test_threads'
 quietly _datasignature
 assert `"`r(datasignature)'"'==`"`signature'"'
 local restored_order : sortedby
