@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-tb4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      linux-E-smoke.sge   
+jobnumber    8502096             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Sat Nov  7 12:07:07 2026
+start_time   Sat Nov  7 12:08:32 2026
+end_time     Sat Nov  7 12:10:13 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 101          
+ru_utime     123.501      
+ru_stime     6.482        
+ru_maxrss    906908              
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    967656              
+ru_majflt    2                   
+ru_nswap     0                   
+ru_inblock   100784              
+ru_oublock   349064              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     47787               
+ru_nivcsw    747                 
+cpu          129.983      
+mem          102.691           
+io           2.113             
+iow          0.000             
+maxvmem      2.442G
+arid         undefined

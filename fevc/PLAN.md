@@ -1,3 +1,35 @@
+# Windows full-CMG candidate E qualification — November 7, 2026
+
+Candidate `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4` retains the common,
+unmodified CMG `e5613e81fb3b03c78de98658b372646fa802aabb` and explicit 128 levels.
+The result-export and scheduling fixes pass 952 Python tests, the Rust workspace,
+Clippy, formatting, assembly, vendor and parity checks. Hosted Windows package,
+Rust and SPI checks pass at this exact source. Mac arm64/Rosetta thin/universal
+native and installed qualification passes. SCC smoke `8502096` and full native
+job `8502097` pass with zero scheduler errors; all 60 collected artifacts match
+the remote hashes. A collection-only permission-metadata failure is preserved;
+no native test was rerun.
+
+The E development pilot passes all scientific cells; three single-pair timing
+observations exceed the prospective allowance. It is diagnostic evidence,
+not confirmation. The full confirmation was frozen independently with the
+unchanged six-pair schedule, inputs and `max(5%, 1 ms)` median allowance:
+`07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a`.
+Its new smoke passes with verified cleanup; the remaining groups are running.
+See [E platform status](../native/windows-cmg-20261107/qualification-E-status.json),
+[development results](../native/windows-cmg-20261107/evidence/development-E/pilot-review.json)
+and the [frozen campaign](../native/windows-cmg-20261107/evidence/windows-E-campaign.json).
+
+Publication and adoption remain blocked until the full E confirmation and final
+package checks pass. All five installed payload plugins remain released 0.5.1.
+Preserve the failed C confirmation and intermediate D evidence. Do not resample
+unchanged E, exclude adverse cells, or weaken the acceptance rules. After all
+gates pass, adopt exact source-bound plugins, publish 0.5.2, verify actual public
+fresh/replacement installations, then delete the approved temporary hosted branch.
+Mac x86-64 runtime qualification uses Rosetta, not native Intel hardware.
+
+## Previous checkpoint
+
 # Windows full-CMG scheduling fix — November 7, 2026
 
 The result-export fix at `05f806ce` passes the Windows development scientific

@@ -1,0 +1,72 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-QUALIFICATION-STATUS-V1",
+  "status": "MAC_LINUX_PASS_WINDOWS_CONFIRMATION_PENDING",
+  "candidate_version": "0.5.2",
+  "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "cmg_max_levels": 128,
+  "published": false,
+  "candidate_binaries_adopted": false,
+  "qualified_candidates": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "c33c3eae146d7cd46fc5a1665e3ea1af20fe201ad15e22c029629cf9e881319b",
+      "bytes": 4049744,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": ""
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "de18230d5ab00df0a6030119a649fecaefbbeaf78c38128317465872a0623809",
+      "bytes": 4808704,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "a39807df6d649033764a9871a1d2192c34019e4e4fc34c9c0cd7dcd133e200d8",
+      "bytes": 8883024,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "703420dfed173d983c7adb3638bc4151edfe6e15a636220f736b0f0155fba99b",
+      "bytes": 5086232,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": ""
+    }
+  ],
+  "corresponding_source": {
+    "sha256": "5ce7fa18033ce85dc19027de2f5f6d4a1ea669a0f871e71b1c2f297568189650",
+    "source_files": 1880,
+    "matches_scc_input": true
+  },
+  "linux": {
+    "jobs": {
+      "smoke": 8502096,
+      "native": 8502097
+    },
+    "accounting": {
+      "smoke": {
+        "jobnumber": "8502096",
+        "failed": "0",
+        "exit_status": "0",
+        "ru_wallclock": "101",
+        "maxvmem": "2.442G"
+      },
+      "native": {
+        "jobnumber": "8502097",
+        "failed": "0",
+        "exit_status": "0",
+        "ru_wallclock": "1834",
+        "maxvmem": "9.387G"
+      }
+    },
+    "verified_artifact_files": 60
+  }
+}

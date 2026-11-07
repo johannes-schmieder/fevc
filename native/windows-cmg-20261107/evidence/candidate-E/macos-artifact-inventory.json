@@ -1,0 +1,1490 @@
+{
+  "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "files": [
+    {
+      "path": "SANITIZED_EVIDENCE.txt",
+      "bytes": 120,
+      "sha256": "178ec3d0cce3bc0aa4f3550fdce4540681025f04eb20b4dba92def6eb1f05d39"
+    },
+    {
+      "path": "candidates/fevc_rust_macos.plugin",
+      "bytes": 8883024,
+      "sha256": "a39807df6d649033764a9871a1d2192c34019e4e4fc34c9c0cd7dcd133e200d8"
+    },
+    {
+      "path": "candidates/fevc_rust_macos_arm64.plugin",
+      "bytes": 4049744,
+      "sha256": "c33c3eae146d7cd46fc5a1665e3ea1af20fe201ad15e22c029629cf9e881319b"
+    },
+    {
+      "path": "candidates/fevc_rust_macos_x86_64.plugin",
+      "bytes": 4808704,
+      "sha256": "de18230d5ab00df0a6030119a649fecaefbbeaf78c38128317465872a0623809"
+    },
+    {
+      "path": "source-manifest.sha256",
+      "bytes": 30712,
+      "sha256": "ce8288e9b712eb86315218a8451c13460af96e350965b29ff7c194d07ac620dc"
+    },
+    {
+      "path": "stata-logs/stata-arm64-backend-routing__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-backend-routing__test-package.log.sanitized.log",
+      "bytes": 38619,
+      "sha256": "9e72f28f1259fdf4a6eb303651651801579a11e20dda823a8e18a606464488a6"
+    },
+    {
+      "path": "stata-logs/stata-arm64-canonical-install-unavailable__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-canonical-install-unavailable__install-unavailable-arm64 unavailable.log.sanitized.log",
+      "bytes": 8592,
+      "sha256": "fd683956b3820aeaf231cf6eafe67c231ef3575a13d10dd844c95c374edf3c8b"
+    },
+    {
+      "path": "stata-logs/stata-arm64-clean-install__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-clean-install__stata.log.sanitized.log",
+      "bytes": 488212,
+      "sha256": "26e0458bbae60d70196ba798f09e873f0a89d0469ba9e289b8f571f5adebaed5"
+    },
+    {
+      "path": "stata-logs/stata-arm64-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-component-centering-exact__test-package.log.sanitized.log",
+      "bytes": 14763,
+      "sha256": "fd54c75b017130ca740a19b0ec4e5877c85ae563b1bda1f8360c6462caf651f7"
+    },
+    {
+      "path": "stata-logs/stata-arm64-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-component-centering-native__test-package.log.sanitized.log",
+      "bytes": 17303,
+      "sha256": "ce0c08a7554c1cfa23fd51a9425cb7a8624e785758120e4a152c20f06a7eb551"
+    },
+    {
+      "path": "stata-logs/stata-arm64-diagnostic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-diagnostic__test-package.log.sanitized.log",
+      "bytes": 3385,
+      "sha256": "4795bdf6ebc98e7ba151330b3cfcfa2519bafce6784dd2b5d2d3a51cbf9ef246"
+    },
+    {
+      "path": "stata-logs/stata-arm64-environment__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-environment__stata_environment.log.sanitized.log",
+      "bytes": 355,
+      "sha256": "704d9c5051ca58b2e2686c6a0c9c4491f32c1daec0dc6149371a97f2ba29c116"
+    },
+    {
+      "path": "stata-logs/stata-arm64-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-exact-controls__test-package.log.sanitized.log",
+      "bytes": 7746,
+      "sha256": "16489772c2c87b71262801b77d3a28c0e03cb676f40815a3741b2874b1037d4e"
+    },
+    {
+      "path": "stata-logs/stata-arm64-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-lifecycle__test-package.log.sanitized.log",
+      "bytes": 5155,
+      "sha256": "57936891dc0d5cf23f98517cedcfa25cf1d0e77376aca922ac46a74ccb81dee1"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-attachments-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-attachments-thin__test-package.log.sanitized.log",
+      "bytes": 6103,
+      "sha256": "e5a936a54da52dd2cc057ae4b0709edbb7d2a469e587528f65c0beb7f3c417a7"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-attachments-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-attachments-universal__test-package-universal.log.sanitized.log",
+      "bytes": 6123,
+      "sha256": "7d02b9d94f4e9cdb889c01750e0c214811a64522a2eac40098c62d8d19349a46"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-modes-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-modes-thin__test-package.log.sanitized.log",
+      "bytes": 9082,
+      "sha256": "b8d2fc5fefd21ad477222ccc6621803a463c883db5b4e38ae15eb0a46dcc236e"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-modes-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-mcse-modes-universal__test-package-universal.log.sanitized.log",
+      "bytes": 9102,
+      "sha256": "db35bb45df1ae5b2478fe6d1bf3befea4ed1eb7ae4758a151eaecd9cdc194d0c"
+    },
+    {
+      "path": "stata-logs/stata-arm64-numerical-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-numerical-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 4465,
+      "sha256": "8d37bdadc803c74702e2d55477de922c88b94203cbd3754a09aefc2a65e7bbab"
+    },
+    {
+      "path": "stata-logs/stata-arm64-numerical-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-numerical-thin__test-package.log.sanitized.log",
+      "bytes": 10038,
+      "sha256": "e44ac5b840dd36a7240b7a1aa2caee7d21f3316d43493a7c3f4146b3752ffdc5"
+    },
+    {
+      "path": "stata-logs/stata-arm64-numerical-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-numerical-universal__test-package-universal.log.sanitized.log",
+      "bytes": 10058,
+      "sha256": "998c3ac5d13547fcda21d9a76c8abf11613e7cf4c4e7dde255b038779b1ef3d0"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-mata-structured_common__test-package mata structured_common.log.sanitized.log",
+      "bytes": 7578,
+      "sha256": "26b4ca17b8b5eeaf11497637bc77cc9741e8621876f785e1850dc45001f89e6a"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-mata-structured_leverage__test-package mata structured_leverage.log.sanitized.log",
+      "bytes": 7580,
+      "sha256": "6c71d2db2a9c27f2d339b48bb92affe4edf8c63b2bc154d22d6fbfb8956e6311"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-rust-structured_common__test-package rust structured_common.log.sanitized.log",
+      "bytes": 7020,
+      "sha256": "4f31ff61200c795181575ab2c6ec5c4c8761ee7262d255df164b775f59d9975d"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-pooled-component-rust-structured_leverage__test-package rust structured_leverage.log.sanitized.log",
+      "bytes": 7022,
+      "sha256": "14cd9991ea53ef43ce71cb325585a55fbb7af93a8c5f0be2196a9a47438bd248"
+    },
+    {
+      "path": "stata-logs/stata-arm64-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-private-generic__test-package.log.sanitized.log",
+      "bytes": 30306,
+      "sha256": "a7261699659c4d0213e76bdaa722a0caa69cffcac1e7e60a2dddeea5edb9fa3a"
+    },
+    {
+      "path": "stata-logs/stata-arm64-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-private-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 11872,
+      "sha256": "aeb42f9cfb240f387a6cd4e004af7f7818507c7e10cea906a5f60d3459803189"
+    },
+    {
+      "path": "stata-logs/stata-arm64-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-private-planned-v4__test-package.log.sanitized.log",
+      "bytes": 23465,
+      "sha256": "cc80145eb367e65d50fec201260f7be5797ae53c297db0066944c55023e18119"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-component-inference__test-package.log.sanitized.log",
+      "bytes": 20850,
+      "sha256": "1ad7444750383df0ff53760998ec22cb6ae96adde5ca90b50d390771bfc77a8e"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-control-panel__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-control-panel__test-package rust.log.sanitized.log",
+      "bytes": 4883,
+      "sha256": "f53aabf9dd8f62156cca350993a79251b242f7f91571da43747cb1ebec70a6ab"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-controlled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 7578,
+      "sha256": "6a4d7411e1081b9fcd060ba05aafc3b8a3d3608f7a81ad31f70682602a5592b8"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-exact__test-package.log.sanitized.log",
+      "bytes": 16765,
+      "sha256": "682f238a31da2290c7b550bc7460bd1e2be0b19508ee86ae04572ddfe6dc06da"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-full-cmg__test-package.log.sanitized.log",
+      "bytes": 11425,
+      "sha256": "351bdd390ded29795a1d539d9a598485ee8ebc274bcdc21c5ac59be8aa10a46f"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-generic-execution__test-package.log.sanitized.log",
+      "bytes": 35378,
+      "sha256": "65db2b4789c176a3a946c43581a47c134c8152ab01e037e8e00f6c8ba31121f4"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-generic__test-package.log.sanitized.log",
+      "bytes": 81290,
+      "sha256": "aaff42f7c86a1a71461e5b8b4fc8258b1181669813ad56dd09964cb5762c58ce"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-individual-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-individual-inference__test-package.log.sanitized.log",
+      "bytes": 53381,
+      "sha256": "0c7602059d0bf936f0f1f26a0eba3270c03d7f391767379110604df3313d0991"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-match-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-match-component-inference__test-package.log.sanitized.log",
+      "bytes": 14399,
+      "sha256": "73b0e6ff97c532ebb82e225b669e29120b9584a214c0da0fae18745277462e3b"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-observation-full-cmg__test-package.log.sanitized.log",
+      "bytes": 5544,
+      "sha256": "ed647867a2219576f5ee9bfa3d313f458201891d98e1ed5b043cbf3745d2c046"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 34751,
+      "sha256": "47cadafa6baa8a2170db03039e2497c38901495a36948998f7037cdd4f3fbdaf"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-point-routes-full-cmg__test-package.log.sanitized.log",
+      "bytes": 7017,
+      "sha256": "da681041f80c5b97acd955c8deb524c702e037cb6308169a6e1efc4184bebed8"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-pooled-deletion__test-package.log.sanitized.log",
+      "bytes": 28756,
+      "sha256": "dc528ae48b6e6b57a26db4866a40818ffbed1ff67d282f02d4fcb120b5f6e322"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-pooled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 6049,
+      "sha256": "e3b0a1e7f1538dc966342b7aefd2320fc077343cf377a83eab106c8d702b084d"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-projection-mean__test-package.log.sanitized.log",
+      "bytes": 6102,
+      "sha256": "34d3fb374912a2976be1988cdafc00a66aee6d8863acbc4e92f644f0b64128ac"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-route__test-package.log.sanitized.log",
+      "bytes": 28822,
+      "sha256": "e9d422d63be6fd252a694a805a92973f4ae127e8e0478913447dae4fe659a82f"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-runtime-reporting__test-package.log.sanitized.log",
+      "bytes": 96047,
+      "sha256": "72b0d50ddb585fe294a972a8fd0239b5b709a3aca8dcb07f0c3e84e66ddad3f5"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-stayer-hybrid__test-package.log.sanitized.log",
+      "bytes": 36078,
+      "sha256": "92f0717be4ef025413f715818086bc6d4cce4a8cdd8435a66ce3df275556d8ef"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-stayer-options__test-package.log.sanitized.log",
+      "bytes": 16399,
+      "sha256": "b0b31c20df7c5f98f2ce36be19fe6442ccb54527eeb96386410e67a6067c44cc"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-subsample__test-package.log.sanitized.log",
+      "bytes": 17349,
+      "sha256": "c49b72b7a6ba4f24e1244922154f3f730abc6e126c262f86e08b6a3f130f4765"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-public-timer-ownership__test-package.log.sanitized.log",
+      "bytes": 6820,
+      "sha256": "bf43c6a58c1577ae56bd4e1902ba4ef01793c9fc8c5ea1bce66f601878846c38"
+    },
+    {
+      "path": "stata-logs/stata-arm64-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 12503,
+      "sha256": "1f38d3d4a71d4646ccbfefd38700a1199156c230204bb2e6c689eb96209ba9a6"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-component-centering-exact__test-package-universal.log.sanitized.log",
+      "bytes": 14783,
+      "sha256": "24d56764df2a12d1613d4dc8b3634b1801773c8c968894642c1ed0fc9d084b26"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-component-centering-native__test-package-universal.log.sanitized.log",
+      "bytes": 17323,
+      "sha256": "5ea51fcca5af10a726b4ef327e93edcbc1e09e779c9b7d92a79c54d8d115ca85"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-exact-controls__test-package-universal.log.sanitized.log",
+      "bytes": 7766,
+      "sha256": "4b6424752e717483c39822517a612a89a9d18d7d72b3c0d7ce040a4091c24030"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-lifecycle__test-package-universal.log.sanitized.log",
+      "bytes": 5175,
+      "sha256": "03706425125d803ac82ab24731c57c6ed770e3914746c107aed71d5423b06e39"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-mata-structured_common__test-package-universal mata structured_common.log.sanitized.log",
+      "bytes": 7598,
+      "sha256": "8287bd6726833a2cddebbb87b674788f469e4f37fcb68847f3ba8766b2bbc55a"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-mata-structured_leverage__test-package-universal mata structured_leverage.log.sanitized.log",
+      "bytes": 7600,
+      "sha256": "00c67a38d8f26e9eab80e414000364c368ae1a4e3ac37acca5c333d166aee21d"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-rust-structured_common__test-package-universal rust structured_common.log.sanitized.log",
+      "bytes": 7040,
+      "sha256": "a219fb7afc9b9f1b76610e49e7926698ce14e3b219c6100f807e30c0f27d275d"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-pooled-component-rust-structured_leverage__test-package-universal rust structured_leverage.log.sanitized.log",
+      "bytes": 7042,
+      "sha256": "7d2f6650797e96d938cba1f78edba2a97b48195bae7f536bb79c1ef3c0b1d8c4"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-private-generic__test-package-universal.log.sanitized.log",
+      "bytes": 30326,
+      "sha256": "988305babd7f8e5223410c081a5f98545f3de507420dfb1f1fcb7ef384fa07c8"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-private-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 11892,
+      "sha256": "80de235ef2647cf6ef4148190e267715a69be44cb7d0401a871f6a49f95001f3"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-private-planned-v4__test-package-universal.log.sanitized.log",
+      "bytes": 23485,
+      "sha256": "50079812566cd4fd187876f6043c018ace0f1a4d6241789468a11e0112eb149b"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-controlled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 7598,
+      "sha256": "9f6f21427c76c02a757855359cf118fb01cf42145fb517178e2c3b2e353ccc7a"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-exact__test-package-universal.log.sanitized.log",
+      "bytes": 16785,
+      "sha256": "375eebe53d0229ab5f5d9e04a81721cbf1b0845e390cd6a4c055d0692fbf6151"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 11445,
+      "sha256": "b9604dd79c09ae9b1c3274175da3dde93120399675e6ad858e43db19d54ef518"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-generic-execution__test-package-universal.log.sanitized.log",
+      "bytes": 35398,
+      "sha256": "c6dd4aaa7a0fcf6239ac0be1cc55ca1b72547157ace5f2af6cb72071140f1e14"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-generic__test-package-universal.log.sanitized.log",
+      "bytes": 81310,
+      "sha256": "b1b0c989bb374a8a65642dbed25aed14208c9d5a4a2f788f04d695b71521ca5e"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-observation-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 5564,
+      "sha256": "2576a7f25ade6993e116419cf0b337e2850d4b943a3127192b09d605e2bbe182"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 34771,
+      "sha256": "fd194636ed45f2976b663c21e2ff39f13ac40b372919bd698e2b51a7e6ad1e46"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-point-routes-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 7037,
+      "sha256": "a618cee2d91f97f9962ae8e64cab9b8180f5c9b4d60a8443713363437529ad3e"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-pooled-deletion__test-package-universal.log.sanitized.log",
+      "bytes": 28776,
+      "sha256": "971a1382e204961ffbdaf9249fda1ec9ff9b7ca44311753830b07ed5d8f6606d"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-pooled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 6069,
+      "sha256": "e4641baee55ad0d1aa0f7f2409f2a65feb421c734c987e4168fe86995f1fed8f"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-projection-mean__test-package-universal.log.sanitized.log",
+      "bytes": 6122,
+      "sha256": "acf492cbe2ed3d1b8bc7f2fa1a253744f42436dcfcfeff518dd7c7eec94de746"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-route__test-package-universal.log.sanitized.log",
+      "bytes": 28842,
+      "sha256": "ae356fd9a1d70faa5586746d32f385e9a18cfabb487cd4ad46243d999c763298"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-runtime-reporting__test-package-universal.log.sanitized.log",
+      "bytes": 96067,
+      "sha256": "caa576f3b698af5be216f0394af7655aa0da7a39531ee1c6d1218429c04f2d4c"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-stayer-hybrid__test-package-universal.log.sanitized.log",
+      "bytes": 36098,
+      "sha256": "274b981ec40bfe61002c9b9cf25c1f102d0342e15ad5a2cc60b63c323f982170"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-stayer-options__test-package-universal.log.sanitized.log",
+      "bytes": 16419,
+      "sha256": "bbf157492debab498a623c82582f79238949d05cd5f1ea7b6895e06915ff23e6"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-subsample__test-package-universal.log.sanitized.log",
+      "bytes": 17369,
+      "sha256": "c00a9f3606c60ed9e84f8c5b3d171fcb40a76a79789b6028d55e94fde01f56da"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-arm64-universal-public-timer-ownership__test-package-universal.log.sanitized.log",
+      "bytes": 6840,
+      "sha256": "326d9b018ba9a41cec92d76d00fa2bfba5931538be3d4406150ac73a844ea440"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-backend-routing__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-backend-routing__test-package.log.sanitized.log",
+      "bytes": 38619,
+      "sha256": "9e72f28f1259fdf4a6eb303651651801579a11e20dda823a8e18a606464488a6"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-canonical-install-unavailable__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-canonical-install-unavailable__install-unavailable-x86_64 unavailable.log.sanitized.log",
+      "bytes": 8593,
+      "sha256": "d5e538d223844722790cc48a8a09585a8d724b2e758725b7029af1d33957995c"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-clean-install__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-clean-install__stata.log.sanitized.log",
+      "bytes": 488306,
+      "sha256": "5fc3ec8d0524d2b673adbb0cedadc63b49c4d502fbed9d9394cef7a41726de0d"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-component-centering-exact__test-package.log.sanitized.log",
+      "bytes": 14763,
+      "sha256": "fd54c75b017130ca740a19b0ec4e5877c85ae563b1bda1f8360c6462caf651f7"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-component-centering-native__test-package.log.sanitized.log",
+      "bytes": 17303,
+      "sha256": "ce0c08a7554c1cfa23fd51a9425cb7a8624e785758120e4a152c20f06a7eb551"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-diagnostic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-diagnostic__test-package.log.sanitized.log",
+      "bytes": 3385,
+      "sha256": "4795bdf6ebc98e7ba151330b3cfcfa2519bafce6784dd2b5d2d3a51cbf9ef246"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-environment__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-environment__stata_environment.log.sanitized.log",
+      "bytes": 360,
+      "sha256": "ebba45766a0a612f457ffdec64a5c42d6f374cdbc811f6ded4812c40f80d6ee7"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-exact-controls__test-package.log.sanitized.log",
+      "bytes": 7746,
+      "sha256": "16489772c2c87b71262801b77d3a28c0e03cb676f40815a3741b2874b1037d4e"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-lifecycle__test-package.log.sanitized.log",
+      "bytes": 5160,
+      "sha256": "d2ddfe2cea613b6cf581e17dc42d3ce81a9d052e0094e01c1780e2dd5d4ae460"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-attachments-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-attachments-thin__test-package.log.sanitized.log",
+      "bytes": 6103,
+      "sha256": "e5a936a54da52dd2cc057ae4b0709edbb7d2a469e587528f65c0beb7f3c417a7"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-attachments-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-attachments-universal__test-package-universal.log.sanitized.log",
+      "bytes": 6123,
+      "sha256": "7d02b9d94f4e9cdb889c01750e0c214811a64522a2eac40098c62d8d19349a46"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-modes-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-modes-thin__test-package.log.sanitized.log",
+      "bytes": 9082,
+      "sha256": "b8d2fc5fefd21ad477222ccc6621803a463c883db5b4e38ae15eb0a46dcc236e"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-modes-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-mcse-modes-universal__test-package-universal.log.sanitized.log",
+      "bytes": 9102,
+      "sha256": "db35bb45df1ae5b2478fe6d1bf3befea4ed1eb7ae4758a151eaecd9cdc194d0c"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-numerical-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-numerical-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 4465,
+      "sha256": "8d37bdadc803c74702e2d55477de922c88b94203cbd3754a09aefc2a65e7bbab"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-numerical-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-numerical-thin__test-package.log.sanitized.log",
+      "bytes": 10038,
+      "sha256": "18a0ad31facb53535b92d67bee0493b680a2a534d2ac7c44e1246c42fb212c81"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-numerical-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-numerical-universal__test-package-universal.log.sanitized.log",
+      "bytes": 10058,
+      "sha256": "b01ef46339aeea916bb2f6433366d6832b9dce8ae1354551ad05dda5ef104cfd"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-mata-structured_common__test-package mata structured_common.log.sanitized.log",
+      "bytes": 7578,
+      "sha256": "26b4ca17b8b5eeaf11497637bc77cc9741e8621876f785e1850dc45001f89e6a"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-mata-structured_leverage__test-package mata structured_leverage.log.sanitized.log",
+      "bytes": 7580,
+      "sha256": "6c71d2db2a9c27f2d339b48bb92affe4edf8c63b2bc154d22d6fbfb8956e6311"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-rust-structured_common__test-package rust structured_common.log.sanitized.log",
+      "bytes": 7020,
+      "sha256": "4f31ff61200c795181575ab2c6ec5c4c8761ee7262d255df164b775f59d9975d"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-pooled-component-rust-structured_leverage__test-package rust structured_leverage.log.sanitized.log",
+      "bytes": 7022,
+      "sha256": "14cd9991ea53ef43ce71cb325585a55fbb7af93a8c5f0be2196a9a47438bd248"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-private-generic__test-package.log.sanitized.log",
+      "bytes": 30306,
+      "sha256": "a7261699659c4d0213e76bdaa722a0caa69cffcac1e7e60a2dddeea5edb9fa3a"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-private-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 11872,
+      "sha256": "aeb42f9cfb240f387a6cd4e004af7f7818507c7e10cea906a5f60d3459803189"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-private-planned-v4__test-package.log.sanitized.log",
+      "bytes": 23465,
+      "sha256": "cc80145eb367e65d50fec201260f7be5797ae53c297db0066944c55023e18119"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-component-inference__test-package.log.sanitized.log",
+      "bytes": 20850,
+      "sha256": "9a53861732a70e821eeafdf75e62f821106e5017a09a236630cb93736e092707"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-control-panel__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-control-panel__test-package rust.log.sanitized.log",
+      "bytes": 4883,
+      "sha256": "f53aabf9dd8f62156cca350993a79251b242f7f91571da43747cb1ebec70a6ab"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-controlled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 7578,
+      "sha256": "6a4d7411e1081b9fcd060ba05aafc3b8a3d3608f7a81ad31f70682602a5592b8"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-exact__test-package.log.sanitized.log",
+      "bytes": 16765,
+      "sha256": "682f238a31da2290c7b550bc7460bd1e2be0b19508ee86ae04572ddfe6dc06da"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-full-cmg__test-package.log.sanitized.log",
+      "bytes": 11425,
+      "sha256": "351bdd390ded29795a1d539d9a598485ee8ebc274bcdc21c5ac59be8aa10a46f"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-generic-execution__test-package.log.sanitized.log",
+      "bytes": 35378,
+      "sha256": "65db2b4789c176a3a946c43581a47c134c8152ab01e037e8e00f6c8ba31121f4"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-generic__test-package.log.sanitized.log",
+      "bytes": 81290,
+      "sha256": "aaff42f7c86a1a71461e5b8b4fc8258b1181669813ad56dd09964cb5762c58ce"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-individual-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-individual-inference__test-package.log.sanitized.log",
+      "bytes": 53151,
+      "sha256": "466966bae08c325ad9a856ef32ea5a360a5a91cf0d26a37f4779233c1459ab7a"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-match-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-match-component-inference__test-package.log.sanitized.log",
+      "bytes": 14399,
+      "sha256": "73b0e6ff97c532ebb82e225b669e29120b9584a214c0da0fae18745277462e3b"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-observation-full-cmg__test-package.log.sanitized.log",
+      "bytes": 5544,
+      "sha256": "ed647867a2219576f5ee9bfa3d313f458201891d98e1ed5b043cbf3745d2c046"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 34751,
+      "sha256": "47cadafa6baa8a2170db03039e2497c38901495a36948998f7037cdd4f3fbdaf"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-point-routes-full-cmg__test-package.log.sanitized.log",
+      "bytes": 7017,
+      "sha256": "da681041f80c5b97acd955c8deb524c702e037cb6308169a6e1efc4184bebed8"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-pooled-deletion__test-package.log.sanitized.log",
+      "bytes": 28756,
+      "sha256": "16ceb345f5888444e1ecdc12c7c41ba939554b7d1b3566087dbf154a1a1908fa"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-pooled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 6049,
+      "sha256": "e3b0a1e7f1538dc966342b7aefd2320fc077343cf377a83eab106c8d702b084d"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-projection-mean__test-package.log.sanitized.log",
+      "bytes": 6102,
+      "sha256": "34d3fb374912a2976be1988cdafc00a66aee6d8863acbc4e92f644f0b64128ac"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-route__test-package.log.sanitized.log",
+      "bytes": 28822,
+      "sha256": "e9d422d63be6fd252a694a805a92973f4ae127e8e0478913447dae4fe659a82f"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-runtime-reporting__test-package.log.sanitized.log",
+      "bytes": 96160,
+      "sha256": "cd33b6d60d67adb21c1e614cb9e4ffb3b1828891382166c5e062fe201afb9153"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-stayer-hybrid__test-package.log.sanitized.log",
+      "bytes": 36078,
+      "sha256": "92f0717be4ef025413f715818086bc6d4cce4a8cdd8435a66ce3df275556d8ef"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-stayer-options__test-package.log.sanitized.log",
+      "bytes": 16399,
+      "sha256": "304615826800e4bbe469e21f6bd4aba0b4170eadd056588a771e22cef0c6b888"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-subsample__test-package.log.sanitized.log",
+      "bytes": 17349,
+      "sha256": "c49b72b7a6ba4f24e1244922154f3f730abc6e126c262f86e08b6a3f130f4765"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-public-timer-ownership__test-package.log.sanitized.log",
+      "bytes": 6820,
+      "sha256": "bf43c6a58c1577ae56bd4e1902ba4ef01793c9fc8c5ea1bce66f601878846c38"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 12503,
+      "sha256": "1f38d3d4a71d4646ccbfefd38700a1199156c230204bb2e6c689eb96209ba9a6"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-component-centering-exact__test-package-universal.log.sanitized.log",
+      "bytes": 14783,
+      "sha256": "24d56764df2a12d1613d4dc8b3634b1801773c8c968894642c1ed0fc9d084b26"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-component-centering-native__test-package-universal.log.sanitized.log",
+      "bytes": 17323,
+      "sha256": "5ea51fcca5af10a726b4ef327e93edcbc1e09e779c9b7d92a79c54d8d115ca85"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-exact-controls__test-package-universal.log.sanitized.log",
+      "bytes": 7766,
+      "sha256": "4b6424752e717483c39822517a612a89a9d18d7d72b3c0d7ce040a4091c24030"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-lifecycle__test-package-universal.log.sanitized.log",
+      "bytes": 5180,
+      "sha256": "0478fcbfcab8e31e55297a845a5a85dcc20195e21e1e44c5824c77c2524d2be2"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-mata-structured_common__test-package-universal mata structured_common.log.sanitized.log",
+      "bytes": 7598,
+      "sha256": "8287bd6726833a2cddebbb87b674788f469e4f37fcb68847f3ba8766b2bbc55a"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-mata-structured_leverage__test-package-universal mata structured_leverage.log.sanitized.log",
+      "bytes": 7600,
+      "sha256": "00c67a38d8f26e9eab80e414000364c368ae1a4e3ac37acca5c333d166aee21d"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-rust-structured_common__test-package-universal rust structured_common.log.sanitized.log",
+      "bytes": 7040,
+      "sha256": "a219fb7afc9b9f1b76610e49e7926698ce14e3b219c6100f807e30c0f27d275d"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-pooled-component-rust-structured_leverage__test-package-universal rust structured_leverage.log.sanitized.log",
+      "bytes": 7042,
+      "sha256": "7d2f6650797e96d938cba1f78edba2a97b48195bae7f536bb79c1ef3c0b1d8c4"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-private-generic__test-package-universal.log.sanitized.log",
+      "bytes": 30326,
+      "sha256": "988305babd7f8e5223410c081a5f98545f3de507420dfb1f1fcb7ef384fa07c8"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-private-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 11892,
+      "sha256": "80de235ef2647cf6ef4148190e267715a69be44cb7d0401a871f6a49f95001f3"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-private-planned-v4__test-package-universal.log.sanitized.log",
+      "bytes": 23485,
+      "sha256": "50079812566cd4fd187876f6043c018ace0f1a4d6241789468a11e0112eb149b"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-controlled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 7598,
+      "sha256": "9f6f21427c76c02a757855359cf118fb01cf42145fb517178e2c3b2e353ccc7a"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-exact__test-package-universal.log.sanitized.log",
+      "bytes": 16785,
+      "sha256": "375eebe53d0229ab5f5d9e04a81721cbf1b0845e390cd6a4c055d0692fbf6151"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 11445,
+      "sha256": "b9604dd79c09ae9b1c3274175da3dde93120399675e6ad858e43db19d54ef518"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-generic-execution__test-package-universal.log.sanitized.log",
+      "bytes": 35398,
+      "sha256": "c6dd4aaa7a0fcf6239ac0be1cc55ca1b72547157ace5f2af6cb72071140f1e14"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-generic__test-package-universal.log.sanitized.log",
+      "bytes": 81310,
+      "sha256": "b1b0c989bb374a8a65642dbed25aed14208c9d5a4a2f788f04d695b71521ca5e"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-observation-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 5564,
+      "sha256": "2576a7f25ade6993e116419cf0b337e2850d4b943a3127192b09d605e2bbe182"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 34771,
+      "sha256": "fd194636ed45f2976b663c21e2ff39f13ac40b372919bd698e2b51a7e6ad1e46"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-point-routes-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 7037,
+      "sha256": "a618cee2d91f97f9962ae8e64cab9b8180f5c9b4d60a8443713363437529ad3e"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-pooled-deletion__test-package-universal.log.sanitized.log",
+      "bytes": 28776,
+      "sha256": "f1c584a913724202d0625bfe311c1711af57df2d1c0feea428e32f12cf59986d"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-pooled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 6069,
+      "sha256": "e4641baee55ad0d1aa0f7f2409f2a65feb421c734c987e4168fe86995f1fed8f"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-projection-mean__test-package-universal.log.sanitized.log",
+      "bytes": 6122,
+      "sha256": "acf492cbe2ed3d1b8bc7f2fa1a253744f42436dcfcfeff518dd7c7eec94de746"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-route__test-package-universal.log.sanitized.log",
+      "bytes": 28842,
+      "sha256": "ae356fd9a1d70faa5586746d32f385e9a18cfabb487cd4ad46243d999c763298"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-runtime-reporting__test-package-universal.log.sanitized.log",
+      "bytes": 96123,
+      "sha256": "33c268527d3f139d2ecdde63e028506166f9f0ab573393b525467db86f42e26a"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-stayer-hybrid__test-package-universal.log.sanitized.log",
+      "bytes": 36098,
+      "sha256": "274b981ec40bfe61002c9b9cf25c1f102d0342e15ad5a2cc60b63c323f982170"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-stayer-options__test-package-universal.log.sanitized.log",
+      "bytes": 16419,
+      "sha256": "6939e4d172451a66f2b000ee39437308d776c05b7d6633aa019462be18c83606"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-subsample__test-package-universal.log.sanitized.log",
+      "bytes": 17369,
+      "sha256": "c00a9f3606c60ed9e84f8c5b3d171fcb40a76a79789b6028d55e94fde01f56da"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stata-logs/stata-x86_64-universal-public-timer-ownership__test-package-universal.log.sanitized.log",
+      "bytes": 6840,
+      "sha256": "326d9b018ba9a41cec92d76d00fa2bfba5931538be3d4406150ac73a844ea440"
+    }
+  ]
+}

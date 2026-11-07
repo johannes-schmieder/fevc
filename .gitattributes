@@ -97,3 +97,9 @@ native/windows-cmg-20261107/evidence/development-D/*/controller.json -text white
 
 # Preserve the intermediate development run scheduler receipts.
 native/windows-cmg-20261107/evidence/development-D/*-qacct.txt whitespace=-blank-at-eol
+
+native/windows-cmg-20261107/evidence/development-E/*/controller.json -text whitespace=cr-at-eol
+
+native/windows-cmg-20261107/evidence/candidate-E/*-qacct.txt whitespace=-blank-at-eol
+
+native/windows-cmg-20261107/evidence/candidate-E/windows-hosted-build-receipt.json -text whitespace=cr-at-eol

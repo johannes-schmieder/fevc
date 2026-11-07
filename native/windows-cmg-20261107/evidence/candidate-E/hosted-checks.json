@@ -1,0 +1,85 @@
+[
+  {
+    "kind": "build",
+    "run": 42394565802,
+    "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "build",
+        "conclusion": "success"
+      }
+    ]
+  },
+  {
+    "kind": "rust",
+    "run": 42394568202,
+    "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "Standalone dependency policy",
+        "conclusion": "success"
+      },
+      {
+        "name": "ubuntu-latest / Rust stable",
+        "conclusion": "success"
+      },
+      {
+        "name": "ubuntu-latest / Rust 1.85.1",
+        "conclusion": "success"
+      },
+      {
+        "name": "macos-latest / Rust 1.85.1",
+        "conclusion": "success"
+      },
+      {
+        "name": "windows-latest / Rust 1.85.1",
+        "conclusion": "success"
+      },
+      {
+        "name": "macos-latest / Rust stable",
+        "conclusion": "success"
+      },
+      {
+        "name": "windows-latest / Rust stable",
+        "conclusion": "success"
+      }
+    ]
+  },
+  {
+    "kind": "spi",
+    "run": 42394570714,
+    "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "SPI candidate / windows-latest / Rust stable",
+        "conclusion": "success"
+      },
+      {
+        "name": "SPI candidate / macos-latest / Rust stable",
+        "conclusion": "success"
+      },
+      {
+        "name": "SPI candidate / ubuntu-latest / Rust stable",
+        "conclusion": "success"
+      },
+      {
+        "name": "SPI candidate / ubuntu-latest / Rust 1.85.1",
+        "conclusion": "success"
+      },
+      {
+        "name": "SPI candidate / windows-latest / Rust 1.85.1",
+        "conclusion": "success"
+      },
+      {
+        "name": "SPI candidate / macos-latest / Rust 1.85.1",
+        "conclusion": "success"
+      }
+    ]
+  }
+]

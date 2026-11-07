@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-ei3.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      linux-E-full-guard.sge
+jobnumber    8502097             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Sat Nov  7 12:07:08 2026
+start_time   Sat Nov  7 12:11:34 2026
+end_time     Sat Nov  7 12:42:08 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 1834         
+ru_utime     4513.883     
+ru_stime     118.587      
+ru_maxrss    874880              
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    8688934             
+ru_majflt    954                 
+ru_nswap     0                   
+ru_inblock   320872              
+ru_oublock   2584280             
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     5524046             
+ru_nivcsw    26816               
+cpu          4632.470     
+mem          7610.112          
+io           181.200           
+iow          0.000             
+maxvmem      9.387G
+arid         undefined

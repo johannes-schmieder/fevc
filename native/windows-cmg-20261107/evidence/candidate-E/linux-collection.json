@@ -1,0 +1,330 @@
+{
+  "status": "PASS",
+  "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "source_bundle_sha256": "5ce7fa18033ce85dc19027de2f5f6d4a1ea669a0f871e71b1c2f297568189650",
+  "run_dir": "/projectnb/welfgr/vckss/runs/20261107T170530Z-windows-cmg-ec5e1e0e",
+  "accounting": {
+    "smoke": {
+      "jobnumber": "8502096",
+      "failed": "0",
+      "exit_status": "0",
+      "ru_wallclock": "101",
+      "maxvmem": "2.442G"
+    },
+    "native": {
+      "jobnumber": "8502097",
+      "failed": "0",
+      "exit_status": "0",
+      "ru_wallclock": "1834",
+      "maxvmem": "9.387G"
+    }
+  },
+  "artifact_files": [
+    {
+      "path": "artifacts/SANITIZED_EVIDENCE.txt",
+      "bytes": 133,
+      "sha256": "44e4e8d5a46c9ec4508c3484b373b05c0573285897142bad55dfbb0f3008c4cd"
+    },
+    {
+      "path": "artifacts/candidate/fevc_rust_linux_x64.plugin",
+      "bytes": 5086232,
+      "sha256": "703420dfed173d983c7adb3638bc4151edfe6e15a636220f736b0f0155fba99b"
+    },
+    {
+      "path": "artifacts/qualification-source.sha256",
+      "bytes": 224984,
+      "sha256": "0eac35c28f3ccb0946ccc1222bd42ab919ea6d25638af5cd85b4775eeee80419"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-centering-capability__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-centering-capability__fevc.log.sanitized.log",
+      "bytes": 746,
+      "sha256": "717ee30ea211227f2065d5203c42d02d6b3d196cafc56277c6ff8b1be06bf673"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-clean-install__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-clean-install__stata.log.sanitized.log",
+      "bytes": 484246,
+      "sha256": "f087bfc48ee28c4f473f5b625cb7888f32c18610f361d71a5f4f04a7bfe16f8a"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-exact__fevc.log.sanitized.log",
+      "bytes": 14470,
+      "sha256": "c9baf13ea803ae15b6ee1103b0554eb3d3304be343aaecbde3f9bf4d28bf5201"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-native__fevc.log.sanitized.log",
+      "bytes": 17009,
+      "sha256": "836e0d59371be8f6157e179572c85ad9044634ca167e8df4599f021f95aff1f9"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-diagnostic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-diagnostic__fevc.log.sanitized.log",
+      "bytes": 3097,
+      "sha256": "af8f1d3632b20c258efab0cca815a65c5d31bd941afb19f8e2acc223d7b3524f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-environment__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-environment__environment.log.sanitized.log",
+      "bytes": 246,
+      "sha256": "1b349289d6bcb8be3c61d988c74f720b7f04f9f0fd43f73664142cd74c7b0fb0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-full-suite__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-full-suite__run_all.log.sanitized.log",
+      "bytes": 1324686,
+      "sha256": "0ea071cae08545e00e90d4bd01ed755895b8373ab44395e1aad7dad0776fd173"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-capability__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-capability__f.log.sanitized.log",
+      "bytes": 741,
+      "sha256": "1bf504d4b4331528c914dcba368f025b3d373c1902d553ca0061e86b760633e9"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-exact__f rust.log.sanitized.log",
+      "bytes": 5969,
+      "sha256": "6227ec2df5f789265458a15ce087ed2a4b69d74ae8239d731f1fbfb5928d1260"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-jla__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-jla__f rust.log.sanitized.log",
+      "bytes": 3587,
+      "sha256": "f7a8128972a533a7dbaec28a7a30f2675cfbf8085287445c9db7ff505bf2c1f5"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-mean__f rust.log.sanitized.log",
+      "bytes": 4389,
+      "sha256": "f6960c5b7187709968c734c3e2aa877363ec746090bc0f57d3e45fedf5354d74"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-options__f rust.log.sanitized.log",
+      "bytes": 6767,
+      "sha256": "459ec4a0c3d3d905cf4db5a83b078ae8dfc506180e2b007ef2643f81ebbb8d84"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-exact__f.log.sanitized.log",
+      "bytes": 14465,
+      "sha256": "f0f4eb36f7067781dbf8bd6dba9d558a3fd435ebe58874e0cf9d473d75b15353"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-native__f.log.sanitized.log",
+      "bytes": 17004,
+      "sha256": "7067c6fd893aa9345861f6a543e7c83cc74ef8b902e42ffd092a6978b28311e1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-mean-projection__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-mean-projection__f.log.sanitized.log",
+      "bytes": 5807,
+      "sha256": "454b2559876d2b82aca094a0deca57d8ea726c0473e5b3ddb5f883e332e9c917"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_common__f mata structured_common.log.sanitized.log",
+      "bytes": 7256,
+      "sha256": "2aa44f1b3595ed74e696b2c74dbcd33611e9e26fe483b4acbd581bf0a9e2339d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_leverage__f mata structured_leverage.log.sanitized.log",
+      "bytes": 7256,
+      "sha256": "2aa44f1b3595ed74e696b2c74dbcd33611e9e26fe483b4acbd581bf0a9e2339d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_common__f rust structured_common.log.sanitized.log",
+      "bytes": 6698,
+      "sha256": "4cd902e1f20cc3847dc058803475a447e15316b5bbc4f8214d59614791aff3d2"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_leverage__f rust structured_leverage.log.sanitized.log",
+      "bytes": 6698,
+      "sha256": "4cd902e1f20cc3847dc058803475a447e15316b5bbc4f8214d59614791aff3d2"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-lifecycle__fevc.log.sanitized.log",
+      "bytes": 4875,
+      "sha256": "24ba0b98fc0b87ce3c4887e1f984616088d72d22744ef36cdbdaef51f6a42627"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-mean-projection__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-mean-projection__fevc.log.sanitized.log",
+      "bytes": 5812,
+      "sha256": "41dc5470d58e9a504fb0670576db90231cda2615e1cee757fc89d19b015428fa"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_common__fevc mata structured_common.log.sanitized.log",
+      "bytes": 7261,
+      "sha256": "4ed64c0769e76fbba6f33e3c9d5bd012904fc0546ea9d59863e0623c9dbe8056"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_leverage__fevc mata structured_leverage.log.sanitized.log",
+      "bytes": 7261,
+      "sha256": "4ed64c0769e76fbba6f33e3c9d5bd012904fc0546ea9d59863e0623c9dbe8056"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_common__fevc rust structured_common.log.sanitized.log",
+      "bytes": 6703,
+      "sha256": "ae9677f75a40cd53a8f74ece0d45a0a5d4a5802df6ddf46e7eacf705562a8807"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_leverage__fevc rust structured_leverage.log.sanitized.log",
+      "bytes": 6703,
+      "sha256": "ae9677f75a40cd53a8f74ece0d45a0a5d4a5802df6ddf46e7eacf705562a8807"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-control-panel__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-control-panel__fevc rust.log.sanitized.log",
+      "bytes": 4580,
+      "sha256": "b9635180d1dbd22c89f4fecdf45efea09ce6ecf2e1063df51311145844a7dabe"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-route__fevc.log.sanitized.log",
+      "bytes": 28543,
+      "sha256": "852311527bc6ded8c510e712ba90ee51cb1e12283ea703a95c8794431a54f51f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-shared-atoms__fevc.log.sanitized.log",
+      "bytes": 12213,
+      "sha256": "f1437dc4152415e60007200bcb3d3256625bef9e43def28a75859fc278c765d3"
+    },
+    {
+      "path": "artifacts/stata-logs/test-root__run_all.log.sanitized.log",
+      "bytes": 1324686,
+      "sha256": "0ea071cae08545e00e90d4bd01ed755895b8373ab44395e1aad7dad0776fd173"
+    }
+  ],
+  "receipts": {
+    "wrapper.txt": "6658595a0e64f3a938c535ab67e4b22d56b7ac3d995298608922a5e362320027",
+    "smoke.txt": "627b2050cb3ed3562fe4760837999ff070fb90886507505160f5018608c8fc33",
+    "linux-qualification.txt": "7322c85fe62e5ec299e38ee6ab2c4d78bd9b9950f2dc96ddc8a3d98c17c32596"
+  },
+  "candidate_sha256": "703420dfed173d983c7adb3638bc4151edfe6e15a636220f736b0f0155fba99b"
+}

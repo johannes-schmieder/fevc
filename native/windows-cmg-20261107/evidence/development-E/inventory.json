@@ -1,0 +1,92 @@
+{
+  "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "classification": "DEVELOPMENT_ONLY_NOT_CONFIRMATION",
+  "campaign_sha256": "6521af196b7acc7d88c9dcaa81bb272635724ff06524a0cae6e02501313785b7",
+  "files": [
+    {
+      "path": "campaign.json",
+      "bytes": 7908,
+      "sha256": "6521af196b7acc7d88c9dcaa81bb272635724ff06524a0cae6e02501313785b7"
+    },
+    {
+      "path": "performance-candidate-0-attempt1/build.json",
+      "bytes": 6856,
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "performance-candidate-0-attempt1/checks.json",
+      "bytes": 3311,
+      "sha256": "a399fdcfb3fdd39e3ffe503208f1925acde825ac5fb64c253e044e149fdd60c5"
+    },
+    {
+      "path": "performance-candidate-0-attempt1/controller.json",
+      "bytes": 2013,
+      "sha256": "7a3bfaf71efb2914ee300b6777d3776d862e3d4c10a743282cb0fb3136d4514f"
+    },
+    {
+      "path": "performance-candidate-0-attempt1/runtime.json",
+      "bytes": 2297,
+      "sha256": "b50584f3d5e1e6cb6826680e0e8d471b162f2f880027eaf457ad84882a3fe86f"
+    },
+    {
+      "path": "performance-candidate-0-attempt1/wrapper.json",
+      "bytes": 566,
+      "sha256": "81a24cfba185155be84b7608aaedeb5c79e53e6b4e8a79b89cd79c5cd8a7d55e"
+    },
+    {
+      "path": "performance-incumbent-0-attempt1/build.json",
+      "bytes": 6856,
+      "sha256": "0e1e7107e684508c3e6008fb7fb381e48358ac146a4a7c563a07687ae7817a0c"
+    },
+    {
+      "path": "performance-incumbent-0-attempt1/checks.json",
+      "bytes": 3321,
+      "sha256": "0ed1a9c3f88e75e7237438e03cab393ee6c3b93fff268e0b07ada7664b6b671c"
+    },
+    {
+      "path": "performance-incumbent-0-attempt1/controller.json",
+      "bytes": 2013,
+      "sha256": "dccbf2e22a87d58639809db004ccae48b056f23d6b0f7521cf3178011b7c9132"
+    },
+    {
+      "path": "performance-incumbent-0-attempt1/runtime.json",
+      "bytes": 2297,
+      "sha256": "e195742ac4f0ab32ad8eff4069cce9a852cbe9cc388834f049735b44ae108fc2"
+    },
+    {
+      "path": "performance-incumbent-0-attempt1/wrapper.json",
+      "bytes": 566,
+      "sha256": "e3fbfd66e9c089660db84064263c21daa10e708f6adb05617f3809324f567e59"
+    },
+    {
+      "path": "pilot-review.json",
+      "bytes": 4014,
+      "sha256": "aac15a812833bb9597cb0bae7768e324ca2302755d1f3a9e54c79fd08cda5c99"
+    },
+    {
+      "path": "smoke-candidate-0-attempt1/build.json",
+      "bytes": 6857,
+      "sha256": "1db6aabfe7d37874cdfa8920a18185062ee2e4b7107a6fe7774221865b2808cf"
+    },
+    {
+      "path": "smoke-candidate-0-attempt1/checks.json",
+      "bytes": 897,
+      "sha256": "8fd05f4dc4f7dc60e524280845c1b2762255a7275795e9c0014e746d875e71dc"
+    },
+    {
+      "path": "smoke-candidate-0-attempt1/controller.json",
+      "bytes": 2012,
+      "sha256": "3b834975d34633561cfe390d7da904837ac677fb7569a0cea3ebf96d7d39908b"
+    },
+    {
+      "path": "smoke-candidate-0-attempt1/runtime.json",
+      "bytes": 2290,
+      "sha256": "b94c4a530c424aefddb6bd84b37451a4b4b9bd18d5447b650cf95fe8c711aa5b"
+    },
+    {
+      "path": "smoke-candidate-0-attempt1/wrapper.json",
+      "bytes": 566,
+      "sha256": "5c18936fa75d5e8ef8b94543d40c251c98ca1832a39b2a0a41070532eb7743b5"
+    }
+  ]
+}

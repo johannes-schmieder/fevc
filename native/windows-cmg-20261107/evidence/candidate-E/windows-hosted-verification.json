@@ -1,0 +1,9 @@
+{
+  "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "run_id": "42394565802",
+  "archive_sha256": "a61fd3827e33680a2ba7b8d38cadca9d134f53c8ebaa328dbd7c2d4eda65b88c",
+  "plugin_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+  "plugin_bytes": 5569024,
+  "inventory": "PASS",
+  "native_runtime": "PENDING"
+}

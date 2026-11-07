@@ -1,0 +1,130 @@
+{
+  "classification": "DEVELOPMENT_ONLY_NOT_CONFIRMATION",
+  "status": "SCIENCE_PASS_TIMING_UNRESOLVED_PENDING_REGISTERED_MEDIANS",
+  "candidate_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "campaign_sha256": "6521af196b7acc7d88c9dcaa81bb272635724ff06524a0cae6e02501313785b7",
+  "cells": [
+    {
+      "case": 0,
+      "workers": 1,
+      "incumbent_ms": 122,
+      "candidate_ms": 122,
+      "prospective_allowance_ms": 6.1000000000000005,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.0559771220072631e-08
+    },
+    {
+      "case": 0,
+      "workers": 2,
+      "incumbent_ms": 123,
+      "candidate_ms": 125,
+      "prospective_allowance_ms": 6.15,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.0559771220072631e-08
+    },
+    {
+      "case": 1,
+      "workers": 1,
+      "incumbent_ms": 3097,
+      "candidate_ms": 483,
+      "prospective_allowance_ms": 154.85000000000002,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 8.03892772127188e-07
+    },
+    {
+      "case": 1,
+      "workers": 2,
+      "incumbent_ms": 3110,
+      "candidate_ms": 454,
+      "prospective_allowance_ms": 155.5,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 8.03892772127188e-07
+    },
+    {
+      "case": 2,
+      "workers": 1,
+      "incumbent_ms": 19353,
+      "candidate_ms": 1720,
+      "prospective_allowance_ms": 967.6500000000001,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.29750148698623e-06
+    },
+    {
+      "case": 2,
+      "workers": 2,
+      "incumbent_ms": 19565,
+      "candidate_ms": 1567,
+      "prospective_allowance_ms": 978.25,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 1.29750148698623e-06
+    },
+    {
+      "case": 3,
+      "workers": 1,
+      "incumbent_ms": 123,
+      "candidate_ms": 120,
+      "prospective_allowance_ms": 6.15,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 5.111301151745187e-09
+    },
+    {
+      "case": 3,
+      "workers": 2,
+      "incumbent_ms": 125,
+      "candidate_ms": 146,
+      "prospective_allowance_ms": 6.25,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 5.111301151745187e-09
+    },
+    {
+      "case": 4,
+      "workers": 1,
+      "incumbent_ms": 408,
+      "candidate_ms": 430,
+      "prospective_allowance_ms": 20.400000000000002,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 3.5076244021164338e-12
+    },
+    {
+      "case": 4,
+      "workers": 2,
+      "incumbent_ms": 409,
+      "candidate_ms": 473,
+      "prospective_allowance_ms": 20.450000000000003,
+      "single_pair_exceeds_allowance": true,
+      "science": "PASS",
+      "largest_difference_over_bound": 3.5076244021164338e-12
+    },
+    {
+      "case": 5,
+      "workers": 1,
+      "incumbent_ms": 919,
+      "candidate_ms": 739,
+      "prospective_allowance_ms": 45.95,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 2.996466186327748e-10
+    },
+    {
+      "case": 5,
+      "workers": 2,
+      "incumbent_ms": 928,
+      "candidate_ms": 887,
+      "prospective_allowance_ms": 46.400000000000006,
+      "single_pair_exceeds_allowance": false,
+      "science": "PASS",
+      "largest_difference_over_bound": 2.996466186327748e-10
+    }
+  ],
+  "confirmation_campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+  "decision": "Use the already frozen six-pair median comparison without changing code, cases, repetitions, tolerances or allowances. Pilot timings are retained and never substituted for confirmation."
+}

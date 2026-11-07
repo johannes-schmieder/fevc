@@ -1,0 +1,7 @@
+{
+  "status": "COLLECTION_TRANSPORT_METADATA_FAILURE",
+  "source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "native_qualification_status": "PASS",
+  "failure": "rsync -a returned 23 on local fchmodat directory metadata while collecting completed artifacts",
+  "correction": "Collect file contents and timestamps only; preserve local permissions. Verify every returned file size and SHA against the remote inventory. No native job or scientific measurement rerun."
+}

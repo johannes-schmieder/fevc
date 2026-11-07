@@ -1,3 +1,24 @@
+# Current candidate E
+
+The current frozen build is `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`.
+It adds the reviewed result-export and scheduling fixes to the Windows CMG
+implementation, retaining unmodified upstream CMG `e5613e81` and 128 levels.
+[Platform status](qualification-E-status.json) and [source-bound evidence](evidence/candidate-E/)
+record passing Mac arm64/Rosetta, SCC Linux and hosted Windows/Rust/SPI gates.
+
+The [E pilot](evidence/development-E/pilot-review.json) passes scientific checks,
+but its single-pair timings are not release qualification. The
+[frozen confirmation](evidence/windows-E-campaign.json) retains the original
+six paired blocks and all thresholds. Its smoke passes; the remaining groups
+are running. No candidate binary is adopted or published. The installed payload
+still contains 0.5.1. Final Windows confirmation, package installation and actual
+published-install checks remain required before completion.
+
+The earlier failed confirmation and development evidence below retain their
+original source identities and outcomes.
+
+## Previous checkpoint
+
 # Windows CMG qualification checkpoint — November 7, 2026
 
 The implementation is committed at `7cc07a56` and targets fevc **0.5.2**.
