@@ -34,6 +34,8 @@ cases using supported diagonal routes and mover-only weighted observation.
 Its times are excluded from confirmation. A new complete 18-group campaign is
 frozen with unchanged production, candidate binaries and acceptance thresholds;
 see the [supported checkpoint](../native/windows-cmg-20261107/supported-checkpoint.json).
+All six new confirmation runtime/installation groups pass; the twelve fixed
+performance runs are in progress. See the [confirmation runtime checkpoint](../native/windows-cmg-20261107/confirmation-runtime-checkpoint.json).
 The original runtime passes and failure remain immutable. The owner-approved
 temporary qualification branch will be deleted after release. New plugin bytes
 are not adopted.

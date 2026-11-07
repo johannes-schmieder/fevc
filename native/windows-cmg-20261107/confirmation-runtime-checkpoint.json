@@ -1,0 +1,316 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-CONFIRMATION-RUNTIME-CHECKPOINT-V1",
+  "status": "SIX_RUNTIME_GROUPS_PASS_PERFORMANCE_RUNNING",
+  "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+  "candidate": {
+    "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+    "binary_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+    "hosted_build_run_id": "42366984005",
+    "hosted_rust_run_id": "42366985923",
+    "hosted_spi_run_id": "42367941176"
+  },
+  "cmg_commit": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "harness_sha256": "85b7c22d064b860fdabf50409062955b23fbb870459860a55cf7b49dbb9fd0c2",
+  "groups_passed": 6,
+  "groups_required": 18,
+  "records": [
+    {
+      "group": "smoke",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "run": {
+        "artifacts": [
+          {
+            "bytes": 5553152,
+            "name": "fevc_rust_windows_x64.plugin",
+            "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae"
+          },
+          {
+            "bytes": 6857,
+            "name": "windows-build.json",
+            "sha256": "a120b2b9adc365528d27ecfe73edd84061c0d96079df92b3a4fceecf88fb2eba"
+          },
+          {
+            "bytes": 897,
+            "name": "windows-project-checks.json",
+            "sha256": "a690144acf9e9308b0642851f6584156e9a10d9994f5c314f2e1b21c1d3a45de"
+          }
+        ],
+        "error_code": null,
+        "failure_stage": "complete",
+        "input_identity_sha256": "3e272bbe5b0cbdcb08d42215c0df936238fb22652167c943cd14e6d1fcc4d66a",
+        "receipt_sha256": "0c3c7a24ca04d380b89ee43bfff941036d581b5af9da5dd2fd1e278e4fba4d0c",
+        "run_id": "win-20261107T140118Z-26a21b48",
+        "source_archive_sha256": "deb03f7941ac03360ba0d821f86b3e80c11ffaf2007f816d4eee73aea1df5f79",
+        "source_revision": "commit-0ee4bd280b28a909319c5a97e38ee273b37f48e3",
+        "stata_rc": null,
+        "status": "PASS",
+        "wrapper_exit": 0
+      },
+      "runtime_record_sha256": "bc52dd5d9bdad4a6fd7756dd4601e5b401f72dad7a38ca2328af00e6afbfed5d",
+      "checks_sha256": "a690144acf9e9308b0642851f6584156e9a10d9994f5c314f2e1b21c1d3a45de",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_boundary"
+      ]
+    },
+    {
+      "group": "legacy",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "run": {
+        "artifacts": [
+          {
+            "bytes": 5553152,
+            "name": "fevc_rust_windows_x64.plugin",
+            "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae"
+          },
+          {
+            "bytes": 6856,
+            "name": "windows-build.json",
+            "sha256": "ad1ccaae84ae3e64e8bc8221d6370b8d4be9cedcce89c8b9af2746d6bf2c3469"
+          },
+          {
+            "bytes": 1302,
+            "name": "windows-project-checks.json",
+            "sha256": "61afcf9ce384468fb2beeab05c83cadb5d37b3b26e26c04f1fc8f0979984b286"
+          }
+        ],
+        "error_code": null,
+        "failure_stage": "complete",
+        "input_identity_sha256": "15f8db5ce63dcee0990a5f5a9ee7d75be9910e76fa46d9df8e4ec5a9b0f4120c",
+        "receipt_sha256": "d0155bbe80cc1d61f9c75241e54e619fa71327790c2c7960067139a10c91f084",
+        "run_id": "win-20261107T140713Z-121c8806",
+        "source_archive_sha256": "c114aadea7e45a683dd374f6da8e1c505137a66a64c5ecbe98404456b96f5e1f",
+        "source_revision": "commit-cce66ba6a9b49d7db5cb8e04c66d869ee6239a28",
+        "stata_rc": null,
+        "status": "PASS",
+        "wrapper_exit": 0
+      },
+      "runtime_record_sha256": "9d2a7f59f829dbd981f8c9d696d399d984118f6be355ec0db48cfbce52c5014d",
+      "checks_sha256": "61afcf9ce384468fb2beeab05c83cadb5d37b3b26e26c04f1fc8f0979984b286",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "observation_component",
+        "individual_component",
+        "match_component",
+        "pooled_deletion",
+        "mcse_modes",
+        "mcse_attachments",
+        "centering_mean",
+        "centering_exact",
+        "centering_jla",
+        "centering_options"
+      ]
+    },
+    {
+      "group": "cmg_point",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "run": {
+        "artifacts": [
+          {
+            "bytes": 5553152,
+            "name": "fevc_rust_windows_x64.plugin",
+            "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae"
+          },
+          {
+            "bytes": 6856,
+            "name": "windows-build.json",
+            "sha256": "ad1ccaae84ae3e64e8bc8221d6370b8d4be9cedcce89c8b9af2746d6bf2c3469"
+          },
+          {
+            "bytes": 1184,
+            "name": "windows-project-checks.json",
+            "sha256": "528c4a8d5bda4f04167f4978d81b2b6852f1c0b38485e6065d12d6ed5c513e0a"
+          }
+        ],
+        "error_code": null,
+        "failure_stage": "complete",
+        "input_identity_sha256": "b226a4b8050653ce200373ffbc54c8370efe43ad3a7ff1be5d57838b699cb700",
+        "receipt_sha256": "a4c525abc64714b287dfd9e52ff40398babe5953a81b2eee9a3d19cb770d9fed",
+        "run_id": "win-20261107T141651Z-f80d35ce",
+        "source_archive_sha256": "7614f17919231600e5e504b7199d971d6dbd08347197312c07422ab475fc8db4",
+        "source_revision": "commit-590efc09b635a37ef32567a1aa7d8e6a4d11b44d",
+        "stata_rc": null,
+        "status": "PASS",
+        "wrapper_exit": 0
+      },
+      "runtime_record_sha256": "0e3b973c3716230b1b5e1043a1c2969d442d83c3309d3876cfb7f8b6b13a1fd7",
+      "checks_sha256": "528c4a8d5bda4f04167f4978d81b2b6852f1c0b38485e6065d12d6ed5c513e0a",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_boundary",
+        "cmg_point_1",
+        "cmg_point_2",
+        "cmg_controlled_1",
+        "cmg_controlled_2",
+        "cmg_pooled",
+        "cmg_mcse_1",
+        "cmg_mcse_2",
+        "cmg_v2"
+      ]
+    },
+    {
+      "group": "cmg_attachments",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "run": {
+        "artifacts": [
+          {
+            "bytes": 5553152,
+            "name": "fevc_rust_windows_x64.plugin",
+            "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae"
+          },
+          {
+            "bytes": 6856,
+            "name": "windows-build.json",
+            "sha256": "ad1ccaae84ae3e64e8bc8221d6370b8d4be9cedcce89c8b9af2746d6bf2c3469"
+          },
+          {
+            "bytes": 1175,
+            "name": "windows-project-checks.json",
+            "sha256": "c821bb05a20bb27d92290dd3ad69b9e0d4f7336c80eeaa5630087e7f4e206869"
+          }
+        ],
+        "error_code": null,
+        "failure_stage": "complete",
+        "input_identity_sha256": "1a705543c995ea8a5b31ae4bc0c383f1b82bd2a22ee15e6eb1454bed68c9d05d",
+        "receipt_sha256": "dd29140cd16f3ae53d2467ad5e312b0fb0b1198056705dde63f19882488dfc08",
+        "run_id": "win-20261107T142314Z-15b9b7cd",
+        "source_archive_sha256": "9f44168dc8a8bedc65d81bd57539bd49a1d85801b94202f25739687dad7607c5",
+        "source_revision": "commit-0257ca03a9ba82c3da540d94e878b65a6f12be48",
+        "stata_rc": null,
+        "status": "PASS",
+        "wrapper_exit": 0
+      },
+      "runtime_record_sha256": "d20fd012f11ae353f0cc5ee47a1c6f567dc14a045cb3d78e28f40922d2f34c78",
+      "checks_sha256": "c821bb05a20bb27d92290dd3ad69b9e0d4f7336c80eeaa5630087e7f4e206869",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_attachments_1",
+        "cmg_attachments_2",
+        "cmg_pooled_common_1",
+        "cmg_pooled_common_2",
+        "cmg_pooled_leverage_1",
+        "cmg_pooled_leverage_2"
+      ]
+    },
+    {
+      "group": "cmg_lifecycle",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "run": {
+        "artifacts": [
+          {
+            "bytes": 5553152,
+            "name": "fevc_rust_windows_x64.plugin",
+            "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae"
+          },
+          {
+            "bytes": 6856,
+            "name": "windows-build.json",
+            "sha256": "ad1ccaae84ae3e64e8bc8221d6370b8d4be9cedcce89c8b9af2746d6bf2c3469"
+          },
+          {
+            "bytes": 953,
+            "name": "windows-project-checks.json",
+            "sha256": "1a90090f7aa9973cebbd359bef83479991c3afe55be3ba242eb0deca3c4b0d2f"
+          }
+        ],
+        "error_code": null,
+        "failure_stage": "complete",
+        "input_identity_sha256": "c6f33784a85d206e0a9631b6c2c3eb3b847478709a5fe13e264b333a0c8fbd80",
+        "receipt_sha256": "539b2c7a68b51df32368b073c3fbd3919801ae6e7bd7f4587447b7b2efb3da6f",
+        "run_id": "win-20261107T142907Z-6458bd45",
+        "source_archive_sha256": "a7bd460b097b7a72b08a8240bcf38469aabc878290ce9995c960fe77d63290dd",
+        "source_revision": "commit-41622081d0ee268c2eb38b7910eeaf9afffd2608",
+        "stata_rc": null,
+        "status": "PASS",
+        "wrapper_exit": 0
+      },
+      "runtime_record_sha256": "f970dabc8204bd9dca51bdbea104f98b9b6e572166cfb59a1c80f6cce04bf006",
+      "checks_sha256": "1a90090f7aa9973cebbd359bef83479991c3afe55be3ba242eb0deca3c4b0d2f",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_lifecycle_1",
+        "cmg_lifecycle_2"
+      ]
+    },
+    {
+      "group": "installation",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "run": {
+        "artifacts": [
+          {
+            "bytes": 5553152,
+            "name": "fevc_rust_windows_x64.plugin",
+            "sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae"
+          },
+          {
+            "bytes": 6856,
+            "name": "windows-build.json",
+            "sha256": "ad1ccaae84ae3e64e8bc8221d6370b8d4be9cedcce89c8b9af2746d6bf2c3469"
+          },
+          {
+            "bytes": 954,
+            "name": "windows-project-checks.json",
+            "sha256": "904588891810c1fb77a07ef15d8e169d5877636023ca42de7307490ce01113df"
+          }
+        ],
+        "error_code": null,
+        "failure_stage": "complete",
+        "input_identity_sha256": "efe752a70372e07a389d3541e339165f5947e33809290f5e55dee72ab822f086",
+        "receipt_sha256": "849f97daba9ad4abc6db601ae2dfcb66f0f3c8b33e1ff6887f068981c12a84cf",
+        "run_id": "win-20261107T143427Z-c80e6a76",
+        "source_archive_sha256": "930b94ae7364e9ea55ec43f29ed26b8e6f2d45838ab9767a4a9e832a1930c693",
+        "source_revision": "commit-314451629ffc8090dd79cb138552ba1ce78e55e1",
+        "stata_rc": null,
+        "status": "PASS",
+        "wrapper_exit": 0
+      },
+      "runtime_record_sha256": "c5db6ac4f39665417ab33b2a2c72a9d831efb5bbeff7a84de9ef7e334f750792",
+      "checks_sha256": "904588891810c1fb77a07ef15d8e169d5877636023ca42de7307490ce01113df",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "replacement_install",
+        "cmg_boundary"
+      ]
+    }
+  ],
+  "performance": "Frozen twelve-run schedule has started; no aggregate decision yet.",
+  "original_registration_and_pilot_retained": true,
+  "published": false,
+  "repository_plugins_adopted": false
+}

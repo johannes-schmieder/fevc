@@ -36,13 +36,21 @@ the [source-bound smoke record](evidence/windows-smoke/runtime.json). It covers
 PE audit, clean installation, lifecycle, point/projection estimates, CMG boundary
 checks and idle registry, with independently verified cleanup and stopped state.
 
+All six runtime and installation groups also pass under the corrected full
+confirmation registration; see the [confirmation checkpoint](confirmation-runtime-checkpoint.json).
+The original incumbent request failed because it forced an unavailable Windows
+0.5.1 CMG route. Its failure, the corrected native development pilot and both
+registrations remain preserved. The new campaign compares supported incumbent
+routes and the common weighted-observation mover population, with unchanged
+candidate bytes and acceptance thresholds.
+
 Remaining work follows the [Windows qualification workflow](../../rust/stata_backend/WINDOWS_CMG_QUALIFICATION.md):
-finish the twelve frozen performance groups (all six runtime and installation
-groups [pass](runtime-checkpoint.json)), adopt all five exact binaries, publish 0.5.2, and verify
-actual published fresh/replacement installations. The release command rejects
-legacy Windows evidence for this version. No confirmation result has been
-resampled or excluded. The frozen campaign is executing serially and stops
-on the first failed group.
+finish the twelve fixed performance runs, adopt the five exact binaries only
+if all scientific and timing cells pass, publish 0.5.2, and verify actual
+published fresh/replacement installations. The assembled candidate already
+passes [local installation and source checks](local-package-checkpoint.json).
+No final-registration confirmation measurement is resampled or excluded; the
+schedule stops on the first failed group.
 
 Native Intel hardware remains untested; the Mac x86-64 evidence is Rosetta.
 The initial development harness failures and superseded smoke are identified in
