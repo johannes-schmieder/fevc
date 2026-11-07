@@ -1,6 +1,6 @@
 # Native package provenance
 
-Version 0.5.1 is qualified for publication with CMG 0.2.0 at
+Version [0.5.1](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1) is published with CMG 0.2.0 at
 `e5613e81fb3b03c78de98658b372646fa802aabb`. All five plugins share build source
 `94d94999be54e9a2309497d5fbe9899e2822cd51`; Mac, Linux and private Windows
 native qualification pass. The dated records below retain their original
@@ -20,7 +20,11 @@ uses the exact hosted static-CRT build. Native Intel hardware is not qualified.
 The shared full-CMG Stata route remains Mac/Unix only; Windows qualification
 covers its established native routes, including compressed JLA with exact
 preconditioning. The separate Mata and package-owned Rust implementations
-remain supported.
+remain supported. The [publication record](cmg-consolidation-20261106/evidence/publication.json)
+verifies every published asset and all 61 installed files through fresh/replacement
+installations from the immutable tag, main, `github install`, and the downloaded
+native ZIP on Apple Silicon. It records the package commit separately from the
+native build source; earlier preparation-stage records remain unchanged.
 The original failed performance comparison and the later changed-build studies
 are retained separately. Installation checks identify the package commit and
 installed hashes; they do not expand the scientific scope of the native tests.

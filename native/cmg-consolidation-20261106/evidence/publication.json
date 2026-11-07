@@ -1,0 +1,2754 @@
+{
+  "schema": "FEVC-PUBLISHED-INSTALLATION-V1",
+  "status": "PASS",
+  "version": "0.5.1",
+  "common_cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
+  "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "release": {
+    "assets": [
+      {
+        "apiUrl": "https://api.github.com/repos/johannes-schmieder/fevc/releases/assets/719299350",
+        "contentType": "application/zip",
+        "createdAt": "2026-11-07T02:09:57Z",
+        "digest": "sha256:6e055b375ef9124fb3c1ac5496c77f3f4058c7f1a374e831b1d86bdf74a6e9ef",
+        "downloadCount": 0,
+        "id": "RA_kwDOT80ayc4q36MW",
+        "label": "",
+        "name": "fevc-0.5.1.zip",
+        "size": 11717127,
+        "state": "uploaded",
+        "updatedAt": "2026-11-07T02:10:01Z",
+        "url": "https://github.com/johannes-schmieder/fevc/releases/download/v0.5.1/fevc-0.5.1.zip",
+        "verified_sha256": "6e055b375ef9124fb3c1ac5496c77f3f4058c7f1a374e831b1d86bdf74a6e9ef"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/johannes-schmieder/fevc/releases/assets/719299351",
+        "contentType": "application/x-gtar",
+        "createdAt": "2026-11-07T02:09:57Z",
+        "digest": "sha256:e1f86851e5babdc9e0d176a1c80df3166cd2613b2f319f2ad54473b5911f38b7",
+        "downloadCount": 0,
+        "id": "RA_kwDOT80ayc4q36MX",
+        "label": "",
+        "name": "fevc-corresponding-source-94d94999.tar.gz",
+        "size": 7437545,
+        "state": "uploaded",
+        "updatedAt": "2026-11-07T02:10:01Z",
+        "url": "https://github.com/johannes-schmieder/fevc/releases/download/v0.5.1/fevc-corresponding-source-94d94999.tar.gz",
+        "verified_sha256": "e1f86851e5babdc9e0d176a1c80df3166cd2613b2f319f2ad54473b5911f38b7"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/johannes-schmieder/fevc/releases/assets/719299349",
+        "contentType": "application/json",
+        "createdAt": "2026-11-07T02:09:57Z",
+        "digest": "sha256:dc0f99fca7bb9f82e4cfd7de23141387f094ad9f9cbf9e43af549d3d8e15a902",
+        "downloadCount": 0,
+        "id": "RA_kwDOT80ayc4q36MV",
+        "label": "",
+        "name": "release-manifest.json",
+        "size": 13271,
+        "state": "uploaded",
+        "updatedAt": "2026-11-07T02:09:57Z",
+        "url": "https://github.com/johannes-schmieder/fevc/releases/download/v0.5.1/release-manifest.json",
+        "verified_sha256": "dc0f99fca7bb9f82e4cfd7de23141387f094ad9f9cbf9e43af549d3d8e15a902"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/johannes-schmieder/fevc/releases/assets/719299348",
+        "contentType": "application/octet-stream",
+        "createdAt": "2026-11-07T02:09:57Z",
+        "digest": "sha256:6ec881a73b9f39a98389f0f65f23cdc48bf8a7d9ecb3c6db940542458c3bedc5",
+        "downloadCount": 0,
+        "id": "RA_kwDOT80ayc4q36MU",
+        "label": "",
+        "name": "SHA256SUMS",
+        "size": 277,
+        "state": "uploaded",
+        "updatedAt": "2026-11-07T02:09:57Z",
+        "url": "https://github.com/johannes-schmieder/fevc/releases/download/v0.5.1/SHA256SUMS",
+        "verified_sha256": "6ec881a73b9f39a98389f0f65f23cdc48bf8a7d9ecb3c6db940542458c3bedc5"
+      }
+    ],
+    "isDraft": false,
+    "isPrerelease": false,
+    "publishedAt": "2026-11-07T02:10:02Z",
+    "tagName": "v0.5.1",
+    "targetCommitish": "main",
+    "url": "https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1",
+    "release_list_bytes": 25246
+  },
+  "checks": {
+    "main_and_github": {
+      "status": "PASS",
+      "platform": "Darwin",
+      "architecture": "arm64",
+      "catalog_url": "https://raw.githubusercontent.com/johannes-schmieder/fevc/main/",
+      "methods": [
+        "net",
+        "github"
+      ],
+      "results": [
+        {
+          "method": "net",
+          "mode": "fresh",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "1059c63f9880d5fced9ff2ba8fb1c6b46d36721d28bdf94283a7b36518e40a5e",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        },
+        {
+          "method": "net",
+          "mode": "replace",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "07c8061d794c03670f3aa89f0b6378b3fa0b0ce5e3b1a4019aed286ee99688af",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        },
+        {
+          "method": "github",
+          "mode": "fresh",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "f6f4bb24985e134ac8db041d3915295e5e5a1811e705d1708aecaaa174d13269",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        },
+        {
+          "method": "github",
+          "mode": "replace",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "4875122122677d6cb171f8a68f60252040606b03e4a9d44f3e32378ed85c7bd3",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        }
+      ],
+      "catalog_sha256": "431497a5edc3e02a811f99719722e68bc71eee847f49fd15cebde5894b10e3b1",
+      "verifier_sha256": "1a0f861e155fccbcf09c7b9ace2941a91b83584c97d11ff6ceae07f451dfd448",
+      "scope": "Installed payload hashes cover all five plugins; runtime checks apply only to the recorded execution platform. Other platforms require their separate exact-binary qualification receipts."
+    },
+    "tag": {
+      "status": "PASS",
+      "platform": "Darwin",
+      "architecture": "arm64",
+      "catalog_url": "https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.1/",
+      "methods": [
+        "net"
+      ],
+      "results": [
+        {
+          "method": "net",
+          "mode": "fresh",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "9310348ecd9ea6b6a0a699cc988e14f34d4292e0c268376a9c02c4129478e4ac",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        },
+        {
+          "method": "net",
+          "mode": "replace",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "8b72f8c4cc219218f883ccc3df3177d70a744efff16ac49c863a0ea5dee32353",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        }
+      ],
+      "catalog_sha256": "431497a5edc3e02a811f99719722e68bc71eee847f49fd15cebde5894b10e3b1",
+      "verifier_sha256": "1a0f861e155fccbcf09c7b9ace2941a91b83584c97d11ff6ceae07f451dfd448",
+      "scope": "Installed payload hashes cover all five plugins; runtime checks apply only to the recorded execution platform. Other platforms require their separate exact-binary qualification receipts."
+    },
+    "downloaded_zip": {
+      "status": "PASS",
+      "platform": "Darwin",
+      "architecture": "arm64",
+      "catalog_url": "Downloaded published fevc-0.5.1.zip served locally",
+      "methods": [
+        "net"
+      ],
+      "results": [
+        {
+          "method": "net",
+          "mode": "fresh",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "d2cbac3650a69e051a4c77d884033dd8f01160bc9bc28c0be0ea4cf264be0843",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        },
+        {
+          "method": "net",
+          "mode": "replace",
+          "status": "PASS",
+          "installed_files": [
+            {
+              "name": "LICENSE",
+              "installed_name": "license",
+              "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9"
+            },
+            {
+              "name": "THIRD_PARTY_NOTICES.txt",
+              "installed_name": "third_party_notices.txt",
+              "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f"
+            },
+            {
+              "name": "fevc.ado",
+              "installed_name": "fevc.ado",
+              "sha256": "f9dcbbca4e6a6bb73d3bbdca3f2021ce9a75b1a41ae05417b856248b3b0c0ef3"
+            },
+            {
+              "name": "fevc.mata",
+              "installed_name": "fevc.mata",
+              "sha256": "d83b1cc89b80938d53019c3cadabfd48418db1ea5ea8b9288fb6d27548ca0c56"
+            },
+            {
+              "name": "fevc_numerical.mata",
+              "installed_name": "fevc_numerical.mata",
+              "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee"
+            },
+            {
+              "name": "fevc_inference.mata",
+              "installed_name": "fevc_inference.mata",
+              "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3"
+            },
+            {
+              "name": "fevc_graph.mata",
+              "installed_name": "fevc_graph.mata",
+              "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17"
+            },
+            {
+              "name": "fevc_cmg.mata",
+              "installed_name": "fevc_cmg.mata",
+              "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23"
+            },
+            {
+              "name": "fevc_solver.mata",
+              "installed_name": "fevc_solver.mata",
+              "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5"
+            },
+            {
+              "name": "fevc_rng.mata",
+              "installed_name": "fevc_rng.mata",
+              "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060"
+            },
+            {
+              "name": "fevc_scale.mata",
+              "installed_name": "fevc_scale.mata",
+              "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8"
+            },
+            {
+              "name": "fevc_resource.mata",
+              "installed_name": "fevc_resource.mata",
+              "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5"
+            },
+            {
+              "name": "fevc_scale_engine.mata",
+              "installed_name": "fevc_scale_engine.mata",
+              "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627"
+            },
+            {
+              "name": "fevc_scale_runtime.mata",
+              "installed_name": "fevc_scale_runtime.mata",
+              "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c"
+            },
+            {
+              "name": "fevc__display.ado",
+              "installed_name": "fevc__display.ado",
+              "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207"
+            },
+            {
+              "name": "fevc__progress.ado",
+              "installed_name": "fevc__progress.ado",
+              "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687"
+            },
+            {
+              "name": "fevc__lifecycle.ado",
+              "installed_name": "fevc__lifecycle.ado",
+              "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24"
+            },
+            {
+              "name": "fevc_estat.ado",
+              "installed_name": "fevc_estat.ado",
+              "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6"
+            },
+            {
+              "name": "fevc_run.ado",
+              "installed_name": "fevc_run.ado",
+              "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731"
+            },
+            {
+              "name": "fevc__simulate_data.ado",
+              "installed_name": "fevc__simulate_data.ado",
+              "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6"
+            },
+            {
+              "name": "fevc_rust.ado",
+              "installed_name": "fevc_rust.ado",
+              "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce"
+            },
+            {
+              "name": "fevc__rust_plugin_call.ado",
+              "installed_name": "fevc__rust_plugin_call.ado",
+              "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36"
+            },
+            {
+              "name": "fevc__rust_solve_v4.ado",
+              "installed_name": "fevc__rust_solve_v4.ado",
+              "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd"
+            },
+            {
+              "name": "fevc__rust_solve_v5.ado",
+              "installed_name": "fevc__rust_solve_v5.ado",
+              "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928"
+            },
+            {
+              "name": "fevc__rust_cmg_model.ado",
+              "installed_name": "fevc__rust_cmg_model.ado",
+              "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22"
+            },
+            {
+              "name": "fevc__rust_plan_receipt.ado",
+              "installed_name": "fevc__rust_plan_receipt.ado",
+              "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_comp_v7.ado",
+              "installed_name": "fevc__rust_reconcile_comp_v7.ado",
+              "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac"
+            },
+            {
+              "name": "fevc__rust_reconcile_exact_v7.ado",
+              "installed_name": "fevc__rust_reconcile_exact_v7.ado",
+              "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198"
+            },
+            {
+              "name": "fevc__rust_post_comp_v7.ado",
+              "installed_name": "fevc__rust_post_comp_v7.ado",
+              "sha256": "1fc3aacb0f27be567ee59cffd72b16f3168f87939c5316e98b9239b8fe83c506"
+            },
+            {
+              "name": "fevc__rust_post_exact_v7.ado",
+              "installed_name": "fevc__rust_post_exact_v7.ado",
+              "sha256": "2b77502dbacb1931d26ba55640cfad48a0a949fca84c5987cf6d1e7e85fa49e1"
+            },
+            {
+              "name": "fevc__rust_capture_stayers.ado",
+              "installed_name": "fevc__rust_capture_stayers.ado",
+              "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746"
+            },
+            {
+              "name": "fevc__rust_post_stayer_hybrid.ado",
+              "installed_name": "fevc__rust_post_stayer_hybrid.ado",
+              "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf"
+            },
+            {
+              "name": "fevc__rust_macos.ado",
+              "installed_name": "fevc__rust_macos.ado",
+              "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba"
+            },
+            {
+              "name": "fevc__rust_windows.ado",
+              "installed_name": "fevc__rust_windows.ado",
+              "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a"
+            },
+            {
+              "name": "fevc__rust_linux.ado",
+              "installed_name": "fevc__rust_linux.ado",
+              "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793"
+            },
+            {
+              "name": "fevc__rust_public_call.ado",
+              "installed_name": "fevc__rust_public_call.ado",
+              "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5"
+            },
+            {
+              "name": "fevc__rust_core_ready.ado",
+              "installed_name": "fevc__rust_core_ready.ado",
+              "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1"
+            },
+            {
+              "name": "fevc__component_model_route.ado",
+              "installed_name": "fevc__component_model_route.ado",
+              "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb"
+            },
+            {
+              "name": "fevc__observation_population.ado",
+              "installed_name": "fevc__observation_population.ado",
+              "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9"
+            },
+            {
+              "name": "fevc__hybrid_sample.ado",
+              "installed_name": "fevc__hybrid_sample.ado",
+              "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d"
+            },
+            {
+              "name": "fevc__stayer_population_post.ado",
+              "installed_name": "fevc__stayer_population_post.ado",
+              "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20"
+            },
+            {
+              "name": "fevc__exact_inference_model_post.ado",
+              "installed_name": "fevc__exact_inference_model_post.ado",
+              "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a"
+            },
+            {
+              "name": "fevc__rust_component_attach.ado",
+              "installed_name": "fevc__rust_component_attach.ado",
+              "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0"
+            },
+            {
+              "name": "fevc__rust_comp_batch_receipt.ado",
+              "installed_name": "fevc__rust_comp_batch_receipt.ado",
+              "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd"
+            },
+            {
+              "name": "fevc__rust_component_fetch.ado",
+              "installed_name": "fevc__rust_component_fetch.ado",
+              "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab"
+            },
+            {
+              "name": "fevc__rust_component_post.ado",
+              "installed_name": "fevc__rust_component_post.ado",
+              "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e"
+            },
+            {
+              "name": "fevc__failure_guidance.ado",
+              "installed_name": "fevc__failure_guidance.ado",
+              "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8"
+            },
+            {
+              "name": "fevc.sthlp",
+              "installed_name": "fevc.sthlp",
+              "sha256": "ab77fe2fda7899744a69cf4d6f330181a21660f8c622835e6af786437ab7626d"
+            },
+            {
+              "name": "fevc__memory_options.ado",
+              "installed_name": "fevc__memory_options.ado",
+              "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a"
+            },
+            {
+              "name": "fevc__native_threads.ado",
+              "installed_name": "fevc__native_threads.ado",
+              "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117"
+            },
+            {
+              "name": "fevc__control_failure_post.ado",
+              "installed_name": "fevc__control_failure_post.ado",
+              "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4"
+            },
+            {
+              "name": "fevc_timer.mata",
+              "installed_name": "fevc_timer.mata",
+              "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6"
+            },
+            {
+              "name": "fevc__timer.ado",
+              "installed_name": "fevc__timer.ado",
+              "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4"
+            },
+            {
+              "name": "fevc__numerical.ado",
+              "installed_name": "fevc__numerical.ado",
+              "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55"
+            },
+            {
+              "name": "fevc__rust_numerical.ado",
+              "installed_name": "fevc__rust_numerical.ado",
+              "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459"
+            },
+            {
+              "name": "fevc__centering.ado",
+              "installed_name": "fevc__centering.ado",
+              "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78"
+            },
+            {
+              "name": "fevc_rust_macos_arm64.plugin",
+              "installed_name": "fevc_rust_macos_arm64.plugin",
+              "sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+            },
+            {
+              "name": "fevc_rust_macos_x86_64.plugin",
+              "installed_name": "fevc_rust_macos_x86_64.plugin",
+              "sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+            },
+            {
+              "name": "fevc_rust_macos.plugin",
+              "installed_name": "fevc_rust_macos.plugin",
+              "sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+            },
+            {
+              "name": "fevc_rust_linux_x64.plugin",
+              "installed_name": "fevc_rust_linux_x64.plugin",
+              "sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+            },
+            {
+              "name": "fevc_rust_windows_x64.plugin",
+              "installed_name": "fevc_rust_windows_x64.plugin",
+              "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+            }
+          ],
+          "stata_process_rc": 0,
+          "transcript_sha256": "e1fcaff1fbfb9d5819514d978489c554ba7fef4c7360eeb2a88f857575fb5421",
+          "checks": [
+            "native progress API 2",
+            "README example",
+            "caller data restoration",
+            "decomposition",
+            "help",
+            "installed match q0/q1",
+            "installed pooled components: both backends and models",
+            "installed deletion-unit mover regression",
+            "installed subsample equivalence regression",
+            "caller timer preservation",
+            "idle native registry",
+            "all installed file hashes"
+          ]
+        }
+      ],
+      "catalog_sha256": "3fe071223dd92b7ef82dc2a40e21e950289a122ea9ae63ee40c5e728db07c206",
+      "verifier_sha256": "1a0f861e155fccbcf09c7b9ace2941a91b83584c97d11ff6ceae07f451dfd448",
+      "scope": "Installed payload hashes cover all five plugins; runtime checks apply only to the recorded execution platform. Other platforms require their separate exact-binary qualification receipts."
+    }
+  },
+  "compatibility": "Only current documentation and publication evidence change after the tagged package commit. All installed files, five plugin bytes, runtime/build sources, CMG vendor payload, scientific inputs and acceptance criteria are unchanged. Prior source-bound records retain their original status.",
+  "limitations": [
+    "Runtime checks here are macOS arm64 only; the five plugin hashes bind the separate passed platform qualification.",
+    "Native Intel Mac hardware is unqualified; Intel runtime qualification used Rosetta.",
+    "Shared full-CMG Stata route remains Mac/Unix only. Windows established native routes were qualified separately."
+  ]
+}

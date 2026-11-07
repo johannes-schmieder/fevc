@@ -29,8 +29,12 @@ pass. The 63-file ZIP matches the tested 61-file installed payload exactly.
 See the prepublication checks and installation records beside the adoption manifest.
 Johannes accepted fereg's two inconclusive Mac timing cells as explicit release
 exceptions on November 6. Their measured status and all prior adverse evidence
-remain unchanged. Common-revision qualification is complete; publication and
-actual published-install verification are now in progress.
+remain unchanged. CMG 0.2.0 and fevc 0.5.1 are published. All eight actual
+published-install cases pass: tag/main/github/downloaded-ZIP fresh/replacement,
+all 61 installed file hashes, native component and pooled inference, and caller
+state/timer restoration. The release manifest binds package commit `117d09c5`
+and actual build source `94d94999`. See the [publication record](../native/cmg-consolidation-20261106/evidence/publication.json).
+Only documentation and evidence change after the immutable release tag.
 ## Previous checkpoint
 
 # GitHub release 0.5.0 — October 14, 2026
