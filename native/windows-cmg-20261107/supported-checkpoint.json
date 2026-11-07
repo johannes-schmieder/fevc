@@ -1,0 +1,16 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-SUPPORTED-CHECKPOINT-V1",
+  "status": "DEVELOPMENT_PILOT_PASS_CONFIRMATION_REGISTERED",
+  "pilot_run": "win-20261107T135332Z-79b4b20b",
+  "pilot_campaign_sha256": "2b49ce7122192bc1606781a76509566f7af548313fb9220c5012b7eb3a604189",
+  "pilot_cleanup_verified": true,
+  "pilot_measurements": "Development-only; excluded from all confirmation comparisons.",
+  "confirmation_campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+  "groups_required": 18,
+  "binary_and_production_changes": false,
+  "threshold_changes": false,
+  "original_failure_preserved": "performance-checkpoint.json",
+  "pilot_evidence": "evidence/windows-supported-pilot",
+  "confirmation_evidence": "evidence/windows-supported-campaign.json",
+  "published": false
+}

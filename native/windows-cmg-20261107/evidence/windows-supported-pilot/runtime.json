@@ -1,0 +1,55 @@
+{
+  "all_started_wrappers_terminal": true,
+  "backend_acceptance_sha256": "71b3a144e989e3f9f515387e892909698b0d6e704c04d32c4c40af8ecf76deca",
+  "campaign_sha256": "2b49ce7122192bc1606781a76509566f7af548313fb9220c5012b7eb3a604189",
+  "cleanup_verified": true,
+  "identity_cleanup": {
+    "source": "unchanged_clean_transport_no_overlay",
+    "status": "PASS"
+  },
+  "input_identity_sha256": "49532dc43e27571055c35b858fe69910acce79948d4ca252d11807bceafe52a5",
+  "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "proposal_manifest_sha256": "1bc1dfa655d04a516e5ea5d1718d220f6e3f64e982369b09497119ae1d514ddb",
+  "run": {
+    "artifacts": [
+      {
+        "bytes": 5552128,
+        "name": "fevc_rust_windows_x64.plugin",
+        "sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+      },
+      {
+        "bytes": 6856,
+        "name": "windows-build.json",
+        "sha256": "0e1e7107e684508c3e6008fb7fb381e48358ac146a4a7c563a07687ae7817a0c"
+      },
+      {
+        "bytes": 3321,
+        "name": "windows-project-checks.json",
+        "sha256": "2a5cf5a56a3a5c840093081edcc3bbb79974bae7504067f8eaaeb1955c85fb60"
+      }
+    ],
+    "error_code": null,
+    "failure_stage": "complete",
+    "input_identity_sha256": "49532dc43e27571055c35b858fe69910acce79948d4ca252d11807bceafe52a5",
+    "receipt_sha256": "921ae2935db7f40753762bb8e52f9661260a2a3ac110306f69949418725bb491",
+    "run_id": "win-20261107T135332Z-79b4b20b",
+    "source_archive_sha256": "ec6896819d8d04b277d7634f47c791d18a3a9398b237c22968d74385d6dfa491",
+    "source_revision": "commit-7a574a5ba92ab347ecfe06c7c9850758c38b180d",
+    "stata_rc": null,
+    "status": "PASS",
+    "wrapper_exit": 0
+  },
+  "schema": "FEVC-WINDOWS-CMG-GROUP-RUN-V1",
+  "selection": {
+    "campaign_sha256": "2b49ce7122192bc1606781a76509566f7af548313fb9220c5012b7eb3a604189",
+    "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+    "hosted_build_run_id": "42313440397",
+    "hosted_rust_run_id": "42313444009",
+    "performance_arm": "incumbent",
+    "performance_block": 0,
+    "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+    "qualification_group": "performance"
+  },
+  "status": "PASS",
+  "transport_commit": "7a574a5ba92ab347ecfe06c7c9850758c38b180d"
+}

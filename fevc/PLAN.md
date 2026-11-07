@@ -28,10 +28,14 @@ pooled inference, MCSE, cancellation, memory policies and replacement installs.
 The first incumbent performance block failed with Stata r(198) during command
 execution; cleanup passed and the campaign stopped. The failure is preserved
 in the [performance checkpoint](../native/windows-cmg-20261107/performance-checkpoint.json).
-Its diagnosis and a valid complete comparison remain; see the
-[runtime checkpoint](../native/windows-cmg-20261107/runtime-checkpoint.json) and the
-[private checkpoint](../native/windows-cmg-20261107/private-checkpoint.json). The owner approved temporary
-qualification branch, which will be deleted after release. New plugin bytes
+The failed request forced a full-CMG route unavailable in Windows 0.5.1.
+A separate native Windows development pilot passed all 12 corrected incumbent
+cases using supported diagonal routes and mover-only weighted observation.
+Its times are excluded from confirmation. A new complete 18-group campaign is
+frozen with unchanged production, candidate binaries and acceptance thresholds;
+see the [supported checkpoint](../native/windows-cmg-20261107/supported-checkpoint.json).
+The original runtime passes and failure remain immutable. The owner-approved
+temporary qualification branch will be deleted after release. New plugin bytes
 are not adopted.
 The installation payload retains all five released 0.5.1 plugin hashes.
 Use source-bound Windows smoke and bounded point, attachment, lifecycle/memory,

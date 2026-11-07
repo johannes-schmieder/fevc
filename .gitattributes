@@ -88,3 +88,5 @@ native/windows-cmg-20261107/evidence/windows-smoke/receipt.json -text whitespace
 
 # Preserve the failed first Windows performance controller receipt.
 native/windows-cmg-20261107/evidence/windows-performance-attempt1/receipt.json -text whitespace=cr-at-eol
+
+native/windows-cmg-20261107/evidence/windows-supported-pilot/receipt.json -text whitespace=cr-at-eol

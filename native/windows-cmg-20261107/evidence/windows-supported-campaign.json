@@ -1,0 +1,206 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-CAMPAIGN-V1",
+  "registration_kind": "CONFIRMATION",
+  "created_at": "2026-11-07T14:01:05.030611+00:00",
+  "cmg_commit": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "candidate": {
+    "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+    "binary_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+    "hosted_build_run_id": "42366984005",
+    "hosted_rust_run_id": "42366985923",
+    "hosted_spi_run_id": "42367941176"
+  },
+  "incumbent": {
+    "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+    "package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
+    "binary_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+    "hosted_build_run_id": "42313440397",
+    "hosted_rust_run_id": "42313444009"
+  },
+  "harness_sha256": "85b7c22d064b860fdabf50409062955b23fbb870459860a55cf7b49dbb9fd0c2",
+  "protocol_sha256": "6031b373385ccc5cb470845e422fd0d00f4f1061ca2a74d0e33043734587c423",
+  "performance_driver_sha256": "ea38ae19d388e304c3f3d83619e996abbec5f3833c1d19224edcb87719645f6f",
+  "qualification_harness_source_commit": "ca4c230f586b6192ad88e6e908cff72619924086",
+  "protocol": {
+    "schema": "FEVC-WINDOWS-CMG-PROTOCOL-V1",
+    "status": "FROZEN_COMMON_SUPPORT_CORRECTION_BEFORE_NEW_CONFIRMATION",
+    "platform": {
+      "os": "Windows Server 2022",
+      "arch": "x86_64",
+      "stata": "19 MP",
+      "native_workers": [
+        1,
+        2
+      ]
+    },
+    "scope": "Same four corrected targets, retained sample, deletion, nuisance, weights, projections and component inference within each paired request. Compare accepted 0.5.1 Windows automatic/diagonal routes with full shared CMG. Weighted observation deletion uses the mover population supported by both versions.",
+    "candidate_cmg": "e5613e81fb3b03c78de98658b372646fa802aabb",
+    "candidate_levels": 128,
+    "incumbent_package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
+    "incumbent_build_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+    "incumbent_windows_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+    "driver": "fevc/tests/stata/test_windows_cmg_performance.do",
+    "groups": [
+      "smoke",
+      "legacy",
+      "cmg_point",
+      "cmg_attachments",
+      "cmg_lifecycle",
+      "installation"
+    ],
+    "schedule": [
+      {
+        "block": 0,
+        "seed": 8675309,
+        "arms": [
+          "incumbent",
+          "candidate"
+        ]
+      },
+      {
+        "block": 1,
+        "seed": 8675311,
+        "arms": [
+          "candidate",
+          "incumbent"
+        ]
+      },
+      {
+        "block": 2,
+        "seed": 8675317,
+        "arms": [
+          "incumbent",
+          "candidate"
+        ]
+      },
+      {
+        "block": 3,
+        "seed": 8675323,
+        "arms": [
+          "candidate",
+          "incumbent"
+        ]
+      },
+      {
+        "block": 4,
+        "seed": 8675329,
+        "arms": [
+          "incumbent",
+          "candidate"
+        ]
+      },
+      {
+        "block": 5,
+        "seed": 8675333,
+        "arms": [
+          "candidate",
+          "incumbent"
+        ]
+      }
+    ],
+    "execution": {
+      "licensed_processes": 1,
+      "seconds_limit_per_group": 900,
+      "fresh_process_per_arm_block": true,
+      "warmup_commands_per_cell": 1,
+      "timed_complete_commands_per_cell": 1,
+      "cells_per_arm_block": 12,
+      "total_timed_commands": 144,
+      "resampling_or_exclusions": false
+    },
+    "cases": [
+      {
+        "case": 0,
+        "name": "automatic mover ring",
+        "rows": 2048,
+        "workers": 512,
+        "firms": 256,
+        "probes": 32,
+        "tolerance": 1e-10
+      },
+      {
+        "case": 1,
+        "name": "generic match",
+        "rows": 32000,
+        "workers": 4000,
+        "firms": 1000,
+        "probes": 32,
+        "tolerance": 1e-10
+      },
+      {
+        "case": 2,
+        "name": "generic observation",
+        "rows": 131072,
+        "workers": 16384,
+        "firms": 2048,
+        "probes": 32,
+        "tolerance": 1e-10
+      },
+      {
+        "case": 3,
+        "name": "controlled weighted mover-only observation",
+        "rows": 288,
+        "probes": 32,
+        "tolerance": 1e-10,
+        "stayers": "movers"
+      },
+      {
+        "case": 4,
+        "name": "firm projection",
+        "rows": 240,
+        "probes": 200,
+        "tolerance": 1e-12
+      },
+      {
+        "case": 5,
+        "name": "pooled structured-common highrank inference",
+        "rows": 512,
+        "probes": 200,
+        "tolerance": 1e-10,
+        "inference_simulations": 100,
+        "inference_seed": 1791
+      }
+    ],
+    "acceptance": {
+      "same_retained_sample": true,
+      "finite_results": true,
+      "complete_residual": "max(1e-11,10*effective_phase_tolerance)",
+      "four_target_equivalence": "max(1e-8*max(1,abs(incumbent),abs(candidate)),0.1*max(incumbent_mcse,candidate_mcse))",
+      "complete_command_time": "candidate median <= incumbent median + max(0.05*incumbent median,1 millisecond)",
+      "all_12_cells_required": true,
+      "all_18_group_receipts_required": true,
+      "retain_adverse_and_inconclusive_results": true
+    },
+    "qualification_limitations": [
+      "One/two native Windows workers; higher concurrency covered only by Rust tests.",
+      "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested.",
+      "Performance compares requests supported by both versions. Weighted observation deletion uses movers; broader observation/both capability is qualified by runtime/oracle tests without an incumbent Windows native timing comparison."
+    ],
+    "routes": {
+      "candidate": {
+        "case_0": "engine(auto) preconditioner(auto)",
+        "cases_1_to_5": "engine(generic) preconditioner(cmg)"
+      },
+      "incumbent": {
+        "case_0": "engine(auto) preconditioner(auto)",
+        "cases_1_to_5": "engine(generic) preconditioner(diagonal)"
+      },
+      "batch": "auto",
+      "weighted_observation_population": "movers in both arms; identical generated data and retained sample"
+    },
+    "previous_failed_registration": {
+      "campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+      "run_id": "win-20261107T133151Z-6316cc50",
+      "result": "First incumbent block failed with r(198); no candidate performance run started. Failed-run collection returns no artifacts, so partial measurements are unavailable and are not passing evidence.",
+      "diagnosis": "Local no-timing reproduction with Windows platform selection rejects case 1 forced generic CMG with UNSUPPORTED_FEATURE [engine_full_cmg_receipt]. All 12 corrected automatic/diagonal common-support requests pass the local diagnostic.",
+      "correction": "Use the accepted incumbent diagonal route for explicit generic comparisons. The weighted-observation performance request is mover-only in both arms; broader candidate observation/both support remains covered by native runtime qualification.",
+      "unchanged": "Candidate/CMG/source/binary, generated data, seeds, probes, worker counts, schedule, warmups, repetitions and acceptance thresholds."
+    }
+  },
+  "supersedes_failed_campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+  "development_pilot": {
+    "run_id": "win-20261107T135332Z-79b4b20b",
+    "record_sha256": "3fe7184fc3b919d8cbc60468da0884abe0c6253c53d6ab8bd0ea3dadf4573649",
+    "scope": "Accepted incumbent requests and complete generator/validator/receipt path; development times are not confirmation evidence."
+  }
+}
