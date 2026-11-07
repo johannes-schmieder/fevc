@@ -1,0 +1,36 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-LOCAL-PACKAGE-CHECKPOINT-V1",
+  "status": "LOCAL_INSTALL_PASS_WINDOWS_CONFIRMATION_PENDING",
+  "source_commit": "3421a7502e655c6d4e875b4820ff0b5310a05140",
+  "build_source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "source_checks": {
+    "python_passed": 952,
+    "assembly": "PASS",
+    "vendor": "PASS",
+    "generated_parity": "PASS"
+  },
+  "installation": {
+    "platform": "Darwin",
+    "architecture": "arm64",
+    "fresh": "PASS",
+    "replacement": "PASS",
+    "installed_files_per_case": 61,
+    "native_plugin_identities": 5
+  },
+  "published": false,
+  "repository_plugins_adopted": false,
+  "evidence": [
+    {
+      "path": "evidence/packaging/candidate-payload.json",
+      "sha256": "7a3f4dc70d79675e242f59d5d9ee7860a896235e7d7f883f8f406f974d0d91f6"
+    },
+    {
+      "path": "evidence/packaging/local-install.json",
+      "sha256": "a1fbd001db4b170f7210c7337c25fdbd12ec455fbe7f2f5df4171a7becdbf5ec"
+    },
+    {
+      "path": "evidence/packaging/source-checks.txt",
+      "sha256": "bbdc09592aed07f1c95d5871627be78add8a470296240cca2ce371c807e0690b"
+    }
+  ]
+}

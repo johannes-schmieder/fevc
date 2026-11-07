@@ -38,6 +38,10 @@ The original runtime passes and failure remain immutable. The owner-approved
 temporary qualification branch will be deleted after release. New plugin bytes
 are not adopted.
 The installation payload retains all five released 0.5.1 plugin hashes.
+The assembled candidate separately passes local fresh/replacement installation:
+all 61 file hashes and native inference/caller-state checks. All 952 current
+Python tests and assembly/vendor/generated-parity checks pass. See the
+[local package checkpoint](../native/windows-cmg-20261107/local-package-checkpoint.json).
 Use source-bound Windows smoke and bounded point, attachment, lifecycle/memory,
 performance and installation groups; one/two native workers on the existing
 Windows x86-64 Stata/MP 19 machine. Preserve the 900-second limit and strict
