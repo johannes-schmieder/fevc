@@ -1,0 +1,71 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-TRANSPORT-COMPATIBILITY-V1",
+  "status": "PASS",
+  "before_transport_commit": "48f69430cc52201f9ad802f4b2c45d5c7b5153cb",
+  "after_transport_commit": "fb69ba7183166b753f39c6cedd8cf87fc8667ed7",
+  "changed_path": "windows-incumbent/fevc.pkg",
+  "before_sha256": "3fe071223dd92b7ef82dc2a40e21e950289a122ea9ae63ee40c5e728db07c206",
+  "after_sha256": "438cad898670798aebd66792b5f3ee86785c304a87a469011061681aa5c03ea6",
+  "reason": "Offline install-only preflight found that the unchanged builder copies f entries but omits F ancillary files. Normalize incoming incumbent staging entries to f; the builder renders installed license entries back to F. All 61 released payload bytes remain exact.",
+  "preflight_failure": {
+    "status": "FAIL",
+    "scope": "Offline packaging preflight only; no estimator execution or campaign measurement",
+    "missing_F_ancillary_files_install": [
+      "CATALOG_INSTALL_RC=601"
+    ],
+    "installed_licenses": 0
+  },
+  "preflight_pass": {
+    "status": "PASS",
+    "scope": "Local install-only preflight; exact Windows builder file-selection and catalog rendering, including duplicate plugin line",
+    "catalog_transform": "Uppercase F entries converted to f only in incoming staging catalog, so the unchanged builder copies all files and renders licenses back to F",
+    "installed_license_files": 2,
+    "install_result": [
+      "CATALOG_INSTALL_RC=0"
+    ],
+    "prior_catalog_sha256": "3fe071223dd92b7ef82dc2a40e21e950289a122ea9ae63ee40c5e728db07c206",
+    "corrected_input_catalog_sha256": "438cad898670798aebd66792b5f3ee86785c304a87a469011061681aa5c03ea6"
+  },
+  "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "incumbent_package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
+  "campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+  "harness_sha256": "85b7c22d064b860fdabf50409062955b23fbb870459860a55cf7b49dbb9fd0c2",
+  "unchanged": [
+    "all production and vendor source",
+    "all five candidate DLL/plugin bytes",
+    "incumbent 61 installed payload bytes",
+    "runtime and performance harness",
+    "scientific fixtures, seeds, protocol, thresholds and schedule",
+    "campaign manifest"
+  ],
+  "reused_runs": [
+    {
+      "group": "cmg_attachments",
+      "run_id": "win-20261107T131351Z-8c5f90d0",
+      "transport_commit": "48f69430cc52201f9ad802f4b2c45d5c7b5153cb",
+      "receipt_sha256": "b39f7264534fb9632b5598fa3991c61d7fa5a0916107d3e916144e66f7b2e4d2"
+    },
+    {
+      "group": "cmg_point",
+      "run_id": "win-20261107T130716Z-e47f7994",
+      "transport_commit": "479c29a928526a8e9f10bb767248d0b13076c4b2",
+      "receipt_sha256": "050375811643cee4502b1d040e7e25f091b3df2aabd45b0d15831c40b7706a87"
+    },
+    {
+      "group": "legacy",
+      "run_id": "win-20261107T125732Z-5e330950",
+      "transport_commit": "950a27a7d2b1aa00d123c8cb081f62cf4b90d22d",
+      "receipt_sha256": "d79c8ee5f690c558f85774f923fd462c71f6f4b95bbbdd5c7693e98ea6da0bb6"
+    },
+    {
+      "group": "smoke",
+      "run_id": "win-20261107T125058Z-204f546f",
+      "transport_commit": "8922c60ed2915ae47ae91a6fcb889bf0bfa61ae0",
+      "receipt_sha256": "efbd22ea2a25a6c23f3167f72e92c4689fce3caabbd92840d7b411690839fe8b"
+    }
+  ],
+  "reuse_scope": "The four completed candidate groups stage fevc/ and never load windows-incumbent/. Their original receipts remain unchanged and bound to their original archives. Installation and all performance groups have not started.",
+  "performance_measurements_before_fix": 0,
+  "scientific_retries": 0,
+  "resampling_or_exclusions": 0
+}
