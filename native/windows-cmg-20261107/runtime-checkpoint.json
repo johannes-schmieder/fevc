@@ -1,0 +1,153 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-RUNTIME-CHECKPOINT-V1",
+  "created_at": "2026-11-07T13:33:25.127355+00:00",
+  "status": "ALL_SIX_RUNTIME_INSTALLATION_GROUPS_PASS_PERFORMANCE_PENDING",
+  "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "binary_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+  "campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+  "groups": [
+    {
+      "group": "smoke",
+      "run_id": "win-20261107T125058Z-204f546f",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "transport_commit": "8922c60ed2915ae47ae91a6fcb889bf0bfa61ae0",
+      "source_archive_sha256": "3691ba04623fb0eeff077759bb20ec5a98d0fda3ab07f32baadb2a68cf98aa42",
+      "controller_receipt_sha256": "efbd22ea2a25a6c23f3167f72e92c4689fce3caabbd92840d7b411690839fe8b",
+      "checks_sha256": "dad1966abc2f0f04b1a6052839b6c4c0741255ece68d36de3c1fbd7042874aa6",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_boundary"
+      ]
+    },
+    {
+      "group": "legacy",
+      "run_id": "win-20261107T125732Z-5e330950",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "transport_commit": "950a27a7d2b1aa00d123c8cb081f62cf4b90d22d",
+      "source_archive_sha256": "9b7dd039ba59ff0a3ea7ccc4c69ec2b58159e78f5cbe1a4f0ac2467307333d10",
+      "controller_receipt_sha256": "d79c8ee5f690c558f85774f923fd462c71f6f4b95bbbdd5c7693e98ea6da0bb6",
+      "checks_sha256": "6a04059de0a1f7cf70e9ae5552b6bc7ae0e9e58098d42ce17eaf9b72270002bc",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "observation_component",
+        "individual_component",
+        "match_component",
+        "pooled_deletion",
+        "mcse_modes",
+        "mcse_attachments",
+        "centering_mean",
+        "centering_exact",
+        "centering_jla",
+        "centering_options"
+      ]
+    },
+    {
+      "group": "cmg_point",
+      "run_id": "win-20261107T130716Z-e47f7994",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "transport_commit": "479c29a928526a8e9f10bb767248d0b13076c4b2",
+      "source_archive_sha256": "a46c67b5e79009480fdab445ffe118077a2cae829663b64a13db6afcbcc43716",
+      "controller_receipt_sha256": "050375811643cee4502b1d040e7e25f091b3df2aabd45b0d15831c40b7706a87",
+      "checks_sha256": "d8638f47dd8ec77a123f85d10673a0e0b4d39e801611fefa02fc619953580774",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_boundary",
+        "cmg_point_1",
+        "cmg_point_2",
+        "cmg_controlled_1",
+        "cmg_controlled_2",
+        "cmg_pooled",
+        "cmg_mcse_1",
+        "cmg_mcse_2",
+        "cmg_v2"
+      ]
+    },
+    {
+      "group": "cmg_attachments",
+      "run_id": "win-20261107T131351Z-8c5f90d0",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "transport_commit": "48f69430cc52201f9ad802f4b2c45d5c7b5153cb",
+      "source_archive_sha256": "05bfd41cff3c5800fb7a05fa6a18a8db0305bb8f021c711f9e6c0bd719452bfc",
+      "controller_receipt_sha256": "b39f7264534fb9632b5598fa3991c61d7fa5a0916107d3e916144e66f7b2e4d2",
+      "checks_sha256": "d11b24858fa9326bd688ebe276ff2551becf54254e4b23e8e753f5cf64f20457",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_attachments_1",
+        "cmg_attachments_2",
+        "cmg_pooled_common_1",
+        "cmg_pooled_common_2",
+        "cmg_pooled_leverage_1",
+        "cmg_pooled_leverage_2"
+      ]
+    },
+    {
+      "group": "cmg_lifecycle",
+      "run_id": "win-20261107T132037Z-28166c88",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "transport_commit": "e6f58e1ffef9e363307b0786435662754ab8d5d7",
+      "source_archive_sha256": "49ecd0b0eaad9810b11df43fc9a8e381967accb965f6bb7a820a595db1a9fc63",
+      "controller_receipt_sha256": "36ee80c29319fa1135dae0b74843e8f1d137cc41ef70052b9c63f4d3e8bf7f72",
+      "checks_sha256": "79e871f0167916c9e029b9e74b823d638c9690df9d2a26fb468e447e6e88baf4",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "cmg_lifecycle_1",
+        "cmg_lifecycle_2"
+      ]
+    },
+    {
+      "group": "installation",
+      "run_id": "win-20261107T132620Z-e7064f1f",
+      "status": "PASS",
+      "cleanup_verified": true,
+      "transport_commit": "23d53afbbc1a03ba9ea00b23e927dbc3c0905269",
+      "source_archive_sha256": "1a2c8f0997b005a9e14992ad8bcac2a7565e61588fa8739358b5040294841cb8",
+      "controller_receipt_sha256": "568ca421257284836b4e995e75b42c6b426fb102ba64c409872b4e88110a0651",
+      "checks_sha256": "d9d68bf0cf25f906ad9bd32adbfcfad9f32a15165782f7e19fccf517e6e0434d",
+      "completed_tests": [
+        "pe_import_export",
+        "clean_install",
+        "lifecycle",
+        "point_mean",
+        "projection_mean",
+        "registry_idle",
+        "replacement_install",
+        "cmg_boundary"
+      ]
+    }
+  ],
+  "performance_groups_passed": 0,
+  "performance_groups_required": 12,
+  "candidate_adopted": false,
+  "published": false,
+  "repair_cycles_used": 1
+}

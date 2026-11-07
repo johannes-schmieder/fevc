@@ -37,8 +37,8 @@ PE audit, clean installation, lifecycle, point/projection estimates, CMG boundar
 checks and idle registry, with independently verified cleanup and stopped state.
 
 Remaining work follows the [Windows qualification workflow](../../rust/stata_backend/WINDOWS_CMG_QUALIFICATION.md):
-finish the five remaining runtime groups and twelve frozen
-performance groups, adopt all five exact binaries, publish 0.5.2, and verify
+finish the twelve frozen performance groups (all six runtime and installation
+groups [pass](runtime-checkpoint.json)), adopt all five exact binaries, publish 0.5.2, and verify
 actual published fresh/replacement installations. The release command rejects
 legacy Windows evidence for this version. No confirmation result has been
 resampled or excluded. The frozen campaign is executing serially and stops
