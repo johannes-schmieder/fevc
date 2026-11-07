@@ -99,3 +99,45 @@ def test_current_adopted_payload_and_catalogs_agree():
     files, _ = release.adopted_package(root, root / "native/pooled-component-20261010/manifest.json",
                                      allow_pending_windows=True)
     assert len(files) == 63
+
+
+def qualified(adopted):
+    root, path = adopted
+    manifest = json.loads(path.read_text())
+    manifest["schema"] = "FEVC-NATIVE-ADOPTION-V1"
+    for row in manifest["binaries"]:
+        row["runtime_qualification"] = "PASS"
+    manifest["windows_qualification"] = manifest.pop("windows_manual_adoption")
+    path.write_text(json.dumps(manifest))
+    return root, path
+
+
+def test_generic_adoption_requires_pass_even_with_legacy_flag(adopted):
+    root, path = qualified(adopted)
+    manifest = json.loads(path.read_text())
+    manifest["binaries"][-1]["runtime_qualification"] = "OWNER_MANUAL_TEST_PENDING"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="runtime qualification incomplete"):
+        release.adopted_package(root, path, allow_pending_windows=True)
+
+
+def test_generic_adoption_requires_qualification_evidence(adopted):
+    root, path = qualified(adopted)
+    manifest = json.loads(path.read_text())
+    manifest["windows_manual_adoption"] = manifest.pop("windows_qualification")
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="missing Windows qualification"):
+        release.adopted_package(root, path)
+
+
+def test_generic_adoption_retains_all_verified_binaries(adopted):
+    files, manifest = release.adopted_package(*qualified(adopted))
+    assert len([f for f in files if str(f.relative).endswith(".plugin")]) == 5
+    assert not any("pending" in x.lower() for x in release.qualification_limitations(manifest))
+    assert any("Rosetta" in x for x in release.qualification_limitations(manifest))
+    assert release.zip_package(files) == release.zip_package(files)
+
+
+def test_legacy_adoption_retains_runtime_limitation(adopted):
+    _, manifest = release.adopted_package(*adopted, allow_pending_windows=True)
+    assert any("Windows" in x and "pending" in x for x in release.qualification_limitations(manifest))

@@ -18,7 +18,8 @@ import build_release_artifact as portable
 
 def adopted_package(repo: Path, manifest_path: Path, *, allow_pending_windows: bool = False):
     adoption = json.loads(manifest_path.read_bytes())
-    if adoption.get("schema") != "FEVC-POOLED-COMPONENT-ADOPTION-V1":
+    if adoption.get("schema") not in {"FEVC-POOLED-COMPONENT-ADOPTION-V1",
+                                      "FEVC-NATIVE-ADOPTION-V1"}:
         raise ValueError("unsupported adoption manifest")
     source = adoption.get("build_source_commit", "")
     if not portable.COMMIT_RE.fullmatch(source):
@@ -29,7 +30,8 @@ def adopted_package(repo: Path, manifest_path: Path, *, allow_pending_windows: b
     files = list(portable.package_files(repo / "fevc"))
     for row in rows:
         status = row.get("runtime_qualification")
-        pending = (row["name"] == "fevc_rust_windows_x64.plugin"
+        pending = (adoption["schema"] == "FEVC-POOLED-COMPONENT-ADOPTION-V1"
+                   and row["name"] == "fevc_rust_windows_x64.plugin"
                    and status == "OWNER_MANUAL_TEST_PENDING" and allow_pending_windows)
         if status != "PASS" and not pending:
             raise ValueError("runtime qualification incomplete: " + row["name"])
@@ -39,8 +41,12 @@ def adopted_package(repo: Path, manifest_path: Path, *, allow_pending_windows: b
         if portable.sha256(payload) != row.get("sha256") or len(payload) != row.get("bytes"):
             raise ValueError("binary hash or size mismatch: " + row["name"])
         files.append(portable.PackageFile(PurePosixPath(row["name"]), payload))
-    for row in [*adoption.get("evidence", []), adoption["corresponding_source"],
-                adoption["windows_manual_adoption"]]:
+    windows = (adoption.get("windows_qualification")
+               if adoption["schema"] == "FEVC-NATIVE-ADOPTION-V1"
+               else adoption.get("windows_manual_adoption"))
+    if not windows:
+        raise ValueError("missing Windows qualification or explicit manual-adoption evidence")
+    for row in [*adoption.get("evidence", []), adoption["corresponding_source"], windows]:
         payload = portable._read_regular(manifest_path.parent, portable._safe_relative(row["path"]))
         if portable.sha256(payload) != row["sha256"]:
             raise ValueError("adoption evidence hash mismatch: " + row["path"])
@@ -65,6 +71,15 @@ def zip_package(files: tuple[portable.PackageFile, ...]) -> bytes:
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, item.data, compresslevel=9)
     return buffer.getvalue()
+
+
+def qualification_limitations(adoption: dict) -> list[str]:
+    limitations = ["Mac x86-64 runtime qualification uses Rosetta.",
+                   "Package validation does not expand scientific or platform claims."]
+    if any(row["name"] == "fevc_rust_windows_x64.plugin"
+           and row["runtime_qualification"] != "PASS" for row in adoption["binaries"]):
+        limitations.insert(0, "Windows Stata runtime testing remains pending.")
+    return limitations
 
 
 def main() -> int:
@@ -100,12 +115,12 @@ def main() -> int:
         "archive": name, "archive_sha256": portable.sha256(archive),
         "adoption_manifest_sha256": portable.sha256(args.adoption_manifest.read_bytes()),
         "binaries": adoption["binaries"], "corresponding_source": source_row,
-        "windows_runtime_pending_authorized": args.allow_pending_windows,
+        "windows_runtime_pending_authorized": args.allow_pending_windows and any(
+            row["runtime_qualification"] == "OWNER_MANUAL_TEST_PENDING"
+            for row in adoption["binaries"]),
         "files": [{"path": "fevc/" + str(item.relative), "sha256": portable.sha256(item.data),
                    "size": len(item.data)} for item in files],
-        "limitations": ["Windows Stata runtime testing remains pending.",
-                        "Mac x86-64 runtime qualification uses Rosetta.",
-                        "Package validation does not expand scientific or platform claims."],
+        "limitations": qualification_limitations(adoption),
     }
     output = args.output_dir
     output.mkdir(parents=True, exist_ok=False)
