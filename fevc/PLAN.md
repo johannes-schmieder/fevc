@@ -1,34 +1,33 @@
-# Windows full-CMG 0.5.2 adoption — November 7, 2026
+# Windows full-CMG 0.5.2 released — November 7, 2026
 
-All five plugins are adopted from build source
-`ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`, using unmodified common CMG
-`e5613e81fb3b03c78de98658b372646fa802aabb` with explicit 128 levels.
-The [adoption manifest](../native/windows-cmg-20261107/manifest.json) binds their
-hashes, corresponding source and exact native qualification evidence.
+[fevc 0.5.2](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
+is published at package commit `3744dd68e808c8a7b7b5cede9cf364c27da3d22d`.
+All five plugins share qualified build source
+`ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4` and unmodified common CMG
+`e5613e81fb3b03c78de98658b372646fa802aabb`, explicitly configured to 128 levels.
+The Windows full-CMG platform restriction is removed for supported routes.
 
-The frozen Windows confirmation
-`07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a`
-passes all 18 groups and all 12 scientific and timing cells. All 144 timed
-commands are retained under the unchanged six-pair median allowance
-`max(5%, 1 ms)`, without resampling or exclusions. Each run verifies collection,
-source identity, cleanup and shutdown; the final inspector confirms stopped.
-See the [complete confirmation](../native/windows-cmg-20261107/evidence/confirmation-E/result-summary.json).
-Earlier C failures and D/E development pilots remain unchanged.
+The [final audit](../native/windows-cmg-20261107/final-audit.json) binds all
+binary and source hashes, exact release assets, platform evidence and cleanup.
+All 18 Windows groups, 144 retained timed commands and 12 scientific/timing
+cells pass the frozen rules without exclusions or resampling. Mac arm64/Rosetta,
+SCC Linux smoke/full/native/installed, hosted builds and Rust/MSRV checks pass.
+The final package passes 952 Python tests, source/vendor/license/assembly checks,
+and published-commit Source checks and Rust backend CI.
 
-Mac arm64/Rosetta thin/universal native and installed qualification, SCC smoke
-`8502096` and full job `8502097`, and hosted Windows package/Rust/SPI checks pass.
-Exact E local HTTP fresh/replacement installs pass on Mac arm64, checking all
-61 installed file hashes. All 63 final payload files equal that preflight.
-Source checks pass at E (952 Python tests, Rust workspace, Clippy, formatting,
-assembly and vendor/parity); final package checks are in progress.
+All eight actual tag/main/GitHub/downloaded-ZIP fresh/replacement installs pass
+on Mac arm64, verifying all 61 installed files and five plugin hashes per case,
+native and pooled inference, and caller-state/timer restoration. Published
+assets equal the verified local assets byte for byte. Separate Windows and
+Linux runtime receipts retain their exact E identities. The temporary hosted
+branch is deleted after verification, owned temporary transports are removed,
+and the Windows machine is stopped. Unrelated CMG work remains untouched.
 
-Next: finish source-compatible packaging checks, publish the authorized 0.5.2
-release, verify actual tag/main/GitHub/downloaded-ZIP fresh and replacement
-installations, record the final audit, then remove the approved temporary
-`qualify/windows-cmg-20261107` branch. No publication is claimed yet.
-Windows qualification covers one/two native workers and the registered fixtures.
-Mac x86-64 runtime qualification uses Rosetta; native Intel hardware and general
-statistical coverage are not claimed. Unrelated CMG work remains untouched.
+Earlier failed registrations, C timing failures, adverse D/E pilot observations,
+superseded incomplete qualifiers and the repaired package-test failure remain
+preserved. Windows runtime scope is one/two workers and the declared fixtures.
+Mac x86-64 tests use Rosetta; native Intel hardware, representative-scale
+performance and general statistical coverage are not claimed.
 
 ## Previous checkpoint
 

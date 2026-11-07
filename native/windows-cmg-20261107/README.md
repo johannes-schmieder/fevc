@@ -1,25 +1,24 @@
-# Qualified Windows full-CMG 0.5.2 payload
+# Published Windows full-CMG 0.5.2
 
-All five adopted plugins share build source
-`ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`, common unmodified CMG
-`e5613e81fb3b03c78de98658b372646fa802aabb`, and explicit 128 levels.
-The [manifest](manifest.json) binds the exact binaries, corresponding source
-and native evidence. Mac arm64/Rosetta, SCC Linux and hosted checks pass.
+[Release 0.5.2](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
+uses package commit `3744dd68e808c8a7b7b5cede9cf364c27da3d22d` and five plugins
+built at `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`. Common unmodified CMG is
+`e5613e81fb3b03c78de98658b372646fa802aabb`, with explicit 128 levels.
 
-The [registered confirmation](evidence/confirmation-E/result-summary.json)
-passes all 18 Windows groups and all 12 scientific and timing cells. All 144
-measurements remain in the [comparison](evidence/confirmation-E/comparison.json);
-no resampling, exclusions or threshold changes occurred. Cleanup and shutdown
-pass after every group, and the final inspector confirms the machine stopped.
-The earlier failed confirmation and development pilots below retain their
-original identities, adverse results and limited interpretation.
+The [final audit](final-audit.json) records exact assets, binary/source provenance,
+source-compatible packaging, all platform checks and cleanup. All 18 Windows
+groups and all 12 scientific/timing cells pass; all 144 measurements remain
+preserved. Mac arm64/Rosetta, SCC Linux and hosted qualification also pass.
+All eight actual published tag/main/GitHub/downloaded-ZIP fresh/replacement
+installations pass on Mac arm64, verifying 61 installed files and all five
+plugin hashes per case. Their receipts are under [publication evidence](evidence/publication-E/).
+The temporary qualification branch is deleted and Windows is stopped.
 
-[Exact E local fresh/replacement installations](evidence/packaging-E/binding.json)
-pass on Mac arm64, verifying all 61 installed files. The adopted 63-file payload
-matches that preflight exactly. Final packaging and actual published-install
-checks remain in progress; this checkpoint does not claim publication.
-Windows qualification covers one/two workers and the declared fixtures only.
-Mac x86-64 runtime tests use Rosetta; no native Intel or general coverage claim.
+The [adoption manifest](manifest.json) retains its prepublication checkpoint
+and exact qualification bindings; final publication status is recorded separately.
+Earlier failures and development pilots below retain their original outcomes.
+Windows runtime qualification covers one/two workers and declared fixtures;
+Mac x86-64 uses Rosetta. Native Intel hardware and general coverage are not claimed.
 
 ## Previous checkpoint
 

@@ -1,0 +1,18 @@
+{
+  "temporary_remote_branch_deleted": true,
+  "expected_branch_head": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "removed_temporary_transports": [
+    "/private/tmp/fevc-windows-20261107/transport",
+    "/private/tmp/fevc-windows-20261107/transport-supported-pilot",
+    "/private/tmp/fevc-windows-20261107/transport-supported-confirmation",
+    "/private/tmp/fevc-windows-20261107/transport-D-pilot",
+    "/private/tmp/fevc-windows-20261107/transport-E-pilot",
+    "/private/tmp/fevc-windows-20261107/transport-E-confirmation"
+  ],
+  "preserved": "All accepted and failed run evidence, scientific measurements, source archives and release assets remain in native/ or ignored local evidence. Unrelated repositories, branches and worktrees are untouched.",
+  "deleted_branch": "qualify/windows-cmg-20261107",
+  "verified_release_tag_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
+  "verified_main_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
+  "cleanup_verified_at_utc": "2026-11-07T20:20:21.007216+00:00",
+  "windows_state": "stopped"
+}

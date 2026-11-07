@@ -1,0 +1,387 @@
+{
+  "schema": "FEVC-GITHUB-RELEASE-PACKAGE-V1",
+  "version": "0.5.2",
+  "tag": "v0.5.2",
+  "package_source_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
+  "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "archive": "fevc-0.5.2.zip",
+  "archive_sha256": "66bb8233e217b0fa89898cade883881667222760af8492ef559c1a8f9b9dfd97",
+  "adoption_manifest_sha256": "37c25a4f74aee6f472e03754ccc7b266a5182f2dc7d007528c7b4c61cebd1837",
+  "binaries": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "c33c3eae146d7cd46fc5a1665e3ea1af20fe201ad15e22c029629cf9e881319b",
+      "bytes": 4049744,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "",
+      "replaces_sha256": "d995be6a336ef85dd60d5a06530d1fe888cbb6c5c8f5259870f7e050a65cb4e9"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "de18230d5ab00df0a6030119a649fecaefbbeaf78c38128317465872a0623809",
+      "bytes": 4808704,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta",
+      "replaces_sha256": "9f3894c1432552665df597f43a78cb98abb4f57667c1ba876106dbb92ec8a532"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "a39807df6d649033764a9871a1d2192c34019e4e4fc34c9c0cd7dcd133e200d8",
+      "bytes": 8883024,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta",
+      "replaces_sha256": "7835a787cb5eeb874fd9e772aedda5055062002d26f70200ba1295774b848b98"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "703420dfed173d983c7adb3638bc4151edfe6e15a636220f736b0f0155fba99b",
+      "bytes": 5086232,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "",
+      "replaces_sha256": "b87a90cfcba21fd3cc0d9f666f99d2ae4c7723ff02caa90b7cf67d5274e375e5"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+      "bytes": 5569024,
+      "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+      "runtime_qualification": "PASS",
+      "limitation": "Windows one/two native workers",
+      "replaces_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19"
+    }
+  ],
+  "corresponding_source": {
+    "path": "fevc-corresponding-source-ec5e1e0e.tar.gz",
+    "sha256": "5ce7fa18033ce85dc19027de2f5f6d4a1ea669a0f871e71b1c2f297568189650"
+  },
+  "windows_runtime_pending_authorized": false,
+  "files": [
+    {
+      "path": "fevc/LICENSE",
+      "sha256": "47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9",
+      "size": 1139
+    },
+    {
+      "path": "fevc/THIRD_PARTY_NOTICES.txt",
+      "sha256": "c3cd53e49a0d7323e81596758aaf6e78398f378a4dbe7bb1b29c65b52882835f",
+      "size": 48215
+    },
+    {
+      "path": "fevc/fevc.ado",
+      "sha256": "8e27551def4c50bb83479b976f93c5b16de646257e5d5b81645ea8cea5556841",
+      "size": 535292
+    },
+    {
+      "path": "fevc/fevc.mata",
+      "sha256": "d4615ee7ebdec24f11f5ae3eb92755b667a915beab9c5cebc1f66383add2eff1",
+      "size": 247941
+    },
+    {
+      "path": "fevc/fevc.pkg",
+      "sha256": "3fe071223dd92b7ef82dc2a40e21e950289a122ea9ae63ee40c5e728db07c206",
+      "size": 1928
+    },
+    {
+      "path": "fevc/fevc.sthlp",
+      "sha256": "0538b950d5497c98c0a1ba736bbe2e78b5d5e52fe59601083189c8b21aa24711",
+      "size": 40663
+    },
+    {
+      "path": "fevc/fevc__centering.ado",
+      "sha256": "dc9041fc2c6fd46af8013f2de16090e18cd4bffac704ae5c0d34af95b5a53d78",
+      "size": 4554
+    },
+    {
+      "path": "fevc/fevc__component_model_route.ado",
+      "sha256": "be048b73f7405dadca56f778e5977945d5948e8b45332b21befbbb3fe875e9fb",
+      "size": 10113
+    },
+    {
+      "path": "fevc/fevc__control_failure_post.ado",
+      "sha256": "609298f4d852e224cbc00962ee5a7c9dfb912a57ea06e37dd38ee74bc89304e4",
+      "size": 1297
+    },
+    {
+      "path": "fevc/fevc__display.ado",
+      "sha256": "2ad9e0837bcd81e53eb3f3cf6adb2f4c84d800edc3410fa8f194c9b80a875207",
+      "size": 22527
+    },
+    {
+      "path": "fevc/fevc__exact_inference_model_post.ado",
+      "sha256": "4906158e7c7ac44d715ed9bc4c39e92f3b64942219f67cf8aa778a794b83b79a",
+      "size": 6731
+    },
+    {
+      "path": "fevc/fevc__failure_guidance.ado",
+      "sha256": "2dc889571b85425f0279aad52a190d10c96e2ddf6526f021deb0f624935e75c8",
+      "size": 10391
+    },
+    {
+      "path": "fevc/fevc__hybrid_sample.ado",
+      "sha256": "893648d5b2a2d1973ba093d7fb2d25393e5aedce1f2ce859b57a846202399b4d",
+      "size": 1075
+    },
+    {
+      "path": "fevc/fevc__lifecycle.ado",
+      "sha256": "727d7d1de813826687f528172c221ed549c5693069c3b225ea0155a4f8ccfe24",
+      "size": 17090
+    },
+    {
+      "path": "fevc/fevc__memory_options.ado",
+      "sha256": "7c3f07a2b78627e0f5a0e55a13ac598b27d0d574b08945bb5ab40b09eef5c97a",
+      "size": 1502
+    },
+    {
+      "path": "fevc/fevc__native_threads.ado",
+      "sha256": "c8698b24977c13574936022feade3dbe7c1859516e22e593a602f39951f98117",
+      "size": 3630
+    },
+    {
+      "path": "fevc/fevc__numerical.ado",
+      "sha256": "ca5b5bdc80682d73e89d22dc3d00b78230e380d9b538f74a583bf18d6af00e55",
+      "size": 13427
+    },
+    {
+      "path": "fevc/fevc__observation_population.ado",
+      "sha256": "eb5ec887ccf2eb8e954afe5423c9b4332f0117dcd8ae01adec80e31cd970c1b9",
+      "size": 5057
+    },
+    {
+      "path": "fevc/fevc__progress.ado",
+      "sha256": "143429e29dd77e4dcd240fc2b9790e98fafb31d4948148316268b0cd47152687",
+      "size": 2276
+    },
+    {
+      "path": "fevc/fevc__rust_capture_stayers.ado",
+      "sha256": "c1e021add1b2b43a09b20b1ccbc1ffdfec0875379d3bd67792a6fdce136ff746",
+      "size": 7172
+    },
+    {
+      "path": "fevc/fevc__rust_cmg_model.ado",
+      "sha256": "237d9a00fe939f09d2c3a9840a745645139f362f32c46e32d0ecb26374e77f22",
+      "size": 1734
+    },
+    {
+      "path": "fevc/fevc__rust_comp_batch_receipt.ado",
+      "sha256": "8d280d61cdb8f2aad388d9611b15dbf885e50c860fa76219c3a4450cdbd627bd",
+      "size": 1949
+    },
+    {
+      "path": "fevc/fevc__rust_component_attach.ado",
+      "sha256": "e0f695ce91ca4a3a15eab00c67663f1bd5637cc6ca1fe7f2ff9b67e4156fcfc0",
+      "size": 2940
+    },
+    {
+      "path": "fevc/fevc__rust_component_fetch.ado",
+      "sha256": "6f25d8df96247476c7291ad6bc254c6c54756824a1fdc451ceb6b41f26d00eab",
+      "size": 16622
+    },
+    {
+      "path": "fevc/fevc__rust_component_post.ado",
+      "sha256": "9075e31890ffb36859399e551f0482b1e5e7d253ea00b2bac096657c4b734a6e",
+      "size": 12539
+    },
+    {
+      "path": "fevc/fevc__rust_core_ready.ado",
+      "sha256": "cfe3967ec61401acbb2d2849b10d207955ae25b4fda50081182f63af977406c1",
+      "size": 1282
+    },
+    {
+      "path": "fevc/fevc__rust_linux.ado",
+      "sha256": "4314c8f4cc25f23f5147c0a1acd1498a664999585b803d9a0966da0b96cef793",
+      "size": 298
+    },
+    {
+      "path": "fevc/fevc__rust_macos.ado",
+      "sha256": "266d601ba6ec3405780a4a924ef9f6a0ab09867c11392db6aa9d6453e65939ba",
+      "size": 492
+    },
+    {
+      "path": "fevc/fevc__rust_numerical.ado",
+      "sha256": "0fb573e59ad75a97db247bd6aa75d10f16e383b9877bbca710e5d9306c06d459",
+      "size": 2243
+    },
+    {
+      "path": "fevc/fevc__rust_plan_receipt.ado",
+      "sha256": "25a82614b3b15b30a7b1c201ac10f0431c73ca975f31f90af42b1258eac858ac",
+      "size": 24161
+    },
+    {
+      "path": "fevc/fevc__rust_plugin_call.ado",
+      "sha256": "cacab83348fdc128e51e9b6d1f209eeed554eea0b89d4254e7b82eb8a6899f36",
+      "size": 1001
+    },
+    {
+      "path": "fevc/fevc__rust_post_comp_v7.ado",
+      "sha256": "15bd3753d97a01484810a14ffc072579cd275068f7ac36260212043c1a387f1e",
+      "size": 36798
+    },
+    {
+      "path": "fevc/fevc__rust_post_exact_v7.ado",
+      "sha256": "060f90a2b4ce4b27a58658792e34d34c0d72ec880c47e8b3ee8fef1cc97682c4",
+      "size": 41471
+    },
+    {
+      "path": "fevc/fevc__rust_post_stayer_hybrid.ado",
+      "sha256": "6e2f22df6b83973829bd0877a37c6ad8c34c050d35f17326485963796dd04daf",
+      "size": 11976
+    },
+    {
+      "path": "fevc/fevc__rust_public_call.ado",
+      "sha256": "3687a245e611b0fdd6533c59c5b8fea6b9167c28262a4882534205d5dd2418f5",
+      "size": 177
+    },
+    {
+      "path": "fevc/fevc__rust_reconcile_comp_v7.ado",
+      "sha256": "be206cb5966ac3470e217af48b41469e9d0e8c77dcf8cf898be578534146b4ac",
+      "size": 31430
+    },
+    {
+      "path": "fevc/fevc__rust_reconcile_exact_v7.ado",
+      "sha256": "187f6a35df86355d25f2445c3bc7c143098f65ea20d6e7b9b7cece84211ee198",
+      "size": 17770
+    },
+    {
+      "path": "fevc/fevc__rust_solve_v4.ado",
+      "sha256": "989327898cea53fdbfe810a2ceef352aba72ba33c3903d11509bd1eb675808cd",
+      "size": 8945
+    },
+    {
+      "path": "fevc/fevc__rust_solve_v5.ado",
+      "sha256": "f2771df045e20f7b6e1402ab7f91b0f83919efff373ad1a4a6580381277ea928",
+      "size": 4728
+    },
+    {
+      "path": "fevc/fevc__rust_windows.ado",
+      "sha256": "c5e3442c5232f9aa1e39788c75a7562f7ea6f3f575cfb583b85631864eade24a",
+      "size": 304
+    },
+    {
+      "path": "fevc/fevc__simulate_data.ado",
+      "sha256": "01af0316092100182c8accb0a52888159ec8497a0a5609fa142c9c12d26843c6",
+      "size": 11099
+    },
+    {
+      "path": "fevc/fevc__stayer_population_post.ado",
+      "sha256": "41c40a4597780c27b0be99099ffc53a1da12e883168d5417371d070d8ebd6b20",
+      "size": 2110
+    },
+    {
+      "path": "fevc/fevc__timer.ado",
+      "sha256": "e2a98c0fe368e3d36a3a7ab2c742b0e7a95b8b9fab170f99aebad231f1249fc4",
+      "size": 2500
+    },
+    {
+      "path": "fevc/fevc_cmg.mata",
+      "sha256": "2c8d58e68f783f432564580110129bfb7630dc3a5cefb7629512228a94310c23",
+      "size": 141956
+    },
+    {
+      "path": "fevc/fevc_estat.ado",
+      "sha256": "a9362c384537a3b21d8453f24515240e9e6e4397329311086bd390bce1fa0bd6",
+      "size": 11937
+    },
+    {
+      "path": "fevc/fevc_graph.mata",
+      "sha256": "bc0fbeff42c9ba8d66c71160335c8edea0a9413d6aac6fc183ea0d5727b7fa17",
+      "size": 20467
+    },
+    {
+      "path": "fevc/fevc_inference.mata",
+      "sha256": "7f4c93152098d8ce9094c35a353512f90c1bff8f677c32be5a2136b75986ddb3",
+      "size": 59482
+    },
+    {
+      "path": "fevc/fevc_numerical.mata",
+      "sha256": "777cafb7e39d5332d74a975e840e062ed8238e4fc2bf2e0221fd0723251337ee",
+      "size": 28345
+    },
+    {
+      "path": "fevc/fevc_resource.mata",
+      "sha256": "3b0039132d10bb144900017f7deddb4ed15094477444509373dd9e6c6099e0d5",
+      "size": 42152
+    },
+    {
+      "path": "fevc/fevc_rng.mata",
+      "sha256": "4e8e35f187ca5bb73102492c652d21f2252f7663fce2a20c4ee91ce8df2a0060",
+      "size": 32704
+    },
+    {
+      "path": "fevc/fevc_run.ado",
+      "sha256": "642ecde77e2cd949219b7ec9d1eda2a7723c593dc6c1e01bed1ccdd1fa08b731",
+      "size": 1985
+    },
+    {
+      "path": "fevc/fevc_rust.ado",
+      "sha256": "e1af83f5337eb90a25b980e35bb6109cd666991bc7df61b4f7259a4f4324c3ce",
+      "size": 128175
+    },
+    {
+      "path": "fevc/fevc_rust_linux_x64.plugin",
+      "sha256": "703420dfed173d983c7adb3638bc4151edfe6e15a636220f736b0f0155fba99b",
+      "size": 5086232
+    },
+    {
+      "path": "fevc/fevc_rust_macos.plugin",
+      "sha256": "a39807df6d649033764a9871a1d2192c34019e4e4fc34c9c0cd7dcd133e200d8",
+      "size": 8883024
+    },
+    {
+      "path": "fevc/fevc_rust_macos_arm64.plugin",
+      "sha256": "c33c3eae146d7cd46fc5a1665e3ea1af20fe201ad15e22c029629cf9e881319b",
+      "size": 4049744
+    },
+    {
+      "path": "fevc/fevc_rust_macos_x86_64.plugin",
+      "sha256": "de18230d5ab00df0a6030119a649fecaefbbeaf78c38128317465872a0623809",
+      "size": 4808704
+    },
+    {
+      "path": "fevc/fevc_rust_windows_x64.plugin",
+      "sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+      "size": 5569024
+    },
+    {
+      "path": "fevc/fevc_scale.mata",
+      "sha256": "e505fc11d4e70df533c664f0ce012f337c0d8d368590142ca1e47bd744f86bb8",
+      "size": 57894
+    },
+    {
+      "path": "fevc/fevc_scale_engine.mata",
+      "sha256": "5fd1d5bc9ad41a3a8ea50ce6b71a2d2829587d1ca9b46ee522d1bd4b162fd627",
+      "size": 84779
+    },
+    {
+      "path": "fevc/fevc_scale_runtime.mata",
+      "sha256": "2ebec091cd6a31babb7988e15269ad9f53693305344711bb16d6dd084776446c",
+      "size": 8083
+    },
+    {
+      "path": "fevc/fevc_solver.mata",
+      "sha256": "e72ea218c68760be4ae2c24ff88d33521d8b080e244656c4b6a6512e6e71bce5",
+      "size": 81337
+    },
+    {
+      "path": "fevc/fevc_timer.mata",
+      "sha256": "e7490083f939c7dcdfe47112a7706f0e1fbc38ff435885b797f9d26c9900b1d6",
+      "size": 3370
+    },
+    {
+      "path": "fevc/stata.toc",
+      "sha256": "97ca7986d041b0cf47dec4ee19d853b0e407d4b3a4b276715a61adb3aa1d303d",
+      "size": 192
+    }
+  ],
+  "limitations": [
+    "Mac x86-64 runtime qualification uses Rosetta.",
+    "Package validation does not expand scientific or platform claims.",
+    "One/two native Windows workers; higher concurrency covered only by Rust tests.",
+    "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested.",
+    "Performance compares requests supported by both versions. Weighted observation deletion uses movers; broader observation/both capability is qualified by runtime/oracle tests without an incumbent Windows native timing comparison.",
+    "Bounded performance comparisons qualify the 12 declared cells only; no general coverage or representative-scale claim."
+  ]
+}

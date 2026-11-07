@@ -5,6 +5,10 @@ adds full-CMG Windows support while retaining the common unmodified CMG 0.2.0
 revision `e5613e81fb3b03c78de98658b372646fa802aabb` and explicit 128-level limit.
 All five plugins share build source `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`.
 
+The [publication audit](windows-cmg-20261107/final-audit.json) verifies all eight
+actual tag/main/GitHub/downloaded-ZIP fresh and replacement installations,
+including all installed file and binary hashes.
+
 ## Windows full-CMG qualification in 0.5.2
 
 The [adoption manifest](windows-cmg-20261107/manifest.json) binds the exact

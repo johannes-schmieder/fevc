@@ -1,0 +1,56 @@
+{
+  "schema": "FEVC-PUBLISHED-INSTALL-AUDIT-V1",
+  "status": "PASS",
+  "version": "0.5.2",
+  "release_url": "https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2",
+  "package_source_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
+  "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "cmg_max_levels": 128,
+  "assets": [
+    {
+      "name": "SHA256SUMS",
+      "sha256": "8cf5973221267b55e248c9c9b831688319d75405e1cc710a3562d8d4218a900d",
+      "bytes": 277
+    },
+    {
+      "name": "fevc-0.5.2.zip",
+      "sha256": "66bb8233e217b0fa89898cade883881667222760af8492ef559c1a8f9b9dfd97",
+      "bytes": 11741046
+    },
+    {
+      "name": "fevc-corresponding-source-ec5e1e0e.tar.gz",
+      "sha256": "5ce7fa18033ce85dc19027de2f5f6d4a1ea669a0f871e71b1c2f297568189650",
+      "bytes": 7645697
+    },
+    {
+      "name": "release-manifest.json",
+      "sha256": "11ba8994706095059c53dfe9e8b673c1c1976457762db4463ab548abd7263258",
+      "bytes": 13625
+    }
+  ],
+  "installations": [
+    {
+      "channel": "tag",
+      "receipt": "tag-install.json",
+      "sha256": "1df41b9e140a786555566437e161327cab8297373c3efcca02597ed96608357b",
+      "cases": 2
+    },
+    {
+      "channel": "public",
+      "receipt": "public-install.json",
+      "sha256": "ede21bc65e7dea274ec8f2e5a3103d8c2b2fba6b6ec4b33567d7fdf57c027fad",
+      "cases": 4
+    },
+    {
+      "channel": "zip",
+      "receipt": "zip-install.json",
+      "sha256": "521ee3eae26d2d730430033727c3b483a61c992a8ed03e7add6fb3c92ced6f93",
+      "cases": 2
+    }
+  ],
+  "installation_cases": 8,
+  "installed_files_each": 61,
+  "runtime_platform": "Mac arm64",
+  "scope": "Actual tag/main/GitHub/downloaded-ZIP fresh and replacement packages; every installed hash, native component and pooled inference, timer/caller-state checks. Other platform runtime claims retain their separate exact E qualification receipts."
+}
