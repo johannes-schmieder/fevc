@@ -110,6 +110,8 @@ pub extern "C" fn vckss_rust_selftest() -> i32 {
     ffi_status(selftest)
 }
 
+// Unit-test executables do not link the C SPI objects. Export these two
+// Stata entry points only in non-test builds, which link the real C shim.
 /// Stata SPI loader entry point. The C implementation records Stata's
 /// function table; the Rust wrapper keeps the symbol on Cargo's export list.
 ///
@@ -117,7 +119,7 @@ pub extern "C" fn vckss_rust_selftest() -> i32 {
 ///
 /// `plugin` must be the valid SPI function-table pointer supplied by Stata
 /// during plugin loading and must remain valid for the process lifetime.
-#[no_mangle]
+#[cfg_attr(not(test), no_mangle)]
 pub unsafe extern "C" fn pginit(plugin: *mut c_void) -> i32 {
     // SAFETY: Stata supplies the SPI table pointer during plugin loading.
     unsafe { vckss_spi_pginit(plugin) }
@@ -129,7 +131,7 @@ pub unsafe extern "C" fn pginit(plugin: *mut c_void) -> i32 {
 ///
 /// `argv` must reference `argc` valid, NUL-terminated strings owned by Stata
 /// for the duration of this call.
-#[no_mangle]
+#[cfg_attr(not(test), no_mangle)]
 pub unsafe extern "C" fn stata_call(argc: i32, argv: *mut *mut c_char) -> i32 {
     // SAFETY: Stata owns the argument vector for the duration of this call.
     unsafe { vckss_stata_call_impl(argc, argv) }
