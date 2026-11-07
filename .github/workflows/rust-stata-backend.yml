@@ -33,6 +33,24 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
+      - name: Activate Windows MSVC and the distributed static CRT
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or -not $vs) { throw 'MSVC unavailable' }
+          $devcmd = Join-Path $vs 'Common7/Tools/VsDevCmd.bat'
+          $environment = & cmd.exe /d /s /c "`"$devcmd`" -arch=x64 -host_arch=x64 >nul && set"
+          if ($LASTEXITCODE -ne 0) { throw 'MSVC environment setup failed' }
+          foreach ($line in $environment) {
+            if ($line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$' -and
+                $Matches[1] -in @('PATH', 'INCLUDE', 'LIB', 'LIBPATH')) {
+              $line | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            }
+          }
+          'RUSTFLAGS=-C target-feature=+crt-static' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Report selected toolchain
         run: |
           rustc --version --verbose
@@ -163,7 +181,11 @@ jobs:
             echo "no header-derived Rust exports were parsed" >&2
             exit 1
           }
-          exports=$(nm -g "${library}" | awk '{print $NF}' | sed 's/^_//')
+          nm_options=(-g)
+          if [[ "${RUNNER_OS}" == "Linux" ]]; then
+            nm_options=(-D --defined-only)
+          fi
+          exports=$(nm "${nm_options[@]}" "${library}" | awk '{print $NF}' | sed 's/^_//')
           for symbol in "${expected_exports[@]}"; do
             grep -F -x -q "${symbol}" <<<"${exports}" || {
               echo "missing required export: ${symbol}" >&2
@@ -174,34 +196,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $library = "rust/stata_backend/target/release/vckss_stata.dll"
-          $header = Get-Content -Raw "rust/stata_backend/include/vckss_rust.h"
-          $expected = [regex]::Matches($header, '\b(vckss_rust_[A-Za-z0-9_]+)\s*\(') |
-            ForEach-Object { $_.Groups[1].Value } |
-            Sort-Object -Unique
-          $expected = @($expected) + @("pginit", "stata_call")
-          if ($expected.Count -le 2) {
-            throw "no header-derived Rust exports were parsed"
-          }
-          $exports = (dumpbin /exports $library | Out-String)
-          foreach ($symbol in $expected) {
-            if ($exports -notmatch ("(?m)\b" + [regex]::Escape($symbol) + "\b")) {
-              throw "missing required Windows export: $symbol"
-            }
-          }
-          $dependentOutput = (dumpbin /dependents $library | Out-String)
-          $dependencies = [regex]::Matches(
-            $dependentOutput,
-            '(?im)^\s*([A-Za-z0-9_.-]+\.dll)\s*$'
-          ) | ForEach-Object { $_.Groups[1].Value }
-          if (@($dependencies).Count -eq 0) {
-            throw "no Windows dependencies were parsed"
-          }
-          foreach ($dependency in $dependencies) {
-            if ($dependency -notmatch '^(?i:KERNEL32|ADVAPI32|WS2_32|USERENV|BCRYPT|NTDLL|VCRUNTIME140(?:_1)?|api-ms-win-crt-[A-Za-z0-9_.-]+)\.dll$') {
-              throw "unexpected Windows dependency: $dependency"
-            }
-          }
+          ./rust/stata_backend/audit_windows_plugin.ps1 -Binary "rust/stata_backend/target/release/vckss_stata.dll"
 
 # These jobs prove compilation, ABI layout, symbols, and dependency shape only.
 # A build candidate is not a qualified Stata plugin until it passes licensed
