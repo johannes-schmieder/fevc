@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-gd4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      fevc_cmg_full       
+jobnumber    8496385             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Sat Nov  7 04:04:05 2026
+start_time   Sat Nov  7 04:10:55 2026
+end_time     Sat Nov  7 04:41:57 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 1862         
+ru_utime     4507.849     
+ru_stime     126.910      
+ru_maxrss    908664              
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    6130898             
+ru_majflt    988                 
+ru_nswap     0                   
+ru_inblock   274976              
+ru_oublock   2563392             
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     5665619             
+ru_nivcsw    27451               
+cpu          4634.759     
+mem          7582.319          
+io           182.027           
+iow          0.000             
+maxvmem      9.283G
+arid         undefined

@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-tb4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      fevc_cmg_smoke      
+jobnumber    8496384             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Sat Nov  7 04:04:05 2026
+start_time   Sat Nov  7 04:06:47 2026
+end_time     Sat Nov  7 04:08:18 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 91           
+ru_utime     113.395      
+ru_stime     5.177        
+ru_maxrss    894400              
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    974074              
+ru_majflt    141                 
+ru_nswap     0                   
+ru_inblock   105752              
+ru_oublock   347976              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     18436               
+ru_nivcsw    575                 
+cpu          118.571      
+mem          93.782            
+io           2.046             
+iow          0.000             
+maxvmem      2.439G
+arid         undefined

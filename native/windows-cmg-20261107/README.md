@@ -1,0 +1,38 @@
+# Windows CMG qualification checkpoint — November 7, 2026
+
+The implementation is committed at `7cc07a56` and targets fevc **0.5.2**.
+It enables automatic and explicit shared full-CMG point, projection and
+component-inference routes on Windows. Exact and explicit diagonal Stata
+routing retain their existing behavior. CMG remains unmodified upstream
+`e5613e81fb3b03c78de98658b372646fa802aabb`, with explicit 128-level configuration.
+
+**Windows qualification and publication are pending.** No new binary has been
+adopted into the installation payload. All five checked-in plugins retain
+their released 0.5.1 hashes. The local Mac qualifier temporarily stages its
+outputs after testing; those exact task-produced files were restored after
+preserving the qualified candidates.
+
+All 951 Python tests, the Rust workspace checks, generated-source/vendor checks,
+and the integrated local Stata quick/full and installation suites pass.
+Native Mac arm64 and Rosetta x86-64 thin/universal/installed qualification pass.
+SCC Linux jobs `8496384` (smoke) and `8496385` (full native/installed) pass with
+`failed=0` and `exit_status=0`; all 66 collected files match their remote hashes.
+Windows-target Rust compilation passes, but is not Windows runtime evidence.
+
+The [status and binary hashes](qualification-status.json) bind these claims to
+the exact build source. Original source-bound receipts are copied under
+`evidence/` without modification. Qualified binaries, the corresponding-source
+archive, full sanitized logs, local validation logs and the undeployed collector
+patch are retained in ignored local storage `.local/windows-cmg-20261107/`.
+
+Remaining work follows the [Windows qualification workflow](../../rust/stata_backend/WINDOWS_CMG_QUALIFICATION.md):
+complete the bounded collector maintenance and backend acceptance, run hosted
+Windows builds/tests, execute the six runtime groups and twelve frozen
+performance groups, adopt all five exact binaries, publish 0.5.2, and verify
+actual published fresh/replacement installations. The release command rejects
+legacy Windows evidence for this version. No confirmation result has been
+resampled or excluded; Windows confirmation has not started.
+
+Native Intel hardware remains untested; the Mac x86-64 evidence is Rosetta.
+The initial development harness failures and superseded smoke are identified in
+the status file. They do not constitute scientific or performance acceptance.

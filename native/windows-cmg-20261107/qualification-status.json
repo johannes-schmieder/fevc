@@ -1,0 +1,172 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-QUALIFICATION-STATUS-V1",
+  "status": "WINDOWS_QUALIFICATION_PENDING",
+  "candidate_version": "0.5.2",
+  "build_source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+  "cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "cmg_vendor": "BYTE_IDENTICAL_UPSTREAM_PAYLOAD",
+  "cmg_max_levels": 128,
+  "published": false,
+  "candidate_binaries_adopted": false,
+  "distributed_plugins": "UNCHANGED_RELEASED_0.5.1_PAYLOAD",
+  "checks": {
+    "python": {
+      "status": "PASS",
+      "passed": 951
+    },
+    "rust_workspace": {
+      "status": "PASS",
+      "passed": 622,
+      "ignored": 2,
+      "suites": 68
+    },
+    "numerical_request_preflight_and_caller_thread_cancellation": {
+      "status": "PASS",
+      "passed": 3
+    },
+    "windows_msvc_cross_compile": {
+      "status": "PASS",
+      "scope": "Compile checking only; tests not executed on Windows"
+    },
+    "integrated_stata_quick_full_installation": "PASS",
+    "cmg_generated_source_and_vendor_checks": "PASS",
+    "macos_native_arm64_thin_universal_installed": "PASS",
+    "macos_rosetta_x86_64_thin_universal_installed": "PASS",
+    "scc_linux_native_full_installed": "PASS",
+    "prepared_collector_offline": {
+      "status": "PASS",
+      "passed": 17,
+      "deployed": false
+    },
+    "release_rejects_old_windows_evidence": "PASS",
+    "windows_hosted_execution": "NOT_RUN",
+    "windows_private_full_cmg": "NOT_RUN",
+    "windows_confirmation_comparison": "NOT_RUN",
+    "windows_fresh_replacement_installation": "NOT_RUN",
+    "published_package_installation": "NOT_RUN"
+  },
+  "qualified_candidates": [
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "54d5984cea5e3addf7563b826bbc31d5cfbb803a39b597863b66489cf91d72fa",
+      "bytes": 4033328,
+      "build_source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "runtime_qualification": "PASS",
+      "limitation": ""
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "22458fb10f16301a4ad8dd6912a2a83873835035b954d008542caad70c5e0202",
+      "bytes": 4796304,
+      "build_source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "a1d7d106e53ec268bfa7db84da70be104b0b7fbad2435ad4859bd50ae1924d84",
+      "bytes": 8850224,
+      "build_source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta"
+    },
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "8637cdaffc6f1b930d522ee93358c8b184771a90ca8bddf19cce74e02a215f18",
+      "bytes": 5069848,
+      "build_source_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+      "runtime_qualification": "PASS",
+      "limitation": ""
+    }
+  ],
+  "linux": {
+    "smoke_job": 8496384,
+    "native_job": 8496385,
+    "accounting_failed": 0,
+    "accounting_exit_status": 0,
+    "verified_collection_files": 66,
+    "collection_sha256": "ffa5b77923ab1fb7f3cdfe06f366c876523c715f02f902477f09e1a6b0ddae75"
+  },
+  "corresponding_source": {
+    "sha256": "372a46a88161b9713cf0d6f34bbb2c5ff41bbeb644a933850830f49bf20a76ec",
+    "source_files": 1722,
+    "matches_scc_input": true,
+    "published": false
+  },
+  "evidence": [
+    {
+      "path": "evidence/macos-qualification.txt",
+      "sha256": "138e1f94df5fc33e75183a771b65d8b5bd40fc6ef89f3b16437b96cd52461645",
+      "bytes": 34577
+    },
+    {
+      "path": "evidence/macos-source-manifest.sha256",
+      "sha256": "cfa29128f91d8d5a48f0756620c354d2fb787cfd51b3d314b9b3f99db7474596",
+      "bytes": 30712
+    },
+    {
+      "path": "evidence/linux-qualification.txt",
+      "sha256": "61c93978bb57b312d479187eaf93cb11cfe25d1b2e889138236bf3895b94165d",
+      "bytes": 10421
+    },
+    {
+      "path": "evidence/linux-wrapper.txt",
+      "sha256": "ec73d82f4c75d2ab9fb418a650717b9e9edd4a2d4e91525cc43923bda68776aa",
+      "bytes": 295
+    },
+    {
+      "path": "evidence/linux-smoke.txt",
+      "sha256": "da0c373491b684aaecb5b4074c4b4d39bd1c6568c1e3224f31449c0a17f6a892",
+      "bytes": 80
+    },
+    {
+      "path": "evidence/linux-native-qacct.txt",
+      "sha256": "48c08eeda086703f8fa2d5554dacf02b431214bea702509ba2b31c3a01cf1975",
+      "bytes": 1418
+    },
+    {
+      "path": "evidence/linux-smoke-qacct.txt",
+      "sha256": "fe4b8d131a5669de06b32ad256a9c4254b2a3afe19f977839fe5ff36f728c575",
+      "bytes": 1418
+    },
+    {
+      "path": "evidence/linux-collection.json",
+      "sha256": "c0574c82bf6ce83991c6bf0f860fa8983a9497e3e7dee5faefeec7ce86e72451",
+      "bytes": 14165
+    }
+  ],
+  "limitations": [
+    "Native Intel Mac hardware was not tested; x86-64 runtime uses Rosetta.",
+    "Windows runtime and complete-command performance qualification remain pending.",
+    "Local performance-driver pilots validate the harness on Mac only."
+  ],
+  "diagnostic_attempts": [
+    {
+      "kind": "native_lifecycle_harness_assertion",
+      "result": "FAIL",
+      "log": "local-gates.log",
+      "diagnosis": "Test expected WITHHELD after r(1), but the established Break contract clears estimator publication. Assertion corrected; lifecycle retests passed. No estimator behavior changed."
+    },
+    {
+      "kind": "integrated_source_inventory",
+      "result": "FAIL",
+      "log": "local-checks.log",
+      "diagnosis": "Source-bundle check rejected new untracked qualification files. Files were staged; integrated qualification passed without changing the guard."
+    },
+    {
+      "kind": "superseded_scc_candidate",
+      "run": "20261107T090000Z-windows-cmg-ad113d34",
+      "smoke_job": 8496314,
+      "full_job": 8496315,
+      "result": "CANCELLED_BY_THIS_TASK",
+      "smoke_wall_seconds": 18,
+      "smoke_exit_status": 137,
+      "diagnosis": "Source gained the missing automatic-exact smoke regression. First smoke began compilation between queue inspection and cancellation; no scientific result was accepted. Superseded evidence retained."
+    },
+    {
+      "kind": "linux_evidence_collection",
+      "result": "CORRECTED_WITHOUT_NATIVE_RETEST",
+      "diagnosis": "Initial collection rejected empty sanitized console companions. They were retained with their nonempty paired logs; all 66 files subsequently verified."
+    }
+  ]
+}
