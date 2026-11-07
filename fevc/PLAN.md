@@ -15,7 +15,10 @@ observations exceed the prospective allowance. It is diagnostic evidence,
 not confirmation. The full confirmation was frozen independently with the
 unchanged six-pair schedule, inputs and `max(5%, 1 ms)` median allowance:
 `07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a`.
-Its new smoke passes with verified cleanup; the remaining groups are running.
+Smoke, legacy and full-CMG point groups pass with verified cleanup; the
+remaining groups are running. Exact E local HTTP fresh/replacement installs
+pass on Mac arm64, verifying all 61 installed file hashes and native inference
+and caller-state checks; see the [package binding](../native/windows-cmg-20261107/evidence/packaging-E/binding.json).
 See [E platform status](../native/windows-cmg-20261107/qualification-E-status.json),
 [development results](../native/windows-cmg-20261107/evidence/development-E/pilot-review.json)
 and the [frozen campaign](../native/windows-cmg-20261107/evidence/windows-E-campaign.json).

@@ -9,8 +9,9 @@ record passing Mac arm64/Rosetta, SCC Linux and hosted Windows/Rust/SPI gates.
 The [E pilot](evidence/development-E/pilot-review.json) passes scientific checks,
 but its single-pair timings are not release qualification. The
 [frozen confirmation](evidence/windows-E-campaign.json) retains the original
-six paired blocks and all thresholds. Its smoke passes; the remaining groups
-are running. No candidate binary is adopted or published. The installed payload
+six paired blocks and all thresholds. Smoke, legacy and full-CMG point groups pass; the remaining groups
+are running. [Exact E local fresh/replacement installations](evidence/packaging-E/binding.json)
+also pass on Mac arm64, including all 61 file hashes. No candidate binary is adopted or published. The installed payload
 still contains 0.5.1. Final Windows confirmation, package installation and actual
 published-install checks remain required before completion.
 
