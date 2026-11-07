@@ -16,14 +16,20 @@ generate double y=5+sin(worker*.5)+firm*.2+sin(_n*.93)
 generate double shifted=y+40
 set seed 721946
 local before `"`c(rngstate)'"'
-foreach algorithm in exact jla {
-    local common worker(worker) firm(firm) backend(rust) algorithm(`algorithm') engine(generic) ///
+foreach algorithm in exact jla auto {
+    local engine generic
+    if "`algorithm'"=="auto" local engine auto
+    local common worker(worker) firm(firm) backend(rust) algorithm(`algorithm') engine(`engine') ///
         deletion(match) stayers(both) rng(counter_v1) probes(64) seed(721946) ///
         preconditioner(auto) tolerance(1e-12) mcse(all) nodisplay
     quietly fevc y [fw=copies], `common'
     assert "`e(centering)'"=="mean"
     assert "`e(backend_selected)'"=="rust"
     assert "`e(status)'"=="KSS_POINT_ESTIMATES_ONLY"
+    if "`algorithm'"=="auto" {
+        assert "`e(algorithm)'"=="exact"
+        assert "`e(cmg_backend)'"==""
+    }
     matrix point=e(kss)
     matrix numerical=e(mcse)
     quietly fevc y [fw=copies], `common' centering(mean)
