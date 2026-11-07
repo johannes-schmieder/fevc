@@ -1,60 +1,25 @@
 # Windows full-CMG qualification — November 7, 2026
 
-The owner authorizes implementation and publication of the next patch release
-after full Windows CMG qualification. The baseline is clean main 57eb055a and
-released 0.5.1 package 117d09c5, built at 94d94999. CMG stays byte-identical to
-e5613e81fb3b03c78de98658b372646fa802aabb with explicit 128-level configuration.
+The Windows implementation and all six runtime/installation groups pass at
+build source `7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20`, using unchanged CMG
+`e5613e81fb3b03c78de98658b372646fa802aabb` and explicit 128 levels.
+All 18 confirmation runs completed with verified cleanup. All 12 scientific
+cells pass, but six timing cells fail the fixed max(5%, 1 ms) allowance:
+controlled weighted observation, projection and pooled inference at one/two
+workers are 26–46% slower. Larger generic paths improve substantially.
+All 144 timed commands and the original failed registration/development pilot
+are retained. See the [complete result](../native/windows-cmg-20261107/confirmation-result.json)
+and [raw comparisons](../native/windows-cmg-20261107/evidence/confirmation-attempt1/comparison.json).
 
-Enable automatic/explicit full CMG, controlled point estimates and CMG
-projection/component execution on Windows. Preserve unrelated exact and
-explicit diagonal routing. Update Stata, Rust capabilities/request validation,
-C receipts and Windows-skipped tests together. No ABI layout changes.
-
-Implementation source `7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20` passes
-951 Python tests, Rust checks, the integrated local Stata suites, native Mac
-arm64/Rosetta thin/universal/installed qualification, and SCC Linux native/full/
-installed qualification (smoke 8496384, full 8496385). See the
-[checkpoint and exact binary hashes](../native/windows-cmg-20261107/README.md).
-Hosted Windows package build and all Rust/SPI matrix jobs pass; the
-[hosted checkpoint](../native/windows-cmg-20261107/hosted-checkpoint.json) records
-three CI repairs and their original failed attempts. Private Windows Stata
-execution, confirmation performance and publication remain pending. The
-owner-maintenance authentication is confirmed. Collector repair cycle 1 and
-restricted backend acceptance passed, including smoke, deliberate failure,
-concurrent-run rejection and verified cleanup/stopped state. The frozen
-18-group private campaign is now running. All six runtime and installation
-groups passed, including exact-binary full-CMG point, controls, attachments,
-pooled inference, MCSE, cancellation, memory policies and replacement installs.
-The first incumbent performance block failed with Stata r(198) during command
-execution; cleanup passed and the campaign stopped. The failure is preserved
-in the [performance checkpoint](../native/windows-cmg-20261107/performance-checkpoint.json).
-The failed request forced a full-CMG route unavailable in Windows 0.5.1.
-A separate native Windows development pilot passed all 12 corrected incumbent
-cases using supported diagonal routes and mover-only weighted observation.
-Its times are excluded from confirmation. A new complete 18-group campaign is
-frozen with unchanged production, candidate binaries and acceptance thresholds;
-see the [supported checkpoint](../native/windows-cmg-20261107/supported-checkpoint.json).
-All six new confirmation runtime/installation groups pass; the twelve fixed
-performance runs are in progress. See the [confirmation runtime checkpoint](../native/windows-cmg-20261107/confirmation-runtime-checkpoint.json).
-The original runtime passes and failure remain immutable. The owner-approved
-temporary qualification branch will be deleted after release. New plugin bytes
-are not adopted.
-The installation payload retains all five released 0.5.1 plugin hashes.
-The assembled candidate separately passes local fresh/replacement installation:
-all 61 file hashes and native inference/caller-state checks. All 952 current
-Python tests and assembly/vendor/generated-parity checks pass. See the
-[local package checkpoint](../native/windows-cmg-20261107/local-package-checkpoint.json).
-Use source-bound Windows smoke and bounded point, attachment, lifecycle/memory,
-performance and installation groups; one/two native workers on the existing
-Windows x86-64 Stata/MP 19 machine. Preserve the 900-second limit and strict
-artifact collection. Rebuild all distributed platform plugins and validate
-affected Mac/Rosetta/Linux paths before release.
-
-Apply registered scientific/residual criteria and a frozen complete-command
-incumbent comparison with max(5%, 1 ms) allowance. Preserve failures and do not
-resample unchanged candidates. Publish only after all required groups pass,
-then verify actual published fresh/replacement installations and audit exact
-source, binary, vendor and evidence identities.
+Publication and binary adoption remain blocked. Diagnose the small-system
+overhead; do not resample the unchanged candidate, relax thresholds or silently
+change solver routes. A justified implementation fix requires a new source,
+matching platform artifacts and a newly registered affected confirmation.
+The installation payload still contains the released 0.5.1 plugins. Mac/Rosetta,
+SCC Linux, hosted Windows/Rust/SPI, 952 Python tests and exact candidate local
+fresh/replacement installation all pass within their recorded scopes. The
+approved temporary hosted branch remains until release. Shared Windows repair
+cycle 1 is accepted; the last run cleaned up and stopped the machine.
 
 ## Previous checkpoint
 

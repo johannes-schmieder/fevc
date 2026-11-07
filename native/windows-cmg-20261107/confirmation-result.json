@@ -1,0 +1,444 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-CONFIRMATION-RESULT-V1",
+  "status": "RELEASE_BLOCKED_PERFORMANCE",
+  "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+  "groups_completed": 18,
+  "scientific_cells_passed": 12,
+  "performance_cells_passed": 6,
+  "performance_cells_failed": 6,
+  "all_144_timed_commands_retained": true,
+  "resampling_or_exclusions": 0,
+  "records": [
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "cmg_attachments"
+      },
+      "run_id": "win-20261107T142314Z-15b9b7cd",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "cmg_lifecycle"
+      },
+      "run_id": "win-20261107T142907Z-6458bd45",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "cmg_point"
+      },
+      "run_id": "win-20261107T141651Z-f80d35ce",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "installation"
+      },
+      "run_id": "win-20261107T143427Z-c80e6a76",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "legacy"
+      },
+      "run_id": "win-20261107T140713Z-121c8806",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T144721Z-5a9a2910",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 1,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T145253Z-c957eac3",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 2,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T151313Z-aa40999a",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 3,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T151901Z-d2ac6879",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 4,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T153917Z-67cb8541",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 5,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T154521Z-dbe7bfe5",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 0,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T144010Z-1bd62e84",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 1,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T145852Z-7bc6dbfd",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 2,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T150612Z-da344a46",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 3,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T152455Z-29e908cf",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 4,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T153208Z-44ebe07b",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 5,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T155056Z-73c56edd",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+        "candidate_sha256": "e79f59aed09bd1ef26ecde8fa9e4dd0b7a6d407697227fb1028486afbc5f18ae",
+        "hosted_build_run_id": "42366984005",
+        "hosted_rust_run_id": "42366985923",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+        "qualification_group": "smoke"
+      },
+      "run_id": "win-20261107T140118Z-26a21b48",
+      "status": "PASS",
+      "cleanup": true
+    }
+  ],
+  "failed_cells": [
+    {
+      "case": 3,
+      "workers": 1,
+      "incumbent_median_ms": 123.0,
+      "candidate_median_ms": 155.5,
+      "allowance_ms": 6.15,
+      "performance": "FAIL",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 6.7206881261425355e-09,
+      "incumbent_ms": [
+        125,
+        125,
+        108,
+        122,
+        124,
+        110
+      ],
+      "candidate_ms": [
+        156,
+        175,
+        155,
+        173,
+        155,
+        154
+      ]
+    },
+    {
+      "case": 3,
+      "workers": 2,
+      "incumbent_median_ms": 124.0,
+      "candidate_median_ms": 163.5,
+      "allowance_ms": 6.2,
+      "performance": "FAIL",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 6.7206881261425355e-09,
+      "incumbent_ms": [
+        124,
+        127,
+        108,
+        125,
+        124,
+        109
+      ],
+      "candidate_ms": [
+        157,
+        171,
+        170,
+        173,
+        154,
+        156
+      ]
+    },
+    {
+      "case": 4,
+      "workers": 1,
+      "incumbent_median_ms": 419.0,
+      "candidate_median_ms": 609.0,
+      "allowance_ms": 20.950000000000003,
+      "performance": "FAIL",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 3.66303170338138e-12,
+      "incumbent_ms": [
+        419,
+        441,
+        388,
+        419,
+        424,
+        401
+      ],
+      "candidate_ms": [
+        578,
+        628,
+        611,
+        638,
+        607,
+        572
+      ]
+    },
+    {
+      "case": 4,
+      "workers": 2,
+      "incumbent_median_ms": 425.0,
+      "candidate_median_ms": 603.0,
+      "allowance_ms": 21.25,
+      "performance": "FAIL",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 3.66303170338138e-12,
+      "incumbent_ms": [
+        433,
+        436,
+        399,
+        424,
+        426,
+        395
+      ],
+      "candidate_ms": [
+        573,
+        635,
+        614,
+        625,
+        592,
+        577
+      ]
+    },
+    {
+      "case": 5,
+      "workers": 1,
+      "incumbent_median_ms": 935.0,
+      "candidate_median_ms": 1369.0,
+      "allowance_ms": 46.75,
+      "performance": "FAIL",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.0189409939155056e-09,
+      "incumbent_ms": [
+        935,
+        967,
+        1000,
+        921,
+        935,
+        924
+      ],
+      "candidate_ms": [
+        1284,
+        1377,
+        1406,
+        1416,
+        1361,
+        1302
+      ]
+    },
+    {
+      "case": 5,
+      "workers": 2,
+      "incumbent_median_ms": 923.0,
+      "candidate_median_ms": 1238.0,
+      "allowance_ms": 46.150000000000006,
+      "performance": "FAIL",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.0189409939155056e-09,
+      "incumbent_ms": [
+        938,
+        970,
+        886,
+        915,
+        931,
+        896
+      ],
+      "candidate_ms": [
+        1169,
+        1293,
+        1254,
+        1328,
+        1222,
+        1157
+      ]
+    }
+  ],
+  "published": false,
+  "repository_plugins_adopted": false,
+  "next": "Diagnose the small controlled, projection and pooled-inference overhead. Do not retry unchanged candidate, weaken gates, or adopt/publish."
+}

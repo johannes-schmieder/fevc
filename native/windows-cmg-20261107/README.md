@@ -6,7 +6,7 @@ component-inference routes on Windows. Exact and explicit diagonal Stata
 routing retain their existing behavior. CMG remains unmodified upstream
 `e5613e81fb3b03c78de98658b372646fa802aabb`, with explicit 128-level configuration.
 
-**Windows qualification and publication are pending.** No new binary has been
+**Publication is blocked by six performance regressions.** No new binary has been
 adopted into the installation payload. All five checked-in plugins retain
 their released 0.5.1 hashes. The local Mac qualifier temporarily stages its
 outputs after testing; those exact task-produced files were restored after
@@ -55,3 +55,10 @@ schedule stops on the first failed group.
 Native Intel hardware remains untested; the Mac x86-64 evidence is Rosetta.
 The initial development harness failures and superseded smoke are identified in
 the status file. They do not constitute scientific or performance acceptance.
+
+The [completed confirmation](confirmation-result.json) contains all 18 runs.
+All scientific cells pass, but controlled weighted observation, projection and
+pooled inference fail timing at both worker counts (26–46% slower). The full
+[comparison](evidence/confirmation-attempt1/comparison.json) retains every
+measurement. No unchanged-candidate rerun, adoption or publication is authorized
+by these results. The current task is diagnosing the overhead.

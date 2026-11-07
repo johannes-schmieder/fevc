@@ -1,0 +1,15 @@
+{
+  "INSTANCE_STOPPED": "yes",
+  "LOCK_RELEASED": "yes",
+  "PROFILE": "stata-do",
+  "PROJECT": "fevc",
+  "RECEIPT_SHA256": "0c3c7a24ca04d380b89ee43bfff941036d581b5af9da5dd2fd1e278e4fba4d0c",
+  "RUN_ID": "win-20261107T140118Z-26a21b48",
+  "SOURCE_REVISION": "commit-0ee4bd280b28a909319c5a97e38ee273b37f48e3",
+  "SOURCE_SHA256": "deb03f7941ac03360ba0d821f86b3e80c11ffaf2007f816d4eee73aea1df5f79",
+  "TRANSIENT_OBJECTS_DELETED": "yes",
+  "WINDOWS_CI_RUN": "PASS",
+  "WINDOWS_FAILURE_STAGE": "complete",
+  "WINDOWS_STATA_RC": "unavailable",
+  "WINDOWS_STATUS": "PASS"
+}
