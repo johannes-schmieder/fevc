@@ -23,8 +23,10 @@ scientific gates under the unchanged max(5%, 1 ms) allowance. Every study
 retains all 96 observations; no adverse measurements were repeated or excluded.
 
 The five exact source-bound plugins, corresponding source and platform evidence
-are assembled in the local package. Final package checks and installations
-remain before publication.
+are assembled in the local package. All 913 Python tests, 28 independent CMG
+tests, integrated Stata quick/full checks, and fresh/replacement installations
+pass. The 63-file ZIP matches the tested 61-file installed payload exactly.
+See the prepublication checks and installation records beside the adoption manifest.
 Cross-consumer release remains gated on common-revision qualification and the
 owner's decision on fereg's inconclusive performance evidence. No new plugins,
 main update or release has been published.

@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "package_source_commit": "cf2ddfb6fe96de415350cf5bb0b436c31a0f95ef",
+  "build_source_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "command": "FEVC_REQUIRE_STATA=1 ./.venv/bin/python fevc/tools/run_checks.py",
+  "python_tests": 913,
+  "independent_cmg_tests": 28,
+  "checks": [
+    "public identity",
+    "license/provenance",
+    "generated parity",
+    "deterministic portable package",
+    "CMG assembly",
+    "Python suite",
+    "CMG Mata core/namespace/scale/hybrid/API-5",
+    "Stata quick and full",
+    "clean install",
+    "legacy-helper migration: repository and SSC layouts",
+    "synthetic and B1/forced-CMG harness checks",
+    "Separations preparation and retained-sample bridge audit"
+  ],
+  "markers": [
+    "FEVC PUBLIC-IDENTITY AUDIT PASS",
+    "FEVC TEST SUITE PASS: quick",
+    "FEVC TEST SUITE PASS: full",
+    "FEVC INSTALL TEST PASS",
+    "FEVC HELPER MIGRATION PASS",
+    "FEVC LOCAL QUALIFICATION PASS"
+  ],
+  "original_log_sha256": "1bc7e90d8fee61c2b651e8a30834d0c0f54ffbeb9190574736e222795235945d",
+  "original_log_bytes": 3302471,
+  "prior_packaging_attempts": [
+    {
+      "stage": "public identity",
+      "result": "FAIL",
+      "cause": "New adoption schema name collided with a reserved private protocol prefix.",
+      "repair": "Distinct CMG adoption schema; audit unchanged; no runtime change."
+    },
+    {
+      "stage": "Python suite",
+      "result": "2 failed, 911 passed",
+      "cause": "New evidence had not yet been staged; the historical ledger test expected Windows to remain unqualified.",
+      "repair": "Stage new evidence and bind current qualification to the exact full Windows receipt and plugin hash; preserve historical pending receipt. No runtime change."
+    }
+  ],
+  "performance": "No performance panel repeated; scientific/complete-command smoke checks do not replace the four frozen performance comparisons.",
+  "installation_evidence": "prepublication-install.json",
+  "limitations": [
+    "Runtime and platform qualification remain bound to their exact binary hashes.",
+    "Published HTTP installation is a separate gate."
+  ]
+}
