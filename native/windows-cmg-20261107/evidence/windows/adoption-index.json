@@ -1,0 +1,81 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-ADOPTION-V1",
+  "campaign": {
+    "path": "evidence/windows-E-campaign.json",
+    "sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a"
+  },
+  "checks": [
+    {
+      "path": "evidence/windows/cmg_attachments-candidate-0-checks.json",
+      "sha256": "ea51e8e43904e00a5d23e208ec7c59cf9f7c28a74c8f7017f954531b58435868"
+    },
+    {
+      "path": "evidence/windows/cmg_lifecycle-candidate-0-checks.json",
+      "sha256": "ae486a1d66dd99c0685d5de86f3392fc221a8ca9517647cdf31a8b20c02c6bc1"
+    },
+    {
+      "path": "evidence/windows/cmg_point-candidate-0-checks.json",
+      "sha256": "33c728ebe5036cc586dea3b2c1352a15dc8ae644031a19e970e70275cb2bc084"
+    },
+    {
+      "path": "evidence/windows/installation-candidate-0-checks.json",
+      "sha256": "dbe137406082f78bac64d51de3d0adc723fc022f2fbe38216fccfd18c653c0b7"
+    },
+    {
+      "path": "evidence/windows/legacy-candidate-0-checks.json",
+      "sha256": "028a887512544e3cd6fdf87c039e5d789c99bf263cf371a4fe2043b865c6e5f4"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-0-checks.json",
+      "sha256": "0404a9590a7d38c128c158b9f4365a4a53393411abff0d4c354b90989458b20c"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-1-checks.json",
+      "sha256": "d90331b60cf55f27863d23b3863bb88b31c827892790636d28ef7f4627a02632"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-2-checks.json",
+      "sha256": "625577d7dcf7fa7cfd57783cf31f17a706b7e2b2056e35dc9798f23783d4a5b5"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-3-checks.json",
+      "sha256": "b246e018dee161da7636b07cc9806e9e85fec2b2beb4a41575c74120e90a015e"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-4-checks.json",
+      "sha256": "2fe2a54f875ce6fe3ca695f8c079cc22ae03019754d9d7afe54d17090849fdf1"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-5-checks.json",
+      "sha256": "a3c5fcdc4304ed85127e695d189355b54a577afdc0cba3538c97c7f8c5e40c32"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-0-checks.json",
+      "sha256": "51eb9bdd4f90806c72e1a07abf26c0b9dbdd2fcd9b0479fc5bc4667ba4eeee02"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-1-checks.json",
+      "sha256": "7bdb9e63973192c133ae60ed092451630aab8cfc9031cb459ff43133f5f0166a"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-2-checks.json",
+      "sha256": "07fca3f17c9a12969b4acfeb2f63640264a9dfe69d09abfeac92ae05bdca9b92"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-3-checks.json",
+      "sha256": "0f0a8620eb157deeee99b3319181cab7e6a771470a1c3fb31f7ca2db6d656229"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-4-checks.json",
+      "sha256": "d954fc607069c87c7c82c71c19b188787582a8c2ce56bd3084c4a465b54cacb9"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-5-checks.json",
+      "sha256": "320290d3551972c1ab03868f9204343ee6f6a7010d3e4aeaa4821a65d02b65b6"
+    },
+    {
+      "path": "evidence/windows/smoke-candidate-0-checks.json",
+      "sha256": "3a5f100d5cc0967a970ee33e579cbf14f8fa9361be8b0bca481d89471345fb67"
+    }
+  ]
+}

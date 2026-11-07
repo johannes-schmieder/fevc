@@ -1,6 +1,16 @@
 # Rust backend test plan
 
-## Current pooled component inference binaries
+## Current Windows full-CMG binaries
+
+All five 0.5.2 plugins share build source `ec5e1e0e` and the unmodified common
+CMG revision `e5613e81`. Native Mac arm64/Rosetta, SCC Linux and all 18 private
+Windows groups pass, including the registered complete-command comparison.
+The [adoption manifest](../native/windows-cmg-20261107/manifest.json) binds
+exact binaries, corresponding source and evidence. Windows scope is one/two
+workers; Mac x86-64 runtime tests use Rosetta. Published installation checks
+are recorded separately. Historical evidence below retains its original scope.
+
+## October 10 pooled component inference binaries
 
 All five payloads are rebuilt from `002205f2` and adopted for repository
 installation under explicit owner authorization. They include pooled mover–stayer

@@ -1,0 +1,35 @@
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 22%]
+........................................................................ [ 30%]
+........................................................................ [ 37%]
+........................................................................ [ 45%]
+........................................................................ [ 52%]
+........................................................................ [ 60%]
+.................................................................F...... [ 68%]
+........................................................................ [ 75%]
+........................................................................ [ 83%]
+........................................................................ [ 90%]
+........................................................................ [ 98%]
+................                                                         [100%]
+=================================== FAILURES ===================================
+_______________________ test_every_alpha_gap_is_explicit _______________________
+
+    def test_every_alpha_gap_is_explicit() -> None:
+        rows = MODULE.load()["rows"]
+        gaps = {
+            row["id"]
+            for row in rows
+            if row["alpha_required"] and row["rust"] != "qualified"
+        }
+        assert gaps == set()
+        windows = next(row for row in rows if row["id"] == "windows")
+        assert windows["mata"] == windows["rust"] == "qualified"
+        record = "native/cmg-consolidation-20261106/manifest.json"
+>       assert record in windows["evidence"]
+E       AssertionError: assert 'native/cmg-consolidation-20261106/manifest.json' in 'Clean ec5e1e0e hosted static-CRT artifact passes all 18 private Windows runtime, installation and fixed performance g...-20261107/manifest.json. Earlier failed registrations, the failed confirmation and development pilots remain separate.'
+
+fevc/tests/python/test_rust_mata_parity.py:35: AssertionError
+=========================== short test summary info ============================
+FAILED fevc/tests/python/test_rust_mata_parity.py::test_every_alpha_gap_is_explicit
+1 failed, 951 passed in 123.95s (0:02:03)

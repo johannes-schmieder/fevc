@@ -12,8 +12,10 @@ No unreleased changes.
   exact selection boundaries, and explicitly selected diagonal execution.
 - Add bounded Windows qualification groups, source/binary-bound receipts,
   one/two-worker native tests, and fixed complete-command comparisons.
-- Windows qualification and publication are pending; distributed plugin files
-  still belong to 0.5.1 until the candidate passes its release gates.
+- Rebuild all five distributed plugins from the same source. Mac arm64,
+  Rosetta x86-64, SCC Linux and private Windows native/installed checks pass.
+  All 18 Windows groups and all 12 registered scientific/performance cells pass;
+  qualification covers one/two Windows workers and excludes native Intel Mac hardware.
 
 ## 0.5.1 — 2026-11-06
 

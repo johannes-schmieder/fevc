@@ -1,35 +1,34 @@
-# Windows full-CMG candidate E qualification — November 7, 2026
+# Windows full-CMG 0.5.2 adoption — November 7, 2026
 
-Candidate `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4` retains the common,
-unmodified CMG `e5613e81fb3b03c78de98658b372646fa802aabb` and explicit 128 levels.
-The result-export and scheduling fixes pass 952 Python tests, the Rust workspace,
-Clippy, formatting, assembly, vendor and parity checks. Hosted Windows package,
-Rust and SPI checks pass at this exact source. Mac arm64/Rosetta thin/universal
-native and installed qualification passes. SCC smoke `8502096` and full native
-job `8502097` pass with zero scheduler errors; all 60 collected artifacts match
-the remote hashes. A collection-only permission-metadata failure is preserved;
-no native test was rerun.
+All five plugins are adopted from build source
+`ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`, using unmodified common CMG
+`e5613e81fb3b03c78de98658b372646fa802aabb` with explicit 128 levels.
+The [adoption manifest](../native/windows-cmg-20261107/manifest.json) binds their
+hashes, corresponding source and exact native qualification evidence.
 
-The E development pilot passes all scientific cells; three single-pair timing
-observations exceed the prospective allowance. It is diagnostic evidence,
-not confirmation. The full confirmation was frozen independently with the
-unchanged six-pair schedule, inputs and `max(5%, 1 ms)` median allowance:
-`07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a`.
-Smoke, legacy and full-CMG point groups pass with verified cleanup; the
-remaining groups are running. Exact E local HTTP fresh/replacement installs
-pass on Mac arm64, verifying all 61 installed file hashes and native inference
-and caller-state checks; see the [package binding](../native/windows-cmg-20261107/evidence/packaging-E/binding.json).
-See [E platform status](../native/windows-cmg-20261107/qualification-E-status.json),
-[development results](../native/windows-cmg-20261107/evidence/development-E/pilot-review.json)
-and the [frozen campaign](../native/windows-cmg-20261107/evidence/windows-E-campaign.json).
+The frozen Windows confirmation
+`07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a`
+passes all 18 groups and all 12 scientific and timing cells. All 144 timed
+commands are retained under the unchanged six-pair median allowance
+`max(5%, 1 ms)`, without resampling or exclusions. Each run verifies collection,
+source identity, cleanup and shutdown; the final inspector confirms stopped.
+See the [complete confirmation](../native/windows-cmg-20261107/evidence/confirmation-E/result-summary.json).
+Earlier C failures and D/E development pilots remain unchanged.
 
-Publication and adoption remain blocked until the full E confirmation and final
-package checks pass. All five installed payload plugins remain released 0.5.1.
-Preserve the failed C confirmation and intermediate D evidence. Do not resample
-unchanged E, exclude adverse cells, or weaken the acceptance rules. After all
-gates pass, adopt exact source-bound plugins, publish 0.5.2, verify actual public
-fresh/replacement installations, then delete the approved temporary hosted branch.
-Mac x86-64 runtime qualification uses Rosetta, not native Intel hardware.
+Mac arm64/Rosetta thin/universal native and installed qualification, SCC smoke
+`8502096` and full job `8502097`, and hosted Windows package/Rust/SPI checks pass.
+Exact E local HTTP fresh/replacement installs pass on Mac arm64, checking all
+61 installed file hashes. All 63 final payload files equal that preflight.
+Source checks pass at E (952 Python tests, Rust workspace, Clippy, formatting,
+assembly and vendor/parity); final package checks are in progress.
+
+Next: finish source-compatible packaging checks, publish the authorized 0.5.2
+release, verify actual tag/main/GitHub/downloaded-ZIP fresh and replacement
+installations, record the final audit, then remove the approved temporary
+`qualify/windows-cmg-20261107` branch. No publication is claimed yet.
+Windows qualification covers one/two native workers and the registered fixtures.
+Mac x86-64 runtime qualification uses Rosetta; native Intel hardware and general
+statistical coverage are not claimed. Unrelated CMG work remains untouched.
 
 ## Previous checkpoint
 

@@ -1,0 +1,321 @@
+{
+  "status": "PASS",
+  "groups": 18,
+  "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+  "cells": [
+    {
+      "case": 0,
+      "workers": 1,
+      "incumbent_median_ms": 121.5,
+      "candidate_median_ms": 117.5,
+      "allowance_ms": 6.075,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.6269651432632273e-08,
+      "incumbent_ms": [
+        123,
+        118,
+        117,
+        122,
+        122,
+        121
+      ],
+      "candidate_ms": [
+        117,
+        113,
+        109,
+        118,
+        121,
+        119
+      ]
+    },
+    {
+      "case": 0,
+      "workers": 2,
+      "incumbent_median_ms": 125.0,
+      "candidate_median_ms": 120.0,
+      "allowance_ms": 6.25,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.6269651432632273e-08,
+      "incumbent_ms": [
+        125,
+        125,
+        110,
+        125,
+        123,
+        126
+      ],
+      "candidate_ms": [
+        119,
+        115,
+        110,
+        121,
+        122,
+        123
+      ]
+    },
+    {
+      "case": 1,
+      "workers": 1,
+      "incumbent_median_ms": 3069.0,
+      "candidate_median_ms": 476.5,
+      "allowance_ms": 153.45000000000002,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 9.710293563608348e-07,
+      "incumbent_ms": [
+        2982,
+        3156,
+        2844,
+        2955,
+        3295,
+        3265
+      ],
+      "candidate_ms": [
+        465,
+        470,
+        440,
+        483,
+        487,
+        493
+      ]
+    },
+    {
+      "case": 1,
+      "workers": 2,
+      "incumbent_median_ms": 3088.0,
+      "candidate_median_ms": 449.5,
+      "allowance_ms": 154.4,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 9.710293563608348e-07,
+      "incumbent_ms": [
+        2986,
+        3190,
+        2856,
+        2936,
+        3268,
+        3250
+      ],
+      "candidate_ms": [
+        434,
+        445,
+        410,
+        456,
+        454,
+        461
+      ]
+    },
+    {
+      "case": 2,
+      "workers": 1,
+      "incumbent_median_ms": 19424.0,
+      "candidate_median_ms": 1701.5,
+      "allowance_ms": 971.2,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.6881072722144722e-06,
+      "incumbent_ms": [
+        18745,
+        20103,
+        17694,
+        18353,
+        20264,
+        20719
+      ],
+      "candidate_ms": [
+        1660,
+        1667,
+        1595,
+        1736,
+        1736,
+        1755
+      ]
+    },
+    {
+      "case": 2,
+      "workers": 2,
+      "incumbent_median_ms": 19260.5,
+      "candidate_median_ms": 1582.5,
+      "allowance_ms": 963.0250000000001,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.6881072722144722e-06,
+      "incumbent_ms": [
+        18572,
+        19949,
+        17661,
+        18395,
+        20312,
+        27313
+      ],
+      "candidate_ms": [
+        1535,
+        1554,
+        1482,
+        1611,
+        1632,
+        1645
+      ]
+    },
+    {
+      "case": 3,
+      "workers": 1,
+      "incumbent_median_ms": 117.5,
+      "candidate_median_ms": 119.5,
+      "allowance_ms": 5.875,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 6.7206881261425355e-09,
+      "incumbent_ms": [
+        106,
+        124,
+        109,
+        111,
+        124,
+        205
+      ],
+      "candidate_ms": [
+        116,
+        115,
+        121,
+        130,
+        118,
+        122
+      ]
+    },
+    {
+      "case": 3,
+      "workers": 2,
+      "incumbent_median_ms": 115.5,
+      "candidate_median_ms": 120.0,
+      "allowance_ms": 5.775,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 6.7206881261425355e-09,
+      "incumbent_ms": [
+        110,
+        121,
+        107,
+        109,
+        124,
+        202
+      ],
+      "candidate_ms": [
+        118,
+        120,
+        112,
+        120,
+        120,
+        121
+      ]
+    },
+    {
+      "case": 4,
+      "workers": 1,
+      "incumbent_median_ms": 414.5,
+      "candidate_median_ms": 416.0,
+      "allowance_ms": 20.725,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 3.66303170338138e-12,
+      "incumbent_ms": [
+        406,
+        423,
+        392,
+        389,
+        448,
+        744
+      ],
+      "candidate_ms": [
+        406,
+        410,
+        389,
+        422,
+        422,
+        425
+      ]
+    },
+    {
+      "case": 4,
+      "workers": 2,
+      "incumbent_median_ms": 412.0,
+      "candidate_median_ms": 420.5,
+      "allowance_ms": 20.6,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 3.66303170338138e-12,
+      "incumbent_ms": [
+        393,
+        431,
+        387,
+        393,
+        438,
+        764
+      ],
+      "candidate_ms": [
+        409,
+        419,
+        392,
+        422,
+        433,
+        432
+      ]
+    },
+    {
+      "case": 5,
+      "workers": 1,
+      "incumbent_median_ms": 921.0,
+      "candidate_median_ms": 729.0,
+      "allowance_ms": 46.050000000000004,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.0189409939155056e-09,
+      "incumbent_ms": [
+        888,
+        954,
+        858,
+        869,
+        982,
+        1648
+      ],
+      "candidate_ms": [
+        711,
+        725,
+        673,
+        746,
+        753,
+        733
+      ]
+    },
+    {
+      "case": 5,
+      "workers": 2,
+      "incumbent_median_ms": 921.5,
+      "candidate_median_ms": 873.0,
+      "allowance_ms": 46.075,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 1.0189409939155056e-09,
+      "incumbent_ms": [
+        892,
+        951,
+        883,
+        878,
+        980,
+        1669
+      ],
+      "candidate_ms": [
+        847,
+        861,
+        810,
+        894,
+        894,
+        885
+      ]
+    }
+  ],
+  "comparison": "six fixed paired blocks; common-draw registered scientific bound; complete-command medians",
+  "retries_or_exclusions": 0
+}

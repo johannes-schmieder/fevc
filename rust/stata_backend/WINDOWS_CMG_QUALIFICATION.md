@@ -6,8 +6,10 @@ explicit diagonal Stata routing keep their existing behavior. There is no ABI
 layout change. CMG remains the unmodified common revision
 `e5613e81fb3b03c78de98658b372646fa802aabb`, with 128 levels explicitly configured.
 
-**Qualification is pending.** The distributed binaries still belong to 0.5.1.
-A source test or a hosted build alone cannot establish Windows Stata support.
+**Native qualification passes.** All 18 source-bound private Windows groups
+and all 12 registered scientific/performance cells pass for the adopted 0.5.2
+DLL. See `native/windows-cmg-20261107/manifest.json` for exact identities and
+platform limitations. Published installation checks are recorded separately.
 
 ## Fixed campaign
 

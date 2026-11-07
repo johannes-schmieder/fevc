@@ -1,22 +1,25 @@
-# Current candidate E
+# Qualified Windows full-CMG 0.5.2 payload
 
-The current frozen build is `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`.
-It adds the reviewed result-export and scheduling fixes to the Windows CMG
-implementation, retaining unmodified upstream CMG `e5613e81` and 128 levels.
-[Platform status](qualification-E-status.json) and [source-bound evidence](evidence/candidate-E/)
-record passing Mac arm64/Rosetta, SCC Linux and hosted Windows/Rust/SPI gates.
+All five adopted plugins share build source
+`ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`, common unmodified CMG
+`e5613e81fb3b03c78de98658b372646fa802aabb`, and explicit 128 levels.
+The [manifest](manifest.json) binds the exact binaries, corresponding source
+and native evidence. Mac arm64/Rosetta, SCC Linux and hosted checks pass.
 
-The [E pilot](evidence/development-E/pilot-review.json) passes scientific checks,
-but its single-pair timings are not release qualification. The
-[frozen confirmation](evidence/windows-E-campaign.json) retains the original
-six paired blocks and all thresholds. Smoke, legacy and full-CMG point groups pass; the remaining groups
-are running. [Exact E local fresh/replacement installations](evidence/packaging-E/binding.json)
-also pass on Mac arm64, including all 61 file hashes. No candidate binary is adopted or published. The installed payload
-still contains 0.5.1. Final Windows confirmation, package installation and actual
-published-install checks remain required before completion.
+The [registered confirmation](evidence/confirmation-E/result-summary.json)
+passes all 18 Windows groups and all 12 scientific and timing cells. All 144
+measurements remain in the [comparison](evidence/confirmation-E/comparison.json);
+no resampling, exclusions or threshold changes occurred. Cleanup and shutdown
+pass after every group, and the final inspector confirms the machine stopped.
+The earlier failed confirmation and development pilots below retain their
+original identities, adverse results and limited interpretation.
 
-The earlier failed confirmation and development evidence below retain their
-original source identities and outcomes.
+[Exact E local fresh/replacement installations](evidence/packaging-E/binding.json)
+pass on Mac arm64, verifying all 61 installed files. The adopted 63-file payload
+matches that preflight exactly. Final packaging and actual published-install
+checks remain in progress; this checkpoint does not claim publication.
+Windows qualification covers one/two workers and the declared fixtures only.
+Mac x86-64 runtime tests use Rosetta; no native Intel or general coverage claim.
 
 ## Previous checkpoint
 

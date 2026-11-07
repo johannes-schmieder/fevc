@@ -1,10 +1,28 @@
 # Native package provenance
 
-Version [0.5.1](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1) is published with CMG 0.2.0 at
-`e5613e81fb3b03c78de98658b372646fa802aabb`. All five plugins share build source
-`94d94999be54e9a2309497d5fbe9899e2822cd51`; Mac, Linux and private Windows
-native qualification pass. The dated records below retain their original
-publication and qualification scope, including earlier pending Windows results.
+Version [0.5.2](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
+adds full-CMG Windows support while retaining the common unmodified CMG 0.2.0
+revision `e5613e81fb3b03c78de98658b372646fa802aabb` and explicit 128-level limit.
+All five plugins share build source `ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4`.
+
+## Windows full-CMG qualification in 0.5.2
+
+The [adoption manifest](windows-cmg-20261107/manifest.json) binds the exact
+binaries, corresponding source, hosted checks and native evidence. Mac arm64,
+Mac x86-64 under Rosetta, universal aliases and SCC Linux native/installed tests
+pass. Windows passes all 18 bounded runtime, fresh/replacement installation and
+fixed performance groups, including one/two-worker full-CMG point, controls,
+MCSE, projection, pooled inference, cancellation and memory-policy checks.
+The [comparison](windows-cmg-20261107/evidence/windows/comparison.json) retains
+all 144 timed commands across the 12 scientific/performance cells and applies
+the predeclared `max(5%, 1 ms)` complete-command allowance. No confirmation
+measurement in the final registration was resampled or excluded. The original
+failed incumbent registration, failed confirmation and development pilots are preserved in
+the qualification records. The weighted-observation comparison uses movers,
+the population supported by both versions. These claims apply to the declared
+fixtures and worker counts; native Intel Mac hardware and general coverage
+remain outside the qualification. Historical evidence below keeps its original
+sources, limitations and outcomes.
 
 ## CMG consolidation in 0.5.1
 

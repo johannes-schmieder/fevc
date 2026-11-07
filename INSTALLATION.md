@@ -57,7 +57,7 @@ Stata after updating a loaded native plugin. See
 
 After installing or updating the package and restarting Stata, you can
 check which features the loaded plugin supports. With the plugins included
-in version 0.5.1, all of the following assertions should hold, and the
+in version 0.5.2, all of the following assertions should hold, and the
 example should run on the Rust backend. This has been verified on macOS,
 Linux, and Windows.
 
@@ -79,20 +79,20 @@ confidence intervals that pool movers and stayers.
 ## Installing a specific release
 
 To install the tagged
-[0.5.1 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1)
+[0.5.2 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
 from GitHub:
 
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.1/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.2/")
 ```
 
 Restart Stata after updating to load the new programs and native plugin.
 
 ## Release ZIP and offline installation
 
-Download `fevc-0.5.1.zip` from the
-[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.1).
+Download `fevc-0.5.2.zip` from the
+[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2).
 The ZIP contains only the installation files, programs, help, license
 notices, and five native plugins; it does not include tests, development
 tools, or benchmark data. Extract it and run:

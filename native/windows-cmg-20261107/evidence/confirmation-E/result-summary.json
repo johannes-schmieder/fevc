@@ -1,0 +1,287 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-CONFIRMATION-RESULT-V1",
+  "status": "QUALIFICATION_PASS",
+  "build_source_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+  "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+  "groups_completed": 18,
+  "scientific_cells_passed": 12,
+  "performance_cells_passed": 12,
+  "performance_cells_failed": 0,
+  "all_144_timed_commands_retained": true,
+  "resampling_or_exclusions": 0,
+  "records": [
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "cmg_attachments"
+      },
+      "run_id": "win-20261107T175700Z-c913e8e8",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "cmg_lifecycle"
+      },
+      "run_id": "win-20261107T180308Z-690a97df",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "cmg_point"
+      },
+      "run_id": "win-20261107T175038Z-7e40b04f",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "installation"
+      },
+      "run_id": "win-20261107T180855Z-fc435a06",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "legacy"
+      },
+      "run_id": "win-20261107T174029Z-e07c8bc7",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T182209Z-9af9b733",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 1,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T182827Z-f6e0a485",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 2,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T184909Z-8b3df1ad",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 3,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T185514Z-ae9a2d3e",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 4,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T191625Z-cc9da9ab",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 5,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T192231Z-0c8173cf",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 0,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T181455Z-3b32b381",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 1,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T183448Z-7ab55e0e",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 2,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T184232Z-9a8c7abf",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 3,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T190131Z-bdf5eecb",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 4,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T190851Z-bf673ca8",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
+        "hosted_build_run_id": "42313440397",
+        "hosted_rust_run_id": "42313444009",
+        "performance_arm": "incumbent",
+        "performance_block": 5,
+        "production_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+        "qualification_group": "performance"
+      },
+      "run_id": "win-20261107T192859Z-28b401d8",
+      "status": "PASS",
+      "cleanup": true
+    },
+    {
+      "group": {
+        "campaign_sha256": "07e26f8e747884db82a9594b396300e86b10c263c72d10e31b2a2e912222726a",
+        "candidate_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+        "hosted_build_run_id": "42394565802",
+        "hosted_rust_run_id": "42394568202",
+        "performance_arm": "candidate",
+        "performance_block": 0,
+        "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+        "qualification_group": "smoke"
+      },
+      "run_id": "win-20261107T173448Z-99afbebd",
+      "status": "PASS",
+      "cleanup": true
+    }
+  ],
+  "failed_cells": [],
+  "published": false,
+  "repository_plugins_adopted": false
+}

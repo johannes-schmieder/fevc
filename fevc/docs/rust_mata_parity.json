@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-06",
-  "release_target": "0.5.1",
-  "qualification_scope": "CMG consolidation plugins are built from 94d94999 with unmodified upstream CMG e5613e81. Mac arm64/Rosetta, SCC Linux 8488094 and private Windows full native/installed qualification pass. Exact hashes, corresponding source and evidence are in native/cmg-consolidation-20261106/manifest.json. Shared full-CMG Stata routes remain Mac/Unix only; Windows retains its established native routes. No native Intel hardware or general coverage claim. Historical dated receipts qualify only their recorded binaries; final package installation evidence is separate.",
+  "updated": "2026-11-07",
+  "release_target": "0.5.2",
+  "qualification_scope": "All five plugins are built from ec5e1e0e with unmodified common CMG e5613e81 and explicit 128 levels. Mac arm64/Rosetta, SCC Linux 8502097, and all 18 private Windows runtime/installation/frozen performance groups pass. Windows now supports shared full-CMG automatic/explicit point estimation and supported projection/component routes. Exact hashes, corresponding source and evidence are in native/windows-cmg-20261107/manifest.json. Windows runtime qualification covers one/two workers; no native Intel hardware or general coverage claim. Historical records retain their original source and scope; final published-install evidence is separate.",
   "statuses": [
     "qualified",
     "implemented",
@@ -16,7 +16,7 @@
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Explicit exact Mata and scalable Rust/JLA, fixed offsets and independent physical stayers. Separate type variance coefficients in one residual-moment Gram; dense and literal-expansion oracles pass. The 16000-call assessment has full primary availability and passes its descriptive screens; stress failures and numerical sensitivity remain in POOLED_COMPONENT_ASSESSMENT.md. All five current plugins are rebuilt at 94d94999 with the existing capability/receipt contracts and bounded residual refinement. Mac arm64/Rosetta, SCC Linux and private Windows full native/installed checks pass; shared full-CMG Stata routes remain Mac/Unix only. native/cmg-consolidation-20261106/manifest.json; POOLED_COMPONENT_INFERENCE.md."
+      "evidence": "Explicit exact Mata and scalable Rust/JLA, fixed offsets and independent physical stayers. Separate type variance coefficients in one residual-moment Gram; dense and literal-expansion oracles pass. The 16000-call assessment has full primary availability and passes its descriptive screens; stress failures and numerical sensitivity remain in POOLED_COMPONENT_ASSESSMENT.md. All five current plugins are rebuilt at ec5e1e0e with the existing capability/receipt contracts and bounded residual refinement. Mac arm64/Rosetta, SCC Linux and private Windows native/installed checks pass, including shared full-CMG pooled structured-common/leverage q0/q1 at one/two Windows workers. native/windows-cmg-20261107/manifest.json; POOLED_COMPONENT_INFERENCE.md."
     },
     {
       "id": "mean-centering",
@@ -168,7 +168,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean 94d94999 native arm64 and Rosetta x86-64 thin/universal full native and installed checks pass. Exact three hashes and receipt: native/cmg-consolidation-20261106/manifest.json. No native Intel hardware claim; historical receipts keep their recorded scope."
+      "evidence": "Clean ec5e1e0e native arm64 and Rosetta x86-64 thin/universal full native and installed checks pass. Exact three hashes and receipts: native/windows-cmg-20261107/manifest.json. No native Intel hardware claim; historical receipts keep their original scope."
     },
     {
       "id": "linux-scc",
@@ -176,7 +176,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean 94d94999 SCC smoke 8488089 and full 8488094 pass, including native and installed checks; failed=0 and exit_status=0. All 66 collected files hash-verified. Exact plugin and receipt: native/cmg-consolidation-20261106/manifest.json."
+      "evidence": "Clean ec5e1e0e SCC smoke 8502096 and full 8502097 pass, including native and installed checks; failed=0 and exit_status=0. The collected evidence and binary inventory are hash-verified. Exact plugin and receipts: native/windows-cmg-20261107/manifest.json."
     },
     {
       "id": "windows",
@@ -184,7 +184,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean 94d94999 hosted static-CRT artifact, smoke win-20261106T235058Z-83f6dbe7 and full win-20261107T000031Z-bd8dad24 pass on private Windows x86-64 Stata. All 18 platform gates pass or are satisfied by hosted CI. Exact plugin and receipts: native/cmg-consolidation-20261106/manifest.json. Shared full-CMG Stata route remains Mac/Unix only; established Windows native routes are qualified."
+      "evidence": "Clean ec5e1e0e hosted static-CRT artifact passes all 18 private Windows runtime, installation and fixed performance groups, including shared full-CMG point, controls, projection, pooled component inference, cancellation and memory policy at one/two workers. All 12 registered scientific/performance cells pass. Exact binary, source and receipts: native/windows-cmg-20261107/manifest.json. Earlier failed registrations, the failed confirmation and development pilots remain separate."
     },
     {
       "id": "all-point-probe-numerical-mcse",

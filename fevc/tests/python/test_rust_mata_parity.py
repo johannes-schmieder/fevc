@@ -31,19 +31,24 @@ def test_every_alpha_gap_is_explicit() -> None:
     assert gaps == set()
     windows = next(row for row in rows if row["id"] == "windows")
     assert windows["mata"] == windows["rust"] == "qualified"
-    record = "native/cmg-consolidation-20261106/manifest.json"
+    record = "native/windows-cmg-20261107/manifest.json"
     assert record in windows["evidence"]
     manifest_path = REPO_ROOT / record
     adoption = json.loads(manifest_path.read_text(encoding="utf-8"))
-    evidence = adoption["windows_qualification"]
-    payload = (manifest_path.parent / evidence["path"]).read_bytes()
-    assert hashlib.sha256(payload).hexdigest() == evidence["sha256"]
-    checks = json.loads(payload)
-    assert checks["status"] == "PASS" and checks["runtime_profile"] == "full"
-    assert set(checks["gates"].values()) <= {"PASS", "HOSTED_CI_PASS"}
-    assert checks["production_commit"] == adoption["build_source_commit"]
+    sys.path.insert(0, str(REPO_ROOT / "fevc/tools"))
+    import build_github_release
+
+    # Current qualification requires every registered runtime and comparison
+    # group; the previous single full-profile receipt cannot qualify 0.5.2.
+    result = build_github_release.require_windows_cmg_qualification(
+        REPO_ROOT, manifest_path, adoption
+    )
+    assert result["status"] == "PASS" and result["groups"] == 18
+    assert len(result["cells"]) == 12
+    assert all(cell["science"] == cell["performance"] == "PASS"
+               for cell in result["cells"])
     binary = next(row for row in adoption["binaries"] if "windows" in row["name"])
-    assert checks["binary_sha256"] == binary["sha256"] == hashlib.sha256(
+    assert binary["sha256"] == hashlib.sha256(
         (REPO_ROOT / "fevc" / binary["name"]).read_bytes()
     ).hexdigest()
     # The previous adoption remains an unqualified historical exception.

@@ -1,0 +1,65 @@
+[
+  {
+    "command": [
+      "fevc/cmg/tools/assemble.py",
+      "--all",
+      "--check"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fevc/tools/check_cmg_vendor.py"
+    ],
+    "exit_code": 0,
+    "stdout": "CMG_VENDOR_CHECK=PASS\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fevc/tools/render_rust_mata_parity.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fevc/tools/check_fevc_public_identity.py"
+    ],
+    "exit_code": 0,
+    "stdout": "FEVC PUBLIC-IDENTITY AUDIT PASS\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fevc/tools/license_audit.py"
+    ],
+    "exit_code": 0,
+    "stdout": "LICENSE_AUDIT=PASS\nMIT_SHA256=47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fevc/tools/build_release_artifact.py",
+      "--check"
+    ],
+    "exit_code": 0,
+    "stdout": "FEVC_RELEASE_ARTIFACT_CHECK_PASS version=0.5.2 files=58 sha256=4d127887a25cc460068c0454449fdb9a01e61946ce1042f0b2f6e9e3862486c4\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "fevc/tools/build_github_release.py",
+      "--adoption-manifest",
+      "native/windows-cmg-20261107/manifest.json",
+      "--check"
+    ],
+    "exit_code": 0,
+    "stdout": "FEVC_GITHUB_PACKAGE_CHECK_PASS version=0.5.2 files=63 sha256=66bb8233e217b0fa89898cade883881667222760af8492ef559c1a8f9b9dfd97\n",
+    "stderr": ""
+  }
+]
