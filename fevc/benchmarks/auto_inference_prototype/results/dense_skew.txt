@@ -1,0 +1,23 @@
+design n=4413 workers=1804 firms=415 stayer rows=582 leverage mean 0.503 max 0.931 mover matches/firm 9.2
+== firm_omit / skew errors, 1000 samples
+   theta [0.098, 0.028, 0.024]  SD/|theta| [0.021, 0.053, 0.026]  noise share of variance [0.076, 0.077, 0.184]  KSS correction/theta [ 0.104,  0.156, -0.097]
+   Monte Carlo SD / analytic SD [1.012, 1.040, 0.985, 1.021]
+   true variances             raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.989, 0.960, 1.016, 0.979] median [0.989, 0.960, 1.014, 0.979]  coverage [0.944, 0.942, 0.956, 0.951]
+   true variances             trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.989, 0.960, 1.016, 0.979] median [0.989, 0.960, 1.014, 0.979]  coverage [0.944, 0.942, 0.956, 0.951]
+   current (moment, common)   raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.005, 0.840, 0.927, 0.847] median [1.003, 0.839, 0.921, 0.846]  coverage [0.949, 0.899, 0.933, 0.911]
+   current (moment, common)   trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.005, 0.840, 0.927, 0.847] median [1.003, 0.839, 0.921, 0.846]  coverage [0.949, 0.899, 0.933, 0.911]
+   model (proxy, common)      raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.999, 0.837, 0.931, 0.841] median [0.997, 0.834, 0.923, 0.839]  coverage [0.950, 0.897, 0.934, 0.911]
+   model (proxy, common)      trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.999, 0.837, 0.931, 0.841] median [0.997, 0.834, 0.923, 0.839]  coverage [0.950, 0.897, 0.934, 0.911]
+   model (proxy, lean)        raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.991, 0.828, 0.916, 0.832] median [0.990, 0.827, 0.910, 0.831]  coverage [0.945, 0.894, 0.931, 0.910]
+   model (proxy, lean)        trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.991, 0.828, 0.916, 0.832] median [0.990, 0.827, 0.910, 0.831]  coverage [0.945, 0.894, 0.931, 0.910]
+   naive plug-in              raw   available [0.023, 0.998, 1.000, 0.000]  SE ratio rms [0.458, 0.739, 1.428,   nan] median [0.350, 0.735, 1.391,   nan]  coverage [0.010, 0.829, 0.990, 0.000]
+   naive plug-in              trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [0.493, 0.972, 1.451, 0.813] median [0.474, 0.967, 1.406, 0.805]  coverage [0.656, 0.937, 0.991, 0.902]
+   robust (lean)              raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.130, 0.974, 1.048, 1.005] median [1.116, 0.963, 1.006, 0.994]  coverage [0.971, 0.936, 0.955, 0.955]
+   robust (lean)              trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.130, 0.974, 1.048, 1.005] median [1.116, 0.963, 1.006, 0.994]  coverage [0.971, 0.936, 0.955, 0.955]
+   robust-dr (lean)           raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.129, 0.975, 1.052, 1.006] median [1.115, 0.964, 1.010, 0.995]  coverage [0.971, 0.937, 0.953, 0.957]
+   robust-dr (lean)           trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.129, 0.975, 1.052, 1.006] median [1.115, 0.964, 1.010, 0.995]  coverage [0.971, 0.937, 0.953, 0.957]
+   robust (common)            raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.117, 0.962, 1.031, 0.993] median [1.105, 0.952, 0.994, 0.982]  coverage [0.970, 0.935, 0.953, 0.951]
+   robust (common)            trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.117, 0.962, 1.031, 0.993] median [1.105, 0.952, 0.994, 0.982]  coverage [0.970, 0.935, 0.953, 0.951]
+   robust (homo)              raw   available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.134, 0.978, 1.057, 1.009] median [1.120, 0.967, 1.016, 0.998]  coverage [0.972, 0.937, 0.958, 0.955]
+   robust (homo)              trunc available [1.000, 1.000, 1.000, 1.000]  SE ratio rms [1.134, 0.978, 1.057, 1.009] median [1.120, 0.967, 1.016, 0.998]  coverage [0.972, 0.937, 0.958, 0.955]
+total 46s

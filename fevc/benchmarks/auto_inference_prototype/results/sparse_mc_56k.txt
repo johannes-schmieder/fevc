@@ -1,0 +1,28 @@
+n=56486 workers=23054 firms=4073 scen=homo probes=200 draws=8  setup 0.3s pass1 4.9s (600 solves)
+  analytic SD of this estimator [0.00078 0.00076 0.00019 0.0007 ] (Monte Carlo SD / analytic [1.059 1.027 1.038 0.981])
+  theta0 [0.0837 0.0764 0.052  0.2641]  mean est [0.0836 0.0765 0.052  0.2641]  SD [0.00082 0.00078 0.0002  0.00069]  bias/SD [-0.12  0.04  0.06 -0.07]   pass2: 36 solves, 0.37s per fit; r_eff med [13602.  3374.  2070.]
+  model     avail [1. 1. 1. 1.]  rmsSE/trueSD [1.    1.    1.005 1.   ]  cover(theta) [0.917 0.967 0.925 0.95 ]  cover(centred) [0.933 0.967 0.925 0.958]
+  robust    avail [1. 1. 1. 1.]  rmsSE/trueSD [1.002 1.002 0.998 1.001]  cover(theta) [0.925 0.967 0.925 0.95 ]  cover(centred) [0.933 0.967 0.925 0.958]
+  model_t   avail [1. 1. 1. 1.]  rmsSE/trueSD [1.    1.    1.005 1.   ]  cover(theta) [0.917 0.967 0.925 0.95 ]  cover(centred) [0.933 0.967 0.925 0.958]
+  robust_t  avail [1. 1. 1. 1.]  rmsSE/trueSD [1.002 1.002 0.998 1.001]  cover(theta) [0.925 0.967 0.925 0.95 ]  cover(centred) [0.933 0.967 0.925 0.958]
+n=56486 workers=23054 firms=4073 scen=mass probes=200 draws=8  setup 0.3s pass1 4.6s (600 solves)
+  analytic SD of this estimator [0.00086 0.00084 0.00022 0.00078] (Monte Carlo SD / analytic [1.053 1.023 1.033 0.978])
+  theta0 [0.0837 0.0764 0.052  0.2641]  mean est [0.0836 0.0765 0.052  0.2641]  SD [0.0009  0.00086 0.00023 0.00077]  bias/SD [-0.13  0.03  0.08 -0.08]   pass2: 36 solves, 0.38s per fit; r_eff med [14266.  3559.  2188.]
+  model     avail [1. 1. 1. 1.]  rmsSE/trueSD [1.    0.999 1.004 0.999]  cover(theta) [0.925 0.958 0.925 0.95 ]  cover(centred) [0.917 0.958 0.9   0.958]
+  robust    avail [1. 1. 1. 1.]  rmsSE/trueSD [1.002 0.996 0.973 0.992]  cover(theta) [0.942 0.958 0.917 0.95 ]  cover(centred) [0.917 0.95  0.892 0.958]
+  model_t   avail [1. 1. 1. 1.]  rmsSE/trueSD [1.    0.999 1.004 0.999]  cover(theta) [0.925 0.958 0.925 0.95 ]  cover(centred) [0.917 0.958 0.9   0.958]
+  robust_t  avail [1. 1. 1. 1.]  rmsSE/trueSD [1.002 0.996 0.973 0.992]  cover(theta) [0.942 0.958 0.917 0.95 ]  cover(centred) [0.917 0.95  0.892 0.958]
+n=56486 workers=23054 firms=4073 scen=firm_omit probes=200 draws=8  setup 0.3s pass1 4.5s (600 solves)
+  analytic SD of this estimator [0.00078 0.00087 0.00024 0.00096] (Monte Carlo SD / analytic [1.072 1.018 1.038 0.99 ])
+  theta0 [0.0837 0.0764 0.052  0.2641]  mean est [0.0836 0.0764 0.052  0.2641]  SD [0.00084 0.00089 0.00025 0.00095]  bias/SD [-0.1  -0.    0.08 -0.05]   pass2: 36 solves, 0.37s per fit; r_eff med [12634.  3089.  1922.]
+  model     avail [1. 1. 1. 1.]  rmsSE/trueSD [1.045 0.944 0.88  0.817]  cover(theta) [0.917 0.958 0.892 0.883]  cover(centred) [0.925 0.958 0.9   0.892]
+  robust    avail [1. 1. 1. 1.]  rmsSE/trueSD [1.108 0.989 1.01  0.945]  cover(theta) [0.95  0.967 0.917 0.95 ]  cover(centred) [0.933 0.967 0.908 0.958]
+  model_t   avail [1. 1. 1. 1.]  rmsSE/trueSD [1.045 0.944 0.88  0.817]  cover(theta) [0.917 0.958 0.892 0.883]  cover(centred) [0.925 0.958 0.9   0.892]
+  robust_t  avail [1. 1. 1. 1.]  rmsSE/trueSD [1.108 0.989 1.01  0.945]  cover(theta) [0.95  0.967 0.917 0.95 ]  cover(centred) [0.933 0.967 0.908 0.958]
+n=56486 workers=23054 firms=4073 scen=worker_omit probes=200 draws=8  setup 0.2s pass1 5.0s (600 solves)
+  analytic SD of this estimator [0.00087 0.00083 0.00022 0.00083] (Monte Carlo SD / analytic [1.037 1.025 0.99  0.942])
+  theta0 [0.0837 0.0764 0.052  0.2641]  mean est [0.0836 0.0765 0.052  0.2641]  SD [0.00091 0.00085 0.00022 0.00078]  bias/SD [-0.11  0.05  0.05 -0.05]   pass2: 36 solves, 0.38s per fit; r_eff med [13385.  3384.  2030.]
+  model     avail [1. 1. 1. 1.]  rmsSE/trueSD [0.983 1.002 0.965 0.933]  cover(theta) [0.933 0.967 0.942 0.95 ]  cover(centred) [0.95  0.967 0.95  0.958]
+  robust    avail [1. 1. 1. 1.]  rmsSE/trueSD [1.021 1.007 1.02  1.014]  cover(theta) [0.942 0.967 0.958 0.967]  cover(centred) [0.95  0.967 0.958 0.958]
+  model_t   avail [1. 1. 1. 1.]  rmsSE/trueSD [0.983 1.002 0.965 0.933]  cover(theta) [0.933 0.967 0.942 0.95 ]  cover(centred) [0.95  0.967 0.95  0.958]
+  robust_t  avail [1. 1. 1. 1.]  rmsSE/trueSD [1.021 1.007 1.02  1.014]  cover(theta) [0.942 0.967 0.958 0.967]  cover(centred) [0.95  0.967 0.958 0.958]

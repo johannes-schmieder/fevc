@@ -49,6 +49,9 @@ status are in [native provenance](../../native/README.md).
 - [Accepted Mean component inference plan](MEAN_COMPONENT_INFERENCE_PLAN.md):
   implementation, independent algebra, bounded sampling assessment, companion
   technical note and exact-source platform qualification.
+- [Automatic standard errors: proposal](AUTOMATIC_INFERENCE_PROPOSAL.md): diagnosis of the
+  current inference routes, a cheaper residual-based design, prototype evidence and an
+  implementation plan. Not implemented.
 - [Mean component inference assessment](MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md):
   complete attempt accounting, 22 retained exact-Mata availability failures,
   bounded native screens and material numerical sensitivity.

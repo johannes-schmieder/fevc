@@ -1,0 +1,8 @@
+bottleneck design: n=3864 workers=1600 firms=200 bridge movers=2
+exact leading share l1^2/sum l^2 [0.543 0.544 0.545] ; exact r_eff [2. 2. 2.] ; bound 1/sqrt(r_eff) [0.708 0.709 0.709]
+draws=8 estimated r_eff [2.3 2.2 2.2] -> leading-share bracket [[0.438 0.457 0.449] , [0.662 0.676 0.67 ]]; max influence share [0.3096 0.4744 0.5804]
+draws=16 estimated r_eff [2.5 2.5 2.5] -> leading-share bracket [[0.397 0.4   0.4  ] , [0.63  0.633 0.633]]; max influence share [0.3096 0.4744 0.5804]
+trace share [0.952 0.319 0.632]
+  true variances       cover [1.    0.997 0.998 0.948] rmsSE/SD [1.417 1.125 1.216 0.979]
+  model (proxy, lean)  cover [1.    0.982 1.    0.948] rmsSE/SD [1.411 1.118 1.211 0.979]
+  robust (lean)        cover [0.982 0.933 0.962 0.943] rmsSE/SD [1.882 1.335 1.595 0.967]

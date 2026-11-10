@@ -1,0 +1,19 @@
+design n=358809 rows (259158 mover matches, 99651 stayer obs), workers=139005 firms=9575, build 1s
+factorisation 46s
+pass 1 (point estimate): 600 solves, 26s
+mass      draws=2: pass 2 = 12 solves, 1.2s | theta [0.08427 0.07057 0.05095 0.25673] | true SD [3.39e-04 3.32e-04 7.80e-05 3.15e-04]
+    robust SE/true SD [1.006 1.001 0.973 0.996]  (CV across draw seeds [0.0007 0.0003 0.0035 0.0005])
+    model  SE/true SD [1.006 0.998 1.007 1.   ]  (CV across draw seeds [0.0001 0.0001 0.0006 0.    ])
+    r_eff [150752.   9823.  12980.]  max influence share [0.000823 0.000792 0.002677]  floored 0.0000
+mass      draws=8: pass 2 = 36 solves, 2.3s | theta [0.08427 0.07057 0.05095 0.25673] | true SD [3.39e-04 3.32e-04 7.80e-05 3.15e-04]
+    robust SE/true SD [1.006 1.001 0.972 0.996]  (CV across draw seeds [0.0003 0.0001 0.0007 0.0003])
+    model  SE/true SD [1.006 0.998 1.007 1.   ]  (CV across draw seeds [0.     0.     0.0001 0.    ])
+    r_eff [133240.   6042.   4777.]  max influence share [0.000823 0.000792 0.002677]  floored 0.0000
+firm_omit draws=2: pass 2 = 12 solves, 1.3s | theta [0.08393 0.07107 0.05105 0.25709] | true SD [3.08e-04 3.44e-04 8.60e-05 3.85e-04]
+    robust SE/true SD [1.108 0.989 1.004 0.957]  (CV across draw seeds [0.0006 0.0003 0.0028 0.0003])
+    model  SE/true SD [1.044 0.937 0.848 0.808]  (CV across draw seeds [0.0001 0.0001 0.0006 0.    ])
+    r_eff [238432.  18423.  12859.]  max influence share [0.000738 0.000892 0.006451]  floored 0.0000
+firm_omit draws=8: pass 2 = 36 solves, 2.3s | theta [0.08393 0.07107 0.05105 0.25709] | true SD [3.08e-04 3.44e-04 8.60e-05 3.85e-04]
+    robust SE/true SD [1.107 0.989 1.003 0.957]  (CV across draw seeds [0.0002 0.     0.0004 0.0002])
+    model  SE/true SD [1.044 0.937 0.848 0.808]  (CV across draw seeds [0.     0.     0.0002 0.    ])
+    r_eff [106999.   5209.   4140.]  max influence share [0.000738 0.000892 0.006451]  floored 0.0000

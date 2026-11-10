@@ -1,0 +1,14 @@
+n=4413 workers=1804 firms=415 scen=mass probes=200 draws=8  setup 0.1s pass1 0.1s (600 solves)
+  analytic SD of this estimator [0.00242 0.00152 0.00068 0.00232] (Monte Carlo SD / analytic [0.982 1.017 0.954 0.958])
+  theta0 [0.0985 0.028  0.0242 0.175 ]  mean est [0.0985 0.028  0.0242 0.1749]  SD [0.00238 0.00155 0.00065 0.00222]  bias/SD [ 0.02 -0.02 -0.09 -0.04]   pass2: 36 solves, 0.01s per fit; r_eff med [957. 310. 185.]
+  model     avail [1. 1. 1. 1.]  rmsSE/trueSD [1.001 1.    1.008 0.997]  cover(theta) [0.962 0.932 0.97  0.958]  cover(centred) [0.962 0.932 0.962 0.96 ]
+  robust    avail [1.    1.    0.998 1.   ]  rmsSE/trueSD [0.99  0.982 0.966 0.976]  cover(theta) [0.958 0.93  0.944 0.958]  cover(centred) [0.958 0.926 0.948 0.958]
+  model_t   avail [1. 1. 1. 1.]  rmsSE/trueSD [1.001 1.    1.008 0.997]  cover(theta) [0.962 0.932 0.97  0.958]  cover(centred) [0.962 0.932 0.962 0.96 ]
+  robust_t  avail [1. 1. 1. 1.]  rmsSE/trueSD [0.99  0.983 0.973 0.977]  cover(theta) [0.958 0.93  0.952 0.958]  cover(centred) [0.958 0.926 0.958 0.958]
+n=4413 workers=1804 firms=415 scen=firm_omit probes=200 draws=8  setup 0.1s pass1 0.1s (600 solves)
+  analytic SD of this estimator [0.00204 0.00149 0.00062 0.00228] (Monte Carlo SD / analytic [0.982 1.009 0.97  0.957])
+  theta0 [0.0985 0.028  0.0242 0.175 ]  mean est [0.0985 0.028  0.0242 0.1749]  SD [0.002   0.0015  0.0006  0.00218]  bias/SD [ 0.01 -0.   -0.1  -0.04]   pass2: 36 solves, 0.01s per fit; r_eff med [839. 305. 172.]
+  model     avail [1. 1. 1. 1.]  rmsSE/trueSD [1.007 0.869 0.913 0.857]  cover(theta) [0.972 0.908 0.942 0.924]  cover(centred) [0.972 0.908 0.94  0.93 ]
+  robust    avail [1.    1.    0.996 1.   ]  rmsSE/trueSD [1.063 0.982 0.969 0.957]  cover(theta) [0.976 0.938 0.946 0.948]  cover(centred) [0.976 0.938 0.944 0.944]
+  model_t   avail [1. 1. 1. 1.]  rmsSE/trueSD [1.007 0.869 0.913 0.857]  cover(theta) [0.972 0.908 0.942 0.924]  cover(centred) [0.972 0.908 0.94  0.93 ]
+  robust_t  avail [1. 1. 1. 1.]  rmsSE/trueSD [1.063 0.982 0.973 0.957]  cover(theta) [0.976 0.938 0.954 0.948]  cover(centred) [0.976 0.938 0.95  0.944]
