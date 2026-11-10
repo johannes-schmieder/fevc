@@ -4858,6 +4858,14 @@ fn solve_engine_v4_with_numerical_attachment(
         });
         let plan_problem = stayer_augmentation
             .map_or(&prepared.problem, |augmentation| &augmentation.core.problem);
+        // The compressed engine carries no attachment. A mover-only request
+        // without controls that asks for leave-out residual standard errors
+        // therefore runs on the generic engine, as the same request does
+        // whenever stayers are present.
+        let compressed_can_carry_request = prepared
+            .component_inference
+            .as_ref()
+            .is_none_or(|component| !component.core.leave_out_residual);
         let estimator_plan = resolve_estimator_plan(EstimatorPlanRequest {
             algorithm: algorithm_requested,
             engine: engine_requested,
@@ -4869,7 +4877,8 @@ fn solve_engine_v4_with_numerical_attachment(
             exact_limit,
             compressed_semantic_plan_ready: stayer_augmentation
                 .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
-                && prepared.plan.is_some(),
+                && prepared.plan.is_some()
+                && compressed_can_carry_request,
             compressed_physical_rng_ready: stayer_augmentation
                 .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
                 && compressed_physical_rng_ready,

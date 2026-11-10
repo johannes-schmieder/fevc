@@ -1597,3 +1597,245 @@ fn mixed_component_automatic_batches_keep_partition_and_v2_unit_receipt() {
         ok(vckss_rust_engine_release_v1(generation));
     }
 }
+
+pub(super) fn attach_leaveout_residual(generation: u64, grouped: bool, draws: u32) {
+    let attach = if grouped {
+        vckss_rust_engine_augment_match_component_inference_interrupt_v4
+    } else {
+        vckss_rust_engine_augment_component_inference_interrupt_v4
+    };
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    ok(
+        vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+            &mut augmentation,
+            bytes::<VckssComponentInferenceAugmentationRequestInterruptV1>(),
+        ),
+    );
+    augmentation.options.variance_source = VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL;
+    augmentation.options.seed = 8_675_309;
+    augmentation.options.probes = 4 * draws;
+    augmentation.options.batch_width = 16;
+    ok(attach(generation, &augmentation, 512));
+}
+
+pub(super) fn leaveout_residual_result(
+    generation: u64,
+) -> ([f64; 16], VckssComponentInferenceResultReceiptV5) {
+    let mut primitive = [42.0; 9];
+    let mut covariance = [42.0; 16];
+    let mut mcse = [42.0; 9];
+    let mut spectrum = [42.0; 60];
+    let mut summaries = [42.0; 24];
+    let mut folds = [42.0; 150];
+    let mut cv = [42.0; 490];
+    let mut targets = [42.0; 8];
+    let mut receipt = VckssComponentInferenceResultReceiptV5::default();
+    ok(vckss_rust_engine_component_inference_result_v5(
+        generation,
+        primitive.as_mut_ptr(),
+        9,
+        covariance.as_mut_ptr(),
+        16,
+        mcse.as_mut_ptr(),
+        9,
+        spectrum.as_mut_ptr(),
+        60,
+        ptr::null_mut(),
+        0,
+        summaries.as_mut_ptr(),
+        24,
+        folds.as_mut_ptr(),
+        150,
+        cv.as_mut_ptr(),
+        490,
+        targets.as_mut_ptr(),
+        8,
+        &mut receipt,
+        288,
+    ));
+    assert_eq!(receipt.variance_fit, 3);
+    assert_eq!(
+        receipt.v4.v3.v2.variance_source,
+        VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL
+    );
+    assert_eq!(receipt.joint_status, 0);
+    for target in 0..4 {
+        assert!(covariance[5 * target] > 0.0 && covariance[5 * target].is_finite());
+    }
+    (covariance, receipt)
+}
+
+// The default request leaves the solver route and batches automatic. The
+// resolved executor must carry leave-out residual standard errors on both of
+// its executors without changing the point estimate.
+#[test]
+fn v8_resolved_execution_carries_leaveout_residual_standard_errors() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    reset();
+    for (workers, firms, probes, executor) in [
+        (20, 20, 200, VCKSS_GENERIC_EXECUTION_DIAGONAL_QUEUE),
+        (8, 256, 9, VCKSS_GENERIC_EXECUTION_DIRECT_ATTACHMENTS),
+    ] {
+        let columns = OwnedColumns::structured_component_sized(workers, firms);
+        let capability = planned_capability_request(
+            VCKSS_ALGORITHM_JLA,
+            VCKSS_ENGINE_GENERIC,
+            VCKSS_ROUTE_AUTO,
+            VCKSS_DELETION_OBSERVATION,
+            VCKSS_NUISANCE_JOINT,
+            0,
+            VCKSS_BATCH_MODE_AUTO,
+            VCKSS_BATCH_MODE_AUTO,
+        );
+        let mut baseline = planned_solve_request(capability, 0, 0);
+        baseline.v3.v2.v1.probes = probes;
+        let mut candidate = VckssEngineSolveRequestV8::default();
+        candidate.v7.v6.v4 = baseline;
+        candidate.v7.v6.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV8>();
+        candidate.v7.v6.threads = 7;
+
+        let reference = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
+        ok(vckss_rust_engine_solve_v8(reference, &candidate));
+        let point_only = point(reference);
+        ok(vckss_rust_engine_release_v1(reference));
+
+        let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
+        attach_leaveout_residual(generation, false, 8);
+        ok(vckss_rust_engine_solve_v8(generation, &candidate));
+        close(&point(generation), &point_only);
+        let receipt = work(generation);
+        assert_eq!(receipt.execution_mode, executor);
+        let (_, result) = leaveout_residual_result(generation);
+        assert_eq!(result.v4.v3.v2.probes, 32);
+        assert_eq!(result.v4.solver_columns, 35);
+        ok(vckss_rust_engine_release_v1(generation));
+    }
+}
+
+// Without stayers and without controls, engine(auto) selects the compressed
+// engine, which carries no attachment. With standard errors attached the same
+// request must select the generic engine instead of failing.
+#[test]
+fn mover_only_match_request_with_standard_errors_selects_the_generic_engine() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    reset();
+    let mut columns = OwnedColumns::structured_component();
+    for row in 0..columns.worker.len() {
+        columns.deletion[row] = (row / 2 + 1) as f64;
+        columns.frequency[row] = 2.0;
+    }
+    let capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    let mut baseline = planned_solve_request(capability, 0, 0);
+    baseline.v3.v2.v1.probes = 200;
+    let mut candidate = VckssEngineSolveRequestV8::default();
+    candidate.v7.v6.v4 = baseline;
+    candidate.v7.v6.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV8>();
+    candidate.v7.v6.threads = 7;
+
+    let selected = |attach: bool| {
+        let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
+        if attach {
+            attach_leaveout_residual(generation, true, 8);
+        }
+        ok(vckss_rust_engine_solve_v8(generation, &candidate));
+        let mut plan = VckssExecutionPlanReceiptV1::default();
+        ok(vckss_rust_engine_execution_plan_receipt_v1(
+            generation,
+            &mut plan,
+            bytes::<VckssExecutionPlanReceiptV1>(),
+        ));
+        let estimate = point(generation);
+        let covariance = attach.then(|| leaveout_residual_result(generation).0);
+        ok(vckss_rust_engine_release_v1(generation));
+        (plan.resolution.engine_selected, estimate, covariance)
+    };
+    let (engine, compressed_point, _) = selected(false);
+    assert_eq!(engine, VCKSS_ENGINE_COMPRESSED);
+    let (engine, generic_point, covariance) = selected(true);
+    assert_eq!(engine, VCKSS_ENGINE_GENERIC);
+    // Two engines, one estimand: the estimates agree within a few standard
+    // errors plus their numerical noise.
+    let covariance = covariance.unwrap();
+    for target in 0..4 {
+        let tolerance = 6.0 * covariance[5 * target].sqrt();
+        assert!(
+            (compressed_point[target] - generic_point[target]).abs() <= tolerance,
+            "target {target}: {} versus {} (tolerance {tolerance})",
+            compressed_point[target],
+            generic_point[target]
+        );
+    }
+}
+
+// The default request with controls: match deletion, joint nuisance, engine,
+// route and batches all automatic. The point estimate stays the joint one and
+// the offset pass is counted with the attachment on either executor.
+#[test]
+fn default_request_with_controls_carries_standard_errors_through_the_offset_pass() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    reset();
+    for (workers, firms, probes, executor) in [
+        (20, 20, 200_u32, VCKSS_GENERIC_EXECUTION_DIAGONAL_QUEUE),
+        (8, 256, 9, VCKSS_GENERIC_EXECUTION_DIRECT_ATTACHMENTS),
+    ] {
+        let mut columns = OwnedColumns::structured_component_sized(workers, firms);
+        for row in 0..columns.worker.len() {
+            columns.deletion[row] = (row / 2 + 1) as f64;
+            columns.frequency[row] = 2.0;
+        }
+        let controls = vec![(0..columns.worker.len())
+            .map(|row| ((row * 13 + 5) % 17) as f64 / 17.0 + 0.01 * columns.firm[row])
+            .collect::<Vec<f64>>()];
+        for row in 0..columns.worker.len() {
+            columns.outcome[row] += 0.4 * controls[0][row];
+        }
+        let capability = planned_capability_request(
+            VCKSS_ALGORITHM_JLA,
+            VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+            VCKSS_ROUTE_AUTO,
+            VCKSS_DELETION_MATCH,
+            VCKSS_NUISANCE_JOINT,
+            1,
+            VCKSS_BATCH_MODE_AUTO,
+            VCKSS_BATCH_MODE_AUTO,
+        );
+        let mut baseline = planned_solve_request(capability, 0, 0);
+        baseline.v3.v2.v1.probes = probes;
+        let mut candidate = VckssEngineSolveRequestV8::default();
+        candidate.v7.v6.v4 = baseline;
+        candidate.v7.v6.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV8>();
+        candidate.v7.v6.threads = 7;
+
+        let reference = prepare_with_controls(&columns, &controls, VCKSS_DELETION_MATCH);
+        ok(vckss_rust_engine_solve_v8(reference, &candidate));
+        let point_only = point(reference);
+        ok(vckss_rust_engine_release_v1(reference));
+
+        let generation = prepare_with_controls(&columns, &controls, VCKSS_DELETION_MATCH);
+        attach_leaveout_residual(generation, true, 8);
+        ok(vckss_rust_engine_solve_v8(generation, &candidate));
+        close(&point(generation), &point_only);
+        let receipt = work(generation);
+        assert_eq!(receipt.execution_mode, executor);
+        let (_, result) = leaveout_residual_result(generation);
+        assert_eq!(result.v4.v3.v2.probes, 32);
+        // Three influence solves, four per draw, and two per point probe.
+        assert_eq!(result.v4.solver_columns, 35 + 2 * probes);
+        assert_eq!(receipt.component_rhs_count, 35 + 2 * u64::from(probes));
+        let mut units = VckssComponentInferenceUnitReceiptV1::default();
+        ok(vckss_rust_engine_component_inference_unit_receipt_v1(
+            generation, &mut units, 64,
+        ));
+        assert_eq!(units.nuisance_uncertainty_omitted, 0);
+        ok(vckss_rust_engine_release_v1(generation));
+    }
+}

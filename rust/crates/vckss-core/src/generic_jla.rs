@@ -1356,6 +1356,17 @@ fn run_generic_jla_with_execution_interrupt(
         })
         .and_then(|value| value.checked_add(projection_columns))
         .and_then(|value| {
+            // The offset pass repeats the target probes with the worker-firm
+            // solver: two right-hand sides per probe.
+            value.checked_add(
+                if offset_pass_requested(component_inference, options, controls) {
+                    2 * options.probes as usize
+                } else {
+                    0
+                },
+            )
+        })
+        .and_then(|value| {
             component_inference.map_or(Some(value), |prepared| {
                 usize::try_from(prepared.options.probes)
                     .ok()
@@ -2082,6 +2093,35 @@ fn run_generic_jla_with_execution_interrupt(
     let inference_coefficients = component_inference
         .is_some()
         .then(|| working_fit.coefficients.clone());
+    let offset_pass = offset_pass_requested(component_inference, options, controls);
+    // The outcome net of the fitted control index, centred as a fixed-offset
+    // run centres it. Its worker-firm fit and residuals are the joint ones.
+    let offset_y = if offset_pass {
+        let mut offset = copy_f64(&working_y, "offset-pass outcome", interrupt)?;
+        for (row, value) in offset.iter_mut().enumerate() {
+            checkpoint_chunk(interrupt, row, "generic_jla_offset_pass")?;
+            let mut sum = StableAccumulator::default();
+            sum.add(*value);
+            for control in 0..controls {
+                sum.add(
+                    -canonical.columns[control][row] * working_fit.coefficients.control[control],
+                );
+            }
+            *value = sum.finish();
+        }
+        crate::centering::subtract(
+            options.centering,
+            &mut offset,
+            &problem.frequency,
+            problem.physical_total,
+            interrupt,
+        )?;
+        Some(offset)
+    } else {
+        None
+    };
+    // Worker-firm leave-out adjustments and unit geometry of the offset pass.
+    let mut offset_state: Option<(Vec<f64>, (Vec<f64>, Vec<f64>))> = None;
     drop(working_fit);
 
     let row_rank = if observation_residual_moment_mode {
@@ -2415,6 +2455,46 @@ fn run_generic_jla_with_execution_interrupt(
                 &mut stayer_adjusted,
                 interrupt,
             )?);
+            if offset_pass {
+                let mut movers = match_deleted_adjustment(
+                    problem,
+                    &match_plan,
+                    &match_moments,
+                    &residual,
+                    None,
+                    options,
+                    true,
+                    None,
+                    interrupt,
+                )?;
+                let no_controls = zeroed_f64_with_interrupt(
+                    rows,
+                    "offset-pass zero control leverage",
+                    interrupt,
+                    "generic_jla_hybrid_allocate",
+                )?;
+                let mut stayers = observation_deleted_adjustment(
+                    problem,
+                    &observation_classes,
+                    &observation_moments,
+                    &signs,
+                    &residual,
+                    &no_controls,
+                    &row_order,
+                    options,
+                    true,
+                    interrupt,
+                )?;
+                let unit_geometry =
+                    pooled_component::geometry(mixed, &mut movers, &mut stayers, interrupt)?;
+                let values = combine_hybrid_adjustments(
+                    &movers.values,
+                    &stayers.values,
+                    &hybrid_plan.stayer_rows,
+                    interrupt,
+                )?;
+                offset_state = Some((values, unit_geometry));
+            }
         }
         if let Some(state) = numerical_state.as_mut() {
             state.point_clipping(stayer_adjusted.variance_clipped);
@@ -2517,6 +2597,24 @@ fn run_generic_jla_with_execution_interrupt(
                             )
                         })?,
                     ));
+                }
+                if offset_pass {
+                    let mut offset = match_deleted_adjustment(
+                        problem, &plan, &moments, &residual, None, options, true, None, interrupt,
+                    )?;
+                    let retained = |value: Option<Vec<f64>>| {
+                        value.ok_or_else(|| {
+                            BackendError::invariant(
+                                "generic_jla_component_inference",
+                                "offset-pass unit geometry was not retained",
+                            )
+                        })
+                    };
+                    let unit_geometry = (
+                        retained(offset.inference_leverage.take())?,
+                        retained(offset.inference_maker_inverse.take())?,
+                    );
+                    offset_state = Some((offset.values, unit_geometry));
                 }
                 match_rows_for_target = Some(plan);
                 (
@@ -2644,7 +2742,7 @@ fn run_generic_jla_with_execution_interrupt(
                 &geometry,
                 &weights,
                 &row_order,
-                &working_y,
+                offset_y.as_deref().unwrap_or(&working_y),
                 options,
                 interrupt,
             )?)
@@ -2688,6 +2786,37 @@ fn run_generic_jla_with_execution_interrupt(
         center_map.as_ref(),
         interrupt,
     )?;
+    let mut offset_receipts = Vec::new();
+    let offset_target = match (offset_y.as_ref(), offset_state.as_ref()) {
+        (Some(outcome), Some((adjusted, _))) => Some(target_correction(
+            problem,
+            &target_plan,
+            outcome,
+            adjusted,
+            &fe_solver,
+            &row_order,
+            match_rows_for_target
+                .as_ref()
+                .map(|plan| plan.rows.as_slice()),
+            hybrid.map(|plan| plan.stayer_rows.as_slice()),
+            rng,
+            options,
+            true,
+            &mut offset_receipts,
+            match_rows_for_target.as_ref(),
+            None,
+            &residual,
+            None,
+            interrupt,
+        )?),
+        (None, None) => None,
+        _ => {
+            return Err(BackendError::invariant(
+                "generic_jla_component_inference",
+                "the offset pass lost its outcome or unit geometry",
+            ))
+        }
+    };
     let numerical_result = numerical_state
         .map(|state| {
             state.replay(
@@ -2751,12 +2880,58 @@ fn run_generic_jla_with_execution_interrupt(
                         "grouped component inference lost its match plan",
                     )
                 })?;
+                // With an offset pass, every unit quantity below is the
+                // fixed-offset one; otherwise it is the run's own.
+                let offset_coefficients;
+                let (
+                    unit_y,
+                    unit_adjusted,
+                    diagonal,
+                    leverage,
+                    maker_inverse,
+                    unit_solver,
+                    unit_coefficients,
+                    unit_correction,
+                ) = match (&offset_y, &offset_state, &offset_target) {
+                    (Some(outcome), Some((adjusted, unit_geometry)), Some(correction)) => {
+                        offset_coefficients = ModelCoefficients {
+                            worker: coefficients.worker.clone(),
+                            firm: coefficients.firm.clone(),
+                            control: Vec::new(),
+                        };
+                        (
+                            outcome.as_slice(),
+                            adjusted.as_slice(),
+                            correction.diagonal.as_ref().ok_or_else(|| {
+                                BackendError::invariant(
+                                    "generic_jla_component_inference",
+                                    "the offset pass retained no target diagonals",
+                                )
+                            })?,
+                            &unit_geometry.0,
+                            &unit_geometry.1,
+                            &fe_solver,
+                            &offset_coefficients,
+                            correction.mean_centered,
+                        )
+                    }
+                    _ => (
+                        working_y.as_slice(),
+                        deleted_adjusted.as_slice(),
+                        diagonal,
+                        leverage,
+                        maker_inverse,
+                        working_solver,
+                        coefficients,
+                        target.mean_centered,
+                    ),
+                };
                 let mut collapsed = collapse_match_component_data(
                     problem,
                     match_plan,
-                    &working_y,
+                    unit_y,
                     &residual,
-                    &deleted_adjusted,
+                    unit_adjusted,
                     diagonal,
                     interrupt,
                 )?;
@@ -2764,7 +2939,7 @@ fn run_generic_jla_with_execution_interrupt(
                     pooled_component::append_data(
                         mixed,
                         &mut collapsed,
-                        &working_y,
+                        unit_y,
                         &residual,
                         maker_inverse,
                         diagonal,
@@ -2774,8 +2949,8 @@ fn run_generic_jla_with_execution_interrupt(
                 run_component_inference_attachment(
                     problem,
                     prepared,
-                    working_solver,
-                    coefficients,
+                    unit_solver,
+                    unit_coefficients,
                     ComponentInferenceRows::Match {
                         plan: pooled_plan.as_ref().map_or(match_plan, |mixed| &mixed.plan),
                         mover_units: pooled_plan.as_ref().map(|mixed| mixed.mover_units),
@@ -2792,7 +2967,7 @@ fn run_generic_jla_with_execution_interrupt(
                     structured_fold_entity.as_deref(),
                     Some(&collapsed.mass),
                     residual_control_adjustment.as_ref(),
-                    target.mean_centered,
+                    unit_correction,
                     memory.component_inference,
                     counter_plan,
                     interrupt,
@@ -2807,6 +2982,34 @@ fn run_generic_jla_with_execution_interrupt(
             ));
         }
     };
+    // The offset pass belongs to the attachment: its solves join the
+    // attachment's receipts so that every transport counts them once.
+    if let (Some(result), false) = (
+        component_inference_result.as_mut(),
+        offset_receipts.is_empty(),
+    ) {
+        let tolerance = fe_solver.options().full_residual_tolerance();
+        for receipt in &offset_receipts {
+            result.maximum_iterations = result.maximum_iterations.max(receipt.pcg.iterations);
+            result.maximum_reduced_residual = result
+                .maximum_reduced_residual
+                .max(receipt.pcg.relative_residual);
+            result.maximum_complete_residual = result
+                .maximum_complete_residual
+                .max(receipt.complete_residual);
+            result.solve_receipts.push(ComponentInferenceSolveReceipt {
+                phase: ComponentInferenceSolvePhase::Influence,
+                target_or_probe: receipt.probe.unwrap_or(0),
+                iterations: receipt.pcg.iterations,
+                reduced_residual: receipt.pcg.relative_residual,
+                complete_residual: receipt.complete_residual,
+                full_residual_tolerance: tolerance,
+            });
+        }
+        if let Some(diagnostic) = result.residual_noise.as_mut() {
+            diagnostic.offset_pass_solves = offset_receipts.len();
+        }
+    }
     let projection = match (projection, projection_coefficients) {
         (Some(prepared), Some(coefficients)) => {
             crate::progress::stage(crate::progress::PROJECTION);
@@ -3164,9 +3367,10 @@ fn validate_component_inference_request(
         ComponentInferenceUnit::Match => {
             // Without controls the two nuisance modes are one estimator, and
             // the leave-out residual source needs no offset to hold fixed.
-            let no_offset = prepared.leave_out_residual && problem.controls.is_empty();
+            // The leave-out residual source forms its own fixed-offset
+            // geometry, so it accepts either nuisance mode.
             if options.deletion != DeletionMode::Match
-                || (options.nuisance != NuisanceMode::FixedOffset && !no_offset)
+                || (options.nuisance != NuisanceMode::FixedOffset && !prepared.leave_out_residual)
             {
                 return Err(BackendError::new(
                     ErrorCode::UnsupportedFeature,
@@ -5923,6 +6127,22 @@ struct CollapsedMatchComponentData {
     deleted_adjusted: Vec<f64>,
     mass: Vec<f64>,
     target_diagonal: [Vec<f64>; PRIMITIVE_TARGETS],
+}
+
+/// Leave-out residual standard errors use the fixed-offset geometry of
+/// collapsed deletion units. Under joint nuisance with controls the engine
+/// forms that geometry beside the joint point estimate: the leverage moments
+/// are shared, the leave-out adjustments are recomputed without controls, and
+/// one further target pass uses the worker-firm solver on the offset outcome.
+fn offset_pass_requested(
+    component_inference: Option<&ComponentExecution<'_>>,
+    options: GenericJlaOptions,
+    controls: usize,
+) -> bool {
+    component_inference.is_some_and(|prepared| {
+        prepared.leave_out_residual && prepared.inference_unit == ComponentInferenceUnit::Match
+    }) && options.nuisance == NuisanceMode::Joint
+        && controls > 0
 }
 
 #[derive(Clone, Copy, Debug)]

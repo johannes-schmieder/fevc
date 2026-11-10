@@ -223,6 +223,16 @@ fn run_centered(
     centering: Centering,
     attach: bool,
 ) -> vckss_core::generic_jla::GenericJlaResult {
+    run_nuisance(hybrid, route, centering, NuisanceMode::FixedOffset, attach)
+}
+
+fn run_nuisance(
+    hybrid: &vckss_core::stayer_hybrid::PreparedExactStayerHybrid,
+    route: ModelSolverRoute,
+    centering: Centering,
+    nuisance: NuisanceMode,
+    attach: bool,
+) -> vckss_core::generic_jla::GenericJlaResult {
     let prepared = prepare_residual_noise_with_interrupt(
         &hybrid.problem,
         ComponentInferenceUnit::Match,
@@ -239,7 +249,7 @@ fn run_centered(
         routed_options(
             GenericJlaOptions {
                 centering,
-                ..options(DeletionMode::Match, NuisanceMode::FixedOffset)
+                ..options(DeletionMode::Match, nuisance)
             },
             route,
         ),
@@ -555,7 +565,7 @@ fn mover_only(
 }
 
 // Without controls there is no offset, so the default joint mode must give
-// the fixed-offset standard errors; with controls it stays rejected.
+// the fixed-offset standard errors with no further solves.
 #[test]
 fn no_control_match_units_accept_either_nuisance_mode() {
     let problem = fixture(false);
@@ -566,31 +576,6 @@ fn no_control_match_units_accept_either_nuisance_mode() {
     for index in 0..16 {
         assert_close(fixed.covariance[index], joint.covariance[index], 1e-10);
     }
-    let controlled = fixture(true);
-    let prepared = prepare_residual_noise_with_interrupt(
-        &controlled,
-        ComponentInferenceUnit::Match,
-        ComponentInferenceOptions {
-            probes: 4 * DRAWS,
-            ..ComponentInferenceOptions::default()
-        },
-        StructuredVarianceOptions::default(),
-        &mut NeverInterrupt,
-    )
-    .expect("standard-error preparation");
-    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
-        &controlled,
-        routed_options(
-            options(DeletionMode::Match, NuisanceMode::Joint),
-            ModelSolverRoute::Diagonal,
-        ),
-        None,
-        Some(&prepared),
-        None,
-        &mut NeverInterrupt,
-    )
-    .expect_err("joint match units with controls");
-    assert_eq!(error.code, ErrorCode::UnsupportedFeature);
 }
 
 // Observation units keep the controls in the operator, so the joint kernel
@@ -754,5 +739,75 @@ fn observation_units_with_joint_controls_use_the_joint_kernel() {
     }
     for target in 0..4 {
         assert!(attached.covariance[target * 5] > 0.0);
+    }
+}
+
+// With controls kept in the operator, the point estimate is the joint one and
+// the standard error is the fixed-offset one. The engine forms the
+// fixed-offset unit geometry beside the joint run: shared leverage moments,
+// leave-out adjustments without controls, and one more target pass.
+#[test]
+fn joint_nuisance_with_controls_reports_the_fixed_offset_standard_errors() {
+    let hybrid = super::pooled_component::fixture(false);
+    for centering in [Centering::Mean, Centering::None] {
+        let route = ModelSolverRoute::Diagonal;
+        let point_only = run_nuisance(&hybrid, route, centering, NuisanceMode::Joint, false);
+        let joint = run_nuisance(&hybrid, route, centering, NuisanceMode::Joint, true);
+        let fixed = run_nuisance(&hybrid, route, centering, NuisanceMode::FixedOffset, true);
+        // The attachment leaves the joint point estimate untouched, and the
+        // two nuisance modes are different estimators here.
+        assert_eq!(point_only.corrected, joint.corrected);
+        assert_ne!(joint.corrected, fixed.corrected);
+        let probes = options(DeletionMode::Match, NuisanceMode::Joint).probes as usize;
+        let (joint, fixed) = (
+            joint.component_inference.expect("joint"),
+            fixed.component_inference.expect("fixed offset"),
+        );
+        let diagnostic = joint.residual_noise.as_ref().expect("diagnostic");
+        assert_eq!(diagnostic.offset_pass_solves, 2 * probes);
+        assert_eq!(diagnostic.controls, 2);
+        assert_eq!(
+            joint.solve_receipts.len(),
+            3 + 4 * DRAWS as usize + 2 * probes
+        );
+        assert_eq!(fixed.solve_receipts.len(), 3 + 4 * DRAWS as usize);
+        assert_eq!(
+            fixed
+                .residual_noise
+                .as_ref()
+                .expect("diagnostic")
+                .offset_pass_solves,
+            0
+        );
+        assert!(!joint.nuisance_uncertainty_conditioned_away);
+        assert_eq!(joint.independent_units, fixed.independent_units);
+        for index in 0..16 {
+            assert_close(joint.covariance[index], fixed.covariance[index], 1e-7);
+        }
+        for target in 0..3 {
+            for (a, b) in joint.influence[target].iter().zip(&fixed.influence[target]) {
+                assert_close(*a, *b, 1e-7);
+            }
+        }
+    }
+}
+
+#[test]
+fn joint_nuisance_offset_pass_covers_mover_only_units() {
+    let problem = fixture(true);
+    assert!(!problem.controls.is_empty());
+    let joint = mover_only(&problem, NuisanceMode::Joint);
+    let fixed = mover_only(&problem, NuisanceMode::FixedOffset);
+    assert!(
+        joint
+            .residual_noise
+            .as_ref()
+            .expect("diagnostic")
+            .offset_pass_solves
+            > 0
+    );
+    assert!(!joint.nuisance_uncertainty_conditioned_away);
+    for index in 0..16 {
+        assert_close(joint.covariance[index], fixed.covariance[index], 1e-7);
     }
 }

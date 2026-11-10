@@ -690,3 +690,85 @@ fn numerical_windows_keeps_v1_disabled_while_v2_is_available() {
         ErrorCode::UnsupportedFeature as i32
     );
 }
+
+// The default command keeps numerical MCSE replay on. With leave-out residual
+// standard errors attached, the resolved automatic executor must still return
+// the same point estimate and MCSE, the replay, and the standard errors, with
+// and without controls.
+#[test]
+fn numerical_replay_and_leaveout_residual_standard_errors_share_the_default_route() {
+    use super::generic_execution::{attach_leaveout_residual, leaveout_residual_result};
+    let _guard = TEST_LOCK.lock().unwrap();
+    reset();
+    let mut columns = OwnedColumns::structured_component_sized(20, 20);
+    for row in 0..columns.worker.len() {
+        columns.deletion[row] = (row / 2 + 1) as f64;
+        columns.frequency[row] = 2.0;
+    }
+    let control = vec![(0..columns.worker.len())
+        .map(|row| ((row * 13 + 5) % 17) as f64 / 17.0 + 0.01 * columns.firm[row])
+        .collect::<Vec<f64>>()];
+    for controls in [0_u32, 1] {
+        let c: &[Vec<f64>] = if controls == 1 { &control } else { &[] };
+        let mut reference: Option<VckssEngineResultV1> = None;
+        for attach in [false, true] {
+            let mut request = VckssNumericalRequestV2 {
+                v1: request(
+                    VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+                    VCKSS_ROUTE_AUTO,
+                    VCKSS_DELETION_MATCH,
+                    VCKSS_NUISANCE_JOINT,
+                    controls,
+                ),
+                execution_mode: VCKSS_GENERIC_EXECUTION_RESOLVED_AUTO,
+                ..VckssNumericalRequestV2::default()
+            };
+            request.v1.struct_size = bytes::<VckssNumericalRequestV2>();
+            request.v1.schema_version = 2;
+            request.v1.component_requested = u32::from(attach);
+            // Without the attachment and without controls this request is the
+            // compressed engine's; force the generic engine for the reference
+            // so both runs use one point executor.
+            if controls == 0 {
+                request.v1 = super::numerical::request(
+                    VCKSS_ENGINE_GENERIC,
+                    VCKSS_ROUTE_AUTO,
+                    VCKSS_DELETION_MATCH,
+                    VCKSS_NUISANCE_JOINT,
+                    0,
+                );
+                request.v1.struct_size = bytes::<VckssNumericalRequestV2>();
+                request.v1.schema_version = 2;
+                request.v1.component_requested = u32::from(attach);
+            }
+            let generation = prepare_with_controls(&columns, c, VCKSS_DELETION_MATCH);
+            if attach {
+                attach_leaveout_residual(generation, true, 8);
+            }
+            ok(vckss_rust_engine_solve_numerical_interrupt_v2(
+                generation,
+                &request,
+                None,
+                ptr::null_mut(),
+                0,
+            ));
+            let value = point(generation);
+            assert_eq!(result(generation).executed_replay_rhs, 33);
+            if let Some(old) = reference {
+                assert_eq!(
+                    component_bits(value.corrected),
+                    component_bits(old.corrected)
+                );
+                assert_eq!(
+                    component_bits(value.numerical_mcse),
+                    component_bits(old.numerical_mcse)
+                );
+                let (_, receipt) = leaveout_residual_result(generation);
+                assert_eq!(receipt.v4.solver_columns, 35 + controls * 2 * 33);
+            } else {
+                reference = Some(value);
+            }
+            ok(vckss_rust_engine_release_v1(generation));
+        }
+    }
+}

@@ -681,6 +681,9 @@ pub struct Diagnostic {
     pub working_floored: u64,
     /// Controls whose estimation enters through [`ControlAdjustment`].
     pub controls: usize,
+    /// Target-pass solves spent on the fixed-offset geometry when the point
+    /// estimate keeps the controls in its operator; zero otherwise.
+    pub offset_pass_solves: usize,
     pub effective_rank: [f64; REPORTED_TARGETS],
     pub signal_truncation: f64,
     pub residual_noise: [f64; SQUARE],
@@ -703,6 +706,7 @@ impl Diagnostic {
             working_floor: fit.floor,
             working_floored: fit.floored,
             controls,
+            offset_pass_solves: 0,
             effective_rank: moments.effective_rank,
             signal_truncation: covariance.signal_truncation,
             residual_noise: moments.residual_noise,
