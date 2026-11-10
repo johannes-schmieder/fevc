@@ -13,7 +13,9 @@ qualifies nothing.
 | `akm_design.py` | Synthetic worker–firm designs in the pooled match/stayer row convention, leave-one-match-out pruning, and a worker-eliminated sparse solver. |
 | `dense_mc.py` | Explicit $n\times n$ kernels and exact noise terms, so estimators can be compared without numerical approximation. |
 | `sparse_auto.py` | Matrix-free version of the proposed two-pass calculation: leverages and target diagonals from Rademacher probes, then influence solves and pseudo-noise draws. |
+| `physical_mc.py` | Physical-row kernels: controls estimated jointly or held as an offset, deletion by match, by declared part of a match or by observation, and corrected centering. |
 | `run_dense.py` | Monte Carlo comparison of variance estimators on one dense design. |
+| `run_physical.py` | Monte Carlo of the joint, fixed-offset and corrected point estimates against one standard error, with and without the control-estimation term. |
 | `run_sparse.py` | `draws`: numerical noise against the number of draws. `mc`: Monte Carlo of the matrix-free pipeline. |
 | `run_bottleneck.py` | Two firm clusters joined by a few movers, to test the concentration diagnostic. |
 | `run_scale.py` | One larger design: solve counts, timing and draw-to-draw noise. |
@@ -56,6 +58,12 @@ python run_bottleneck.py 12 600                                                 
 python run_scale.py 10000 120000 25000 31                                       > results/scale_359k.txt
 python run_dense.py 900 1900 0 13 800 homo,mass,firm_omit,worker_omit            > results/dense_limited.txt
 python check_identities.py                                                      > results/check_identities.txt
+python run_physical.py 160 560 80 17 500 match 0 base,firm_omit                 > results/physical_match_nocontrols.txt
+python run_physical.py 160 560 80 17 500 match 2 base,firm_omit,worker_omit     > results/physical_match_controls2.txt
+python run_physical.py 160 560 80 17 500 match 6 base                           > results/physical_match_controls6.txt
+python run_physical.py 160 560 80 17 500 split 2 base,firm_omit                 > results/physical_split_controls2.txt
+python run_physical.py 160 560 80 17 500 observation 2 base,firm_omit           > results/physical_observation_controls2.txt
+python run_physical.py 160 560 80 29 500 match 2 base                           > results/physical_match_controls2_seed29.txt
 ```
 
 The whole set takes roughly forty minutes. Seeds are fixed in the commands and
@@ -69,6 +77,8 @@ do not.
   `fevc`; solve counts do.
 - Leverage estimates use the normalised form $a/(a+b)$ and a plain
   reciprocal, not the package's finite-probe maker formula.
-- No controls, no frequency weights beyond spell mass, no target weights
-  other than physical mass.
+- Controls appear only in the dense physical-row harness; the matrix-free
+  scripts have none. No target weights other than physical mass.
+- Frequency copies are covered only by the algebraic identity in
+  `check_identities.py`.
 - Errors are independent across rows by construction.

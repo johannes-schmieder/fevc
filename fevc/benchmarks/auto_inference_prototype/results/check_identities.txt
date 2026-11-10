@@ -1,5 +1,6 @@
 design n=1184 workers=473 firms=96
-Hutchinson trace: tr(K_t V K_s V)          max scaled error 0.0033 (bound 0.02) ok
-noise statistic N_ts(V)                    max scaled error 0.0036 (bound 0.03) ok
-effective rank from pairs of draws         max scaled error 0.0069 (bound 0.05) ok
-E[sum_a h_a g_ta g_sa] = signal + N_ts     max scaled error 0.0021 (bound 0.02) ok
+design-identical rows: row constant + own value  max scaled error 5.0e-16 (bound 1e-09) ok
+Hutchinson trace: tr(K_t V K_s V)                max scaled error 3.3e-03 (bound 2e-02) ok
+noise statistic N_ts(V)                          max scaled error 3.6e-03 (bound 3e-02) ok
+effective rank from pairs of draws               max scaled error 6.9e-03 (bound 5e-02) ok
+E[sum_a h_a g_ta g_sa] = signal + N_ts           max scaled error 2.1e-03 (bound 2e-02) ok

@@ -1,0 +1,17 @@
+design: 3350 physical rows, 1560 deletion units (match), 627 workers, 130 firms, 6 controls
+== base errors, 500 samples
+   theta [0.095, 0.029, 0.025, 0.174]   analytic SD of the joint estimator [0.005, 0.004, 0.002, 0.006]
+   joint         Monte Carlo SD / joint analytic SD [1.018, 0.959, 1.042, 1.015]   mean bias / SD [-0.003, -0.003, -0.023, -0.018]
+   fixed offset  Monte Carlo SD / joint analytic SD [0.996, 0.955, 1.019, 1.002]   mean bias / SD [ 0.047,  0.015, -0.042,  0.026]
+   corrected     Monte Carlo SD / joint analytic SD [0.996, 0.955, 1.019, 1.002]   mean bias / SD [ 0.046,  0.015, -0.042,  0.026]
+   RMS difference from the joint estimate, in joint SDs: fixed offset [0.112, 0.055, 0.105, 0.091] corrected [0.112, 0.055, 0.105, 0.090]
+   corrected-centering increment, RMS in joint SDs [0.0007 , 0.00016, 0.00064, 0.0007 ]
+   with control term      rms SE / joint analytic SD [0.969, 0.991, 0.991, 0.987]
+                          coverage, joint         [0.940, 0.948, 0.938, 0.950]
+                          coverage, fixed offset  [0.940, 0.952, 0.944, 0.958]
+                          coverage, corrected     [0.940, 0.952, 0.944, 0.958]
+   without control term   rms SE / joint analytic SD [0.969, 0.891, 0.868, 0.785]
+                          coverage, joint         [0.940, 0.926, 0.902, 0.868]
+                          coverage, fixed offset  [0.940, 0.928, 0.906, 0.874]
+                          coverage, corrected     [0.940, 0.928, 0.906, 0.874]
+total 6s

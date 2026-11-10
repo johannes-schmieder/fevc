@@ -77,7 +77,43 @@ def main():
     m = [o.C[t] @ mu for t in range(3)]
     expect = np.array([[np.sum(w * EV * m[t] * m[s]) for s in range(3)] for t in range(3)]) + noise
 
+    # Design-identical rows (the observations or frequency copies of one stayer):
+    # kernel outputs share a row constant and differ only through the own value,
+    # (K v)_c = alpha - d v_c and (M v)_c = v_c - p.  Statistics over the copies are
+    # then polynomials in v_c, so a frequency-coded row needs only power sums.
+    stay_w = np.flatnonzero(np.bincount(d.w[d.stay], minlength=d.nW) >= 3)[0]
+    rows = np.flatnonzero(d.stay & (d.w == stay_w))
+    v_probe = rng.standard_normal(n)
+    mv, kv = A.kernel(v_probe)
+    copy_err = 0.0
+    for t in range(3):
+        dt = A.dt[t][rows[0]]
+        alpha = kv[t][rows] + dt * v_probe[rows]
+        pfit = v_probe[rows] - mv[rows]
+        copy_err = max(
+            copy_err, np.ptp(alpha) / np.abs(alpha).max(), np.ptp(pfit) / np.abs(pfit).max()
+        )
+        vc = v_probe[rows]
+        literal = np.sum(w[rows] * mv[rows] ** 2 * kv[t][rows] ** 2)
+        s = [np.sum(vc**k) for k in range(5)]
+        a0, p0 = alpha[0], pfit[0]
+        # sum_c (v_c - p)^2 (alpha - d v_c)^2 expanded in power sums of v_c
+        coded = w[rows[0]] * (
+            p0**2 * a0**2 * s[0]
+            - 2 * p0 * a0 * (a0 + p0 * dt) * s[1]
+            + (a0**2 + 4 * a0 * p0 * dt + p0**2 * dt**2) * s[2]
+            - 2 * dt * (a0 + p0 * dt) * s[3]
+            + dt**2 * s[4]
+        )
+        copy_err = max(copy_err, abs(coded - literal) / abs(literal))
+
     checks = [
+        (
+            "design-identical rows: row constant + own value",
+            np.array([copy_err]),
+            np.array([0.0]),
+            1e-9,
+        ),
         ("Hutchinson trace: tr(K_t V K_s V)", tau_hat, tau, 0.02),
         ("noise statistic N_ts(V)", noise_hat, noise, 0.03),
         ("effective rank from pairs of draws", reff_hat, reff, 0.05),
@@ -86,11 +122,12 @@ def main():
     bad = 0
     for name, got, want, tol in checks:
         scale = np.sqrt(np.outer(np.diag(want), np.diag(want))) if want.ndim == 2 else np.abs(want)
+        scale = np.where(scale > 0, scale, 1.0)
         err = float(np.max(np.abs(got - want) / scale))
         ok = err <= tol
         bad += not ok
         print(
-            "%-42s max scaled error %.4f (bound %.2f) %s" % (name, err, tol, "ok" if ok else "FAIL")
+            "%-48s max scaled error %.1e (bound %.0e) %s" % (name, err, tol, "ok" if ok else "FAIL")
         )
     return 1 if bad else 0
 
