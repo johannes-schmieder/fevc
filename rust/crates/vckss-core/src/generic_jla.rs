@@ -20,6 +20,7 @@ mod centering;
 mod numerical;
 mod pooled_component;
 pub(crate) mod residual_moment_attachment;
+mod residual_noise_attachment;
 mod spectrum_batches;
 mod statistical_batches;
 pub use numerical::{NumericalMcResult, NumericalReplayRhs, NumericalRhsPhase};
@@ -2613,6 +2614,40 @@ fn run_generic_jla_with_execution_interrupt(
             }
         }
     };
+    // The fixed-offset match route drops the controls from its operator, so
+    // the standard error needs their estimation as an explicit first-order
+    // term. Its unit aggregates use the geometry released just below.
+    let residual_control_adjustment = match component_inference {
+        Some(prepared)
+            if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual
+                && prepared.inference_unit == ComponentInferenceUnit::Match
+                && controls > 0 =>
+        {
+            let match_plan = match_rows_for_target.as_ref().ok_or_else(|| {
+                BackendError::invariant(
+                    "generic_jla_component_inference",
+                    "control-estimation term lost its match plan",
+                )
+            })?;
+            let (plan, mover_units) = pooled_plan.as_ref().map_or(
+                (match_plan, match_plan.rows.len()),
+                |mixed| (&mixed.plan, mixed.mover_units),
+            );
+            Some(residual_noise_attachment::control_adjustment(
+                problem,
+                plan,
+                mover_units,
+                &canonical.columns,
+                &geometry,
+                &weights,
+                &row_order,
+                &working_y,
+                options,
+                interrupt,
+            )?)
+        }
+        _ => None,
+    };
     drop(geometry);
     drop(row_rank);
 
@@ -2691,6 +2726,7 @@ fn run_generic_jla_with_execution_interrupt(
                 },
                 &working_y,
                 outcome_center,
+                options.centering != crate::types::Centering::None,
                 &residual,
                 &deleted_adjusted,
                 leverage,
@@ -2698,6 +2734,7 @@ fn run_generic_jla_with_execution_interrupt(
                 diagonal,
                 addresses,
                 structured_fold_entity.as_deref(),
+                None,
                 None,
                 target.mean,
                 memory.component_inference,
@@ -2742,6 +2779,7 @@ fn run_generic_jla_with_execution_interrupt(
                     },
                     &collapsed.outcome,
                     outcome_center,
+                    options.centering != crate::types::Centering::None,
                     &collapsed.residual,
                     &collapsed.deleted_adjusted,
                     leverage,
@@ -2750,6 +2788,7 @@ fn run_generic_jla_with_execution_interrupt(
                     addresses,
                     structured_fold_entity.as_deref(),
                     Some(&collapsed.mass),
+                    residual_control_adjustment.as_ref(),
                     target.mean,
                     memory.component_inference,
                     counter_plan,
@@ -3080,9 +3119,9 @@ fn validate_component_inference_request(
     let expected_variance = prepared.unit_count(problem);
     let variance_shape_valid = match prepared.variance_source {
         ComponentVarianceSource::Oracle => prepared.variance.len() == expected_variance,
-        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
-            prepared.variance.is_empty()
-        }
+        ComponentVarianceSource::StructuredCommon
+        | ComponentVarianceSource::StructuredLeverage
+        | ComponentVarianceSource::LeaveOutResidual => prepared.variance.is_empty(),
     };
     if prepared.schema_version != crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION
         || !variance_shape_valid
@@ -3131,7 +3170,10 @@ fn validate_component_inference_request(
     if hybrid.is_some()
         && (prepared.inference_unit != ComponentInferenceUnit::Match
             || (!prepared.unified_variance_fit
-                && prepared.variance_source != ComponentVarianceSource::Oracle))
+                && !matches!(
+                    prepared.variance_source,
+                    ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual
+                )))
     {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
@@ -5877,6 +5919,18 @@ struct ComponentInferenceCounterPlan {
     unique_words: u64,
 }
 
+/// Gaussian pseudo-outcome draws addressed by one attachment. The leave-out
+/// residual source draws only its pseudo-noise: no spectrum and no Gram.
+fn component_counter_probes(prepared: &ComponentExecution<'_>) -> Option<u64> {
+    if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual {
+        return Some(u64::from(prepared.options.probes));
+    }
+    u64::from(prepared.options.probes)
+        .checked_add(u64::from(prepared.options.spectrum_probes))?
+        .checked_add(2)?
+        .checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes as u64))
+}
+
 fn plan_component_inference_counter(
     prepared: &ComponentExecution<'_>,
     classes: &[ObservationClass],
@@ -5905,12 +5959,7 @@ fn plan_component_inference_counter(
             .checked_add(words)
             .ok_or_else(|| resource("component-inference Gaussian word count overflow"))?;
     }
-    let probes = u64::from(prepared.options.probes)
-        .checked_add(u64::from(prepared.options.spectrum_probes))
-        .and_then(|value| value.checked_add(2))
-        .and_then(|value| {
-            value.checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes as u64))
-        })
+    let probes = component_counter_probes(prepared)
         .ok_or_else(|| resource("component-inference total probe count overflow"))?;
     let row_atoms = atoms_per_probe
         .checked_mul(probes)
@@ -5941,7 +5990,7 @@ fn plan_component_inference_counter(
         0
     } else {
         match prepared.variance_source {
-            ComponentVarianceSource::Oracle => {
+            ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => {
                 if structured_class_count.is_some() {
                     return Err(BackendError::invariant(
                         "generic_jla_component_counter",
@@ -6102,12 +6151,7 @@ fn plan_grouped_component_inference_counter(
             ));
         }
     }
-    let probes = u64::from(prepared.options.probes)
-        .checked_add(u64::from(prepared.options.spectrum_probes))
-        .and_then(|value| value.checked_add(2))
-        .and_then(|value| {
-            value.checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes as u64))
-        })
+    let probes = component_counter_probes(prepared)
         .ok_or_else(|| resource("grouped component-inference total probe count"))?;
     let row_atoms = groups
         .checked_mul(probes)
@@ -6140,7 +6184,7 @@ fn plan_grouped_component_inference_counter(
         0
     } else {
         match prepared.variance_source {
-            ComponentVarianceSource::Oracle => {
+            ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => {
                 if structured_class_count.is_some() {
                     return Err(BackendError::invariant(
                         "generic_jla_component_counter",
@@ -7457,6 +7501,7 @@ fn run_component_inference_attachment(
     inference_rows: ComponentInferenceRows<'_>,
     working_y: &[f64],
     outcome_center: f64,
+    centered: bool,
     residual: &[f64],
     deleted_adjusted: &[f64],
     leverage: &[f64],
@@ -7465,6 +7510,7 @@ fn run_component_inference_attachment(
     addresses: &ComponentInferenceAddresses,
     structured_fold_entity: Option<&[u64]>,
     match_mass: Option<&[f64]>,
+    control_adjustment: Option<&crate::residual_noise::ControlAdjustment>,
     point_correction: VarianceComponents,
     peak_forecast_bytes: u64,
     counter_plan: ComponentInferenceCounterPlan,
@@ -7501,6 +7547,29 @@ fn run_component_inference_attachment(
             "generic_jla_component_inference",
             "component-inference retained state has inconsistent dimensions",
         ));
+    }
+    if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual {
+        return residual_noise_attachment::run(
+            problem,
+            prepared,
+            solver,
+            coefficients,
+            inference_rows,
+            working_y,
+            centered,
+            residual,
+            deleted_adjusted,
+            leverage,
+            maker_inverse,
+            target_diagonal,
+            addresses,
+            match_mass,
+            control_adjustment,
+            point_correction,
+            peak_forecast_bytes,
+            counter_plan,
+            interrupt,
+        );
     }
     let mut structured_variance = if prepared.variance_source.structured_model().is_some()
         && prepared.residual_moments.is_none()

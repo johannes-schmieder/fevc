@@ -46,6 +46,7 @@ pub mod residual_moment_inference;
 /// Internal observation variance candidate; no plugin or Stata capability.
 #[doc(hidden)]
 pub mod residual_moments;
+pub mod residual_noise;
 pub mod rng;
 pub mod solver;
 pub mod stayer_hybrid;

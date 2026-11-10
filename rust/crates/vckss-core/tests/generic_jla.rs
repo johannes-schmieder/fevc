@@ -57,6 +57,9 @@ mod component_centering;
 #[path = "generic_jla/pooled_component.rs"]
 mod pooled_component;
 
+#[path = "generic_jla/residual_noise.rs"]
+mod residual_noise;
+
 fn fixture(controls: bool) -> CompressedProblem {
     let mut worker = Vec::new();
     let mut firm = Vec::new();

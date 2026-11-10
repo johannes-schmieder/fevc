@@ -86,7 +86,7 @@ pub(super) fn terms(prepared: &ComponentExecution<'_>) -> Result<usize> {
         return match prepared.variance_source {
             ComponentVarianceSource::StructuredCommon => Ok(36),
             ComponentVarianceSource::StructuredLeverage => Ok(6),
-            ComponentVarianceSource::Oracle => {
+            ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => {
                 Err(invalid("mixed moments require a structured variance model"))
             }
         };
@@ -100,7 +100,7 @@ pub(super) fn terms(prepared: &ComponentExecution<'_>) -> Result<usize> {
             },
         ),
         ComponentVarianceSource::StructuredLeverage => Ok(3),
-        ComponentVarianceSource::Oracle => Err(invalid(
+        ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => Err(invalid(
             "residual moments cannot have oracle variance source",
         )),
     }

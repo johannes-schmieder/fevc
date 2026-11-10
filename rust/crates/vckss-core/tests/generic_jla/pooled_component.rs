@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 use super::*;
 
-fn fixture(expand: bool) -> vckss_core::stayer_hybrid::PreparedExactStayerHybrid {
+pub(super) fn fixture(expand: bool) -> vckss_core::stayer_hybrid::PreparedExactStayerHybrid {
     let mover = grouped_component_inference_fixture(8);
     let mut stayers = StayerAugmentationInput {
         firm: Vec::new(),

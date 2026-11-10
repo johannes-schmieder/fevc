@@ -260,6 +260,7 @@ mod campaign {
                 ComponentVarianceSource::StructuredCommon => "structured_common",
                 ComponentVarianceSource::StructuredLeverage => "structured_leverage",
                 ComponentVarianceSource::Oracle => "oracle",
+                ComponentVarianceSource::LeaveOutResidual => "leaveout_residual",
             }
         }
 

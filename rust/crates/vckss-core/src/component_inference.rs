@@ -41,13 +41,16 @@ pub enum ComponentVarianceSource {
     Oracle = 0,
     StructuredCommon = 1,
     StructuredLeverage = 2,
+    /// Squared-residual signal term with pseudo-noise calibration; the working
+    /// variance is fitted internally and no spectral pass is run.
+    LeaveOutResidual = 3,
 }
 
 impl ComponentVarianceSource {
     #[must_use]
     pub fn structured_model(self) -> Option<StructuredVarianceModel> {
         match self {
-            Self::Oracle => None,
+            Self::Oracle | Self::LeaveOutResidual => None,
             Self::StructuredCommon => Some(StructuredVarianceModel::Common),
             Self::StructuredLeverage => Some(StructuredVarianceModel::LeverageOnly),
         }
@@ -271,6 +274,8 @@ pub struct ComponentInferenceResult {
     pub structured_variance: Option<StructuredVarianceResult>,
     /// Separate internal fitting-method identity; never a public oracle fit.
     pub residual_moments: Option<crate::residual_moment_inference::Diagnostic>,
+    /// Present only for the leave-out residual source.
+    pub residual_noise: Option<crate::residual_noise::Diagnostic>,
     /// Row-major covariance; diagnostic raw values only when joint_status fails.
     pub primitive_covariance: [f64; PRIMITIVE_TARGETS * PRIMITIVE_TARGETS],
     /// Exact structural map of `primitive_covariance` to the four public
@@ -448,6 +453,153 @@ pub fn prepare_structured_component_inference_with_interrupt(
         residual_moments: None,
         design_only_order: false,
         unified_variance_fit: false,
+    })
+}
+
+/// Prepare leave-out residual standard errors for either inference unit.
+///
+/// `options.probes` is the number of pseudo-noise draws; each costs one solve
+/// for its fit and one per primitive target. The spectral options are unused.
+/// Observation units keep the unit-frequency boundary of the other sources.
+pub fn prepare_residual_noise_with_interrupt(
+    problem: &CompressedProblem,
+    unit: ComponentInferenceUnit,
+    options: ComponentInferenceOptions,
+    structured_options: StructuredVarianceOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PreparedComponentInference> {
+    let options = options.validate()?;
+    let structured_options = structured_options.validate()?;
+    if options.reference_distribution != ComponentReferenceDistribution::Q0 {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "component_inference_prepare",
+            "leave-out residual standard errors use the normal reference only",
+        ));
+    }
+    if unit == ComponentInferenceUnit::Observation {
+        for row in 0..problem.outcome.len() {
+            checkpoint_chunk(interrupt, row, "component_inference_prepare")?;
+            if problem.frequency[row] != 1 {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "component_inference_prepare",
+                    "observation-unit standard errors require unit frequency weights",
+                ));
+            }
+        }
+    }
+    Ok(PreparedComponentInference {
+        schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        inference_unit: unit,
+        variance_source: ComponentVarianceSource::LeaveOutResidual,
+        variance: Vec::new(),
+        options,
+        structured_options,
+        persistent_bytes: 0,
+        individual_intervals: true,
+        residual_moments: None,
+        design_only_order: false,
+        unified_variance_fit: false,
+    })
+}
+
+/// Result shell for the leave-out residual source. The caller adds solver
+/// receipts and retained design vectors, as for the other sources.
+pub(crate) fn residual_noise_result(
+    rows: usize,
+    covariance: &crate::residual_noise::ResidualCovariance,
+    moments: &crate::residual_noise::NoiseMoments,
+    diagnostic: crate::residual_noise::Diagnostic,
+) -> Result<ComponentInferenceResult> {
+    let reported = map_primitive_covariance(&covariance.primitive)?;
+    let q0_status = core::array::from_fn(|target| {
+        if reported[target * REPORTED_TARGETS + target] > 0.0 {
+            ComponentQ0Status::Computed
+        } else {
+            ComponentQ0Status::NonpositiveVariance
+        }
+    });
+    let joint_status = if (0..PRIMITIVE_TARGETS)
+        .all(|index| covariance.primitive[index * PRIMITIVE_TARGETS + index] > 0.0)
+    {
+        ComponentJointStatus::Computed
+    } else {
+        ComponentJointStatus::NonpositiveDiagonal
+    };
+    let total_weight = [1.0, 1.0, 2.0];
+    let spectrum = core::array::from_fn(|target| {
+        let (trace_square, mcse) = if target < PRIMITIVE_TARGETS {
+            let index = target * PRIMITIVE_TARGETS + target;
+            (moments.trace[index], moments.trace_mcse[index])
+        } else {
+            let mut value = 0.0;
+            for left in 0..PRIMITIVE_TARGETS {
+                for right in 0..PRIMITIVE_TARGETS {
+                    value += total_weight[left]
+                        * total_weight[right]
+                        * moments.trace[left * PRIMITIVE_TARGETS + right];
+                }
+            }
+            (value, 0.0)
+        };
+        let rank = diagnostic.effective_rank[target];
+        ComponentSpectrumDiagnostics {
+            // No eigenmode is computed. The leading share is the upper bound
+            // 1/sqrt(effective rank), or the trivial bound without pairs.
+            certified: true,
+            trace_square_raw: trace_square,
+            trace_square,
+            trace_square_mcse: mcse,
+            leading_share: if rank.is_finite() { rank.sqrt().recip() } else { 1.0 },
+            probes: moments.draws,
+            ..ComponentSpectrumDiagnostics::default()
+        }
+    });
+    Ok(ComponentInferenceResult {
+        schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        joint_status,
+        q0_status,
+        inference_unit: ComponentInferenceUnit::Observation,
+        independent_units: u64::try_from(rows)
+            .map_err(|_| resource("component inference unit count"))?,
+        mixed_units: None,
+        nuisance_uncertainty_conditioned_away: false,
+        effective_match_count: 0.0,
+        largest_match_mass_share: 0.0,
+        largest_match_leverage: 0.0,
+        smallest_maker_denominator: 0.0,
+        variance_source: ComponentVarianceSource::LeaveOutResidual,
+        structured_variance: None,
+        residual_moments: None,
+        residual_noise: Some(diagnostic),
+        primitive_covariance: covariance.primitive,
+        covariance: reported,
+        influence_term: covariance.signal,
+        influence_concentration: covariance.influence_concentration,
+        trace_term: covariance.trace_term,
+        trace_mcse: covariance.trace_mcse,
+        probe_mean: [0.0; PRIMITIVE_TARGETS],
+        probes: moments.draws,
+        psd_cleanup: covariance.signal_truncation,
+        smallest_eigenvalue_before_cleanup: covariance.smallest_signal_eigenvalue,
+        largest_eigenvalue_before_cleanup: covariance.largest_signal_eigenvalue,
+        solve_receipts: Vec::new(),
+        maximum_iterations: 0,
+        maximum_reduced_residual: 0.0,
+        maximum_complete_residual: 0.0,
+        full_residual_tolerance: 0.0,
+        peak_forecast_bytes: 0,
+        leverage: Vec::new(),
+        maker_inverse: Vec::new(),
+        target_diagonal: core::array::from_fn(|_| Vec::new()),
+        influence: core::array::from_fn(|_| Vec::new()),
+        point_correction_identity_error: 0.0,
+        counter_atoms: 0,
+        counter_words: 0,
+        critical_simulations: 0,
+        spectrum,
+        q1: None,
     })
 }
 
@@ -1623,6 +1775,7 @@ pub fn finish_component_covariance_with_reporting(
         variance_source: ComponentVarianceSource::Oracle,
         structured_variance: None,
         residual_moments: None,
+        residual_noise: None,
         primitive_covariance: primitive,
         covariance,
         influence_term,
