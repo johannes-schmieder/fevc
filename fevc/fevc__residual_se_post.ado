@@ -102,8 +102,11 @@ program define fevc__residual_se_post, eclass
     }
     else {
         ereturn local inference_independence "independence across observations"
-        ereturn local inference_offset_warning                    ///
-            "controls stay in the operator; their estimation is part of the kernel"
+        // The native route keeps controls in the operator; the Mata route
+        // subtracts the fitted control index and adds the first-order term.
+        ereturn local inference_offset_warning = cond("`route'"=="rust", ///
+            "controls stay in the operator; their estimation is part of the kernel", ///
+            "control-coefficient estimation enters as a first-order term")
     }
     ereturn local status "FEVC_LEAVEOUT_RESIDUAL_SE"
     if e(inference_computed_targets)<4 ereturn local status "FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL"

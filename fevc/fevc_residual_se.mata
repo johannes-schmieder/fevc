@@ -191,7 +191,8 @@ void vckss_residual_se__stata(
     struct vckss_target_matrices scalar targets
     real colvector y, worker, firm, frequency, target_weight, deletion_id
     real colvector stayer, working_y, beta, residual, leverage, maker_inverse
-    real colvector root, product, variance, scaled_residual, eigenvalues
+    real colvector root, product, variance, scaled_residual
+    real rowvector eigenvalues
     real colvector fourth
     real matrix controls, full_design, design, inverse, target_j
     real matrix ratio, influence, score, noise, fitted, pseudo_residual
@@ -616,7 +617,8 @@ void vckss_residual_se_jla__stata(
     struct vckss_control_basis_result scalar canonical_controls
     real colvector y, worker, firm, frequency, target_weight, deletion_id
     real colvector stayer, working_y, residual, leverage, maker_inverse
-    real colvector root, product, variance, scaled_residual, eigenvalues
+    real colvector root, product, variance, scaled_residual
+    real rowvector eigenvalues
     real colvector fourth, share, unit_worker, unit_firm, mass, unit_y
     real colvector ix, permutation, members, gamma
     real matrix controls, residualized, precision, collapsed
@@ -912,6 +914,12 @@ void vckss_residual_se_jla__stata(
     st_local("inference_nuisance_omitted",control_count > 0 ? "0" : "1")
     st_local(status_local,"CONVERGED")
     st_local(message_local,"matrix-free leave-out residual standard errors converged")
+}
+
+// Defined last: present only when the whole file compiled.
+real scalar vckss_rse__loaded()
+{
+    return(1)
 }
 
 end

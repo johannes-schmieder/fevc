@@ -450,10 +450,13 @@ backend;{p_end}
 {phang2}a native plugin built before this feature.{p_end}
 
 {pstd}
-On the native backend a request without controls and without stayers runs on
-the generic engine rather than the compressed one when standard errors are
-computed; the two engines estimate the same quantities, and the generic
-engine is the one every request with stayers or controls already uses.
+On the native backend the calculation that carries the standard errors uses
+the automatic executor for attachments in place of the point-only one, and a
+request without controls and without stayers runs on the generic engine
+rather than the compressed one. These compute the same estimates; the generic
+engine is the one every request with stayers or controls already uses. A
+failure that can come from the standard errors is followed by one more run
+without them; option, variable and sample errors are reported once.
 
 {pstd}
 The evidence for this method is a simulation study and dense-oracle tests

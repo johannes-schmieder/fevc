@@ -7,9 +7,8 @@ program define fevc__component_model_route, rclass
         inferencesimulations inferencebins inferenceseed backend rng  ///
         algorithm engine preconditioner batch stayers deletionid     ///
         targetweight deletion nuisance weighted inferencegramprobes ///
-        inferencedraws hascontrols
+        inferencedraws
     if "`inferencedraws'"=="" local inferencedraws = 8
-    if "`hascontrols'"=="" local hascontrols = 1
 
     local gram_supplied = (strtrim(`"`inferencegramprobes'"') != "")
     if `gram_supplied' {
@@ -49,7 +48,10 @@ program define fevc__component_model_route, rclass
     // inference(auto), the default, asks for leave-out residual standard
     // errors whenever this request can carry them and otherwise for point
     // estimates only. It never changes the backend, algorithm, or solver
-    // route the user selected.
+    // route the user selected. On the native backend the attachment does
+    // select the resolved automatic executor in place of the point-only
+    // full-CMG one, and the generic engine for a mover-only request without
+    // controls; both compute the same estimates.
     local se_auto = ("`inference'"=="auto")
     local se_auto_reason ""
     local se_suppressed = (`se_auto' & "$VCKSS_SE_SUPPRESS"=="1")
@@ -59,6 +61,7 @@ program define fevc__component_model_route, rclass
             "inference(auto) selects inferencemodel(leaveout_residual); other models need inference(highrank) or inference(q1)."
         exit 198
     }
+    local model_typed = ("`residual_model'" != "")
     if `se_auto' {
         local inferencemodel leaveout_residual
         local inference highrank
@@ -90,7 +93,7 @@ program define fevc__component_model_route, rclass
         exit 198
     }
     local inference_requested = ("`inference'" != "none" | `project_supplied')
-    if "`inference'" != "none" & (`inferencesimulations' < 100 |  ///
+    if "`inference'" != "none" & !`se_auto' & (`inferencesimulations' < 100 |  ///
         `inferencebins' < 4 | `inferenceseed' < 1 |                ///
         `inferenceseed' > 2147483629) {
         quietly _fevc_component_route_failure "INVALID_INFERENCE_TUNING"   ///
@@ -114,6 +117,7 @@ program define fevc__component_model_route, rclass
     else local rng_requested = lower(strtrim(`"`rng'"'))
 
     local supplied = (strtrim(`"`inferencemodel'"')!="")
+    if `se_auto' local supplied = `model_typed'
     if !`supplied' local inferencemodel target_lowess
     local inferencemodel = lower(strtrim(`"`inferencemodel'"'))
     if !inlist("`inferencemodel'","target_lowess",               ///

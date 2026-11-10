@@ -718,8 +718,9 @@ work was done, so no Stata or Mata code described here has been executed.
 (\texttt{inference(auto)}). The command computes them whenever the request
 can carry them and otherwise returns point estimates with a stated reason. It
 never changes the backend, algorithm or solver route the user selected. If
-the calculation that carries them stops, the command runs once more without
-them, so the point estimates never depend on the standard errors.
+the native executor or the Mata stage that carries them stops, the command
+runs once more without them, so the point estimates do not depend on the
+standard errors; option, variable and sample errors are reported once.
 \texttt{inference(none)} gives point estimates only, and
 \texttt{inferencemodel(leaveout\_residual)} with \texttt{inference(highrank)}
 requests the standard errors strictly.

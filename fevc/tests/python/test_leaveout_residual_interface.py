@@ -99,6 +99,11 @@ def test_standard_errors_are_the_default_and_never_reroute_or_cost_the_estimate(
     assert entry.count("capture noisily _fevc_command `0'") == 2
     assert '"$VCKSS_SE_ATTACHED"=="1"' in entry and "`command_rc'!=1" in entry
     assert "global VCKSS_SE_SUPPRESS 1" in entry
+    # Only failures that can come from the standard errors are repeated.
+    assert '"$VCKSS_SE_PHASE"=="1"' in entry
+    assert command.count("global VCKSS_SE_PHASE 1") == 2
+    # The default must not move a request between backends.
+    assert "(`scalable_component_requested' & !`residual_se_requested')" in command
     assert "global VCKSS_SE_ATTACHED = (`se_auto' & `residual')" in route
     assert '"$VCKSS_SE_SUPPRESS"=="1"' in route
 
@@ -145,6 +150,7 @@ def test_mata_runtime_is_separate_and_lazily_loaded():
     helper = helper[: helper.index("\nend\n")]
     assert "findfile fevc_residual_se.mata" in helper
     assert 'vckss_rse__build_id() == "vckss-residual-se-api2"' in helper
+    assert "vckss_rse__loaded() == 1" in helper and "real scalar vckss_rse__loaded()" in mata
     assert "vckss_residual_se__stata(" in helper
     assert "vckss_residual_se_jla__stata(" in helper
     # The Mata routines report through locals of the helper, which must pass

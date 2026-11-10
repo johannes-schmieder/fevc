@@ -37,22 +37,36 @@ program define fevc, eclass
         global VCKSS_REPORT_TIMER 1
         quietly mata: vckss_timer__on(1)
     }
-    capture macro drop VCKSS_SE_SUPPRESS VCKSS_SE_SUPPRESS_REASON VCKSS_SE_ATTACHED
+    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE {
+        capture macro drop VCKSS_SE_`key'
+    }
     capture noisily _fevc_command `0'
     local command_rc = _rc
     if `command_rc' & `command_rc'!=1 & "$VCKSS_SE_ATTACHED"=="1" {
-        // The attempt carried default standard errors and failed. Whatever
-        // the cause, the point estimate must not depend on them.
+        // The attempt carried default standard errors and failed. The point
+        // estimate must not depend on them, so run once more without them
+        // when the failure can be theirs: the native executor or the Mata
+        // stage that carries them was entered, or the status names inference.
+        // Option, variable and sample failures raised before that are the
+        // user's to fix and are not repeated.
         local se_failure `"`e(withholding_status)'"'
+        local se_induced = ("$VCKSS_SE_PHASE"=="1")
+        foreach word in INFERENCE COMPONENT STRUCTURED {
+            if strpos(`"`se_failure'"',"`word'") local se_induced = 1
+        }
         if `"`se_failure'"'=="" local se_failure "return code `command_rc'"
-        global VCKSS_SE_SUPPRESS 1
-        global VCKSS_SE_SUPPRESS_REASON "the calculation that carried them stopped (`se_failure')"
-        di as txt _newline "Note: the run with standard errors stopped (`se_failure')."
-        di as txt "      Estimating once more without them; specify inference(none) to skip this attempt."
-        capture noisily _fevc_command `0'
-        local command_rc = _rc
+        if `se_induced' {
+            global VCKSS_SE_SUPPRESS 1
+            global VCKSS_SE_SUPPRESS_REASON "the calculation that carried them stopped (`se_failure')"
+            di as txt _newline "Note: the run with standard errors stopped (`se_failure')."
+            di as txt "      Estimating once more without them; specify inference(none) to skip this attempt."
+            capture noisily _fevc_command `0'
+            local command_rc = _rc
+        }
     }
-    capture macro drop VCKSS_SE_SUPPRESS VCKSS_SE_SUPPRESS_REASON VCKSS_SE_ATTACHED
+    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE {
+        capture macro drop VCKSS_SE_`key'
+    }
     if "`report_timer'" != "" {
         quietly mata: vckss_timer__off(`report_timer')
         if !`command_rc' & inlist("$VCKSS_REPORT_LEVEL","1","2") & ///
@@ -4386,8 +4400,7 @@ program define _vckss_impl, eclass sortpreserve
         `"`backend'"' `"`rng'"' `"`algorithm'"' `"`engine'"'     ///
         `"`preconditioner'"' `"`batch'"' `"`stayers'"'            ///
         `"`deletionid'"' `"`targetweight'"' `"`deletion'"'       ///
-        `"`nuisance'"' `"`weight'"' `"`inferencegramprobes'"'     ///
-        `inferencedraws' `=(`: word count `varlist'' > 1)'
+        `"`nuisance'"' `"`weight'"' `"`inferencegramprobes'"' `inferencedraws'
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
@@ -4802,7 +4815,7 @@ program define _vckss_impl, eclass sortpreserve
             strtrim(`"`controls'"')==""
         local rust_planned_generic_supported =                 ///
             ( `scalable_project_requested' |                    ///
-            `scalable_component_requested' |                   ///
+            (`scalable_component_requested' & !`residual_se_requested') | ///
             ("`algorithm'" == "jla" &                           ///
             ("`engine_requested'"=="generic" |                   ///
                 `rust_auto_engine_generic' |                       ///
@@ -5387,6 +5400,7 @@ program define _vckss_impl, eclass sortpreserve
             `rust_auto_exact_supported' | `rust_exact_stayer_supported' {
             local rust_planned_wallseconds = cond(`wallseconds_supplied', ///
                 `wallseconds',0)
+            global VCKSS_SE_PHASE 1
             capture noisily _fevc_rust_generic_planned `depvar'  ///
                 `initial_worker' `initial_firm' `rust_deletion'   ///
                 `frequency' `target' `touse' `N_scope' `N_complete' ///
@@ -9711,21 +9725,39 @@ program define _fevc_residual_se_mata
         inference_V_primitive inference_V inference_highrank              ///
         inference_diagnostics inference_varfit inference_spectrum         ///
         inference_q1 inference_q1_status
+    global VCKSS_SE_PHASE 1
     local inference_status "INFERENCE_RUNTIME_FAILED"
     local inference_message "the standard-error runtime stopped unexpectedly"
     local inference_joint_available 0
     local inference_nuisance_omitted 0
+    // Load the runtime once; refuse a different or partly loaded build. The
+    // caller posts the typed status returned through inference_status.
+    capture mata: vckss_rse__api_level()
+    local runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rse__api_level() == 1 &            ///
-        vckss_rse__build_id() == "vckss-residual-se-api2")
+        vckss_rse__build_id() == "vckss-residual-se-api2" &       ///
+        vckss_rse__loaded() == 1)
+    if _rc & `runtime_loaded' {
+        c_local inference_status "STALE_INFERENCE_RUNTIME"
+        c_local inference_message "A different fevc standard-error runtime is already loaded; restart Stata or run discard."
+        exit
+    }
     if _rc {
         capture findfile fevc_residual_se.mata
         if _rc {
-            quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
-                "fevc_residual_se.mata was not found on the Stata adopath."
-            di as error "fevc_residual_se.mata was not found"
-            exit 601
+            c_local inference_status "INFERENCE_RUNTIME_NOT_FOUND"
+            c_local inference_message "fevc_residual_se.mata was not found on the Stata adopath."
+            exit
         }
-        quietly do `"`r(fn)'"'
+        capture quietly do `"`r(fn)'"'
+        capture mata: assert(vckss_rse__api_level() == 1 &        ///
+            vckss_rse__build_id() == "vckss-residual-se-api2" &   ///
+            vckss_rse__loaded() == 1)
+        if _rc {
+            c_local inference_status "INVALID_INFERENCE_RUNTIME"
+            c_local inference_message "The installed fevc standard-error runtime did not load completely; run discard and check fevc_residual_se.mata."
+            exit
+        }
     }
     local se_worker "`id_worker'"
     local se_firm "`id_firm'"
@@ -9777,6 +9809,8 @@ program define _fevc_residual_se_mata
             "inference_status", "inference_message")
     }
     local mata_rc = _rc
+    // Observation units carry no fixed offset to omit, as on the native route.
+    if "`deletion'" == "observation" local inference_nuisance_omitted 0
     c_local inference_status "`inference_status'"
     c_local inference_message `"`inference_message'"'
     c_local inference_joint_available `inference_joint_available'
