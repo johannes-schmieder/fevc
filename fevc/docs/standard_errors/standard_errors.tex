@@ -756,10 +756,11 @@ a joint run does not hold (one further JLA pass with the worker--firm
 solver);
 \item Mata JLA, which retains no per-unit vectors.
 \end{itemize}
-Two smaller items remain: the memory forecast of the attachment does not yet
-count its three-column kernel batches, and the working-variance and
-effective-rank diagnostics beyond the leading-share bound are in the core
-result but not yet in the Stata transport.
+Two smaller items remain. The memory forecast of the attachment reuses the
+formula of the structured sources; its allowances exceed this method's
+buffers, but it was not re-derived for them. The model-based covariance and
+the working-variance term counts are in the core result but not yet in the
+Stata transport.
 \end{sloppypar}
 
 \appendix

@@ -10,6 +10,18 @@ exact binaries, corresponding source and evidence. Windows scope is one/two
 workers; Mac x86-64 runtime tests use Rosetta. Published installation checks
 are recorded separately. Historical evidence below retains its original scope.
 
+## November 10 leave-out residual standard errors (source only)
+
+`vckss-core::residual_noise` adds sampling standard errors for the four
+components from squared residuals and pseudo-noise, attached to generic JLA
+for observation units and for fixed-offset (or control-free) match units. A
+probe is one pseudo-noise solve, four per draw, plus three influence solves.
+The public ABI reports it as variance source 3 behind additive capability
+bit 18; the registered variance-source enumeration is unchanged and the
+method is a flag on the prepared attachment. It follows the automatic solver
+route and every centering mode. No distributed binary contains it yet. See
+`fevc/docs/standard_errors/standard_errors.tex`.
+
 ## October 10 pooled component inference binaries
 
 All five payloads are rebuilt from `002205f2` and adopted for repository

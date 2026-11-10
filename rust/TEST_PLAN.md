@@ -10,6 +10,16 @@ exact binaries, corresponding source and evidence. Windows scope is one/two
 workers; Mac x86-64 runtime tests use Rosetta. Published installation checks
 are recorded separately. Historical evidence below retains its original scope.
 
+## November 10 leave-out residual standard errors (source only)
+
+Focused gates: `cargo test -p vckss-core residual_noise` (unit tests and the
+`generic_jla::residual_noise` dense-oracle tests for pooled fixed-offset match
+units with controls, observation units with joint controls, the automatic
+route, corrected centering and both nuisance modes) and
+`cargo test -p vckss-plugin --test engine_ffi leaveout_residual` (the C ABI
+end to end). No Stata, installed-plugin or platform gate has been run, and no
+binary has been rebuilt.
+
 ## October 10 pooled component inference binaries
 
 All five payloads are rebuilt from `002205f2` and adopted for repository
