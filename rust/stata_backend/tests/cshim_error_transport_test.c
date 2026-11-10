@@ -57,6 +57,7 @@ int32_t vckss_rust_engine_numerical_rhs_v1(uint64_t g, VckssNumericalRhsV1 *r, u
 
 static int mock_component_centering_ready = 1;
 static int mock_component_mixed_ready = 1;
+static int mock_component_residual_ready = 1;
 
 uint32_t vckss_rust_abi_version(void) { return VCKSS_RUST_ABI_VERSION_V1; }
 const char *vckss_rust_backend_version(void) { return VCKSS_RUST_RUNTIME_BUILD_ID; }
@@ -66,7 +67,8 @@ int32_t vckss_rust_backend_capabilities_v1(VckssBackendCapabilitiesV1 *output, u
     *output = (VckssBackendCapabilitiesV1){
         .struct_size = sizeof(*output), .abi_version = VCKSS_RUST_ABI_VERSION_V1,
         .core_ready_flags = 32767 | (mock_component_centering_ready ? VCKSS_CORE_COMPONENT_CENTERING_V1_READY : 0) |
-            (mock_component_mixed_ready ? VCKSS_CORE_MIXED_COMPONENT_V1_READY : 0),
+            (mock_component_mixed_ready ? VCKSS_CORE_MIXED_COMPONENT_V1_READY : 0) |
+            (mock_component_residual_ready ? VCKSS_CORE_RESIDUAL_SE_V1_READY : 0),
         .support_flags = 38, .deterministic_parallelism = 1};
     return 0;
 }
@@ -97,6 +99,7 @@ static double saved_centering_api;
 static double saved_projection_centering_api;
 static double saved_component_centering_api;
 static double saved_component_mixed_api;
+static double saved_component_residual_api;
 static int fail_component_mixed_api_scalar;
 static int fail_matrix;
 static int error_calls;
@@ -822,6 +825,7 @@ static ST_int mock_scalar_save(char *name, ST_double value)
         if (fail_component_mixed_api_scalar) return 1;
         saved_component_mixed_api = value;
     }
+    if (strcmp(name, "__vckss_rust_comp_residual_api") == 0) saved_component_residual_api = value;
     if (strcmp(name, "__vckss_rust_error_code") == 0) saved_error_code = value;
     if (fail_plan_scalar && strcmp(name, "__vckss_plan_struct") == 0) return 1;
     return fail_scalar;
@@ -891,7 +895,9 @@ static void reset_transport(void)
     fail_component_centering_api_scalar = 0;
     fail_component_mixed_api_scalar = 0;
     mock_component_mixed_ready = 1;
+    mock_component_residual_ready = 1;
     saved_component_mixed_api = -1;
+    saved_component_residual_api = -1;
     saved_execution_api = -1;
     saved_progress_api = -1;
     saved_centering_api = -1;
@@ -1156,7 +1162,7 @@ int main(void)
     assert(vckss_probe() == 0);
     assert(saved_execution_api == 3 && saved_progress_api == 2 &&
         saved_centering_api == 1 && saved_projection_centering_api == 1 &&
-        saved_component_centering_api == 1 && scalar_calls == 15);
+        saved_component_centering_api == 1 && scalar_calls == 16);
     reset_transport();
     fail_execution_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
@@ -1165,7 +1171,7 @@ int main(void)
     mock_component_centering_ready = 0;
     assert(vckss_probe() == 0);
     assert(saved_centering_api == 1 && saved_projection_centering_api == 1 &&
-        saved_component_centering_api == 0 && scalar_calls == 15);
+        saved_component_centering_api == 0 && scalar_calls == 16);
     reset_transport();
     fail_component_centering_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
@@ -1180,6 +1186,13 @@ int main(void)
     fail_component_mixed_api_scalar = 1;
     assert(vckss_probe() == VCKSS_STATA_MEMORY_ERROR);
     assert(saved_component_mixed_api == -1 && release_calls == 0 && clear_calls == 0);
+
+    /* Leave-out residual standard errors need the core bit and this transport. */
+    reset_transport();
+    assert(vckss_probe() == 0 && saved_component_residual_api == 1);
+    reset_transport();
+    mock_component_residual_ready = 0;
+    assert(vckss_probe() == 0 && saved_component_residual_api == 0);
 
     for (int numerical = 0; numerical <= 1; ++numerical) {
     for (int mode = 1; mode <= 2; ++mode) {

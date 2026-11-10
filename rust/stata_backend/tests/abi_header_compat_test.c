@@ -65,6 +65,11 @@ _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV2, mover_units) == 64
 _Static_assert(VCKSS_CORE_MIXED_COMPONENT_V1_READY == UINT64_C(131072), "mixed capability bit");
 _Static_assert(VCKSS_CORE_RESIDUAL_SE_V1_READY == UINT64_C(262144), "residual standard-error capability bit");
 _Static_assert(VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL == 3u, "leave-out residual variance source");
+_Static_assert(sizeof(VckssLeaveoutResidualDiagnosticV1) == 368, "leave-out residual diagnostic size");
+_Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, offset_pass_solves) == 32, "leave-out residual solve offset");
+_Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, effective_rank) == 64, "leave-out residual rank offset");
+_Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, model_covariance) == 96, "leave-out residual covariance offset");
+_Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, residual_noise) == 224, "leave-out residual calibration offset");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, independent_units) == 24, "component independent unit offset changed");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, effective_match_count) == 32, "component match mass offset changed");
 

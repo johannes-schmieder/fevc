@@ -1388,3 +1388,244 @@ fn dense_terminal_matrix_and_lower_define_exact_setup_and_command_boundaries() {
     assert_eq!(command_error.code, ErrorCode::ResourceLimit);
     assert_eq!(command_error.phase, "generic_jla_memory");
 }
+
+fn leaveout_mover_problem(dimension: u64, grouped: bool) -> CompressedProblem {
+    let mut columns = InputColumns {
+        worker: Vec::new(),
+        firm: Vec::new(),
+        deletion: Vec::new(),
+        outcome: Vec::new(),
+        frequency: Vec::new(),
+        target_weight: Vec::new(),
+        controls: vec![Vec::new(), Vec::new()],
+    };
+    for worker in 0..dimension {
+        for firm in 0..dimension {
+            for replicate in 0..2_u64 {
+                let row = columns.worker.len() as u64;
+                columns.worker.push(100 + worker);
+                columns.firm.push(1_000 + firm);
+                // Observation units carry unit frequencies and their own ids.
+                columns.deletion.push(if grouped {
+                    50_000 + worker * dimension + firm
+                } else {
+                    50_000 + row
+                });
+                columns.frequency.push(if grouped {
+                    1 + (row + replicate) % 3
+                } else {
+                    1
+                });
+                columns.target_weight.push(1.0);
+                let first = 0.2 * worker as f64 - 0.13 * firm as f64
+                    + 0.31 * replicate as f64
+                    + (row % 7) as f64 / 29.0;
+                let second = -0.11 * worker as f64 + 0.18 * firm as f64 - 0.27 * replicate as f64
+                    + (row % 11) as f64 / 31.0;
+                let shock = ((row * 37 + 11) % 101) as f64 / 50.0 - 1.0;
+                columns.controls[0].push(first);
+                columns.controls[1].push(second);
+                columns
+                    .outcome
+                    .push(1.4 * first - 0.9 * second + worker as f64 - 0.8 * firm as f64 + shock);
+            }
+        }
+    }
+    let rows = columns.worker.len();
+    CanonicalInput::from_validated(columns.validate().expect("leave-out fixture validates"))
+        .expect("leave-out fixture canonicalizes")
+        .compress(&vec![true; rows])
+        .expect("leave-out fixture compresses")
+}
+
+fn leaveout_pooled_problem(dimension: u64) -> vckss_core::stayer_hybrid::PreparedExactStayerHybrid {
+    use vckss_core::stayer_hybrid::{prepare_exact_stayer_hybrid, StayerAugmentationInput};
+    let mover = leaveout_mover_problem(dimension, true);
+    let mut stayers = StayerAugmentationInput {
+        firm: Vec::new(),
+        worker: Vec::new(),
+        outcome: Vec::new(),
+        frequency: Vec::new(),
+        target_weight: Vec::new(),
+        controls: vec![Vec::new(), Vec::new()],
+    };
+    for worker in 0..8 * dimension {
+        for time in 0..4_u64 {
+            stayers.worker.push(worker + 1);
+            stayers.firm.push(worker % dimension + 1);
+            stayers.frequency.push(1 + time % 2);
+            stayers.target_weight.push(1.0);
+            stayers
+                .outcome
+                .push(0.17 * worker as f64 + (time as f64 - 1.5) * 0.4);
+            stayers.controls[0].push(time as f64 * 0.23 + (worker % 3) as f64);
+            stayers.controls[1].push(((worker * 7 + time * 3) % 11) as f64 / 7.0);
+        }
+    }
+    prepare_exact_stayer_hybrid(&mover, stayers).expect("leave-out pooled fixture prepares")
+}
+
+// The leave-out residual attachment has its own lifetime forecast. Every
+// execution path of the default request must keep the process heap inside
+// the admitted command peak, with and without stayers and the offset pass.
+#[test]
+fn leaveout_residual_forecast_covers_heap() {
+    use vckss_core::component_inference::{
+        prepare_residual_noise_with_interrupt, ComponentInferenceOptions, ComponentInferenceUnit,
+    };
+    use vckss_core::generic_jla::{
+        run_generic_jla_with_automatic_mixed_component_batches_interrupt,
+        run_generic_jla_with_diagonal_queue_attachments_interrupt,
+        run_generic_jla_with_direct_attachments_interrupt,
+    };
+    use vckss_core::interrupt::NeverInterrupt;
+    const KINDS: [&str; 5] = ["observation", "match", "offset", "pooled", "pooledoffset"];
+    const PATHS: [&str; 4] = ["queue", "direct", "autodiagonal", "autocmg"];
+    let _serial = TEST_LOCK.lock().unwrap();
+    let selected = std::env::var("FEVC_LEAVEOUT_RESIDUAL_MEMORY_CASE").ok();
+    let Some(selected) = selected else {
+        // One allocator window per process, as for the other pool lifetimes.
+        for kind in KINDS {
+            for path in PATHS {
+                for threads in [1, 7] {
+                    assert!(
+                        std::process::Command::new(std::env::current_exe().unwrap())
+                            .args([
+                                "--exact",
+                                "leaveout_residual_forecast_covers_heap",
+                                "--nocapture"
+                            ])
+                            .env(
+                                "FEVC_LEAVEOUT_RESIDUAL_MEMORY_CASE",
+                                format!("{kind}-{path}-{threads}")
+                            )
+                            .status()
+                            .unwrap()
+                            .success(),
+                        "{kind}-{path}-{threads}"
+                    );
+                }
+            }
+        }
+        return;
+    };
+    let mut parts = selected.split('-');
+    let (kind, path, threads) = (
+        parts.next().unwrap(),
+        parts.next().unwrap(),
+        parts.next().unwrap().parse::<usize>().unwrap(),
+    );
+    let pooled = kind
+        .starts_with("pooled")
+        .then(|| leaveout_pooled_problem(24));
+    let plain = leaveout_mover_problem(24, kind != "observation");
+    let problem = pooled.as_ref().map_or(&plain, |hybrid| &hybrid.problem);
+    let hybrid = pooled.as_ref().map(|hybrid| &hybrid.plan);
+    let (deletion, unit, nuisance) = match kind {
+        "observation" => (
+            DeletionMode::Observation,
+            ComponentInferenceUnit::Observation,
+            NuisanceMode::Joint,
+        ),
+        "match" | "pooled" => (
+            DeletionMode::Match,
+            ComponentInferenceUnit::Match,
+            NuisanceMode::FixedOffset,
+        ),
+        "offset" | "pooledoffset" => (
+            DeletionMode::Match,
+            ComponentInferenceUnit::Match,
+            NuisanceMode::Joint,
+        ),
+        other => panic!("unknown case {other}"),
+    };
+    // A wide draw batch and few point probes make the attachment the peak.
+    let prepared = prepare_residual_noise_with_interrupt(
+        problem,
+        unit,
+        ComponentInferenceOptions {
+            probes: 4 * 64,
+            batch_width: 64,
+            ..ComponentInferenceOptions::default()
+        },
+        vckss_core::structured_variance::StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    let mut estimator = options(deletion, nuisance);
+    estimator.probes = 16;
+    estimator.memory_budget = MemoryBudget::Unspecified;
+    let mut request = cmg_options(estimator);
+    let direct = FullCmgPlanOptions::production(threads, 1e-10, None);
+    let (result, observed) = measured(|| match path {
+        "queue" => {
+            request.routing.route = ModelSolverRoute::Diagonal;
+            run_generic_jla_with_diagonal_queue_attachments_interrupt(
+                problem,
+                request,
+                None,
+                Some(&prepared),
+                hybrid,
+                threads,
+                &mut NeverInterrupt,
+            )
+        }
+        "direct" => {
+            request.leverage_batch = BatchRequest::Auto;
+            request.target_batch = BatchRequest::Auto;
+            run_generic_jla_with_direct_attachments_interrupt(
+                problem,
+                request,
+                None,
+                Some(&prepared),
+                hybrid,
+                direct,
+                &mut NeverInterrupt,
+            )
+        }
+        "autodiagonal" | "autocmg" => {
+            let cmg = path == "autocmg";
+            request.leverage_batch = BatchRequest::Auto;
+            request.target_batch = BatchRequest::Auto;
+            request.routing.route = if cmg {
+                ModelSolverRoute::Cmg
+            } else {
+                ModelSolverRoute::Diagonal
+            };
+            run_generic_jla_with_automatic_mixed_component_batches_interrupt(
+                problem,
+                request,
+                &prepared,
+                hybrid,
+                threads,
+                cmg.then_some(direct),
+                &mut NeverInterrupt,
+            )
+        }
+        other => panic!("unknown path {other}"),
+    });
+    let result = result.unwrap();
+    let execution = &result.receipt.execution;
+    let stack = execution
+        .diagonal_queue
+        .map_or(0, |queue| queue.plan.stack_reservation_bytes);
+    let bound = execution.memory.peak_bytes - stack;
+    let attachment = execution.memory.component_inference_peak_bytes;
+    let inference = result.component_inference.unwrap();
+    let diagnostic = inference.residual_noise.as_ref().unwrap();
+    eprintln!(
+        "leaveout_residual_heap {selected} observed={observed} heap_bound={bound} attachment_forecast={attachment} offset_pass_solves={}",
+        diagnostic.offset_pass_solves
+    );
+    assert!(observed as u64 <= bound, "{selected}");
+    assert!(attachment > 0 && attachment < bound, "{selected}");
+    assert_eq!(
+        diagnostic.offset_pass_solves > 0,
+        kind.ends_with("offset"),
+        "{selected}"
+    );
+    assert_eq!(
+        inference.solve_receipts.len(),
+        4 * 64 + 3 + diagnostic.offset_pass_solves
+    );
+}

@@ -35,6 +35,8 @@ pub(crate) fn forecast(
             route
                 .full_cmg
                 .map_or(usize::MAX, |setup| setup.workspace_count),
+            offset_pass_requested(component, options, problem.controls.len()),
+            options.probes,
         )?;
         memory.peak = checked_sum(&[memory.peak, memory.component_inference])?;
         memory.peak_phase = GenericJlaMemoryPeakPhase::ComponentInference;

@@ -117,6 +117,8 @@ pub(super) fn plan(
                 RouteMemory::default(),
                 Some(capacity),
                 threads.min(capacity),
+                offset_pass_requested(component, options, problem.controls.len()),
+                options.probes,
             )?;
             memory.peak = checked_sum(&[memory.peak, memory.component_inference])?;
             memory.peak_phase = GenericJlaMemoryPeakPhase::ComponentInference;

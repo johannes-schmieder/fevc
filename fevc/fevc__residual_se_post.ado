@@ -88,6 +88,36 @@ program define fevc__residual_se_post, eclass
     if "`route'"=="rust" {
         ereturn scalar inference_offset_pass_solves =             ///
             e(inference_solver_columns)-4*`draws'-3
+        // Receipt columns 39-64 hold the native diagnostics when the plugin
+        // sends them: 41-42 working-variance terms, 44 signal truncation,
+        // 45-60 the row-major model-based covariance.
+        tempname native
+        matrix `native' = e(component_inference_receipt)
+        if colsof(`native')==64 {
+            tempname modelbased modelse terms
+            local names worker_variance firm_variance worker_firm_covariance total_variance
+            matrix `modelbased' = J(4,4,.)
+            matrix `modelse' = J(1,4,.)
+            forvalues row = 1/4 {
+                forvalues column = 1/4 {
+                    matrix `modelbased'[`row',`column'] =         ///
+                        `native'[1,44+4*(`row'-1)+`column']
+                }
+                matrix `modelse'[1,`row'] = sqrt(`modelbased'[`row',`row'])
+            }
+            matrix rownames `modelbased' = `names'
+            matrix colnames `modelbased' = `names'
+            matrix rownames `modelse' = se
+            matrix colnames `modelse' = `names'
+            matrix `terms' = (`native'[1,41],`native'[1,42])
+            matrix rownames `terms' = terms
+            matrix colnames `terms' = mover_units stayer_observations
+            ereturn matrix V_modelbased = `modelbased'
+            ereturn matrix se_modelbased = `modelse'
+            ereturn matrix inference_working_terms = `terms'
+            ereturn scalar inference_signal_truncation = `native'[1,44]
+            ereturn scalar inference_controls = `native'[1,40]
+        }
     }
     if "`deletion'"=="match" {
         ereturn local inference_method                            ///

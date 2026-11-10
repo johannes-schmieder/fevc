@@ -3742,6 +3742,7 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
     VckssComponentInferenceResultReceiptV4 receipt;
     VckssComponentInferenceResultReceiptV5 receipt5;
     VckssComponentInferenceUnitReceiptV2 units;
+    VckssLeaveoutResidualDiagnosticV1 noise;
     VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
@@ -4013,6 +4014,33 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
                 receipt5.floored_predictions >= units.independent_units) {
                 free(storage); return vckss_usage("invalid leave-out residual diagnostics");
             }
+            memset(&noise, 0, sizeof(noise));
+            status = vckss_rust_engine_leaveout_residual_diagnostic_v1(
+                generation, &noise, (uint32_t)sizeof(noise));
+            if (status != 0) { free(storage); return vckss_rust_failure(status); }
+            /* One fit and three kernel images per draw, three influence
+             * solves, and the offset pass account for every solver column. */
+            if (noise.struct_size != sizeof(noise) || noise.schema_version != 1u ||
+                noise.generation != generation || noise.draws < 2u ||
+                (uint64_t)noise.draws * 4u != base->probes ||
+                noise.offset_pass_solves % 2u != 0u ||
+                receipt.solver_columns != (uint64_t)base->probes + 3u + noise.offset_pass_solves ||
+                noise.mover_terms > 5u || noise.stayer_terms > 3u ||
+                noise.mover_terms + noise.stayer_terms == 0u ||
+                (units.stayer_observations == 0u && noise.stayer_terms != 0u) ||
+                noise.working_floored != receipt5.floored_predictions ||
+                noise.working_floor != receipt5.positivity_floor ||
+                !isfinite(noise.signal_truncation) || noise.signal_truncation < 0.0) {
+                free(storage); return vckss_usage("leave-out residual diagnostics did not reconcile");
+            }
+            for (i = 0; i < 16u; ++i) {
+                /* An effective rank is absent when its fourth moment vanished. */
+                if (!isfinite(noise.model_covariance[i]) ||
+                    (i < 4u && !isnan(noise.effective_rank[i]) &&
+                        (!isfinite(noise.effective_rank[i]) || noise.effective_rank[i] < 1.0))) {
+                    free(storage); return vckss_usage("invalid leave-out residual model covariance or rank");
+                }
+            }
             for (i = 0; i < 664u; ++i) {
                 if (!isnan(summaries[i])) { free(storage); return vckss_usage("leave-out residual source exported inapplicable CV results"); }
                 summaries[i] = SV_missval;
@@ -4092,6 +4120,26 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
             (status = vckss_save_double("__vckss_comp_floor", floored ? receipt5.positivity_floor : SV_missval)) != 0 ||
             (status = vckss_save_u64("__vckss_comp_floored", receipt5.floored_predictions)) != 0 ||
             (status = vckss_save_u64("__vckss_comp_nonpositive", receipt5.nonpositive_predictions)) != 0) return status;
+        if (receipt5.variance_fit == 3u) {
+            /* Row-major model-based covariance, then the effective ranks. */
+            char name[32];
+            unsigned int index;
+            if ((status = vckss_save_u64("__vckss_rse_draws", noise.draws)) != 0 ||
+                (status = vckss_save_u64("__vckss_rse_controls", noise.controls)) != 0 ||
+                (status = vckss_save_u64("__vckss_rse_mover_terms", noise.mover_terms)) != 0 ||
+                (status = vckss_save_u64("__vckss_rse_stayer_terms", noise.stayer_terms)) != 0 ||
+                (status = vckss_save_u64("__vckss_rse_offset_solves", noise.offset_pass_solves)) != 0 ||
+                (status = vckss_save_double("__vckss_rse_truncation", noise.signal_truncation)) != 0) return status;
+            for (index = 0; index < 16u; ++index) {
+                snprintf(name, sizeof(name), "__vckss_rse_model_%u", index + 1u);
+                if ((status = vckss_save_double(name, noise.model_covariance[index])) != 0) return status;
+            }
+            for (index = 0; index < 4u; ++index) {
+                snprintf(name, sizeof(name), "__vckss_rse_rank_%u", index + 1u);
+                if ((status = vckss_save_double(name, isnan(noise.effective_rank[index]) ?
+                        SV_missval : noise.effective_rank[index])) != 0) return status;
+            }
+        }
     }
     return 0;
 }

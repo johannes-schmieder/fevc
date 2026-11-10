@@ -905,6 +905,17 @@ interval limits, {cmd:e(V)} and {cmd:e(V_primitive)} the covariance,
 {cmd:e(inference_auto_reason)} is empty when standard errors were computed
 and otherwise says why they were not; {cmd:e(inference_offset_pass_solves)}
 counts the solves of the additional pass under joint nuisance with controls.
+On the native backend, {cmd:e(inference_working_terms)} holds the number of
+working-variance terms kept for mover units and for stayer observations,
+{cmd:e(inference_signal_truncation)} the size of the negative part removed
+from the signal term, {cmd:e(inference_controls)} the controls whose
+estimation enters the standard errors, and {cmd:e(V_modelbased)} with
+{cmd:e(se_modelbased)} the covariance and standard errors obtained when the
+fitted working variances replace the squared residuals in the signal term.
+The reported standard errors are the residual-based ones; a large gap
+between the two says the working-variance model fits the error variances
+poorly. Columns 39 to 64 of {cmd:e(component_inference_receipt)} carry the
+same quantities as they crossed the plugin boundary.
 {cmd:e(projection_b)}, {cmd:e(projection_V)}, and
 {cmd:e(projection_results)} contain projection results. Timing diagnostics
 use only Stata timers that are not already in use and leave the caller's

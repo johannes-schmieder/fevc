@@ -22,7 +22,11 @@ method is a flag on the prepared attachment. It follows the automatic solver
 route, both resolved executors, numerical replay and every centering mode.
 Under joint nuisance with controls the engine adds one target pass with the
 worker-firm solver for the fixed-offset unit geometry; a mover-only request
-without controls selects the generic engine when the attachment is present. No distributed binary contains it yet. See
+without controls selects the generic engine when the attachment is present.
+Its memory forecast is a dedicated lifetime tally, and
+`vckss_rust_engine_leaveout_residual_diagnostic_v1` exports the working-variance
+fit, offset-pass solves, effective ranks and model-based covariance. No
+distributed binary contains it yet. See
 `fevc/docs/standard_errors/standard_errors.tex`.
 
 ## October 10 pooled component inference binaries

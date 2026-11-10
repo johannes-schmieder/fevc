@@ -740,6 +740,7 @@ program define fevc_rust, rclass
         // A partial transport must not inherit V2 counts from an earlier call.
         capture scalar drop __vckss_comp_unit_movers
         capture scalar drop __vckss_comp_unit_stayers
+        capture scalar drop __vckss_rse_draws
         if "`reference'" == "q1" {
             fevc__rust_plugin_call `plugin', `result_command' `handle' q1       ///
                 `primitive' `covariance' `mcse' `spectrum' `q1'              ///
@@ -762,6 +763,30 @@ program define fevc_rust, rclass
                 return scalar `target' = scalar(__vckss_comp_`source')
                 capture scalar drop __vckss_comp_`source'
             }
+        }
+        // Leave-out residual standard errors send their own diagnostics:
+        // draws, controls, working-variance terms for movers and stayers,
+        // offset-pass solves, signal truncation, the row-major model-based
+        // covariance, and the four effective ranks.
+        capture confirm scalar __vckss_rse_draws
+        if !_rc {
+            tempname residual_diagnostic
+            matrix `residual_diagnostic' = J(1,26,.)
+            local column = 0
+            foreach name in draws controls mover_terms stayer_terms offset_solves truncation {
+                local ++column
+                matrix `residual_diagnostic'[1,`column'] = scalar(__vckss_rse_`name')
+                capture scalar drop __vckss_rse_`name'
+            }
+            forvalues index = 1/16 {
+                matrix `residual_diagnostic'[1,6+`index'] = scalar(__vckss_rse_model_`index')
+                capture scalar drop __vckss_rse_model_`index'
+            }
+            forvalues index = 1/4 {
+                matrix `residual_diagnostic'[1,22+`index'] = scalar(__vckss_rse_rank_`index')
+                capture scalar drop __vckss_rse_rank_`index'
+            }
+            return matrix leaveout_residual = `residual_diagnostic'
         }
         return matrix primitive_covariance = `primitive'
         return matrix covariance = `covariance'

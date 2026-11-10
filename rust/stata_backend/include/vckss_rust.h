@@ -937,6 +937,28 @@ typedef struct VckssComponentInferenceUnitReceiptV2 {
     uint64_t stayer_observations;
 } VckssComponentInferenceUnitReceiptV2;
 
+/* Diagnostics of leave-out residual standard errors. model_covariance is the
+ * four-target covariance with the squared-residual two-way signal replaced by
+ * its working-variance counterpart, row-major. residual_noise is the
+ * pseudo-noise calibration of the signal term on the primitive targets. */
+typedef struct VckssLeaveoutResidualDiagnosticV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t draws;
+    uint32_t controls;
+    uint32_t mover_terms;
+    uint32_t stayer_terms;
+    uint64_t offset_pass_solves;
+    uint64_t working_floored;
+    double working_floor;
+    double signal_truncation;
+    double effective_rank[4];
+    double model_covariance[16];
+    double residual_noise[9];
+    double residual_noise_mcse[9];
+} VckssLeaveoutResidualDiagnosticV1;
+
 typedef struct VckssComponentVectorV1 {
     double worker;
     double firm;
@@ -1746,6 +1768,11 @@ int32_t vckss_rust_engine_component_inference_unit_receipt_v1(
 int32_t vckss_rust_engine_component_inference_unit_receipt_v2(
     uint64_t generation,
     VckssComponentInferenceUnitReceiptV2 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_leaveout_residual_diagnostic_v1(
+    uint64_t generation,
+    VckssLeaveoutResidualDiagnosticV1 *output,
     uint32_t output_capacity_bytes
 );
 /* V2 changes policy, not the frozen V1 tuning-request layout. */

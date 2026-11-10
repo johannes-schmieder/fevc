@@ -1662,7 +1662,55 @@ pub(super) fn leaveout_residual_result(
     for target in 0..4 {
         assert!(covariance[5 * target] > 0.0 && covariance[5 * target].is_finite());
     }
+    // The source-specific diagnostic must reconcile with the shared receipt.
+    let diagnostic = leaveout_residual_diagnostic(generation);
+    assert_eq!(4 * diagnostic.draws, receipt.v4.v3.v2.probes);
+    assert_eq!(
+        u64::from(receipt.v4.solver_columns),
+        u64::from(receipt.v4.v3.v2.probes) + 3 + diagnostic.offset_pass_solves
+    );
+    assert_eq!(diagnostic.working_floor, receipt.positivity_floor);
+    assert_eq!(diagnostic.working_floored, receipt.floored_predictions);
+    assert!((1..=5).contains(&diagnostic.mover_terms) && diagnostic.stayer_terms <= 3);
+    assert!(diagnostic.signal_truncation >= 0.0 && diagnostic.signal_truncation.is_finite());
+    for target in 0..4 {
+        let model = diagnostic.model_covariance[5 * target];
+        assert!(model > 0.0 && model.is_finite());
+        assert!(diagnostic.effective_rank[target] >= 1.0);
+        for other in 0..4 {
+            let (upper, lower) = (
+                diagnostic.model_covariance[4 * target + other],
+                diagnostic.model_covariance[4 * other + target],
+            );
+            assert!((upper - lower).abs() <= 1e-12 * upper.abs().max(lower.abs()));
+        }
+    }
+    // Total is worker + firm + 2 x covariance under the model-based map too.
+    let mapped = diagnostic.model_covariance[0]
+        + diagnostic.model_covariance[1]
+        + 2.0 * diagnostic.model_covariance[2];
+    assert!((diagnostic.model_covariance[3] - mapped).abs() <= 1e-12 * mapped.abs().max(1.0));
     (covariance, receipt)
+}
+
+pub(super) fn leaveout_residual_diagnostic(generation: u64) -> VckssLeaveoutResidualDiagnosticV1 {
+    let mut diagnostic = VckssLeaveoutResidualDiagnosticV1::default();
+    assert_eq!(bytes::<VckssLeaveoutResidualDiagnosticV1>(), 368);
+    // A short buffer is refused before anything is written.
+    assert_ne!(
+        vckss_rust_engine_leaveout_residual_diagnostic_v1(generation, &mut diagnostic, 367),
+        0
+    );
+    assert_eq!(diagnostic, VckssLeaveoutResidualDiagnosticV1::default());
+    ok(vckss_rust_engine_leaveout_residual_diagnostic_v1(
+        generation,
+        &mut diagnostic,
+        368,
+    ));
+    assert_eq!(diagnostic.struct_size, 368);
+    assert_eq!(diagnostic.schema_version, 1);
+    assert_eq!(diagnostic.generation, generation);
+    diagnostic
 }
 
 // The default request leaves the solver route and batches automatic. The
@@ -1831,6 +1879,11 @@ fn default_request_with_controls_carries_standard_errors_through_the_offset_pass
         // Three influence solves, four per draw, and two per point probe.
         assert_eq!(result.v4.solver_columns, 35 + 2 * probes);
         assert_eq!(receipt.component_rhs_count, 35 + 2 * u64::from(probes));
+        let diagnostic = leaveout_residual_diagnostic(generation);
+        assert_eq!(diagnostic.draws, 8);
+        assert_eq!(diagnostic.controls, 1);
+        assert_eq!(diagnostic.offset_pass_solves, 2 * u64::from(probes));
+        assert_eq!(diagnostic.stayer_terms, 0);
         let mut units = VckssComponentInferenceUnitReceiptV1::default();
         ok(vckss_rust_engine_component_inference_unit_receipt_v1(
             generation, &mut units, 64,

@@ -26,6 +26,12 @@
   feature have not been executed; Rust is covered by dense-oracle and ABI
   tests. `FEVC_DEFAULT_INFERENCE=none` keeps the earlier default for suites
   written for it.
+- The native route also posts `e(V_modelbased)` and `e(se_modelbased)`,
+  the covariance that takes the fitted working variances as true, with the
+  working-variance term counts and signal truncation, through an additive
+  plugin diagnostic (`vckss_rust_engine_leaveout_residual_diagnostic_v1`).
+- The attachment's memory forecast is its own lifetime tally, checked
+  against the process heap on every executor.
 - Technical supplement: `docs/standard_errors/standard_errors.tex`.
 
 ## 0.5.2 — 2026-11-07

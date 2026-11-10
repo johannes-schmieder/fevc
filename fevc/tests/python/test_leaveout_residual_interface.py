@@ -216,3 +216,62 @@ def test_largest_programs_stay_within_their_earlier_size():
     command = read("fevc/fevc.ado")
     assert _program_code_characters(command, "_vckss_impl") <= 131_933
     assert _program_code_characters(command, "_fevc_rust_generic_planned") <= 131_552
+
+
+def test_native_diagnostics_reach_stata_through_an_additive_transport():
+    plugin = read("rust/crates/vckss-plugin/src/ffi_component_v5.rs")
+    assert "pub struct VckssLeaveoutResidualDiagnosticV1" in plugin
+    assert "const _: [(); 368] = [(); size_of::<VckssLeaveoutResidualDiagnosticV1>()];" in plugin
+    assert "pub extern \"C\" fn vckss_rust_engine_leaveout_residual_diagnostic_v1(" in plugin
+    header = read("rust/stata_backend/include/vckss_rust.h")
+    assert "} VckssLeaveoutResidualDiagnosticV1;" in header
+    assert "int32_t vckss_rust_engine_leaveout_residual_diagnostic_v1(" in header
+    abi = read("rust/stata_backend/tests/abi_header_compat_test.c")
+    assert "sizeof(VckssLeaveoutResidualDiagnosticV1) == 368" in abi
+    shim = read("rust/stata_backend/cshim/stata_entry.c")
+    # Every solver column is a pseudo-noise solve, an influence solve, or an
+    # offset-pass solve; the shim refuses a diagnostic that says otherwise.
+    assert (
+        "receipt.solver_columns != (uint64_t)base->probes + 3u + noise.offset_pass_solves"
+        in shim
+    )
+    for name in ("draws", "controls", "mover_terms", "stayer_terms", "offset_solves", "truncation"):
+        assert f'"__vckss_rse_{name}"' in shim
+    assert '"__vckss_rse_model_%u"' in shim and '"__vckss_rse_rank_%u"' in shim
+    dispatcher = read("fevc/fevc_rust.ado")
+    assert "capture scalar drop __vckss_rse_draws" in dispatcher
+    assert "return matrix leaveout_residual = `residual_diagnostic'" in dispatcher
+    fetch = read("fevc/fevc__rust_component_fetch.ado")
+    assert "capture matrix `residual_diagnostic' = r(leaveout_residual)" in fetch
+    assert "`residual_diagnostic'[1,5]==`receipt'[1,22]-`simulations'-3" in fetch
+    assert "matrix `receipt' = (`receipt',`residual_diagnostic')" in fetch
+    post = read("fevc/fevc__residual_se_post.ado")
+    assert "if colsof(`native')==64 {" in post
+    for returned in (
+        "ereturn matrix V_modelbased",
+        "ereturn matrix se_modelbased",
+        "ereturn matrix inference_working_terms",
+        "ereturn scalar inference_signal_truncation",
+        "ereturn scalar inference_controls",
+    ):
+        assert returned in post
+    help_text = read("fevc/fevc.sthlp")
+    for returned in ("e(V_modelbased)", "e(se_modelbased)", "e(inference_working_terms)"):
+        assert returned in help_text
+
+
+def test_attachment_memory_forecast_is_its_own_lifetime_tally():
+    attachment = read("rust/crates/vckss-core/src/generic_jla/residual_noise_attachment.rs")
+    assert "pub(super) fn peak_bytes(" in attachment
+    engine = read("rust/crates/vckss-core/src/generic_jla.rs")
+    assert "return residual_noise_attachment::peak_bytes(" in engine
+    # Admission before the worker pool and the run itself must agree.
+    for path in (
+        "rust/crates/vckss-core/src/generic_diagonal_queue.rs",
+        "rust/crates/vckss-core/src/generic_cmg_attachments.rs",
+    ):
+        assert "offset_pass_requested(component, options, problem.controls.len())" in read(path)
+    memory = read("rust/crates/vckss-core/tests/generic_jla_memory.rs")
+    assert "fn leaveout_residual_forecast_covers_heap()" in memory
+    boundary = read("rust/crates/vckss-core/tests/generic_jla/residual_noise.rs")
+    assert "fn leaveout_residual_attachment_has_exact_memory_boundary()" in boundary

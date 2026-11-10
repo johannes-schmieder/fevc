@@ -85,6 +85,23 @@ foreach controls in "" "x1 x2" {
             * fixed-offset geometry: two solves per point probe.
             assert e(inference_offset_pass_solves)==2*e(probes)
         }
+        if "`e(backend_selected)'"=="rust" {
+            * The native route also reports the working-variance fit and the
+            * covariance that takes the fitted working variances as true.
+            assert colsof(e(component_inference_receipt))==64
+            assert e(component_inference_receipt)[1,"offset_pass_solves"]==e(inference_offset_pass_solves)
+            assert e(inference_controls)==`q'
+            assert e(inference_signal_truncation)>=0
+            matrix terms = e(inference_working_terms)
+            assert inrange(terms[1,1],1,5) & inrange(terms[1,2],0,3)
+            matrix Vm = e(V_modelbased)
+            matrix sem = e(se_modelbased)
+            assert rowsof(Vm)==4 & colsof(Vm)==4 & colsof(sem)==4
+            forvalues j = 1/4 {
+                assert Vm[`j',`j']>0 & reldif(sem[1,`j'],sqrt(Vm[`j',`j']))<1e-12
+            }
+            assert mreldif(Vm,Vm')<1e-10
+        }
     }
     else {
         capture confirm matrix e(V)

@@ -23,6 +23,15 @@ program define fevc__rust_component_fetch, rclass
     tempname primitive covariance mcse spectrum q1_raw summaries folds cv receipt
     tempname inference_results q1_results units target_status
     matrix `target_status' = r(target_variance_status)
+    // Present only when the plugin sends leave-out residual diagnostics.
+    tempname residual_diagnostic
+    local residual_present = 0
+    capture matrix `residual_diagnostic' = r(leaveout_residual)
+    if !_rc {
+        capture local residual_present = (rowsof(`residual_diagnostic')==1 & ///
+            colsof(`residual_diagnostic')==26)
+        if _rc local residual_present = 0
+    }
     local joint_status = r(joint_status)
     local variance_fit = r(variance_fit)
     matrix `units' = (r(unit_schema),r(unit_deletion),r(independent_units), ///
@@ -179,6 +188,20 @@ program define fevc__rust_component_fetch, rclass
             }
         }
     }
+    if `ok' & `variance_fit'==3 & `residual_present' {
+        // Draws, offset-pass solves and working-variance terms must agree
+        // with the shared receipt; model-based variances must be positive.
+        local ok = `residual_diagnostic'[1,1]==`simulations'/4 &           ///
+            `residual_diagnostic'[1,5]==`receipt'[1,22]-`simulations'-3 &  ///
+            inrange(`residual_diagnostic'[1,3],0,5) &                      ///
+            inrange(`residual_diagnostic'[1,4],0,3) &                      ///
+            `residual_diagnostic'[1,3]+`residual_diagnostic'[1,4]>0 &      ///
+            `residual_diagnostic'[1,6]>=0 & !missing(`residual_diagnostic'[1,6])
+        forvalues index = 1/4 {
+            local diagonal = `residual_diagnostic'[1,2+5*`index']
+            if missing(`diagonal') | `diagonal'<=0 local ok = 0
+        }
+    }
     if `ok' & `joint_status'==0 {
         local scale = max(1,abs(`covariance'[4,4]))
         forvalues row = 1/4 {
@@ -279,6 +302,15 @@ program define fevc__rust_component_fetch, rclass
     matrix `outsummaries' = `summaries'
     matrix `outfolds' = `folds'
     matrix `outcv' = `cv'
+    if `variance_fit'==3 & `residual_present' {
+        // Receipt columns 39-64 for leave-out residual standard errors.
+        matrix colnames `residual_diagnostic' = draws controls mover_terms  ///
+            stayer_terms offset_pass_solves signal_truncation               ///
+            vm_w_w vm_w_f vm_w_c vm_w_t vm_f_w vm_f_f vm_f_c vm_f_t         ///
+            vm_c_w vm_c_f vm_c_c vm_c_t vm_t_w vm_t_f vm_t_c vm_t_t         ///
+            rank_worker rank_firm rank_covariance rank_total
+        matrix `receipt' = (`receipt',`residual_diagnostic')
+    }
     matrix `outreceipt' = `receipt'
     matrix `outunits' = `units'
     matrix `outresults' = `inference_results'

@@ -282,3 +282,88 @@ fn receipt_v5(
     }
     Ok(receipt)
 }
+
+/// Diagnostics that only leave-out residual standard errors produce.
+///
+/// `model_covariance` is the four-target covariance with the squared-residual
+/// two-way signal replaced by its working-variance counterpart, row-major.
+/// `residual_noise` is the pseudo-noise calibration of the signal term on the
+/// three primitive targets, with its Monte Carlo error beside it.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssLeaveoutResidualDiagnosticV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub draws: u32,
+    pub controls: u32,
+    pub mover_terms: u32,
+    pub stayer_terms: u32,
+    pub offset_pass_solves: u64,
+    pub working_floored: u64,
+    pub working_floor: f64,
+    pub signal_truncation: f64,
+    pub effective_rank: [f64; 4],
+    pub model_covariance: [f64; 16],
+    pub residual_noise: [f64; 9],
+    pub residual_noise_mcse: [f64; 9],
+}
+
+const _: [(); 368] = [(); size_of::<VckssLeaveoutResidualDiagnosticV1>()];
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_leaveout_residual_diagnostic_v1(
+    generation: u64,
+    output: *mut VckssLeaveoutResidualDiagnosticV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssLeaveoutResidualDiagnosticV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "leave-out residual diagnostic",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_leaveout_residual_diagnostic")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_leaveout_residual_diagnostic",
+                "leave-out residual diagnostics require generic JLA",
+            ));
+        };
+        let diagnostic = generic
+            .component_inference
+            .as_ref()
+            .and_then(|result| result.residual_noise.as_ref())
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "engine_leaveout_residual_diagnostic",
+                    "the generation has no leave-out residual standard errors",
+                )
+            })?;
+        write_output(
+            output,
+            VckssLeaveoutResidualDiagnosticV1 {
+                struct_size: struct_size_u32::<VckssLeaveoutResidualDiagnosticV1>()?,
+                schema_version: 1,
+                generation,
+                draws: diagnostic.draws,
+                controls: to_u32(diagnostic.controls, "control count")?,
+                mover_terms: to_u32(diagnostic.working_terms[0], "mover working terms")?,
+                stayer_terms: to_u32(diagnostic.working_terms[1], "stayer working terms")?,
+                offset_pass_solves: to_u64(diagnostic.offset_pass_solves, "offset-pass solves")?,
+                working_floored: diagnostic.working_floored,
+                working_floor: diagnostic.working_floor,
+                signal_truncation: diagnostic.signal_truncation,
+                effective_rank: diagnostic.effective_rank,
+                model_covariance: diagnostic.model_covariance,
+                residual_noise: diagnostic.residual_noise,
+                residual_noise_mcse: diagnostic.residual_noise_mcse,
+            },
+        );
+        Ok(())
+    })
+}

@@ -26,6 +26,17 @@ and
 in the same test binary; the offset pass under joint nuisance is compared
 with a fixed-offset run in
 `generic_jla::residual_noise::joint_nuisance_with_controls_reports_the_fixed_offset_standard_errors`.
+The attachment's memory forecast is checked against the process heap by
+`leaveout_residual_forecast_covers_heap` in `tests/generic_jla_memory.rs`
+(observation and match units, with and without stayers and the offset pass,
+on the queued, direct and both automatic executors at one and seven threads)
+and as the exact admission boundary by
+`generic_jla::residual_noise::leaveout_residual_attachment_has_exact_memory_boundary`.
+The diagnostic export is checked in `leaveout_residual_result`; the C shim's
+probe transport in `cshim_error_transport_test.c`. The ignored
+`default_command_on_a_panel_file` and `default_command_on_a_synthetic_panel`
+in `tests/engine_ffi/default_command.rs` run the default command's native
+requests on a caller-supplied panel for timing and sample output.
 No Stata, installed-plugin or platform gate has been run, and no binary has
 been rebuilt.
 

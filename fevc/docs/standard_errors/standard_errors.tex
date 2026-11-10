@@ -697,6 +697,62 @@ estimate $\reff$ as 1.6, 1.3 and 1.2, equal to the exact values, and eight
 draws give 3.4, 1.9 and 1.8, against hundreds or thousands in the other
 designs. The diagnostic separates the two situations clearly.
 
+\subsection{The public Veneto extract}\label{sec:veneto}
+
+Table~\ref{tab:veneto} runs the default request on the public teaching
+extract distributed with the KSS Matlab package: region~1, workers observed
+twice, 71,614 input rows of which 56,044 are retained (12,828 mover rows and
+43,216 stayer rows; 28,022 workers, 1,684 firms). The run goes through the
+plugin's C interface with the requests the command sends---match deletion,
+pooled stayers, \texttt{centering(mean)}, automatic engine, route and
+batches, 200 probes, seed 8,675,309, four threads---so it is engine output,
+not Stata output. The point estimates and numerical MCSE equal the published
+default display to every printed digit.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+ & Estimate & SE & 95\% interval & Model-based SE & $\reff$ \\
+\midrule
+Worker variance & 0.08514 & 0.00124 & [0.08271, 0.08756] & 0.00120 & 172 \\
+Firm variance & 0.01024 & 0.00096 & [0.00836, 0.01212] & 0.00101 & 132 \\
+Covariance & 0.00468 & 0.00073 & [0.00325, 0.00611] & 0.00074 & 129 \\
+Variance of sum & 0.10473 & 0.00070 & [0.10337, 0.10610] & 0.00041 & 12,723 \\
+\bottomrule
+\end{tabular}
+\caption{Default request on the public Veneto extract, eight draws. The
+structured \texttt{highrank} standard errors published for the same sample
+are 0.00120, 0.00103, 0.00077 and 0.00041.}\label{tab:veneto}
+\end{table}
+
+For the three components the reported and model-based standard errors agree
+within 6\%, and both agree with the earlier structured method. For the
+variance of the sum the residual-based standard error is 1.7 times the
+model-based one. The working variance depends on leverage and unit mass only;
+the influence of the total is roughly proportional to a unit's fitted wage
+relative to the mean, and log-wage errors that are larger at either end of
+the wage distribution, or heavier-tailed than Gaussian, raise the
+residual-based figure but not the model-based one. Which explanation holds
+cannot be settled from one sample; the reported figure is the one that does
+not rely on the working-variance model. The effective ranks are at least in the
+hundreds, so normal intervals are appropriate here.
+
+The standard errors add 7\% to the solve time of the point estimates (3.11 to
+3.33 seconds). With one control under the default joint nuisance the offset
+pass adds 400 solves and the solve time rises by 59\% (2.96 to 4.70 seconds).
+These are single runs on a small sample.
+
+The share falls with size. On synthetic two-way panels with the dimensions
+of the confidential Veneto samples, same requests and four threads, the
+standard errors add 16 to 20\% to the solve time at 1.32 million rows (two
+runs; 74 to 87 seconds in the second) and 11\% at 5.5 million rows and 1.1
+million workers (283 to 313 seconds). With one control the offset pass
+raises the 1.32-million-row solve time by 48\% (82 to 122 seconds). The
+attachment's memory forecast is 1.7 GiB at one million units and 3.7 GiB at
+4.2 million. These designs have homoskedastic errors, and there the reported
+and model-based standard errors agree within 6\%.
+
 \subsection{What this evidence does not establish}
 
 The prototype is written in Python with a direct sparse factorisation. It
@@ -784,11 +840,38 @@ were written for the point-only default; the environment setting
 for \texttt{project()} in the same call, for observation deletion with a
 fixed offset or, on the native backend, with frequency weights, for
 \texttt{algorithm(auto)}, and for \texttt{algorithm(exact)} on the native
-backend. Two smaller items remain. The memory forecast of the attachment
-reuses the formula of the structured sources; its allowances exceed this
-method's buffers, but it was not re-derived for them. The model-based
-covariance and the working-variance term counts are in the core result but
-not yet in the Stata transport.
+backend.
+
+\paragraph{Memory admission (tested).} The attachment has its own memory
+forecast, tallied by allocation lifetime: state the command keeps for it
+(fit coefficients, unit addresses and geometry, retained target diagonals,
+collapsed unit data, control aggregates and, under joint nuisance with
+controls, the offset-pass buffers and receipts); state the pass owns (unit
+order, target ratios, working variances, influence and kernel vectors, one
+pseudo-outcome per draw of the batch and the copies moved into the result);
+and the solve buffers for one pseudo-fit and three kernel images per draw of
+the batch. It charges no spectral pass and no residual Gram, which this method
+does not run. An allocation-counting test runs every combination of
+observation and match units, with and without stayers and the offset pass, on
+the queued, direct, and both automatic executors at one and seven threads, and
+checks that the process heap stays within the admitted command peak; a second
+test checks that the forecast is the exact admission boundary.
+
+\paragraph{Diagnostics in Stata (transport tested, ado unexecuted).} An
+additive plugin function, \texttt{vckss\_rust\_engine\_leaveout\_residual\_\allowbreak
+diagnostic\_v1}, exports the draws, the number of controls whose estimation
+enters, the working-variance terms kept for mover units and for stayer
+observations, the offset-pass solves, the signal truncation, the effective
+ranks and the model-based covariance. The C shim refuses a diagnostic whose
+solve count, draws or floor disagree with the shared receipt. On the Stata side
+the native route posts \texttt{e(V\_modelbased)} and
+\texttt{e(se\_modelbased)}, the covariance and standard errors obtained when
+the fitted working variances replace the squared residuals in the signal
+term, together with \texttt{e(inference\_working\_terms)},
+\texttt{e(inference\_signal\_truncation)} and
+\texttt{e(inference\_controls)}. The reported standard errors remain the
+residual-based ones; a large gap between the two flags a working-variance
+model that fits the error variances poorly.
 \end{sloppypar}
 
 \appendix

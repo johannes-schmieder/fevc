@@ -132,6 +132,198 @@ pub(super) fn control_adjustment(
     })
 }
 
+/// Incremental heap of this attachment, tallied by allocation lifetime.
+///
+/// `U` is the number of inferential units, `N` the stored rows, `P` the
+/// complete parameter count and `b` the draws solved together. Three groups
+/// can coexist with the command peak:
+///
+/// * state the command keeps for the attachment: fit coefficients, unit
+///   addresses, unit geometry, retained target diagonals, the collapsed unit
+///   data of a grouped request, the control aggregates, and the retained
+///   buffers of an offset pass;
+/// * state `run` owns: unit order, target ratios, working variances, one
+///   prediction, the influence vectors, one pseudo-residual, `b` pseudo-
+///   outcomes, the kernel images of the current and the previous draw, and
+///   the copies moved into the result;
+/// * solve buffers: `b` pseudo-fits, `3b` kernel right-hand sides and `3b`
+///   kernel solutions, two transient right-hand sides, and the solver's own
+///   batch workspace for `b` columns.
+///
+/// The pass has no spectral phase and no residual Gram, so neither is charged.
+pub(super) fn peak_bytes(
+    problem: &CompressedProblem,
+    prepared: &ComponentExecution<'_>,
+    full_parameters: usize,
+    route_memory: RouteMemory,
+    offset_pass: bool,
+    point_probes: u32,
+) -> Result<u64> {
+    let count = |value: usize, what: &'static str| {
+        u64::try_from(value).map_err(|_| resource(format!("{what} is not representable")))
+    };
+    let units = count(
+        prepared.unit_count(problem),
+        "leave-out residual unit count",
+    )?;
+    let stored = count(problem.outcome.len(), "leave-out residual stored rows")?;
+    let rows = units.max(stored);
+    let workers = count(problem.workers(), "leave-out residual worker count")?;
+    let firms = count(problem.firms(), "leave-out residual firm count")?;
+    let controls = count(problem.controls.len(), "leave-out residual control count")?;
+    let parameters = checked_sum(&[workers, firms, controls])?;
+    let reduced = count(full_parameters, "leave-out residual reduced dimension")?;
+    let draws = crate::component_inference::residual_noise_draws(prepared.options.probes)?;
+    let batch = count(
+        prepared.options.batch_width.clamp(1, draws),
+        "leave-out residual batch width",
+    )?;
+    let grouped = prepared.inference_unit == ComponentInferenceUnit::Match;
+
+    // Fit coefficients, two address words and two geometry values per unit,
+    // and the three retained target diagonals on stored rows.
+    let mut retained = checked_sum(&[
+        checked_product(&[parameters, 8], "leave-out residual fit coefficients")?,
+        checked_product(&[rows, 4, 8], "leave-out residual addresses and geometry")?,
+        checked_product(&[stored, 3, 8], "leave-out residual target diagonals")?,
+    ])?;
+    if grouped {
+        // Outcome, residual, adjusted residual, mass and three diagonals.
+        retained = checked_sum(&[
+            retained,
+            checked_product(&[units, 7, 8], "collapsed unit data")?,
+        ])?;
+        if controls > 0 {
+            // Collapsed, residualized and within-unit control aggregates,
+            // their information matrix and its inverse with workspace.
+            retained = checked_sum(&[
+                retained,
+                checked_product(&[units, controls, 3, 8], "unit control aggregates")?,
+                checked_product(&[controls, controls, 4, 8], "control information")?,
+            ])?;
+        }
+    }
+    if prepared.mixed_units.is_some() {
+        retained = checked_sum(&[
+            retained,
+            checked_product(
+                &[problem.physical_total, 2, 8],
+                "mixed physical maker capture",
+            )?,
+            checked_product(&[rows, 128], "mixed inference unit plan")?,
+            checked_product(&[stored, 8], "mixed plan mover rows")?,
+        ])?;
+    }
+    let offset_receipts = if offset_pass {
+        // Offset outcome, worker-firm adjusted residuals and three target
+        // diagonals on stored rows; unit leverage and maker inverse; the
+        // worker-firm coefficients; and two solves per point-estimate probe.
+        retained = checked_sum(&[
+            retained,
+            checked_product(&[stored, 5, 8], "offset-pass stored rows")?,
+            checked_product(&[rows, 2, 8], "offset-pass unit geometry")?,
+            checked_product(&[workers + firms, 8], "offset-pass coefficients")?,
+        ])?;
+        let solves = u64::from(point_probes)
+            .checked_mul(2)
+            .ok_or_else(|| resource("offset-pass solve count overflow"))?;
+        retained = checked_sum(&[
+            retained,
+            checked_product(
+                &[
+                    solves,
+                    count(
+                        core::mem::size_of::<GenericJlaRhsReceipt>(),
+                        "offset-pass receipt size",
+                    )?,
+                ],
+                "offset-pass solve receipts",
+            )?,
+        ])?;
+        solves
+    } else {
+        0
+    };
+
+    // `run`: order, three ratios, variances, prediction, three influence
+    // vectors, pseudo-residual, two kernel triples and five result copies,
+    // plus one pseudo-outcome per draw of the batch.
+    let owned = checked_product(
+        &[
+            units,
+            batch
+                .checked_add(21)
+                .ok_or_else(|| resource("leave-out residual unit state overflow"))?,
+            8,
+        ],
+        "leave-out residual unit state",
+    )?;
+    // Pseudo-fits, kernel right-hand sides and kernel solutions, with two
+    // transient right-hand sides while a kernel column is assembled.
+    let exchanged = checked_product(
+        &[
+            parameters,
+            batch
+                .checked_mul(7)
+                .and_then(|value| value.checked_add(2))
+                .ok_or_else(|| resource("leave-out residual solve exchange overflow"))?,
+            8,
+        ],
+        "leave-out residual solve exchange",
+    )?;
+    let solver = checked_sum(&[
+        checked_product(&[reduced, batch, 8, 11], "leave-out residual PCG batch")?,
+        checked_product(
+            &[workers, batch, 8, 3],
+            "leave-out residual worker workspace",
+        )?,
+        checked_product(&[batch, 8, 8], "leave-out residual scalar workspace")?,
+        checked_product(&[batch, 96], "leave-out residual solver receipts")?,
+        checked_product(
+            &[route_memory.cmg_batch_workspace_per_column, batch],
+            "leave-out residual CMG batch workspace",
+        )?,
+        route_memory.full_cmg.map_or(Ok(0), |setup| {
+            // One pseudo-fit and three kernel columns per draw of the batch.
+            direct::solve_bytes(
+                workers,
+                firms,
+                controls,
+                checked_product(&[batch, 4], "leave-out residual direct columns")?,
+                setup,
+            )
+        })?,
+    ])?;
+    let receipts = checked_product(
+        &[
+            u64::from(prepared.options.probes)
+                .checked_add(PRIMITIVE_TARGETS as u64)
+                .and_then(|value| value.checked_add(offset_receipts))
+                .ok_or_else(|| resource("leave-out residual receipt count overflow"))?,
+            count(
+                core::mem::size_of::<ComponentInferenceSolveReceipt>(),
+                "leave-out residual receipt size",
+            )?,
+        ],
+        "leave-out residual solve receipts",
+    )?;
+    checked_sum(&[
+        prepared.persistent_bytes,
+        retained,
+        owned,
+        exchanged,
+        solver,
+        receipts,
+        // The result crosses Rust and C once more on export.
+        if prepared.individual_intervals {
+            2 * (846 * 8 + 288)
+        } else {
+            0
+        },
+        2_048,
+    ])
+}
+
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub(super) fn run(
     problem: &CompressedProblem,

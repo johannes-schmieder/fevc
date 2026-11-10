@@ -407,7 +407,12 @@ point estimates only; that outcome is not a failure and keeps the
 point-estimate status. If the run that carried them stops, the command runs
 once more without them and the reason names the status of the stopped run.
 `e(inference_offset_pass_solves)` counts the additional target-pass solves
-under joint nuisance with controls on the native backend.
+under joint nuisance with controls on the native backend. The native route
+also posts `e(V_modelbased)`, `e(se_modelbased)`,
+`e(inference_working_terms)`, `e(inference_signal_truncation)` and
+`e(inference_controls)`, and widens `e(component_inference_receipt)` to 64
+columns; a diagnostic that does not reconcile with the shared receipt
+withholds the standard errors with the internal-invariant status.
 
 ## Withholding statuses
 

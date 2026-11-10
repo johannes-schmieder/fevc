@@ -131,6 +131,9 @@ use vckss_plugin::ffi_engine::{
 
 static TEST_LOCK: Mutex<()> = Mutex::new(());
 
+#[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
+#[path = "engine_ffi/default_command.rs"]
+mod default_command;
 #[path = "engine_ffi/exact_execution.rs"]
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 mod exact_execution;

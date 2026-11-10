@@ -811,3 +811,64 @@ fn joint_nuisance_offset_pass_covers_mover_only_units() {
         assert_close(joint.covariance[index], fixed.covariance[index], 1e-7);
     }
 }
+
+// The attachment's own lifetime forecast sets the admission boundary: the
+// forecast peak is accepted exactly and one byte less is rejected. The offset
+// pass and the control aggregates must enlarge the attachment's share.
+#[test]
+fn leaveout_residual_attachment_has_exact_memory_boundary() {
+    let hybrid = super::pooled_component::fixture(false);
+    let prepared = prepare_residual_noise_with_interrupt(
+        &hybrid.problem,
+        ComponentInferenceUnit::Match,
+        ComponentInferenceOptions {
+            probes: 4 * DRAWS,
+            batch_width: 7,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )
+    .expect("standard-error preparation");
+    let mut attachment = [0_u64; 2];
+    for (slot, nuisance) in [NuisanceMode::FixedOffset, NuisanceMode::Joint]
+        .into_iter()
+        .enumerate()
+    {
+        let mut estimator = options(DeletionMode::Match, nuisance);
+        estimator.memory_limit_bytes = u64::MAX;
+        let run = |estimator| {
+            run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+                &hybrid.problem,
+                routed_options(estimator, ModelSolverRoute::Diagonal),
+                None,
+                Some(&prepared),
+                Some(&hybrid.plan),
+                &mut NeverInterrupt,
+            )
+        };
+        let baseline = run(estimator).expect("unlimited run");
+        let memory = baseline.receipt.execution.memory;
+        let peak = baseline.receipt.peak_forecast_bytes;
+        assert_eq!(memory.peak_bytes, peak);
+        assert!(memory.component_inference_peak_bytes > 0);
+        assert_eq!(
+            baseline
+                .component_inference
+                .as_ref()
+                .expect("attachment")
+                .peak_forecast_bytes,
+            memory.component_inference_peak_bytes
+        );
+        attachment[slot] = memory.component_inference_peak_bytes;
+        estimator.memory_limit_bytes = peak;
+        run(estimator).expect("the exact forecast is accepted");
+        estimator.memory_limit_bytes = peak - 1;
+        let error = run(estimator).expect_err("one byte below the forecast is rejected");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "generic_jla_memory");
+    }
+    // Offset outcome, adjusted residuals, three diagonals, unit geometry,
+    // worker-firm coefficients and two receipts per point probe.
+    assert!(attachment[1] > attachment[0], "{attachment:?}");
+}

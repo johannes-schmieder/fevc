@@ -1790,6 +1790,8 @@ fn run_generic_jla_with_execution_interrupt(
                 diagonal_plan.map(|plan| plan.maximum_rhs)
             },
             full_solver.owned_batch_workers()?,
+            offset_pass_requested(component_inference, options, controls),
+            options.probes,
         )?;
         // This first private implementation admits a deliberately
         // conservative lifetime bound: the existing complete command peak and
@@ -8255,7 +8257,19 @@ fn component_inference_peak_forecast(
     route_memory: RouteMemory,
     queue_capacity: Option<usize>,
     spectrum_workers: usize,
+    offset_pass: bool,
+    point_probes: u32,
 ) -> Result<u64> {
+    if prepared.leave_out_residual {
+        return residual_noise_attachment::peak_bytes(
+            problem,
+            prepared,
+            full_parameters,
+            route_memory,
+            offset_pass,
+            point_probes,
+        );
+    }
     let rows = u64::try_from(prepared.unit_count(problem).max(problem.outcome.len()))
         .map_err(|_| resource("component-inference row forecast is not representable"))?;
     let original_parameters = problem
