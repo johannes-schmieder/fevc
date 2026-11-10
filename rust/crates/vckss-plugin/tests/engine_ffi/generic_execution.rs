@@ -1839,3 +1839,105 @@ fn default_request_with_controls_carries_standard_errors_through_the_offset_pass
         ok(vckss_rust_engine_release_v1(generation));
     }
 }
+
+// The plain default command: match deletion, movers and stayers pooled, no
+// controls, and engine, route and batches automatic. The stayer augmentation,
+// the attachment and the resolved executor must compose, and the standard
+// errors must cover one unit per mover deletion unit and per stayer
+// observation.
+#[test]
+fn default_pooled_request_carries_leaveout_residual_standard_errors() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    reset();
+    let columns = OwnedColumns::structured_component_sized(20, 20);
+    let stayer_rows = 24_usize;
+    let worker: Vec<f64> = (0..stayer_rows).map(|row| (row / 3 + 1) as f64).collect();
+    let outcome: Vec<f64> = (0..stayer_rows)
+        .map(|row| 0.2 * (row / 3) as f64 + ((row * 7) % 5) as f64 / 9.0)
+        .collect();
+    // Each stayer worker keeps one firm across three observations.
+    let firm: Vec<f64> = worker
+        .iter()
+        .map(|w| ((*w as usize - 1) % 20 + 1) as f64)
+        .collect();
+    let frequency = vec![1.0; stayer_rows];
+    let target_weight = vec![1.0; stayer_rows];
+    let descriptor = VckssStayerAugmentationColumnsV1 {
+        struct_size: bytes::<VckssStayerAugmentationColumnsV1>(),
+        reserved: 0,
+        rows: stayer_rows as u64,
+        firm: firm.as_ptr(),
+        worker: worker.as_ptr(),
+        outcome: outcome.as_ptr(),
+        frequency: frequency.as_ptr(),
+        target_weight: target_weight.as_ptr(),
+        controls: ptr::null(),
+        controls_count: 0,
+        reserved_2: 0,
+    };
+    let stayers = VckssStayerAugmentationRequestV1 {
+        rows: stayer_rows as u64,
+        controls_count: 0,
+        caller_copy_bytes: stayer_rows as u64 * 5 * 8,
+        ..VckssStayerAugmentationRequestV1::default()
+    };
+    let mut capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    capability.v2.stayers_mode = VCKSS_STAYERS_ALL;
+    let mut baseline = planned_solve_request(capability, 0, 0);
+    baseline.v3.v2.v1.probes = 200;
+    let mut candidate = VckssEngineSolveRequestV8::default();
+    candidate.v7.v6.v4 = baseline;
+    candidate.v7.v6.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV8>();
+    candidate.v7.v6.threads = 7;
+
+    let mut reference: Option<[f64; 4]> = None;
+    for attach in [false, true] {
+        let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
+        ok(vckss_rust_engine_augment_stayers_v1(
+            generation,
+            &stayers,
+            &descriptor,
+        ));
+        if attach {
+            attach_leaveout_residual(generation, true, 8);
+        }
+        ok(vckss_rust_engine_solve_v8(generation, &candidate));
+        let mut plan = VckssExecutionPlanReceiptV1::default();
+        ok(vckss_rust_engine_execution_plan_receipt_v1(
+            generation,
+            &mut plan,
+            bytes::<VckssExecutionPlanReceiptV1>(),
+        ));
+        assert_eq!(plan.resolution.engine_selected, VCKSS_ENGINE_GENERIC);
+        let estimate = point(generation);
+        if let Some(old) = reference {
+            close(&estimate, &old);
+            let (_, result) = leaveout_residual_result(generation);
+            assert_eq!(result.v4.solver_columns, 35);
+            let mut units = VckssComponentInferenceUnitReceiptV2::default();
+            ok(vckss_rust_engine_component_inference_unit_receipt_v2(
+                generation,
+                &mut units,
+                bytes::<VckssComponentInferenceUnitReceiptV2>(),
+            ));
+            // One unit per mover deletion unit (each fixture row is its
+            // own) and one per stayer observation.
+            let mover_units = columns.worker.len() as u64;
+            assert_eq!(units.independent_units, mover_units + stayer_rows as u64);
+            assert_eq!(units.mover_units, mover_units);
+            assert_eq!(units.stayer_observations, stayer_rows as u64);
+        } else {
+            reference = Some(estimate);
+        }
+        ok(vckss_rust_engine_release_v1(generation));
+    }
+}

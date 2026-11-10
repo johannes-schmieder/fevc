@@ -17,8 +17,17 @@ Focused gates: `cargo test -p vckss-core residual_noise` (unit tests and the
 units with controls, observation units with joint controls, the automatic
 route, corrected centering and both nuisance modes) and
 `cargo test -p vckss-plugin --test engine_ffi leaveout_residual` (the C ABI
-end to end). No Stata, installed-plugin or platform gate has been run, and no
-binary has been rebuilt.
+end to end). The default command's entry points are covered by
+`v8_resolved_execution_carries_leaveout_residual_standard_errors`,
+`default_request_with_controls_carries_standard_errors_through_the_offset_pass`,
+`mover_only_match_request_with_standard_errors_selects_the_generic_engine`
+and
+`numerical_replay_and_leaveout_residual_standard_errors_share_the_default_route`
+in the same test binary; the offset pass under joint nuisance is compared
+with a fixed-offset run in
+`generic_jla::residual_noise::joint_nuisance_with_controls_reports_the_fixed_offset_standard_errors`.
+No Stata, installed-plugin or platform gate has been run, and no binary has
+been rebuilt.
 
 ## October 10 pooled component inference binaries
 

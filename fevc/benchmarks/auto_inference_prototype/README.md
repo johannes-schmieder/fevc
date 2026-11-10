@@ -70,19 +70,30 @@ The whole set takes roughly forty minutes. Seeds are fixed in the commands and
 scripts, so statistical output repeats on the same library versions; timings
 do not.
 
-## Check of the Mata routine's algorithm
+## Check of the Mata routines' algorithms
 
-`check_mata_mirror.py` is a statement-by-statement numpy transliteration of
-`fevc_residual_se.mata`, written because Stata was not available to execute
-the Mata file. It compares every intermediate quantity with the dense oracle
-in `physical_mc.py`:
+`check_mata_mirror.py` holds statement-by-statement numpy transliterations of
+the two routines in `fevc_residual_se.mata`, written because Stata was not
+available to execute the Mata file.
+
+- `mata_mirror` follows the exact-kernel routine. Every intermediate quantity
+  is compared with the dense oracle in `physical_mc.py`.
+- `mata_jla_mirror` follows the matrix-free routine: its own projections, the
+  finite-projection residual-maker inverse, target actions through the
+  physical rows, and kernel images by linear solves. Its standard errors are
+  compared with the exact sampling standard deviation of the jointly
+  estimated estimator, for match and observation deletion.
 
 ```
 python check_mata_mirror.py 130 500 300 11 2 2000   # FIRMS MOVERS STAYERS SEED CONTROLS DRAWS
 ```
 
 `results/check_mata_mirror.txt` holds runs with zero, two and six controls.
-The check covers the algorithm and the unit ordering, not Mata syntax.
+With a plain reciprocal of one minus the projected leverage in place of the
+finite-projection inverse, the matrix-free standard error of the covariance
+was 43% too large at 200 probes on this small, high-leverage design; with the
+finite-projection inverse all four are within 3.5%. The checks cover the
+algorithms and the unit ordering, not Mata syntax.
 
 ## Limits
 
