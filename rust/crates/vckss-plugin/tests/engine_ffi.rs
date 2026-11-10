@@ -4177,6 +4177,191 @@ fn direct_v4_exports_requested_counts_for_both_units() {
     }
 }
 
+// Leave-out residual standard errors cross the ABI as variance source 3. A
+// probe is one pseudo-noise solve, four per draw, so the receipt reconciles
+// probes plus three influence solves and no Gram or spectral work.
+fn check_leaveout_residual_export(grouped: bool, route: u32, corrected: bool) {
+    use vckss_plugin::ffi_engine::{
+        vckss_rust_engine_augment_component_inference_interrupt_v4,
+        vckss_rust_engine_augment_match_component_inference_interrupt_v4,
+        vckss_rust_engine_centering_v1, vckss_rust_engine_component_inference_result_v5,
+        VckssComponentInferenceResultReceiptV5, VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL,
+    };
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let mut columns = OwnedColumns::structured_component();
+    if grouped {
+        for row in 0..columns.worker.len() {
+            columns.deletion[row] = (row / 2 + 1) as f64;
+            columns.frequency[row] = 2.0;
+        }
+    }
+    let (deletion, nuisance) = if grouped {
+        (VCKSS_DELETION_MATCH, VCKSS_NUISANCE_FIXED_OFFSET)
+    } else {
+        (VCKSS_DELETION_OBSERVATION, VCKSS_NUISANCE_JOINT)
+    };
+    let attach = if grouped {
+        vckss_rust_engine_augment_match_component_inference_interrupt_v4
+    } else {
+        vckss_rust_engine_augment_component_inference_interrupt_v4
+    };
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    assert_eq!(
+        vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+            &mut augmentation,
+            bytes::<VckssComponentInferenceAugmentationRequestInterruptV1>()
+        ),
+        0
+    );
+    augmentation.options.variance_source = VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL;
+    augmentation.options.seed = 8_675_309;
+    // Probe counts that are not whole draws fail before any estimator work.
+    for invalid in [4, 30] {
+        let generation = prepare_with_controls(&columns, &[], deletion);
+        augmentation.options.probes = invalid;
+        assert_eq!(
+            attach(generation, &augmentation, 512),
+            ErrorCode::InvalidInput as i32
+        );
+        assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+    }
+    augmentation.options.probes = 32;
+    let generation = prepare_with_controls(&columns, &[], deletion);
+    assert_eq!(
+        attach(generation, &augmentation, 512),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    if corrected {
+        assert_eq!(
+            vckss_rust_engine_centering_v1(generation, 2),
+            0,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+    }
+    let capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_GENERIC,
+        route,
+        deletion,
+        nuisance,
+        0,
+        VCKSS_BATCH_MODE_EXPLICIT,
+        VCKSS_BATCH_MODE_EXPLICIT,
+    );
+    let mut solve = planned_solve_request(capability, 16, 16);
+    solve.v3.v2.v1.seed = 8_675_309;
+    solve.v3.v2.v1.probes = 200;
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &solve),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let mut primitive = [42.0; 9];
+    let mut covariance = [42.0; 16];
+    let mut mcse = [42.0; 9];
+    let mut spectrum = [42.0; 60];
+    let mut summaries = [42.0; 24];
+    let mut folds = [42.0; 150];
+    let mut cv = [42.0; 490];
+    let mut targets = [42.0; 8];
+    let mut receipt = VckssComponentInferenceResultReceiptV5::default();
+    assert_eq!(
+        vckss_rust_engine_component_inference_result_v5(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            ptr::null_mut(),
+            0,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            targets.as_mut_ptr(),
+            8,
+            &mut receipt,
+            288,
+        ),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let base = &receipt.v4.v3.v2;
+    assert_eq!(base.schema_version, 5);
+    assert_eq!(
+        base.variance_source,
+        VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL
+    );
+    assert_eq!(base.reference_distribution, 0);
+    assert_eq!(base.probes, 32);
+    assert_eq!(base.q1_present, 0);
+    assert!(base.counter_atoms > 0 && base.counter_words > 0);
+    assert!(base.point_correction_identity_error <= 1e-10);
+    assert!(base.maximum_complete_residual <= base.full_residual_tolerance);
+    assert_eq!(receipt.variance_fit, 3);
+    assert_eq!(receipt.gram_probes, 0);
+    assert_eq!(receipt.v4.solver_columns, 35);
+    assert!(receipt.positivity_floor > 0.0);
+    assert_eq!(receipt.joint_status, 0);
+    // The Stata fetch helper reconciles these fields literally.
+    assert_eq!(receipt.ordering, 0);
+    assert_eq!(receipt.nonpositive_predictions, 0);
+    assert!((receipt.floored_predictions as usize) < columns.worker.len());
+    assert_eq!(base.fold_rows, 0);
+    assert_eq!(receipt.v4.v3.critical_simulations, 0);
+    assert_eq!(receipt.v4.critical_draws, 0);
+    assert_eq!(receipt.v4.v3.maximum_remainder_identity_error, 0.0);
+    for column in 0..12 {
+        for target in 0..4 {
+            assert!(spectrum[15 * target + column].is_finite());
+        }
+    }
+    assert!(summaries
+        .iter()
+        .chain(&folds)
+        .chain(&cv)
+        .all(|x| x.is_nan()));
+    assert!(primitive.iter().chain(&covariance).all(|x| x.is_finite()));
+    for target in 0..4 {
+        assert_eq!(receipt.q0_status[target], 0);
+        assert_eq!(targets[2 * target], covariance[5 * target]);
+        assert!(covariance[5 * target] > 0.0);
+        // Eight draws, no spectral iteration, and a leading share bounded by
+        // the effective rank rather than an eigenvector.
+        assert_eq!(spectrum[15 * target + 12], 8.0);
+        assert_eq!(spectrum[15 * target + 13], 0.0);
+        assert!(spectrum[15 * target + 6] > 0.0 && spectrum[15 * target + 6] <= 1.0);
+        assert!(spectrum[15 * target + 14] > 0.0 && spectrum[15 * target + 14] <= 1.0);
+    }
+    for column in 0..4 {
+        let mapped = covariance[column] + covariance[4 + column] + 2.0 * covariance[8 + column];
+        assert!((covariance[12 + column] - mapped).abs() <= 1e-12 * covariance[15].abs().max(1.0));
+    }
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+    reset();
+}
+
+#[test]
+fn leaveout_residual_standard_errors_cross_the_plugin_boundary() {
+    check_leaveout_residual_export(false, VCKSS_ROUTE_DIAGONAL_PCG, false);
+    check_leaveout_residual_export(true, VCKSS_ROUTE_DIAGONAL_PCG, false);
+    check_leaveout_residual_export(true, VCKSS_ROUTE_AUTO, false);
+    check_leaveout_residual_export(false, VCKSS_ROUTE_AUTO, true);
+    check_leaveout_residual_export(true, VCKSS_ROUTE_DIAGONAL_PCG, true);
+}
+
 fn check_individual_v5_fitter_export(grouped: bool, unified: bool, gram_probes: Option<u32>) {
     use vckss_plugin::ffi_engine::{
         vckss_rust_component_inference_interface_version,

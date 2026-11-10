@@ -470,6 +470,7 @@ pub fn prepare_residual_noise_with_interrupt(
 ) -> Result<PreparedComponentInference> {
     let options = options.validate()?;
     let structured_options = structured_options.validate()?;
+    residual_noise_draws(options.probes)?;
     if options.reference_distribution != ComponentReferenceDistribution::Q0 {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
@@ -502,6 +503,25 @@ pub fn prepare_residual_noise_with_interrupt(
         design_only_order: false,
         unified_variance_fit: false,
     })
+}
+
+/// Linear solves per pseudo-noise draw of the leave-out residual source: one
+/// fit of the draw and one kernel image per primitive component.
+pub const RESIDUAL_NOISE_SOLVES_PER_DRAW: u32 = 1 + PRIMITIVE_TARGETS as u32;
+
+/// Pseudo-noise draws implied by a probe count. For this source `probes`
+/// counts pseudo-noise solves, so that every transport reconciles one probe
+/// with one solve as it does for the other sources. Two draws are the fewest
+/// that estimate the effective rank.
+pub fn residual_noise_draws(probes: u32) -> Result<usize> {
+    if probes % RESIDUAL_NOISE_SOLVES_PER_DRAW != 0 || probes < 2 * RESIDUAL_NOISE_SOLVES_PER_DRAW {
+        return Err(BackendError::new(
+            ErrorCode::InvalidInput,
+            "component_inference_prepare",
+            "leave-out residual standard errors need a probe count that is a multiple of four and at least eight",
+        ));
+    }
+    Ok((probes / RESIDUAL_NOISE_SOLVES_PER_DRAW) as usize)
 }
 
 /// Result shell for the leave-out residual source. The caller adds solver

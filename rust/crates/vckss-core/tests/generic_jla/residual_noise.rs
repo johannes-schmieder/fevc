@@ -214,11 +214,20 @@ fn run(
     route: ModelSolverRoute,
     attach: bool,
 ) -> vckss_core::generic_jla::GenericJlaResult {
+    run_centered(hybrid, route, Centering::Mean, attach)
+}
+
+fn run_centered(
+    hybrid: &vckss_core::stayer_hybrid::PreparedExactStayerHybrid,
+    route: ModelSolverRoute,
+    centering: Centering,
+    attach: bool,
+) -> vckss_core::generic_jla::GenericJlaResult {
     let prepared = prepare_residual_noise_with_interrupt(
         &hybrid.problem,
         ComponentInferenceUnit::Match,
         ComponentInferenceOptions {
-            probes: DRAWS,
+            probes: 4 * DRAWS,
             ..ComponentInferenceOptions::default()
         },
         StructuredVarianceOptions::default(),
@@ -229,7 +238,7 @@ fn run(
         &hybrid.problem,
         routed_options(
             GenericJlaOptions {
-                centering: Centering::Mean,
+                centering,
                 ..options(DeletionMode::Match, NuisanceMode::FixedOffset)
             },
             route,
@@ -439,5 +448,314 @@ fn standard_errors_are_invariant_to_the_solver_route() {
         .expect("cmg");
     for index in 0..16 {
         assert_close(diagonal.covariance[index], cmg.covariance[index], 1e-6);
+    }
+}
+
+#[test]
+fn standard_errors_follow_the_automatic_solver_route() {
+    let hybrid = super::pooled_component::fixture(false);
+    let diagonal = run(&hybrid, ModelSolverRoute::Diagonal, true);
+    let automatic = run(&hybrid, ModelSolverRoute::Auto, true);
+    assert_eq!(
+        automatic.receipt.execution.requested_route,
+        ModelSolverRoute::Auto
+    );
+    let (diagonal, automatic) = (
+        diagonal.component_inference.expect("diagonal"),
+        automatic.component_inference.expect("automatic"),
+    );
+    for index in 0..16 {
+        assert_close(
+            diagonal.covariance[index],
+            automatic.covariance[index],
+            1e-6,
+        );
+    }
+}
+
+#[test]
+fn probe_counts_must_be_whole_draws() {
+    let hybrid = super::pooled_component::fixture(false);
+    for probes in [4, 7, 30] {
+        assert!(
+            prepare_residual_noise_with_interrupt(
+                &hybrid.problem,
+                ComponentInferenceUnit::Match,
+                ComponentInferenceOptions {
+                    probes,
+                    ..ComponentInferenceOptions::default()
+                },
+                StructuredVarianceOptions::default(),
+                &mut NeverInterrupt,
+            )
+            .is_err(),
+            "{probes} probes"
+        );
+    }
+}
+
+// The corrected point estimate adds a small increment to the mean-centred
+// one. The reported standard error is that of the mean-centred estimate.
+#[test]
+fn corrected_centering_reports_the_mean_centered_standard_error() {
+    let hybrid = super::pooled_component::fixture(false);
+    let mean = run_centered(&hybrid, ModelSolverRoute::Diagonal, Centering::Mean, true);
+    let corrected = run_centered(
+        &hybrid,
+        ModelSolverRoute::Diagonal,
+        Centering::Corrected,
+        true,
+    );
+    let point_only = run_centered(
+        &hybrid,
+        ModelSolverRoute::Diagonal,
+        Centering::Corrected,
+        false,
+    );
+    assert_eq!(point_only.corrected, corrected.corrected);
+    assert_ne!(mean.corrected, corrected.corrected);
+    let (mean, corrected) = (
+        mean.component_inference.expect("mean"),
+        corrected.component_inference.expect("corrected"),
+    );
+    for index in 0..16 {
+        assert_close(mean.covariance[index], corrected.covariance[index], 1e-12);
+    }
+}
+
+fn mover_only(
+    problem: &CompressedProblem,
+    nuisance: NuisanceMode,
+) -> vckss_core::component_inference::ComponentInferenceResult {
+    let prepared = prepare_residual_noise_with_interrupt(
+        problem,
+        ComponentInferenceUnit::Match,
+        ComponentInferenceOptions {
+            probes: 4 * DRAWS,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )
+    .expect("standard-error preparation");
+    run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        problem,
+        routed_options(
+            GenericJlaOptions {
+                centering: Centering::Mean,
+                ..options(DeletionMode::Match, nuisance)
+            },
+            ModelSolverRoute::Diagonal,
+        ),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("mover-only run")
+    .component_inference
+    .expect("attached standard errors")
+}
+
+// Without controls there is no offset, so the default joint mode must give
+// the fixed-offset standard errors; with controls it stays rejected.
+#[test]
+fn no_control_match_units_accept_either_nuisance_mode() {
+    let problem = fixture(false);
+    assert!(problem.controls.is_empty());
+    let fixed = mover_only(&problem, NuisanceMode::FixedOffset);
+    let joint = mover_only(&problem, NuisanceMode::Joint);
+    assert!(fixed.nuisance_uncertainty_conditioned_away);
+    for index in 0..16 {
+        assert_close(fixed.covariance[index], joint.covariance[index], 1e-10);
+    }
+    let controlled = fixture(true);
+    let prepared = prepare_residual_noise_with_interrupt(
+        &controlled,
+        ComponentInferenceUnit::Match,
+        ComponentInferenceOptions {
+            probes: 4 * DRAWS,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )
+    .expect("standard-error preparation");
+    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &controlled,
+        routed_options(
+            options(DeletionMode::Match, NuisanceMode::Joint),
+            ModelSolverRoute::Diagonal,
+        ),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect_err("joint match units with controls");
+    assert_eq!(error.code, ErrorCode::UnsupportedFeature);
+}
+
+// Observation units keep the controls in the operator, so the joint kernel
+// carries their estimation and no separate control term is added.
+#[test]
+fn observation_units_with_joint_controls_use_the_joint_kernel() {
+    let problem = component_inference_fixture(true);
+    let n = problem.outcome.len();
+    let mut estimator = options(DeletionMode::Observation, NuisanceMode::Joint);
+    estimator.probes = 200;
+    estimator.centering = Centering::Mean;
+    let request = routed_options(estimator, ModelSolverRoute::Diagonal);
+    let oracle = prepare_oracle_component_inference(
+        &problem,
+        &vec![0.002; n],
+        ComponentInferenceOptions {
+            probes: 64,
+            spectrum_probes: 64,
+            spectrum_iterations: 128,
+            spectrum_tolerance: 1.0e-3,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("oracle preparation");
+    let reference = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        request,
+        None,
+        Some(&oracle),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("oracle run")
+    .component_inference
+    .expect("oracle inference");
+    let prepared = prepare_residual_noise_with_interrupt(
+        &problem,
+        ComponentInferenceUnit::Observation,
+        ComponentInferenceOptions {
+            probes: 4 * DRAWS,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )
+    .expect("standard-error preparation");
+    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        request,
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("observation run");
+    let attached = result.component_inference.expect("standard errors");
+    let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
+    assert_eq!(attached.inference_unit, ComponentInferenceUnit::Observation);
+    assert_eq!(attached.independent_units as usize, n);
+    assert_eq!(diagnostic.controls, 0);
+    assert!(!attached.nuisance_uncertainty_conditioned_away);
+    // Dense joint kernel H C_t H on physical rows, with the engine's own
+    // leverage and target diagonals, applied to the outcome.
+    let (x, p) = super::component_centering::design(&problem, true);
+    let xt = dense_transpose(&x, n, p);
+    let inverse = dense_inverse(&dense_multiply(&xt, p, n, &x, p), p);
+    let bread = dense_multiply(&x, n, p, &inverse, p);
+    let bread_t = dense_transpose(&bread, n, p);
+    let projection = dense_multiply(&bread, n, p, &xt, n);
+    let mut worker_mean = vec![0.0; p];
+    let mut firm_mean = vec![0.0; p];
+    for cell in 0..problem.cells() {
+        let share = problem.cell_target_sum[cell] / problem.target_total;
+        worker_mean[problem.cell_worker[cell] as usize] += share;
+        let firm = problem.cell_firm[cell] as usize;
+        if firm + 1 < problem.firms() {
+            firm_mean[problem.workers() + firm] += share;
+        }
+    }
+    let mut targets: [Vec<f64>; 3] = core::array::from_fn(|_| vec![0.0; p * p]);
+    for cell in 0..problem.cells() {
+        let share = problem.cell_target_sum[cell] / problem.target_total;
+        let mut worker: Vec<f64> = worker_mean.iter().map(|v| -v).collect();
+        let mut firm: Vec<f64> = firm_mean.iter().map(|v| -v).collect();
+        worker[problem.cell_worker[cell] as usize] += 1.0;
+        let firm_index = problem.cell_firm[cell] as usize;
+        if firm_index + 1 < problem.firms() {
+            firm[problem.workers() + firm_index] += 1.0;
+        }
+        for i in 0..p {
+            for j in 0..p {
+                targets[0][i * p + j] += share * worker[i] * worker[j];
+                targets[1][i * p + j] += share * firm[i] * firm[j];
+                targets[2][i * p + j] += 0.5 * share * (worker[i] * firm[j] + firm[i] * worker[j]);
+            }
+        }
+    }
+    let mean = problem.outcome.iter().sum::<f64>() / n as f64;
+    let centered: Vec<f64> = problem.outcome.iter().map(|y| y - mean).collect();
+    for target in 0..3 {
+        let mut raw = dense_multiply(
+            &dense_multiply(&bread, n, p, &targets[target], p),
+            n,
+            p,
+            &bread_t,
+            n,
+        );
+        for i in 0..n {
+            for j in 0..n {
+                let maker = f64::from(i == j) - projection[i * n + j];
+                raw[i * n + j] -= 0.5
+                    * maker
+                    * (attached.target_diagonal[target][i] * attached.maker_inverse[i]
+                        + attached.target_diagonal[target][j] * attached.maker_inverse[j]);
+            }
+        }
+        let image = dense_multiply(&raw, n, n, &centered, 1);
+        let image_mean = image.iter().sum::<f64>() / n as f64;
+        for (expected, &actual) in image.iter().zip(&attached.influence[target]) {
+            assert_close(expected - image_mean, actual, 2.0e-9);
+        }
+        // The validated sources hold the observed mean fixed and so leave
+        // the image uncentred; the two differ by exactly that constant.
+        for (expected, &actual) in image.iter().zip(&reference.influence[target]) {
+            assert_close(*expected, actual, 2.0e-9);
+        }
+    }
+    // Squared joint residuals carry the signal term.
+    let beta = dense_multiply(
+        &inverse,
+        p,
+        p,
+        &dense_multiply(&xt, p, n, &problem.outcome, 1),
+        1,
+    );
+    let fitted = dense_multiply(&x, n, p, &beta, 1);
+    let scale = attached.influence_term[0]
+        .abs()
+        .max(attached.influence_term[4].abs());
+    for left in 0..3 {
+        for right in 0..3 {
+            let index = left * 3 + right;
+            let expected = 4.0
+                * (0..n)
+                    .map(|a| {
+                        let residual = problem.outcome[a] - fitted[a];
+                        residual
+                            * residual
+                            * attached.maker_inverse[a]
+                            * attached.influence[left][a]
+                            * attached.influence[right][a]
+                    })
+                    .sum::<f64>()
+                - 4.0 * diagnostic.residual_noise[index];
+            assert!(
+                (attached.influence_term[index] - expected).abs() <= 1e-7 * scale,
+                "signal {index}: {} versus {expected}",
+                attached.influence_term[index]
+            );
+        }
+    }
+    for target in 0..4 {
+        assert!(attached.covariance[target * 5] > 0.0);
     }
 }

@@ -1255,9 +1255,13 @@ fn run_generic_jla_with_execution_interrupt(
     let mut options = execution_options.estimator;
     options.solver = routing.solver;
     let mut options = options.validate()?;
-    if (component_inference.is_some() || projection.is_some())
-        && options.centering == crate::types::Centering::Corrected
-    {
+    // Leave-out residual standard errors describe the mean-centred estimate
+    // and treat the corrected-centering increment as fixed.
+    let centering_bound_attachment = projection.is_some()
+        || component_inference.is_some_and(|prepared| {
+            prepared.variance_source != ComponentVarianceSource::LeaveOutResidual
+        });
+    if centering_bound_attachment && options.centering == crate::types::Centering::Corrected {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "centering",
@@ -2737,7 +2741,7 @@ fn run_generic_jla_with_execution_interrupt(
                 structured_fold_entity.as_deref(),
                 None,
                 None,
-                target.mean,
+                target.mean_centered,
                 memory.component_inference,
                 counter_plan,
                 interrupt,
@@ -2790,7 +2794,7 @@ fn run_generic_jla_with_execution_interrupt(
                     structured_fold_entity.as_deref(),
                     Some(&collapsed.mass),
                     residual_control_adjustment.as_ref(),
-                    target.mean,
+                    target.mean_centered,
                     memory.component_inference,
                     counter_plan,
                     interrupt,
@@ -3157,8 +3161,12 @@ fn validate_component_inference_request(
             }
         }
         ComponentInferenceUnit::Match => {
+            // Without controls the two nuisance modes are one estimator, and
+            // the leave-out residual source needs no offset to hold fixed.
+            let no_offset = prepared.variance_source == ComponentVarianceSource::LeaveOutResidual
+                && problem.controls.is_empty();
             if options.deletion != DeletionMode::Match
-                || options.nuisance != NuisanceMode::FixedOffset
+                || (options.nuisance != NuisanceMode::FixedOffset && !no_offset)
             {
                 return Err(BackendError::new(
                     ErrorCode::UnsupportedFeature,
@@ -3189,7 +3197,12 @@ fn validate_component_inference_request(
             "simultaneous fixed-effect projection and component inference is outside the MVP",
         ));
     }
-    if routing.route == ModelSolverRoute::Auto {
+    // The leave-out residual source runs no spectral iteration whose budget
+    // was qualified per route, so it follows the automatic route as the point
+    // estimate does.
+    if routing.route == ModelSolverRoute::Auto
+        && prepared.variance_source != ComponentVarianceSource::LeaveOutResidual
+    {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "generic_jla_component_inference",
@@ -5859,6 +5872,9 @@ struct MakerAction {
 #[derive(Clone, Debug)]
 struct TargetCorrection {
     mean: VarianceComponents,
+    /// The correction before any corrected-centering increment: the one the
+    /// retained target diagonals reproduce.
+    mean_centered: VarianceComponents,
     mcse: VarianceComponents,
     maximum_solve_relres: f64,
     diagonal: Option<[Vec<f64>; PRIMITIVE_TARGETS]>,
@@ -5924,7 +5940,9 @@ struct ComponentInferenceCounterPlan {
 /// residual source draws only its pseudo-noise: no spectrum and no Gram.
 fn component_counter_probes(prepared: &ComponentExecution<'_>) -> Option<u64> {
     if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual {
-        return Some(u64::from(prepared.options.probes));
+        return Some(u64::from(
+            prepared.options.probes / crate::component_inference::RESIDUAL_NOISE_SOLVES_PER_DRAW,
+        ));
     }
     u64::from(prepared.options.probes)
         .checked_add(u64::from(prepared.options.spectrum_probes))?
@@ -8494,6 +8512,7 @@ fn target_correction(
     }
     let mut mean = component_mean(&draws, interrupt)?;
     let mcse = component_mcse(&draws, mean, interrupt)?;
+    let mean_centered = mean;
     if let Some(increments) = increments {
         let increment = component_mean(&increments, interrupt)?;
         mean.worker += increment.worker;
@@ -8503,6 +8522,7 @@ fn target_correction(
     }
     Ok(TargetCorrection {
         mean,
+        mean_centered,
         mcse,
         maximum_solve_relres,
         diagonal: diagonal_sum.map(|values| {

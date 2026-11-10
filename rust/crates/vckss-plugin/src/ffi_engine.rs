@@ -2411,6 +2411,18 @@ pub extern "C" fn vckss_rust_projection_centering_schema_v1() -> u32 {
     1
 }
 
+/// Leave-out residual standard errors describe the mean-centred estimate and
+/// treat the corrected-centering increment as fixed, so they accept every
+/// centering mode. The other sources remain bound to None or Mean.
+fn centering_bound_component(
+    component: Option<&crate::session_retained::PreparedComponentInferenceAugmentation>,
+) -> bool {
+    component.is_some_and(|value| {
+        value.core.variance_source
+            != vckss_core::component_inference::ComponentVarianceSource::LeaveOutResidual
+    })
+}
+
 fn validate_attachment_centering(
     mode: vckss_core::types::Centering,
     projection: bool,
@@ -2444,7 +2456,7 @@ pub extern "C" fn vckss_rust_engine_centering_v1(generation: u64, mode: u32) -> 
                 validate_attachment_centering(
                     mode,
                     prepared.projection.is_some(),
-                    prepared.component_inference.is_some(),
+                    centering_bound_component(prepared.component_inference.as_ref()),
                 )?;
                 prepared.centering = mode;
                 Ok(())
@@ -4740,7 +4752,7 @@ fn solve_engine_v4_with_numerical_attachment(
         validate_attachment_centering(
             prepared.centering,
             prepared.projection.is_some(),
-            prepared.component_inference.is_some(),
+            centering_bound_component(prepared.component_inference.as_ref()),
         )?;
         vckss_core::progress::report(
             vckss_core::progress::MEMORY_FLOOR,

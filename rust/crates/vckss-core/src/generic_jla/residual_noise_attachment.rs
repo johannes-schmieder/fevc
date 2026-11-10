@@ -236,12 +236,11 @@ pub(super) fn run(
     let variance = &fit.variance;
 
     let mut solve_receipts = Vec::new();
-    let draws = prepared.options.probes as usize;
+    let draws = crate::component_inference::residual_noise_draws(prepared.options.probes)?;
     reserve_exact(
         &mut solve_receipts,
-        draws
-            .checked_mul(1 + PRIMITIVE_TARGETS)
-            .and_then(|value| value.checked_add(PRIMITIVE_TARGETS))
+        (prepared.options.probes as usize)
+            .checked_add(PRIMITIVE_TARGETS)
             .ok_or_else(|| resource("residual-noise receipt count overflow"))?,
         "residual-noise solve receipts",
     )?;
@@ -458,6 +457,9 @@ pub(super) fn run(
         &covariance,
     )?;
     let mut result = residual_noise_result(rows, &covariance, &moments, diagnostic)?;
+    // Transports reconcile probes with pseudo-noise solves; the draw count
+    // stays in the diagnostic and the spectrum row.
+    result.probes = prepared.options.probes;
 
     let mut maximum_iterations = 0_u32;
     let mut maximum_reduced_residual = 0.0_f64;

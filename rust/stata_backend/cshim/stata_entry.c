@@ -3838,7 +3838,12 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         (units.deletion_mode == VCKSS_DELETION_OBSERVATION &&
             (units.mover_units != 0u || units.stayer_observations != 0u)) ||
         (units.deletion_mode != VCKSS_DELETION_MATCH && units.deletion_mode != VCKSS_DELETION_OBSERVATION) ||
-        units.nuisance_uncertainty_omitted != (uint32_t)(units.deletion_mode == VCKSS_DELETION_MATCH) ||
+        /* Fixed-offset match sources omit control-estimation uncertainty. The
+         * leave-out residual source carries it as an explicit term, so it may
+         * report none omitted for match units with controls. */
+        (units.nuisance_uncertainty_omitted != (uint32_t)(units.deletion_mode == VCKSS_DELETION_MATCH) &&
+            !(base->variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL &&
+              units.nuisance_uncertainty_omitted == 0u)) ||
         !isfinite(units.effective_match_count) || !isfinite(units.largest_match_mass_share) ||
         !isfinite(units.largest_match_leverage) || !isfinite(units.smallest_maker_denominator) ||
         (units.deletion_mode == VCKSS_DELETION_MATCH &&
