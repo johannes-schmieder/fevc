@@ -19,7 +19,10 @@ probe is one pseudo-noise solve, four per draw, plus three influence solves.
 The public ABI reports it as variance source 3 behind additive capability
 bit 18; the registered variance-source enumeration is unchanged and the
 method is a flag on the prepared attachment. It follows the automatic solver
-route and every centering mode. No distributed binary contains it yet. See
+route, both resolved executors, numerical replay and every centering mode.
+Under joint nuisance with controls the engine adds one target pass with the
+worker-firm solver for the fixed-offset unit geometry; a mover-only request
+without controls selects the generic engine when the attachment is present. No distributed binary contains it yet. See
 `fevc/docs/standard_errors/standard_errors.tex`.
 
 ## October 10 pooled component inference binaries

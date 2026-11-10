@@ -42,10 +42,11 @@
 firm effects, their covariance and the variance of their sum with the
 leave-out correction of Kline, Saggio and S{\o}lvsten (2020, KSS). This note
 describes the standard errors the command can report for those four
-components and the routes on which they are available. They are built from the KSS variance formula, a squared-residual
+components. They are built from the KSS variance formula, a squared-residual
 estimate of its leading term and a simulated correction for its noise terms.
 They cost about 35 linear solves beyond the roughly 600 to 800 that the point
-estimates need. They rest on an assumption that is stronger than what the
+estimates need, plus one further pass of about 400 when controls stay in the
+regression operator. They rest on an assumption that is stronger than what the
 point estimates need: error variances must be similar among observations
 that share a worker or a firm. They are not robust to arbitrary
 heteroskedasticity. The note states the method, the assumptions, the
@@ -55,11 +56,10 @@ verified from what has not.
 
 \section{What is reported, in brief}\label{sec:brief}
 
-With \texttt{inferencemodel(leaveout\_residual)}, or with
-\texttt{inference(auto)} on a route that supports it, \fevc{} reports a
-standard error and a normal confidence interval for each component and posts
-the $4\times4$ covariance matrix of the four components as \texttt{e(V)}.
-Section~\ref{sec:status} lists the supported routes. Three statements
+By default \fevc{} reports a standard error and a normal confidence
+interval for each component and posts the $4\times4$ covariance matrix of
+the four components as \texttt{e(V)}. Section~\ref{sec:status} lists the
+few requests for which it returns point estimates only. Three statements
 summarise the method.
 
 \begin{enumerate}
@@ -712,55 +712,80 @@ This section records what exists in the repository at the time of
 writing, and how each part was checked. Stata was not available where this
 work was done, so no Stata or Mata code described here has been executed.
 
+\paragraph{Default behaviour.} Standard errors are requested by default
+(\texttt{inference(auto)}). The command computes them whenever the request
+can carry them and otherwise returns point estimates with a stated reason. It
+never changes the backend, algorithm or solver route the user selected. If
+the calculation that carries them stops, the command runs once more without
+them, so the point estimates never depend on the standard errors.
+\texttt{inference(none)} gives point estimates only, and
+\texttt{inferencemodel(leaveout\_residual)} with \texttt{inference(highrank)}
+requests the standard errors strictly.
+
 \paragraph{Rust core and plugin (tested).} The method is implemented in
 \texttt{rust/\allowbreak crates/\allowbreak vckss-core/\allowbreak src/\allowbreak residual\_noise.rs} and attached to the
-generic JLA engine. It supports observation units with controls kept in the
-operator, and collapsed match units with a fixed offset or without controls,
-including pooled stayers, frequency weights, the automatic solver route and
-all three centering modes. Tests compare the kernel image of the outcome,
-the pseudo-noise moments, the control term and the assembled covariance with
-independent dense calculations, and an end-to-end test drives the plugin's
-C interface. The public interface reports the method as variance source 3
-behind a capability flag; the plugin binaries shipped in the repository
-predate it and must be rebuilt before Stata can use it.
+generic JLA engine. It covers observation units with controls kept in the
+operator and collapsed deletion units under either nuisance mode, with
+pooled stayers, frequency weights for match deletion, the automatic solver
+route, both of the plugin's automatic executors, numerical MCSE replay and
+all three centering modes. Tests compare the kernel image of the outcome, the
+pseudo-noise moments, the control term and the assembled covariance with
+independent dense calculations, and end-to-end tests drive the plugin's C
+interface through the entry points the default command uses. The public
+interface reports the method as variance source 3 behind a capability flag;
+the plugin binaries shipped in the repository predate it and must be rebuilt
+before Stata can use it. Until then the default returns point estimates and
+says so.
 
-\paragraph{Stata front end (written, not executed).}
-\texttt{inferencemodel(leaveout\_residual)} with \texttt{inference(highrank)}
-requests the standard errors, and \texttt{inference(auto)} requests them
-whenever the command as written can carry them and otherwise returns point
-estimates with a stated reason. Standard errors are available on the explicit
-Rust tuple, with \texttt{preconditioner(diagonal)} or
-\texttt{preconditioner(cmg)}, for observation deletion without frequency
-weights and for \texttt{engine(generic)} match deletion with
-\texttt{nuisance(fixedoffset)} or without controls. \texttt{inference(none)}
-remains the default.
+\paragraph{Controls kept in the operator.} Under the default
+\texttt{nuisance(joint)} with match deletion, the engine forms the
+fixed-offset unit geometry beside the joint point estimate. The leverage
+moments are shared, the leave-out adjustments are recomputed without controls
+at no solve cost, and one further target pass uses the worker--firm solver on
+the offset outcome: two solves per probe, 400 by default. The point estimate
+is unchanged, and the standard errors equal those of a fixed-offset run to
+solver tolerance.
 
-\paragraph{Mata exact route (written, not executed).}
-\texttt{fevc\_residual\_se.mata} implements the same algorithm with exact
-kernels for \texttt{backend(mata) algorithm(exact) deletion(match)}. A
-statement-by-statement numpy transliteration of that file reproduces the
-dense oracle: every intermediate quantity to $10^{-13}$, and standard errors
-within 0.2\% of closed form at 2,000 draws, with zero, two and six controls
-(\texttt{check\_mata\_mirror.py}). That checks the algorithm, not the Mata
-syntax.
+\paragraph{Engine selection.} The compressed engine serves requests with
+match deletion, no controls and no stayers. It carries no attachment, so such
+a request runs on the generic engine when standard errors are computed, as
+the same request already does whenever stayers or controls are present. The
+two engines estimate the same quantities.
 
-\paragraph{Not yet implemented.} Three routes cannot carry the standard
-errors yet, which is why they are not on by default:
-\begin{itemize}
-\item the compressed engine that serves the default match-deletion request
-without controls, and the front-end path for
-\texttt{preconditioner(auto)};
-\item match deletion with controls under the default
-\texttt{nuisance(joint)}, which needs worker--firm-only target diagonals that
-a joint run does not hold (one further JLA pass with the worker--firm
-solver);
-\item Mata JLA, which retains no per-unit vectors.
-\end{itemize}
-Two smaller items remain. The memory forecast of the attachment reuses the
-formula of the structured sources; its allowances exceed this method's
-buffers, but it was not re-derived for them. The model-based covariance and
-the working-variance term counts are in the core result but not yet in the
-Stata transport.
+\paragraph{Mata (written, not executed).}
+\texttt{fevc\_residual\_se.mata} is loaded only when standard errors are
+computed on the Mata backend, so it cannot affect other estimates. It holds
+two routines. The first uses exact kernels for \texttt{algorithm(exact)} with
+match deletion. The second is matrix-free and serves \texttt{algorithm(jla)}
+and observation deletion: it is a separate stage that draws its own
+projections, forms the residual-maker inverse with the finite-projection
+correction the point estimator uses, and costs about three solves per probe,
+one per control and four per draw, roughly as much as the point estimates.
+Statement-by-statement numpy transliterations of both routines reproduce the
+dense oracle (\texttt{check\_mata\_mirror.py}): for the exact routine every
+intermediate quantity to $10^{-13}$ and standard errors within 0.2\% of
+closed form; for the matrix-free routine, at 200 probes and 8 draws, standard
+errors within 3.5\% of the exact sampling standard deviation of the jointly
+estimated estimator, for match and observation deletion with zero, two and
+six controls. That checks the algorithms, not the Mata syntax.
+
+\paragraph{Stata front end (written, not executed).} The route validation,
+attachment, receipt reconciliation, posting, display and help were changed
+for the new default. A regression file,
+\texttt{tests/stata/test\_leaveout\_residual\_se.do}, exercises the default
+request and its routes and is likewise unexecuted. The registered suites
+were written for the point-only default; the environment setting
+\texttt{FEVC\_DEFAULT\_INFERENCE=none} keeps them on it.
+
+\paragraph{Not covered.} The default returns point estimates, with a reason,
+for \texttt{project()} in the same call, for observation deletion with a
+fixed offset or, on the native backend, with frequency weights, for
+\texttt{algorithm(auto)}, and for \texttt{algorithm(exact)} on the native
+backend. Two smaller items remain. The memory forecast of the attachment
+reuses the formula of the structured sources; its allowances exceed this
+method's buffers, but it was not re-derived for them. The model-based
+covariance and the working-variance term counts are in the core result but
+not yet in the Stata transport.
 \end{sloppypar}
 
 \appendix

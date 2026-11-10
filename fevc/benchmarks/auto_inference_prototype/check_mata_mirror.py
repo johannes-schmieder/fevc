@@ -5,7 +5,10 @@ executed.  ``mata_mirror`` below is a statement-by-statement transliteration of
 ``vckss_residual_se__stata`` and its helpers into numpy: same inputs (physical
 rows), same unit order (mover units by deletion identifier, then stayer
 copies), same formulas.  This script compares every intermediate quantity
-with the independent dense oracle in ``physical_mc.py``.
+with the independent dense oracle in ``physical_mc.py``.  ``mata_jla_mirror``
+does the same for the matrix-free routine ``vckss_residual_se_jla__stata``,
+whose standard errors are compared with the exact sampling standard deviation
+of the jointly estimated estimator.
 
 It checks the algorithm, not the Mata syntax.
 
@@ -73,9 +76,11 @@ def working(product, residual, leverage, mass, movers):
     """vckss_rse__working."""
     n = len(product)
     fitted = np.empty(n)
-    basis = features(leverage[:movers], mass[:movers], True)
-    terms = basis.shape[1]
-    fitted[:movers] = basis @ (np.linalg.pinv(basis.T @ basis) @ (basis.T @ product[:movers]))
+    terms = 0
+    if movers > 0:
+        basis = features(leverage[:movers], mass[:movers], True)
+        terms = basis.shape[1]
+        fitted[:movers] = basis @ (np.linalg.pinv(basis.T @ basis) @ (basis.T @ product[:movers]))
     if movers < n:
         basis = features(leverage[movers:], mass[movers:], False)
         terms += basis.shape[1]
@@ -88,6 +93,8 @@ def working(product, residual, leverage, mass, movers):
 def unit_order(deletion, stayer):
     """Mover units by deletion identifier, then stayer rows (vckss_inf__units)."""
     ix = np.flatnonzero(stayer == 0)
+    if len(ix) == 0:
+        return [], np.flatnonzero(stayer == 1)
     permutation = ix[np.argsort(deletion[ix], kind="stable")]
     ids = deletion[permutation]
     starts = np.flatnonzero(np.r_[True, ids[1:] != ids[:-1]])
@@ -240,6 +247,283 @@ def mata_mirror(y, design, controls, frequency, deletion, stayer, targets, draws
     )
 
 
+# ---------------------------------------------------------------------------
+# Matrix-free route: transliteration of vckss_residual_se_jla__stata.
+# ---------------------------------------------------------------------------
+
+
+class FeDesign:
+    """The parts of vckss_fe_design that the routine uses."""
+
+    def __init__(self, worker, firm, frequency):
+        import scipy.sparse as sp
+        import scipy.sparse.linalg as spla
+
+        self.worker, self.firm, self.frequency = worker, firm, frequency
+        self.worker_levels = int(worker.max()) + 1
+        self.firm_levels = int(firm.max()) + 1
+        n = len(worker)
+        cols = np.r_[worker, self.worker_levels + firm]
+        rows = np.r_[np.arange(n), np.arange(n)]
+        full = sp.csr_matrix((np.ones(2 * n), (rows, cols)))
+        self.full = full
+        reduced = full[:, : self.worker_levels + self.firm_levels - 1]
+        self._solve = spla.splu((reduced.T @ sp.diags(frequency) @ reduced).tocsc())
+
+    def transpose_full(self, values):  # vckss__fe_transpose_full: plain group sums
+        return self.full.T @ values
+
+    def transpose(self, values):  # vckss__fe_transpose
+        return self.transpose_full(values)[: self.worker_levels + self.firm_levels - 1]
+
+    def predict(self, coefficient):  # vckss__fe_predict: last firm grounded at zero
+        pad = np.zeros((1,) + coefficient.shape[1:])
+        return self.full @ np.concatenate([coefficient, pad])
+
+    def solve(self, rhs):  # vckss__fe_solve_matrix
+        return self._solve.solve(rhs)
+
+
+def unit_transpose(design, root, value):
+    return design.transpose(root[:, None] * value if value.ndim == 2 else root * value)
+
+
+def unit_predict(design, root, coefficient):
+    fitted = design.predict(coefficient)
+    return root[:, None] * fitted if fitted.ndim == 2 else root * fitted
+
+
+def target_action(base, share, coefficient):
+    """vckss_rse__target_action: columns stacked worker, firm, covariance."""
+    workers, firms = base.worker_levels, base.firm_levels
+    columns = coefficient.shape[1]
+    worker_effect = coefficient[:workers][base.worker]
+    firm_coefficient = np.zeros((firms, columns))
+    firm_coefficient[: firms - 1] = coefficient[workers:]
+    firm_effect = firm_coefficient[base.firm]
+    worker_effect = share[:, None] * (worker_effect - share @ worker_effect)
+    firm_effect = share[:, None] * (firm_effect - share @ firm_effect)
+    zero_worker = np.zeros((workers, columns))
+    zero_firm = np.zeros((firms - 1, columns))
+    full = base.transpose_full(worker_effect)
+    worker_side, firm_side = full[:workers], full[workers : workers + firms - 1]
+    full = base.transpose_full(firm_effect)
+    return np.hstack(
+        [
+            np.vstack([worker_side, zero_firm]),
+            np.vstack([zero_worker, full[workers : workers + firms - 1]]),
+            0.5 * np.vstack([full[:workers], firm_side]),
+        ]
+    )
+
+
+def solve_kernel(value, base, units, root, share, ratio):
+    """vckss_rse__solve_kernel: images (three column blocks) and the residual."""
+    columns = value.shape[1]
+    coefficient = units.solve(unit_transpose(units, root, value))
+    residual = value - unit_predict(units, root, coefficient)
+    rhs = target_action(base, share, coefficient)
+    for j in range(3):
+        rhs[:, j * columns : (j + 1) * columns] += 0.5 * unit_transpose(
+            units, root, ratio[:, [j]] * value
+        )
+    image = unit_predict(units, root, units.solve(rhs))
+    for j in range(3):
+        image[:, j * columns : (j + 1) * columns] -= 0.5 * ratio[:, [j]] * (residual + value)
+    return image, residual
+
+
+def finite_projection(moments, probes):
+    """vckss_rse__finite_projection: ratio estimate of the maker diagonal with
+    the second-order correction of docs/JLA_FINITE_PROJECTION.md."""
+    maker = moments[:, 1] / (moments[:, 0] + moments[:, 1])
+    clipped = int((maker < 0.02).sum())
+    maker = np.maximum(maker, 0.02)
+    lever = 1 - maker
+    bias = (maker * moments[:, 2] - lever * moments[:, 3] + (maker - lever) * moments[:, 4]) / (
+        probes
+    )
+    spread = (
+        maker**2 * moments[:, 2] + lever**2 * moments[:, 3] - 2 * lever * maker * moments[:, 4]
+    ) / probes
+    multiplier = np.clip(1 - spread / maker**2 + bias / maker, 0.5, 2.0)
+    return multiplier / maker, lever, clipped
+
+
+def mata_jla_mirror(
+    y, worker, firm, controls, frequency, target_weight, deletion, stayer, draws, probes, rng
+):
+    """vckss_residual_se_jla__stata with mean centering."""
+    n = len(y)
+    control_count = controls.shape[1]
+    base = FeDesign(worker, firm, frequency)
+    workers, firms = base.worker_levels, base.firm_levels
+    share = target_weight / target_weight.sum()
+    outcome_fit = base.predict(base.solve(base.transpose(frequency * y)))
+    working_y = y.copy()
+    residual = y - outcome_fit
+    if control_count > 0:
+        control_fit = base.predict(base.solve(base.transpose(frequency[:, None] * controls)))
+        residualized = controls - control_fit
+        precision = np.linalg.inv(residualized.T @ (frequency[:, None] * residualized))
+        gamma = precision @ (residualized.T @ (frequency * residual))
+        working_y = y - controls @ gamma
+        residual = residual - residualized @ gamma
+        collapsed = aggregate(controls, working_y, frequency, deletion, stayer, 0)
+        collapsed_residualized = aggregate(residualized, working_y, frequency, deletion, stayer, 0)
+        within = aggregate(controls, working_y, frequency, deletion, stayer, 1)
+    groups, stay_rows = unit_order(deletion, stayer)
+    movers = len(groups)
+    total = movers + int(frequency[stay_rows].sum())
+    unit_worker = np.empty(total, int)
+    unit_firm = np.empty(total, int)
+    mass = np.ones(total)
+    unit_y = np.zeros(total)
+    unit_residual = np.zeros(total)
+    for g, members in enumerate(groups):
+        m = frequency[members].sum()
+        unit_worker[g], unit_firm[g], mass[g] = worker[members[0]], firm[members[0]], m
+        unit_y[g] = frequency[members] @ working_y[members] / np.sqrt(m)
+        unit_residual[g] = frequency[members] @ residual[members] / np.sqrt(m)
+    out = movers
+    for row in stay_rows:
+        for _ in range(int(frequency[row])):
+            unit_worker[out], unit_firm[out] = worker[row], firm[row]
+            unit_y[out], unit_residual[out] = working_y[row], residual[row]
+            out += 1
+    residual = unit_residual
+    n = total
+    root = np.sqrt(mass)
+    yu = center(unit_y, root)
+    units = FeDesign(unit_worker, unit_firm, mass)
+    moments = np.zeros((n, 5))
+    target_diagonal = np.zeros((n, 3))
+    batch = min(32, probes)
+    for begin in range(0, probes, batch):
+        width = min(batch, probes - begin)
+        probe = rng.standard_normal((n, width))
+        projected = unit_predict(units, root, units.solve(unit_transpose(units, root, probe)))
+        # Squared projection and squared residual of each probe, and their
+        # second moments, for the finite-projection maker inverse.
+        square = projected**2
+        complement = (probe - projected) ** 2
+        moments[:, 0] += square.sum(1)
+        moments[:, 1] += complement.sum(1)
+        moments[:, 2] += (square**2).sum(1)
+        moments[:, 3] += (complement**2).sum(1)
+        moments[:, 4] += (square * complement).sum(1)
+        direction = np.sqrt(share)[:, None] * rng.standard_normal((len(share), width))
+        direction = direction - np.outer(share, direction.sum(0))
+        full = base.transpose_full(direction)
+        rhs = np.hstack(
+            [
+                np.vstack([full[:workers], np.zeros((firms - 1, width))]),
+                np.vstack([np.zeros((workers, width)), full[workers : workers + firms - 1]]),
+            ]
+        )
+        projected = unit_predict(units, root, units.solve(rhs))
+        target_diagonal[:, 0] += (projected[:, :width] ** 2).sum(1)
+        target_diagonal[:, 1] += (projected[:, width:] ** 2).sum(1)
+        target_diagonal[:, 2] += (projected[:, :width] * projected[:, width:]).sum(1)
+    moments /= probes
+    target_diagonal /= probes
+    maker_inverse, leverage, clipped = finite_projection(moments, probes)
+    ratio = target_diagonal * maker_inverse[:, None]
+    product = yu * residual * maker_inverse
+    influence, _ = solve_kernel(yu[:, None], base, units, root, share, ratio)
+    influence = center(influence, root)
+    variance, info = working(product, residual, leverage, mass, movers)
+    scaled_residual = residual * np.sqrt(maker_inverse)
+    score = 2 * influence * scaled_residual[:, None]
+    if control_count > 0:
+        load = precision @ (-2 * collapsed.T @ influence)
+        score = (2 * influence + collapsed_residualized @ load) * scaled_residual[:, None] + (
+            within @ load
+        )
+    quadratic = np.zeros((3, 3))
+    calibration = np.zeros((3, 3))
+    batch = min(16, draws)
+    for begin in range(0, draws, batch):
+        width = min(batch, draws - begin)
+        noise = center(np.sqrt(variance)[:, None] * rng.standard_normal((n, width)), root)
+        image, kernel_residual = solve_kernel(noise, base, units, root, share, ratio)
+        image = center(image, root)
+        pseudo_residual = kernel_residual**2 * maker_inverse[:, None]
+        for j in range(3):
+            for k in range(3):
+                a = image[:, j * width : (j + 1) * width]
+                b = image[:, k * width : (k + 1) * width]
+                quadratic[j, k] += (variance[:, None] * a * b).sum()
+                calibration[j, k] += (pseudo_residual * a * b).sum()
+    quadratic /= draws
+    calibration /= draws
+    signal = score.T @ score - 4 * calibration
+    signal = (signal + signal.T) / 2
+    eigenvalues, eigenvectors = np.linalg.eigh(signal)
+    covariance = (eigenvectors * np.maximum(eigenvalues, 0)) @ eigenvectors.T + 2 * quadratic
+    return dict(
+        covariance=covariance,
+        theta=yu @ influence,
+        gamma=gamma if control_count > 0 else np.zeros(0),
+        clipped=clipped,
+        info=info,
+        units=n,
+        movers=movers,
+    )
+
+
+def check_jla(nf, nm, ns, seed, k, draws, probes, deletion_mode):
+    """Standard errors of the matrix-free routine against the exact sampling SD."""
+    from dense_mc import T34
+
+    d = make_design(nf, nm, ns, seed)
+    rng = np.random.default_rng(seed + 100)
+    ph = expand(d, deletion_mode, rng)
+    Z = make_controls(d, ph, k, rng)
+    o = PhysicalOracle(d, ph, Z)
+    a, p = true_effects(d, np.random.default_rng(seed + 1))
+    gamma = np.array([0.03, 0.10] + [0.02] * max(k - 2, 0))[:k]
+    mu = a[ph["w"]] + p[ph["f"]] + Z @ gamma
+    Gam = error_cov(d, ph, "base", s_m2=0.0 if deletion_mode == "observation" else 0.02)
+    exact, _ = o.joint_variance(mu, Gam)
+    sd = np.sqrt(np.diag(T34 @ exact @ T34.T))
+    L = np.linalg.cholesky(Gam + 1e-12 * np.eye(o.nP))
+    frequency = np.ones(o.nP)
+    # Observation deletion: every physical copy is its own unit.
+    stayer = np.ones(o.nP, int) if deletion_mode == "observation" else ph["stay"].astype(int)
+    ratios = []
+    samples = 12
+    for sample in range(samples):
+        y = mu + L @ np.random.default_rng(seed + 500 + sample).standard_normal(o.nP)
+        r = mata_jla_mirror(
+            y,
+            ph["w"],
+            ph["f"],
+            Z,
+            frequency,
+            np.ones(o.nP),
+            ph["unit"],
+            stayer,
+            draws,
+            probes,
+            np.random.default_rng(seed + 900 + sample),
+        )
+        se = np.sqrt(np.diag(T34 @ r["covariance"] @ T34.T))
+        ratios.append(se / sd)
+        if sample == 0 and k:
+            assert np.abs(r["gamma"] - o.gamma_map @ y).max() < 1e-9
+    ratios = np.array(ratios)
+    rms = np.sqrt((ratios**2).mean(0))
+    print(
+        "matrix-free route, %s deletion, %d controls: %d units (%d mover units), "
+        "%d probes, %d draws, %d samples"
+        % (deletion_mode, k, r["units"], r["movers"], probes, draws, samples)
+    )
+    print("   RMS standard error / exact sampling SD of the joint estimator:", np.round(rms, 3))
+    print("   maker diagonals floored at 0.02 in the last sample: %d" % r["clipped"])
+    assert np.abs(rms - 1).max() < 0.10, rms
+
+
 def main(argv):
     nf, nm, ns, seed, k, draws = map(int, argv[:6])
     d = make_design(nf, nm, ns, seed)
@@ -335,6 +619,9 @@ def main(argv):
     tolerance = 6 * np.sqrt(2 / (draws * r["effective"][:3].min()))
     assert rel_tau < max(tolerance, 0.02) and rel_noise < max(3 * tolerance, 0.05)
     assert np.abs(se_mirror / se_exact - 1).max() < 0.02
+    probes = 200
+    for mode in ("match", "observation"):
+        check_jla(nf, nm, ns, seed, k, 8, probes, mode)
     print("OK")
 
 

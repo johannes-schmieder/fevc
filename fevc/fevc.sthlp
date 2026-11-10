@@ -222,10 +222,12 @@ covariance and sorting may be negative. Shares need not lie between 0 and
 {pstd}
 With controls, this total concerns the two fixed effects; it is not a
 bias-corrected decomposition of the controls or the full model's R-squared.
-Point estimation remains the default. Standard errors and confidence
-intervals require an explicit {help fevc##inference:inference request};
-{cmd:inference(auto)} adds {help fevc##se:leave-out residual standard errors}
-wherever the request as written supports them.
+By default the command also reports
+{help fevc##se:leave-out residual standard errors} and normal confidence
+intervals for the four components and posts their covariance as {cmd:e(V)}.
+They rest on an assumption about the error variances that the point
+estimates do not need; read {help fevc##se:what they assume} before
+reporting them. {cmd:inference(none)} gives point estimates only.
 
 {marker centering}
 {title:Outcome centering}
@@ -346,7 +348,7 @@ controls are not silently dropped. See the
 
   {it:Option}{col 40}Description
   {hline 76}
-    {cmd:inference(none|auto|highrank|q1)}{col 40}standard errors and intervals; default none
+    {cmd:inference(auto|none|highrank|q1)}{col 40}standard errors and intervals; default auto
     {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}variance method; see below
     {cmd:inferencedraws(}{it:#}{cmd:)}{col 40}pseudo-noise draws for leaveout_residual; default 8
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
@@ -358,19 +360,26 @@ controls are not silently dropped. See the
 
 {marker se}{...}
 {pstd}
-{bf:Standard errors with inferencemodel(leaveout_residual).} This method
-reports a standard error and a normal confidence interval for each of the
-four components and posts their covariance as {cmd:e(V)}, so {cmd:lincom}
-and {cmd:test} work. It costs about 35 linear solves beyond the point
-estimate with the default {cmd:inferencedraws(8)}. Request it explicitly with
-
-{phang2}{cmd:inference(highrank) inferencemodel(leaveout_residual)}{p_end}
+{bf:Standard errors (the default).} {cmd:fevc} reports a standard error and
+a normal confidence interval for each of the four components and posts their
+covariance as {cmd:e(V)}, so {cmd:lincom} and {cmd:test} work. The default,
+{cmd:inference(auto)}, computes them whenever the request can carry them and
+otherwise returns point estimates with a one-line reason; it never changes
+the backend, algorithm or solver route you selected, and if the calculation
+that carries them stops, the command runs once more without them so that the
+point estimates are always returned. {cmd:inference(none)} turns them off.
+{cmd:inference(highrank) inferencemodel(leaveout_residual)} requests the same
+standard errors strictly: the command stops if they cannot be computed.
 
 {pstd}
-or with {cmd:inference(auto)}, which computes these standard errors when the
-request as written can carry them and otherwise returns point estimates with
-a one-line reason. {cmd:inference(auto)} never changes the backend, engine,
-solver route, or point estimate.
+{it:Cost.} On the native backend they add three linear solves plus four per
+draw, 35 with the default {cmd:inferencedraws(8)}, against roughly 600 to 800
+for the point estimates. With controls under the default
+{cmd:nuisance(joint)} they add one further pass of two solves per probe
+(400 by default), because the standard errors use a fixed-offset version of
+the units; {cmd:nuisance(fixedoffset)} avoids that pass. On the Mata backend
+with {cmd:algorithm(jla)} they are computed in a separate stage that costs
+about as much as the point estimates.
 
 {pstd}
 {it:What it does.} The KSS estimate is a quadratic form in the outcome. Its
@@ -381,9 +390,11 @@ squared regression residuals, each divided by its residual-maker diagonal
 noisy estimates adds to the leading part, are found by passing simulated
 noise through exactly the calculation applied to the data. A small working
 model of the error variances (ranks of leverage and unit size, by movers and
-stayers) is used only to generate that noise. With controls under
-{cmd:nuisance(fixedoffset)}, a first-order term adds the uncertainty in the
-estimated control coefficients. See the technical supplement
+stayers) is used only to generate that noise. With controls, the units are
+formed after subtracting the fitted control index, and a first-order term
+adds the uncertainty in the estimated control coefficients; the same standard
+error serves {cmd:nuisance(joint)} and {cmd:nuisance(fixedoffset)}, whose
+point estimates agree to first order. See the technical supplement
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/standard_errors/standard_errors.tex":docs/standard_errors}.
 
 {pstd}
@@ -424,28 +435,25 @@ matrix, and {cmd:e(variance_floor_share)} the share of units at the working
 variance floor.
 
 {pstd}
-{it:Where it is available.} In this version the method runs on
+{it:Where it is available.} Both deletion modes, {cmd:deletionid()},
+{cmd:stayers(both)} and {cmd:stayers(movers)}, controls under either nuisance
+mode, {cmd:targetweight()}, every {cmd:centering()} mode, and the native and
+Mata backends with {cmd:algorithm(jla)}, as well as Mata
+{cmd:algorithm(exact)}. Exceptions, for which the default returns point
+estimates and says why:
 
-{phang2}{cmd:backend(rust) rng(counter_v1) algorithm(jla)} with
-{cmd:preconditioner(diagonal)} or {cmd:preconditioner(cmg)} and either
-{cmd:deletion(observation)} without frequency weights (controls stay in the
-model), or {cmd:deletion(match) engine(generic)} with
-{cmd:nuisance(fixedoffset)}, or with no controls; and{p_end}
-{phang2}{cmd:backend(mata) algorithm(exact) deletion(match)} with
-{cmd:nuisance(fixedoffset)}, or with no controls, for small designs.{p_end}
+{phang2}{cmd:project()} in the same call;{p_end}
+{phang2}{cmd:deletion(observation)} with {cmd:nuisance(fixedoffset)}, or
+with frequency weights on the native backend;{p_end}
+{phang2}{cmd:algorithm(auto)}, and {cmd:algorithm(exact)} on the native
+backend;{p_end}
+{phang2}a native plugin built before this feature.{p_end}
 
 {pstd}
-Both accept {cmd:stayers(both)}, {cmd:deletionid()}, {cmd:targetweight()}
-and, under match deletion, frequency weights. It is not yet available on the
-default automatic route for match deletion without controls (the compressed
-engine), with {cmd:preconditioner(auto)}, for match deletion with controls
-under the default {cmd:nuisance(joint)}, on Mata JLA, or together with
-{cmd:project()}. For those requests {cmd:inference(auto)} returns point
-estimates and says why. For example,
-
-{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset)}
-{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)}
-{cmd:preconditioner(cmg) inference(auto)}{p_end}
+On the native backend a request without controls and without stayers runs on
+the generic engine rather than the compressed one when standard errors are
+computed; the two engines estimate the same quantities, and the generic
+engine is the one every request with stayers or controls already uses.
 
 {pstd}
 The evidence for this method is a simulation study and dense-oracle tests
@@ -892,7 +900,8 @@ interval limits, {cmd:e(V)} and {cmd:e(V_primitive)} the covariance,
 {cmd:e(inference_variance_warning)} the variance assumption. After
 {cmd:inference(auto)}, {cmd:e(inference_auto)} is 1 and
 {cmd:e(inference_auto_reason)} is empty when standard errors were computed
-and otherwise says why they were not.
+and otherwise says why they were not; {cmd:e(inference_offset_pass_solves)}
+counts the solves of the additional pass under joint nuisance with controls.
 {cmd:e(projection_b)}, {cmd:e(projection_V)}, and
 {cmd:e(projection_results)} contain projection results. Timing diagnostics
 use only Stata timers that are not already in use and leave the caller's

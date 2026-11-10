@@ -10,6 +10,12 @@ working-variance terms 8, floored 5
    pseudo-noise calibration vs closed form, max relative error  0.0014
    standard errors, pseudo-noise / closed form: [1.0002 0.9997 0.998 ]
    effective rank (worker, firm, covariance, total): [292.1  90.7  65.  794.2]
+matrix-free route, match deletion, 0 controls: 2327 units (1140 mover units), 200 probes, 8 draws, 12 samples
+   RMS standard error / exact sampling SD of the joint estimator: [0.981 0.995 1.029 1.003]
+   maker diagonals floored at 0.02 in the last sample: 0
+matrix-free route, observation deletion, 0 controls: 4062 units (0 mover units), 200 probes, 8 draws, 12 samples
+   RMS standard error / exact sampling SD of the joint estimator: [0.988 1.015 0.978 1.014]
+   maker diagonals floored at 0.02 in the last sample: 0
 OK
 
 $ python check_mata_mirror.py 130 500 300 11 2 2000
@@ -24,6 +30,12 @@ working-variance terms 8, floored 1
    pseudo-noise calibration vs closed form, max relative error  0.0022
    standard errors, pseudo-noise / closed form: [0.9999 0.9995 0.9979]
    effective rank (worker, firm, covariance, total): [294.8  92.   65.2 832.9]
+matrix-free route, match deletion, 2 controls: 2327 units (1140 mover units), 200 probes, 8 draws, 12 samples
+   RMS standard error / exact sampling SD of the joint estimator: [0.973 0.986 1.035 1.004]
+   maker diagonals floored at 0.02 in the last sample: 0
+matrix-free route, observation deletion, 2 controls: 4062 units (0 mover units), 200 probes, 8 draws, 12 samples
+   RMS standard error / exact sampling SD of the joint estimator: [0.989 1.008 0.983 1.011]
+   maker diagonals floored at 0.02 in the last sample: 0
 OK
 
 $ python check_mata_mirror.py 130 500 300 11 6 2000
@@ -38,5 +50,11 @@ working-variance terms 8, floored 0
    pseudo-noise calibration vs closed form, max relative error  0.0025
    standard errors, pseudo-noise / closed form: [0.9998 0.9995 0.9979]
    effective rank (worker, firm, covariance, total): [298.8  90.6  65.  821.4]
+matrix-free route, match deletion, 6 controls: 2327 units (1140 mover units), 200 probes, 8 draws, 12 samples
+   RMS standard error / exact sampling SD of the joint estimator: [0.971 0.983 1.035 0.999]
+   maker diagonals floored at 0.02 in the last sample: 0
+matrix-free route, observation deletion, 6 controls: 4062 units (0 mover units), 200 probes, 8 draws, 12 samples
+   RMS standard error / exact sampling SD of the joint estimator: [0.987 1.007 0.98  1.01 ]
+   maker diagonals floored at 0.02 in the last sample: 0
 OK
 

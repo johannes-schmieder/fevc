@@ -22,8 +22,17 @@ program define fevc__component_model_route, rclass
     }
     else local inferencegramprobes = 2048
 
+    // Standard errors are requested by default. inference(none) turns them
+    // off; after a failed attempt the caller suppresses them for its retry.
     local inference_supplied = (strtrim(`"`inference'"') != "")
-    if !`inference_supplied' local inference none
+    if !`inference_supplied' {
+        local inference auto
+        // Suites written for the earlier point-only default keep it by
+        // setting FEVC_DEFAULT_INFERENCE=none in the environment or as a
+        // global macro. Nothing else reads this setting.
+        if lower(strtrim(`"`: environment FEVC_DEFAULT_INFERENCE'"'))=="none" | ///
+            lower(strtrim("$FEVC_DEFAULT_INFERENCE"))=="none" local inference none
+    }
     local inference = lower(strtrim(`"`inference'"'))
     if !inlist("`inference'", "none", "auto", "highrank", "q1") {
         quietly _fevc_component_route_failure "INVALID_INFERENCE"          ///
@@ -37,11 +46,13 @@ program define fevc__component_model_route, rclass
         di as error "inferencedraws() must be an integer in [2,4096]"
         exit 198
     }
-    // inference(auto) asks for leave-out residual standard errors whenever
-    // this exact request can carry them and otherwise for point estimates
-    // only. It never changes the backend, engine, or solver route.
+    // inference(auto), the default, asks for leave-out residual standard
+    // errors whenever this request can carry them and otherwise for point
+    // estimates only. It never changes the backend, algorithm, or solver
+    // route the user selected.
     local se_auto = ("`inference'"=="auto")
     local se_auto_reason ""
+    local se_suppressed = (`se_auto' & "$VCKSS_SE_SUPPRESS"=="1")
     local residual_model = lower(strtrim(`"`inferencemodel'"'))
     if `se_auto' & !inlist("`residual_model'","","leaveout_residual") {
         quietly _fevc_component_route_failure "INFERENCE_MODEL_WITHOUT_INFERENCE" ///
@@ -159,52 +170,62 @@ program define fevc__component_model_route, rclass
         `preconditioner_supplied' &                               ///
         inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") & ///
         inlist(lower(strtrim("`engine'")),"","auto","generic")
-    // Leave-out residual standard errors use the same explicit Rust tuple.
-    // Match units need a fixed offset only when there are controls.
-    local residual_match_tuple = lower(strtrim("`deletion'"))=="match" & ///
+    // Leave-out residual standard errors. Units are the deletion units of
+    // either deletion mode; controls enter through a fixed-offset geometry
+    // under either nuisance mode. Observation deletion on the native route
+    // keeps controls in the operator and needs unit frequencies.
+    local residual_deletion = lower(strtrim("`deletion'"))
+    local residual_units_ok =                                             ///
         inlist(lower(strtrim("`stayers'")),"","movers","both") &         ///
-        (lower(strtrim("`nuisance'"))=="fixedoffset" |                    ///
-            (!`hascontrols' & inlist(lower(strtrim("`nuisance'")),"","joint"))) & ///
-        lower(strtrim("`engine'"))=="generic"
-    local residual_scalable = `residual' & !`project_supplied' &         ///
-        "`backend_requested'"=="rust" & "`rng_requested'"=="counter_v1" & ///
-        `algorithm_supplied' & lower(strtrim("`algorithm'"))=="jla" &   ///
-        ((`observation_tuple' & strtrim(`"`weighted'"')=="") |          ///
-            `residual_match_tuple') &                                     ///
-        `preconditioner_supplied' &                                      ///
-        inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") &  ///
-        inlist(lower(strtrim("`engine'")),"","auto","generic")
-    // The exact Mata route carries them for fixed-offset match units.
-    local residual_exact = `residual' & !`project_supplied' &             ///
+        (inlist("`residual_deletion'","","match") |                       ///
+            ("`residual_deletion'"=="observation" &                       ///
+                inlist(lower(strtrim("`nuisance'")),"","joint")))
+    local residual_native = `residual' & !`project_supplied' &            ///
+        inlist("`backend_requested'","auto","rust") &                    ///
+        inlist("`rng_requested'","auto","counter_v1") &                  ///
+        inlist(lower(strtrim("`algorithm'")),"","jla") &                 ///
+        inlist(lower(strtrim("`engine'")),"","auto","generic") &         ///
+        inlist(lower(strtrim("`preconditioner'")),"","auto","diagonal","cmg") & ///
+        `residual_units_ok' &                                             ///
+        !("`residual_deletion'"=="observation" & strtrim(`"`weighted'"')!="")
+    local residual_mata = `residual' & !`project_supplied' &              ///
         "`backend_requested'"=="mata" &                                  ///
-        inlist("`rng_requested'","auto","stata") & `algorithm_supplied' & ///
-        lower(strtrim("`algorithm'"))=="exact" &                         ///
-        lower(strtrim("`deletion'"))=="match" &                          ///
-        (lower(strtrim("`nuisance'"))=="fixedoffset" |                    ///
-            (!`hascontrols' & inlist(lower(strtrim("`nuisance'")),"","joint")))
+        inlist("`rng_requested'","auto","stata") &                       ///
+        inlist(lower(strtrim("`algorithm'")),"","jla","exact") &         ///
+        `residual_units_ok'
     local residual_reason ""
-    if `residual' & !`residual_scalable' & !`residual_exact' {
-        local residual_reason "this request is outside the routes that carry them (see help fevc, Standard errors)"
+    if `residual' & !`residual_native' & !`residual_mata' {
+        local residual_reason "this combination of options does not carry them (see help fevc, Standard errors)"
     }
-    if `residual_scalable' {
+    if `se_suppressed' {
+        local residual_native = 0
+        local residual_mata = 0
+        local residual_reason "$VCKSS_SE_SUPPRESS_REASON"
+    }
+    if `residual_native' {
+        // A plugin that loads but predates the capability cannot carry them.
+        // With backend(auto) and no plugin, the Mata runtime will.
         capture quietly fevc__rust_public_call probe
         local residual_rc = _rc
-        if !`residual_rc' local residual_rc = (r(component_residual_api)!=1)
-        if !`residual_rc' & `residual_match_tuple' &                     ///
-            lower(strtrim("`stayers'"))!="movers" {
-            local residual_rc = (r(component_mixed_api)!=1)
-        }
         if !`residual_rc' {
-            capture quietly fevc__rust_public_call componentversion
-            local residual_rc = _rc
-            if !`residual_rc' local residual_rc = (r(interface_version)!=4)
+            if r(component_residual_api)!=1 | r(component_mixed_api)!=1 {
+                local residual_native = 0
+                local residual_reason "the installed native plugin predates them; reinstall the matching plugin"
+            }
+            else {
+                capture quietly fevc__rust_public_call componentversion
+                if _rc | r(interface_version)!=4 {
+                    local residual_native = 0
+                    local residual_reason "the installed native plugin predates them; reinstall the matching plugin"
+                }
+            }
         }
-        if `residual_rc' {
-            local residual_scalable = 0
-            local residual_reason "the installed native plugin does not provide them"
+        else if "`backend_requested'"=="rust" {
+            local residual_native = 0
+            local residual_reason "the native plugin is not available"
         }
     }
-    if `residual' & !`residual_scalable' & !`residual_exact' {
+    if `residual' & !`residual_native' & !`residual_mata' {
         if `se_auto' {
             // Point estimates only, exactly as with inference(none).
             local se_auto_reason "`residual_reason'"
@@ -216,25 +237,21 @@ program define fevc__component_model_route, rclass
         }
         else {
             quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_TUPLE_REQUIRED" ///
-                "Leave-out residual standard errors require explicit Rust/Counter-V1 JLA with diagonal or CMG, and observation deletion without weights or engine(generic) match deletion with fixedoffset nuisance (or no controls); or explicit Mata/exact match deletion with fixedoffset nuisance (or no controls); `residual_reason'."
+                "Leave-out residual standard errors need Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)), no project(), and, for native observation deletion, joint nuisance without frequency weights; `residual_reason'."
             di as error "leave-out residual standard errors are not available for this request"
             exit 498
         }
     }
-    if `residual_scalable' {
+    if `residual' {
+        // The request is a scalable component request on the native route
+        // and shares the exact mixed-unit posting on the Mata routes. One
+        // native probe is one pseudo-noise solve: a fit and three kernel
+        // images per draw. No Gram matrix is fitted.
         local scalable = 1
-        // One probe is one pseudo-noise solve: a fit and three kernel images
-        // per draw. No Gram matrix is fitted.
+        local exact_structured = 1
         local inferencesimulations = 4*`inferencedraws'
         local inferencegramprobes = 0
         c_local inferencesimulations `inferencesimulations'
-    }
-    if `residual_exact' {
-        // The exact route shares the mixed-unit posting of exact structured
-        // inference; its simulation count is the number of draws.
-        local exact_structured = 1
-        local inferencegramprobes = 0
-        c_local inferencesimulations `inferencedraws'
     }
     if `structured' & !(`scalable' | `exact_structured') {
         quietly _fevc_component_route_failure "STRUCTURED_INFERENCE_TUPLE_REQUIRED" ///
@@ -246,7 +263,10 @@ program define fevc__component_model_route, rclass
             "inferencegramprobes() requires supported explicit structured Rust component inference."
         exit 498
     }
-    if `scalable' & `match_tuple' & lower(strtrim("`stayers'"))!="movers" {
+    // The structured models are native-only and fail closed without the
+    // plugin. Leave-out residual standard errors checked their capability
+    // above and may run on the Mata runtime instead.
+    if `scalable' & !`residual' & `match_tuple' & lower(strtrim("`stayers'"))!="movers" {
         capture quietly fevc__rust_public_call probe
         local mixed_rc = _rc
         if !`mixed_rc' local mixed_rc = (r(component_mixed_api)!=1)
@@ -256,7 +276,7 @@ program define fevc__component_model_route, rclass
             exit 498
         }
     }
-    if `scalable' {
+    if `scalable' & !`residual' {
         capture quietly fevc__rust_public_call componentversion
         local interface_rc = _rc
         if !`interface_rc' local interface_rc = (r(interface_version)!=4)
@@ -271,7 +291,7 @@ program define fevc__component_model_route, rclass
     c_local inferencedraws `inferencedraws'
     c_local se_auto `se_auto'
     c_local se_auto_reason "`se_auto_reason'"
-    c_local residual_se_requested `residual_scalable'
+    c_local residual_se_requested `residual'
     c_local inferencegramprobes `inferencegramprobes'
     c_local inferencemodel_supplied `supplied'
     c_local scalable_component_requested `scalable'

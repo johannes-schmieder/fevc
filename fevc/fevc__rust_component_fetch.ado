@@ -10,7 +10,9 @@ program define fevc__rust_component_fetch, rclass
     local modelcode = cond("`model'"=="structured_common",1, ///
         cond("`model'"=="leaveout_residual",3,2))
     // Leave-out residual standard errors: a probe is one pseudo-noise solve
-    // (four per draw); there is no Gram fit and no spectral iteration.
+    // (four per draw); there is no Gram fit and no spectral iteration. Under
+    // joint nuisance with controls the solver count also holds the offset
+    // pass, two solves per point probe.
     local expectedfit = cond(`modelcode'==3,3,2)
     local expectedspectrumprobes = cond(`modelcode'==3,`simulations'/4,128)
     local referencecode = ("`reference'"=="q1")
@@ -118,7 +120,8 @@ program define fevc__rust_component_fetch, rclass
             `receipt'[1,27]==0 & `receipt'[1,31]>0 & `receipt'[1,32]>=0 & ///
             `receipt'[1,32]<`expectedunits' & `receipt'[1,33]==0 & ///
             `simulations'>=8 & mod(`simulations',4)==0 & ///
-            `receipt'[1,22]==`simulations'+3 & "`reference'"=="q0"
+            `receipt'[1,22]>=`simulations'+3 &                    ///
+            mod(`receipt'[1,22]-`simulations'-3,2)==0 & "`reference'"=="q0"
         else local ok = `ok' & `receipt'[1,26]==0 & `receipt'[1,27]==0 & ///
             `receipt'[1,32]==0 & `receipt'[1,33]==0
         local q0computed = 0

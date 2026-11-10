@@ -53,10 +53,15 @@ def run_stata(
     command = [stata, "-q", "do", str(do_file), *arguments]
     print(f"\n== {label} ==", flush=True)
     print("+", " ".join(command), flush=True)
+    # The registered suites were written for the point-only default and name
+    # no inference() option; keep them on that default. Tests of the default
+    # standard errors name inference() explicitly.
+    environment = os.environ.copy()
+    environment.setdefault("FEVC_DEFAULT_INFERENCE", "none")
     completed = subprocess.run(
         command,
         cwd=cwd,
-        env=os.environ.copy(),
+        env=environment,
         stdin=subprocess.DEVNULL,
         text=True,
         stdout=subprocess.PIPE,

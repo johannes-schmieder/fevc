@@ -3,9 +3,9 @@
 *! Implements the Kline-Saggio-Solvsten estimator with a source-only Mata
 *! backend and an optional Rust backend. This file validates requests,
 *! prepares the sample, dispatches computation, and posts checked results.
-*! Point estimation is the default; projection and component inference
-*! require explicit requests on supported routes. inference(auto) attaches
-*! leave-out residual standard errors where the requested route carries them.
+*! Leave-out residual standard errors accompany the point estimates by
+*! default (inference(auto)); inference(none) gives point estimates only.
+*! Projection and the other inference methods require explicit requests.
 
 program define fevc, eclass
     version 18.0
@@ -37,8 +37,22 @@ program define fevc, eclass
         global VCKSS_REPORT_TIMER 1
         quietly mata: vckss_timer__on(1)
     }
+    capture macro drop VCKSS_SE_SUPPRESS VCKSS_SE_SUPPRESS_REASON VCKSS_SE_ATTACHED
     capture noisily _fevc_command `0'
     local command_rc = _rc
+    if `command_rc' & `command_rc'!=1 & "$VCKSS_SE_ATTACHED"=="1" {
+        // The attempt carried default standard errors and failed. Whatever
+        // the cause, the point estimate must not depend on them.
+        local se_failure `"`e(withholding_status)'"'
+        if `"`se_failure'"'=="" local se_failure "return code `command_rc'"
+        global VCKSS_SE_SUPPRESS 1
+        global VCKSS_SE_SUPPRESS_REASON "the calculation that carried them stopped (`se_failure')"
+        di as txt _newline "Note: the run with standard errors stopped (`se_failure')."
+        di as txt "      Estimating once more without them; specify inference(none) to skip this attempt."
+        capture noisily _fevc_command `0'
+        local command_rc = _rc
+    }
+    capture macro drop VCKSS_SE_SUPPRESS VCKSS_SE_SUPPRESS_REASON VCKSS_SE_ATTACHED
     if "`report_timer'" != "" {
         quietly mata: vckss_timer__off(`report_timer')
         if !`command_rc' & inlist("$VCKSS_REPORT_LEVEL","1","2") & ///
@@ -3316,6 +3330,13 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_plan_route_sel'==`r_sel_route' &                      ///
         `r_plan_route_fallback'==`r_fallback' &                  ///
         `r_plan_route_error'==`r_fallback_err'
+    // Structured sources solve one system per simulation plus three; the
+    // leave-out residual source reports its own count, which also includes
+    // the offset pass under joint nuisance with controls.
+    local component_plan_rhs = `component_requested'*(`inferencesimulations'+3)+`component_gram_probes'
+    if `component_requested' {
+        if "`component_model'"=="leaveout_residual" local component_plan_rhs = `component_inference_receipt'[1,22]
+    }
     local plan_result_ok =                                       ///
         `r_plan_struct'==1000 & `r_plan_schema'==1 &             ///
         `r_plan_route_schema'==2 & `r_plan_resolved'==1 &        ///
@@ -3324,8 +3345,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_plan_alg_sel'==2 &                                    ///
         `r_plan_eng_req'==`engine_expected_code' &               ///
         `r_plan_eng_sel'==2 &                                    ///
-        `r_plan_rhs'==`expected_rhs_rows'+                        ///
-            `component_requested'*(`inferencesimulations'+3)+`component_gram_probes' & ///
+        `r_plan_rhs'==`expected_rhs_rows'+`component_plan_rhs' &  ///
         `r_plan_full_dim'==`r_dimension' &                        ///
         `r_batch_lev_sel'==`r_lev_batch' &                        ///
         `r_batch_tgt_sel'==`r_tgt_batch' &                        ///
@@ -4379,6 +4399,9 @@ program define _vckss_impl, eclass sortpreserve
     // were attached and, if not, why.
     global VCKSS_SE_AUTO `se_auto'
     global VCKSS_SE_AUTO_REASON "`se_auto_reason'"
+    // Default-on standard errors must never cost the point estimate: the
+    // caller reruns the command without them if this attempt fails.
+    global VCKSS_SE_ATTACHED = (`se_auto' & `residual_se_requested')
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
@@ -4591,7 +4614,9 @@ program define _vckss_impl, eclass sortpreserve
     }
 
     if "`algorithm'" == "" {
-        if `inference_requested' local algorithm exact
+        // Leave-out residual standard errors run on the default randomized
+        // route; the other inference methods select the exact runtime.
+        if `inference_requested' & !`residual_se_requested' local algorithm exact
         else local algorithm jla
     }
     local algorithm = lower(strtrim("`algorithm'"))
@@ -7047,7 +7072,7 @@ program define _vckss_impl, eclass sortpreserve
             // Separate lazily loaded runtime; exact structured inference and
             // its file are untouched by this model.
             capture mata: assert(vckss_rse__api_level() == 1 &    ///
-                vckss_rse__build_id() == "vckss-residual-se-api1")
+                vckss_rse__build_id() == "vckss-residual-se-api2")
             if _rc {
                 capture findfile fevc_residual_se.mata
                 if _rc {
@@ -7063,25 +7088,50 @@ program define _vckss_impl, eclass sortpreserve
             local se_deletion "`deletion_id'"
             local se_sample "`touse'"
             local se_stayer ""
-            if "`stayers'" == "both" {
+            if "`deletion'" == "match" & "`stayers'" == "both" {
                 local se_worker "`hybrid_worker'"
                 local se_firm "`hybrid_firm'"
                 local se_deletion "`hybrid_deletion'"
                 local se_sample "`hybrid_touse'"
                 local se_stayer "`hybrid_stayer'"
             }
+            if "`deletion'" == "observation" {
+                // Every physical observation is its own deletion unit.
+                tempvar se_every
+                quietly generate byte `se_every' = 1
+                local se_stayer "`se_every'"
+            }
             matrix `inference_q1' = J(1,1,.)
             matrix `inference_q1_status' = J(1,1,.)
-            capture noisily mata: vckss_residual_se__stata(       ///
-                "`depvar'", "`se_worker'", "`se_firm'",        ///
-                `"`controlvars'"', "`frequency'", "`target'",   ///
-                "`se_deletion'", "`se_stayer'", "`se_sample'", ///
-                `level', `inferencedraws', `inferenceseed',        ///
-                `rank_tolerance', `block_tolerance', "`corrected'", ///
-                "`inference_V_primitive'", "`inference_V'",      ///
-                "`inference_highrank'", "`inference_diagnostics'", ///
-                "`inference_varfit'", "`inference_spectrum'",    ///
-                "inference_status", "inference_message")
+            if "`selected_algorithm'" == "exact" & "`deletion'" == "match" {
+                // The unit kernel reproduces the posted estimate only when
+                // that estimate holds the control offset fixed.
+                local se_identity = (`control_count'==0 | "`nuisance'"=="fixedoffset")
+                capture noisily mata: vckss_residual_se__stata(       ///
+                    "`depvar'", "`se_worker'", "`se_firm'",        ///
+                    `"`controlvars'"', "`frequency'", "`target'",   ///
+                    "`se_deletion'", "`se_stayer'", "`se_sample'", ///
+                    `level', `inferencedraws', `inferenceseed',        ///
+                    `rank_tolerance', `block_tolerance', `se_identity', ///
+                    "`corrected'",                                   ///
+                    "`inference_V_primitive'", "`inference_V'",      ///
+                    "`inference_highrank'", "`inference_diagnostics'", ///
+                    "`inference_varfit'", "`inference_spectrum'",    ///
+                    "inference_status", "inference_message")
+            }
+            else {
+                capture noisily mata: vckss_residual_se_jla__stata(   ///
+                    "`depvar'", "`se_worker'", "`se_firm'",        ///
+                    `"`controlvars'"', "`frequency'", "`target'",   ///
+                    "`se_deletion'", "`se_stayer'", "`se_sample'", ///
+                    `level', `inferencedraws', `inferenceseed',        ///
+                    `probes', `tolerance', `maxiter', `rank_tolerance', ///
+                    "`corrected'",                                   ///
+                    "`inference_V_primitive'", "`inference_V'",      ///
+                    "`inference_highrank'", "`inference_diagnostics'", ///
+                    "`inference_varfit'", "`inference_spectrum'",    ///
+                    "inference_status", "inference_message")
+            }
         }
         else capture noisily mata: vckss_inference__stata(       ///
             "`depvar'", "`id_worker'", "`id_firm'",          ///

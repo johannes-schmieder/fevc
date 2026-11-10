@@ -51,42 +51,67 @@ def test_probe_count_convention_is_four_solves_per_draw():
     assert "local inferencegramprobes = 0" in route
     fetch = read("fevc/fevc__rust_component_fetch.ado")
     assert "`simulations'/4" in fetch
-    assert "`receipt'[1,22]==`simulations'+3" in fetch
-    wrapper = read("fevc/fevc_rust.ado")
-    assert "mod(`probes',4) != 0" in wrapper
+    # Three influence solves, four per draw, and the offset pass when the
+    # point estimate keeps controls in its operator.
+    assert "`receipt'[1,22]>=`simulations'+3" in fetch
+    assert "mod(`receipt'[1,22]-`simulations'-3,2)==0" in fetch
+    command = read("fevc/fevc.ado")
+    assert "local component_plan_rhs = `component_inference_receipt'[1,22]" in command
+    assert "mod(`probes',4) != 0" in read("fevc/fevc_rust.ado")
 
 
 def test_helpers_map_the_model_to_source_three_and_fit_three():
     attach = read("fevc/fevc__rust_component_attach.ado")
     fetch = read("fevc/fevc__rust_component_fetch.ado")
+    mapping = """cond("`model'"=="leaveout_residual",3,2)"""
     for text in (attach, fetch):
-        assert 'cond("`model\'"=="leaveout_residual",3,2)' in text
+        assert mapping in text
     assert "local expectedfit = cond(`modelcode'==3,3,2)" in fetch
-    post = read("fevc/fevc__rust_component_post.ado")
-    assert "fevc__residual_se_post" in post
+    assert "fevc__residual_se_post" in read("fevc/fevc__rust_component_post.ado")
     batch = read("fevc/fevc__rust_comp_batch_receipt.ado")
     assert "`batch'[1,7]==(`gram_probes'>0)" in batch
 
 
-def test_point_estimation_remains_the_default_and_auto_never_reroutes():
+def test_standard_errors_are_the_default_and_never_reroute_or_cost_the_estimate():
     route = read("fevc/fevc__component_model_route.ado")
-    assert "if !`inference_supplied' local inference none" in route
-    assert 'inlist("`inference\'", "none", "auto", "highrank", "q1")' in route
+    assert "local inference auto" in route
+    assert """inlist("`inference'", "none", "auto", "highrank", "q1")""" in route
+    # Suites written for the point-only default keep it without editing.
+    assert "FEVC_DEFAULT_INFERENCE" in route
+    assert 'environment.setdefault("FEVC_DEFAULT_INFERENCE", "none")' in read(
+        "fevc/tools/run_checks.py"
+    )
     fallback = route[route.index("if `se_auto' {\n            // Point estimates only") :]
     fallback = fallback[: fallback.index("else {")]
     assert "local inference none" in fallback
-    # The automatic mode may only narrow to point estimates; it must not set
-    # a backend, engine, algorithm or preconditioner.
+    # The default may only narrow to point estimates; it must not set a
+    # backend, engine, algorithm, preconditioner or nuisance mode.
     for option in ("backend", "engine", "algorithm", "preconditioner", "nuisance"):
         assert not re.search(rf"c_local {option}\b", route)
     command = read("fevc/fevc.ado")
     assert "INFERENCEDraws(integer 8)" in command
-    assert "global VCKSS_SE_AUTO `se_auto'" in command
+    assert "if `inference_requested' & !`residual_se_requested' local algorithm exact" in command
+    # A failed attempt with default standard errors reruns without them.
+    entry = command[command.index("program define fevc, eclass") :]
+    entry = entry[: entry.index("\nend\n")]
+    assert entry.count("capture noisily _fevc_command `0'") == 2
+    assert '"$VCKSS_SE_ATTACHED"=="1"' in entry and "`command_rc'!=1" in entry
+    assert "global VCKSS_SE_SUPPRESS 1" in entry
+    assert "global VCKSS_SE_ATTACHED = (`se_auto' & `residual_se_requested')" in command
+    assert '"$VCKSS_SE_SUPPRESS"=="1"' in route
+
+
+def test_native_engine_selection_and_offset_pass_are_bound_to_the_flag():
+    assert "compressed_can_carry_request" in read("rust/crates/vckss-plugin/src/ffi_engine.rs")
+    engine = read("rust/crates/vckss-core/src/generic_jla.rs")
+    assert "fn offset_pass_requested(" in engine
+    assert "&& options.nuisance == NuisanceMode::Joint" in engine
+    assert "diagnostic.offset_pass_solves = offset_receipts.len();" in engine
 
 
 def test_corrected_centering_is_admitted_only_for_this_model():
     centering = read("fevc/fevc__centering.ado")
-    assert 'lower(strtrim("`inferencemodel\'"))!="leaveout_residual"' in centering
+    assert """lower(strtrim("`inferencemodel'"))!="leaveout_residual\"""" in centering
     plugin = read("rust/crates/vckss-plugin/src/ffi_engine.rs")
     assert "fn centering_bound_component(" in plugin
 
@@ -105,18 +130,24 @@ def test_display_and_returns_state_the_assumption():
 def test_mata_runtime_is_separate_and_lazily_loaded():
     mata = read("fevc/fevc_residual_se.mata")
     assert "mata set matastrict on" in mata
-    assert 'return("vckss-residual-se-api1")' in mata
+    assert 'return("vckss-residual-se-api2")' in mata
     assert "void vckss_residual_se__stata(" in mata
+    assert "void vckss_residual_se_jla__stata(" in mata
+    assert "real colvector vckss_rse__finite_projection(" in mata
     command = read("fevc/fevc.ado")
-    branch = command[
-        command.index('if "`inferencemodel\'"=="leaveout_residual" & "`inference\'"!="none" {') :
-    ]
+    start = """if "`inferencemodel'"=="leaveout_residual" & "`inference'"!="none" {"""
+    branch = command[command.index(start) :]
     branch = branch[: branch.index("else capture noisily mata: vckss_inference__stata(")]
     assert "findfile fevc_residual_se.mata" in branch
+    assert 'vckss_rse__build_id() == "vckss-residual-se-api2"' in branch
     assert "vckss_residual_se__stata(" in branch
+    assert "vckss_residual_se_jla__stata(" in branch
     # The exact structured runtime is not edited for this model.
     exact = read("fevc/fevc_inference.mata")
     assert "vckss_rse__" not in exact and '"leaveout_residual"' not in exact
+    # A numpy transliteration checks both Mata routines against the oracle.
+    mirror = read("fevc/benchmarks/auto_inference_prototype/check_mata_mirror.py")
+    assert "def mata_mirror(" in mirror and "def mata_jla_mirror(" in mirror
 
 
 def test_package_ships_the_new_files_and_help_documents_the_method():
@@ -125,8 +156,9 @@ def test_package_ships_the_new_files_and_help_documents_the_method():
     assert "f fevc__residual_se_post.ado" in manifest
     help_text = read("fevc/fevc.sthlp")
     assert "{marker se}" in help_text
-    assert "{cmd:inference(none|auto|highrank|q1)}" in help_text
+    assert "{cmd:inference(auto|none|highrank|q1)}" in help_text
     assert "{cmd:inferencedraws(}{it:#}{cmd:)}" in help_text
     assert "heteroskedasticity.}" in help_text
-    assert "Point estimation remains the default." in help_text
+    assert "{cmd:inference(none)} gives point estimates only." in help_text
     assert (PACKAGE / "docs/standard_errors/standard_errors.tex").is_file()
+    assert (PACKAGE / "tests/stata/test_leaveout_residual_se.do").is_file()

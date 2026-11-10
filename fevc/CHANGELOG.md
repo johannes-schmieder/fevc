@@ -2,21 +2,30 @@
 
 ## Unreleased
 
-- Add leave-out residual standard errors for the four components:
-  `inferencemodel(leaveout_residual)` with `inference(highrank)`, and
-  `inference(auto)`, which computes them when the request as written can carry
-  them and otherwise returns point estimates with a reason. About 35 linear
-  solves beyond the point estimate at the default `inferencedraws(8)`.
-  Available on the explicit Rust generic tuple (observation deletion without
-  weights; `engine(generic)` match deletion with `nuisance(fixedoffset)` or
-  no controls) and on exact Mata match deletion. `inference(none)` remains
-  the default.
+- Report leave-out residual standard errors, normal intervals and `e(V)` for
+  the four components by default (`inference(auto)`). `inference(none)` gives
+  point estimates only; `inference(highrank) inferencemodel(leaveout_residual)`
+  requests them strictly; `inferencedraws(#)` sets the pseudo-noise draws.
+- The default never changes the selected backend, algorithm or solver route,
+  and a failed attempt is repeated without standard errors, so point
+  estimates never depend on them.
+- Cost on the native backend: 35 linear solves at the default eight draws,
+  plus two per probe when controls stay in the operator under match
+  deletion. On Mata `algorithm(jla)` they are a separate stage of about the
+  cost of the point estimates.
+- A mover-only request without controls runs on the generic engine when
+  standard errors are attached.
 - The standard errors assume similar error variances among units sharing a
   worker or firm and are not robust to arbitrary heteroskedasticity. The
   display states this and reports an effective-rank diagnostic.
+- Not covered: `project()` in the same call, observation deletion with a
+  fixed offset or (native) frequency weights, `algorithm(auto)`, and native
+  `algorithm(exact)`. These return point estimates with a reason.
 - Native capability bit 18 and variance-source code 3 are additive. The
   distributed plugins predate them. The Stata and Mata sources for this
-  feature have not been executed; Rust is covered by dense-oracle tests.
+  feature have not been executed; Rust is covered by dense-oracle and ABI
+  tests. `FEVC_DEFAULT_INFERENCE=none` keeps the earlier default for suites
+  written for it.
 - Technical supplement: `docs/standard_errors/standard_errors.tex`.
 
 ## 0.5.2 — 2026-11-07

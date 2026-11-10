@@ -433,14 +433,24 @@ posted as `e(V)` by default with stated caveats once every default route can
 carry it. `centering(corrected)` reports the mean-centred standard error and
 treats the increment as fixed.
 
-Implemented now: `inferencemodel(leaveout_residual)` and the non-failing
-`inference(auto)`, on the explicit Rust generic tuple and the exact Mata
-match route. `inference(none)` stays the default because the compressed
-engine, the automatic-preconditioner front-end path, joint nuisance with
-match deletion and controls, and Mata JLA cannot carry the attachment yet;
-`inference(auto)` never reroutes a point request to obtain it. Additive
-readiness bit 18 and variance-source code 3 gate the native path; no ABI
-layout changes. Shipped binaries predate the capability. The Stata and Mata
-sources were written without access to Stata and are unexecuted. See the
-[technical supplement](standard_errors/standard_errors.tex).
+On the owner's further instruction the default is now `inference(auto)`:
+standard errors are computed whenever the request can carry them, the user's
+backend, algorithm and solver route are never changed, and a failed attempt
+is repeated without them so that point estimates never depend on them.
+`inference(none)` is the opt-out. The owner also accepted (i) one further
+target pass under joint nuisance with controls, where the engine forms the
+fixed-offset unit geometry beside the joint point estimate, (ii) running a
+mover-only request without controls on the generic engine when standard
+errors are attached, since the compressed engine carries no attachment and
+both engines estimate the same quantities, and (iii) a separate Mata stage
+for `algorithm(jla)` that draws its own projections. The registered
+campaign example sources are unchanged; the owner has said they may be
+changed and the campaigns rerun later if that becomes useful.
 
+Additive readiness bit 18 and variance-source code 3 gate the native path; no
+ABI layout changes. Shipped binaries predate the capability, so until they
+are rebuilt the default reports point estimates and says why. The Stata and
+Mata sources were written without access to Stata and are unexecuted; the
+registered Stata suites keep the point-only default through
+`FEVC_DEFAULT_INFERENCE=none`. See the
+[technical supplement](standard_errors/standard_errors.tex).

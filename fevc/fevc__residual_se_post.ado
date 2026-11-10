@@ -49,8 +49,8 @@ program define fevc__residual_se_post, eclass
     ereturn local inference_covariance                            ///
         "four-component covariance of rank three; total is worker + firm + 2 x covariance"
     ereturn local inference_capability = cond("`route'"=="rust", ///
-        "leave-out residual standard errors; generic JLA; observation units or fixed-offset match units", ///
-        "leave-out residual standard errors; exact Mata; fixed-offset match units")
+        "leave-out residual standard errors; generic JLA; fixed-offset unit geometry under either nuisance mode", ///
+        "leave-out residual standard errors; Mata exact kernels or linear solves; fixed-offset unit geometry")
     // Pseudo-noise is centred exactly as the estimate is, so the observed
     // mean is not held fixed.
     ereturn scalar inference_mean_omitted = 0
@@ -79,6 +79,16 @@ program define fevc__residual_se_post, eclass
     // which normal intervals under-cover whatever variance is used.
     ereturn scalar inference_low_rank_warning = (`minimum_rank' < 10)
     ereturn scalar inference_nuisance_omitted = `omitted'
+    ereturn local inference_deletion                              ///
+        "`deletion' deletion; one unit per mover deletion unit and per stayer observation"
+    if "`deletion'"=="observation" {
+        ereturn local inference_deletion "observation deletion; one unit per physical observation"
+    }
+    // Solves spent on the fixed-offset geometry beside a joint point estimate.
+    if "`route'"=="rust" {
+        ereturn scalar inference_offset_pass_solves =             ///
+            e(inference_solver_columns)-4*`draws'-3
+    }
     if "`deletion'"=="match" {
         ereturn local inference_method                            ///
             "leave-out residual standard errors on collapsed deletion units"
