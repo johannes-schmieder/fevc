@@ -28,7 +28,8 @@ program define fevc__rust_comp_batch_receipt, rclass
             max(32,8*`native_threads'))
         local ok = `batch'[1,1]==88 & `batch'[1,2]==1 & ///
             `batch'[1,3]==1 & inlist(`batch'[1,4],2,3,4) & ///
-            `batch'[1,5]==`handle' & `batch'[1,6]==1 & `batch'[1,7]==1 & ///
+            `batch'[1,5]==`handle' & `batch'[1,6]==1 & ///
+            `batch'[1,7]==(`gram_probes'>0) & /// no Gram fit declares no Gram width
             `batch'[1,8]==min(max(`covariance_probes',128),`width') & ///
             `batch'[1,9]==min(`gram_probes',`width') & ///
             `width'>=1 & `width'<=`expected_cap' & ///

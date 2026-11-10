@@ -41,8 +41,8 @@
 \noindent \fevc{} estimates the variance of worker effects, the variance of
 firm effects, their covariance and the variance of their sum with the
 leave-out correction of Kline, Saggio and S{\o}lvsten (2020, KSS). This note
-describes the standard errors the command reports for those four
-components. They are built from the KSS variance formula, a squared-residual
+describes the standard errors the command can report for those four
+components and the routes on which they are available. They are built from the KSS variance formula, a squared-residual
 estimate of its leading term and a simulated correction for its noise terms.
 They cost about 35 linear solves beyond the roughly 600 to 800 that the point
 estimates need. They rest on an assumption that is stronger than what the
@@ -55,9 +55,12 @@ verified from what has not.
 
 \section{What is reported, in brief}\label{sec:brief}
 
-For each component \fevc{} reports a standard error and a normal confidence
-interval, and it posts the $4\times4$ covariance matrix of the four
-components as \texttt{e(V)}. Three statements summarise the method.
+With \texttt{inferencemodel(leaveout\_residual)}, or with
+\texttt{inference(auto)} on a route that supports it, \fevc{} reports a
+standard error and a normal confidence interval for each component and posts
+the $4\times4$ covariance matrix of the four components as \texttt{e(V)}.
+Section~\ref{sec:status} lists the supported routes. Three statements
+summarise the method.
 
 \begin{enumerate}
 \item \textbf{The estimate is a quadratic form in the outcome.} Its sampling
@@ -514,9 +517,9 @@ Carlo noise in this comparison.}\label{tab:main}
   tick label style={font=\footnotesize, color=inkmuted},
   title style={font=\small, color=ink},
   xlabel style={font=\footnotesize, color=inkmuted},
-  axis line style={gridline}, tick style={gridline},
+  tick style={gridline},
   xmajorgrids, grid style={gridline, line width=0.3pt},
-  axis lines=left, clip=false,
+  axis lines=left, axis line style={gridline, -}, clip=false,
 ]
 \nextgroupplot[title={Firm variance}, xlabel={SE / true SD},
   legend to name=mainlegend,
@@ -704,7 +707,60 @@ qualification of the released command.
 
 \section{Implementation status}\label{sec:status}
 
-\IfFileExists{implementation_status.tex}{\input{implementation_status.tex}}{}
+\begin{sloppypar}
+This section records what exists in the repository at the time of
+writing, and how each part was checked. Stata was not available where this
+work was done, so no Stata or Mata code described here has been executed.
+
+\paragraph{Rust core and plugin (tested).} The method is implemented in
+\texttt{rust/\allowbreak crates/\allowbreak vckss-core/\allowbreak src/\allowbreak residual\_noise.rs} and attached to the
+generic JLA engine. It supports observation units with controls kept in the
+operator, and collapsed match units with a fixed offset or without controls,
+including pooled stayers, frequency weights, the automatic solver route and
+all three centering modes. Tests compare the kernel image of the outcome,
+the pseudo-noise moments, the control term and the assembled covariance with
+independent dense calculations, and an end-to-end test drives the plugin's
+C interface. The public interface reports the method as variance source 3
+behind a capability flag; the plugin binaries shipped in the repository
+predate it and must be rebuilt before Stata can use it.
+
+\paragraph{Stata front end (written, not executed).}
+\texttt{inferencemodel(leaveout\_residual)} with \texttt{inference(highrank)}
+requests the standard errors, and \texttt{inference(auto)} requests them
+whenever the command as written can carry them and otherwise returns point
+estimates with a stated reason. Standard errors are available on the explicit
+Rust tuple, with \texttt{preconditioner(diagonal)} or
+\texttt{preconditioner(cmg)}, for observation deletion without frequency
+weights and for \texttt{engine(generic)} match deletion with
+\texttt{nuisance(fixedoffset)} or without controls. \texttt{inference(none)}
+remains the default.
+
+\paragraph{Mata exact route (written, not executed).}
+\texttt{fevc\_residual\_se.mata} implements the same algorithm with exact
+kernels for \texttt{backend(mata) algorithm(exact) deletion(match)}. A
+statement-by-statement numpy transliteration of that file reproduces the
+dense oracle: every intermediate quantity to $10^{-13}$, and standard errors
+within 0.2\% of closed form at 2,000 draws, with zero, two and six controls
+(\texttt{check\_mata\_mirror.py}). That checks the algorithm, not the Mata
+syntax.
+
+\paragraph{Not yet implemented.} Three routes cannot carry the standard
+errors yet, which is why they are not on by default:
+\begin{itemize}
+\item the compressed engine that serves the default match-deletion request
+without controls, and the front-end path for
+\texttt{preconditioner(auto)};
+\item match deletion with controls under the default
+\texttt{nuisance(joint)}, which needs worker--firm-only target diagonals that
+a joint run does not hold (one further JLA pass with the worker--firm
+solver);
+\item Mata JLA, which retains no per-unit vectors.
+\end{itemize}
+Two smaller items remain: the memory forecast of the attachment does not yet
+count its three-column kernel batches, and the working-variance and
+effective-rank diagnostics beyond the leading-share bound are in the core
+result but not yet in the Stata transport.
+\end{sloppypar}
 
 \appendix
 \section{Derivations}\label{sec:derivations}

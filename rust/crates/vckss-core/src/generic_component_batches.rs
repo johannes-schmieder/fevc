@@ -156,6 +156,7 @@ mod tests {
             schema_version: crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION,
             inference_unit: ComponentInferenceUnit::Observation,
             variance_source: ComponentVarianceSource::Oracle,
+            leave_out_residual: false,
             variance: vec![0.04; 5],
             options: ComponentInferenceOptions {
                 probes: 129,

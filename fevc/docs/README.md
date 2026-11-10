@@ -49,9 +49,13 @@ status are in [native provenance](../../native/README.md).
 - [Accepted Mean component inference plan](MEAN_COMPONENT_INFERENCE_PLAN.md):
   implementation, independent algebra, bounded sampling assessment, companion
   technical note and exact-source platform qualification.
+- [Standard errors: technical supplement](standard_errors/standard_errors.tex): the
+  leave-out residual method behind `inferencemodel(leaveout_residual)` and
+  `inference(auto)`, its assumptions, diagnostics, simulation evidence and
+  implementation status. LaTeX source; build with `latexmk -pdf`.
 - [Automatic standard errors: proposal](AUTOMATIC_INFERENCE_PROPOSAL.md): diagnosis of the
-  current inference routes, a cheaper residual-based design, prototype evidence and an
-  implementation plan. Not implemented.
+  earlier inference routes, the design choice and the first prototype evidence. The
+  supplement supersedes its implementation plan.
 - [Mean component inference assessment](MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md):
   complete attempt accounting, 22 retained exact-Mata availability failures,
   bounded native screens and material numerical sensitivity.

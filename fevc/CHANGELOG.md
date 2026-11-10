@@ -2,7 +2,22 @@
 
 ## Unreleased
 
-No unreleased changes.
+- Add leave-out residual standard errors for the four components:
+  `inferencemodel(leaveout_residual)` with `inference(highrank)`, and
+  `inference(auto)`, which computes them when the request as written can carry
+  them and otherwise returns point estimates with a reason. About 35 linear
+  solves beyond the point estimate at the default `inferencedraws(8)`.
+  Available on the explicit Rust generic tuple (observation deletion without
+  weights; `engine(generic)` match deletion with `nuisance(fixedoffset)` or
+  no controls) and on exact Mata match deletion. `inference(none)` remains
+  the default.
+- The standard errors assume similar error variances among units sharing a
+  worker or firm and are not robust to arbitrary heteroskedasticity. The
+  display states this and reports an effective-rank diagnostic.
+- Native capability bit 18 and variance-source code 3 are additive. The
+  distributed plugins predate them. The Stata and Mata sources for this
+  feature have not been executed; Rust is covered by dense-oracle tests.
+- Technical supplement: `docs/standard_errors/standard_errors.tex`.
 
 ## 0.5.2 — 2026-11-07
 

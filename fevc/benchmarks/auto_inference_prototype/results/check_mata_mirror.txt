@@ -1,0 +1,42 @@
+$ python check_mata_mirror.py 130 500 300 11 0 2000
+design: 4062 physical rows, 2327 units (1140 mover units), 0 controls, 2000 draws
+working-variance terms 8, floored 5
+   max abs difference, centred outcome:             5.55e-15
+   max abs difference, leverage:                    7.77e-16
+   max abs difference, kernel image of the outcome: 2.76e-17
+   max abs difference, point identity:              1.39e-16
+   max abs difference, unit scores:                 2.06e-13
+   pseudo-noise trace vs closed form, max relative error        0.0019
+   pseudo-noise calibration vs closed form, max relative error  0.0014
+   standard errors, pseudo-noise / closed form: [1.0002 0.9997 0.998 ]
+   effective rank (worker, firm, covariance, total): [292.1  90.7  65.  794.2]
+OK
+
+$ python check_mata_mirror.py 130 500 300 11 2 2000
+design: 4062 physical rows, 2327 units (1140 mover units), 2 controls, 2000 draws
+working-variance terms 8, floored 1
+   max abs difference, centred outcome:             1.02e-14
+   max abs difference, leverage:                    7.77e-16
+   max abs difference, kernel image of the outcome: 3.77e-17
+   max abs difference, point identity:              5.34e-16
+   max abs difference, unit scores:                 1.42e-13
+   pseudo-noise trace vs closed form, max relative error        0.0018
+   pseudo-noise calibration vs closed form, max relative error  0.0022
+   standard errors, pseudo-noise / closed form: [0.9999 0.9995 0.9979]
+   effective rank (worker, firm, covariance, total): [294.8  92.   65.2 832.9]
+OK
+
+$ python check_mata_mirror.py 130 500 300 11 6 2000
+design: 4062 physical rows, 2327 units (1140 mover units), 6 controls, 2000 draws
+working-variance terms 8, floored 0
+   max abs difference, centred outcome:             8.66e-15
+   max abs difference, leverage:                    7.77e-16
+   max abs difference, kernel image of the outcome: 3.73e-17
+   max abs difference, point identity:              4.16e-16
+   max abs difference, unit scores:                 1.41e-13
+   pseudo-noise trace vs closed form, max relative error        0.0019
+   pseudo-noise calibration vs closed form, max relative error  0.0025
+   standard errors, pseudo-noise / closed form: [0.9998 0.9995 0.9979]
+   effective rank (worker, firm, covariance, total): [298.8  90.6  65.  821.4]
+OK
+

@@ -2417,10 +2417,7 @@ pub extern "C" fn vckss_rust_projection_centering_schema_v1() -> u32 {
 fn centering_bound_component(
     component: Option<&crate::session_retained::PreparedComponentInferenceAugmentation>,
 ) -> bool {
-    component.is_some_and(|value| {
-        value.core.variance_source
-            != vckss_core::component_inference::ComponentVarianceSource::LeaveOutResidual
-    })
+    component.is_some_and(|value| !value.core.leave_out_residual)
 }
 
 fn validate_attachment_centering(
@@ -4039,7 +4036,14 @@ fn attach_component_inference_inner(
             "component-inference augmentation request is malformed",
         ));
     }
-    let variance_source = component_variance_source_from_code(request.variance_source)?;
+    // Code 3 is the leave-out residual source: a flag on the prepared
+    // attachment rather than a named variance model.
+    let leave_out_residual = request.variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL;
+    let variance_source = if leave_out_residual {
+        ComponentVarianceSource::Oracle
+    } else {
+        component_variance_source_from_code(request.variance_source)?
+    };
     let reference_distribution = component_reference_from_code(request.reference_distribution)?;
     let automatic_batch = matches!(policy, ComponentInferencePolicy::DirectAutomaticV5 { .. });
     if automatic_batch && request.batch_width != 0 {
@@ -4086,6 +4090,7 @@ fn attach_component_inference_inner(
         prepared.augment_component_inference_with_reporting(
             inference_unit,
             variance_source,
+            leave_out_residual,
             options,
             structured_options,
             policy,
@@ -4133,7 +4138,11 @@ pub extern "C" fn vckss_rust_engine_component_inference_augmentation_receipt_v1(
                 schema_version: VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
                 generation,
                 rows: receipt.rows,
-                variance_source: component_variance_source_code(receipt.variance_source),
+                variance_source: if component.core.leave_out_residual {
+                    VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL
+                } else {
+                    component_variance_source_code(receipt.variance_source)
+                },
                 reference_distribution: component_reference_code(
                     component.core.options.reference_distribution,
                 ),
@@ -9825,7 +9834,11 @@ fn component_inference_result_receipt(
         struct_size: struct_size_u32::<VckssComponentInferenceResultReceiptV2>()?,
         schema_version: VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2,
         generation,
-        variance_source: component_variance_source_code(result.variance_source),
+        variance_source: if result.residual_noise.is_some() {
+            VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL
+        } else {
+            component_variance_source_code(result.variance_source)
+        },
         reference_distribution: if result.q1.is_some() {
             VCKSS_COMPONENT_REFERENCE_Q1
         } else {
@@ -10147,7 +10160,6 @@ fn component_variance_source_from_code(value: u32) -> Result<ComponentVarianceSo
         VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE => {
             Ok(ComponentVarianceSource::StructuredLeverage)
         }
-        VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL => Ok(ComponentVarianceSource::LeaveOutResidual),
         _ => Err(BackendError::invalid(
             "engine_component_inference_augmentation",
             "unknown or private component variance-source code",
@@ -10160,7 +10172,6 @@ const fn component_variance_source_code(value: ComponentVarianceSource) -> u32 {
         ComponentVarianceSource::Oracle => 0,
         ComponentVarianceSource::StructuredCommon => VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
         ComponentVarianceSource::StructuredLeverage => VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE,
-        ComponentVarianceSource::LeaveOutResidual => VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL,
     }
 }
 

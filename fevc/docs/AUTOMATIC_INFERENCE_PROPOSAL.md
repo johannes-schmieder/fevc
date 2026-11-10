@@ -1,7 +1,14 @@
 # Automatic standard errors for the variance components: proposal
 
-Status: **proposal with prototype evidence, November 10, 2026.** Nothing in
-this note changes the released package, its registered contracts, or any
+Status: **proposal with prototype evidence, November 10, 2026; since
+implemented in part.** The owner accepted the recommendation and decided that
+standard errors should be posted as `e(V)` by default with stated caveats,
+that the prototype be extended to controls and other deletion units, and that
+`centering(corrected)` report the mean-centred standard error. The
+[technical supplement](standard_errors/standard_errors.tex) states the method
+as implemented, the extended evidence, and what remains before it can be on
+by default; it supersedes sections 5 and 6 below. Nothing in this note changes
+the released package, its registered contracts, or any
 existing evidence. The numbers below come from a Python prototype in
 [`../benchmarks/auto_inference_prototype/`](../benchmarks/auto_inference_prototype/README.md),
 not from Stata, Mata or the Rust plugin. They are development evidence for a

@@ -70,6 +70,20 @@ The whole set takes roughly forty minutes. Seeds are fixed in the commands and
 scripts, so statistical output repeats on the same library versions; timings
 do not.
 
+## Check of the Mata routine's algorithm
+
+`check_mata_mirror.py` is a statement-by-statement numpy transliteration of
+`fevc_residual_se.mata`, written because Stata was not available to execute
+the Mata file. It compares every intermediate quantity with the dense oracle
+in `physical_mc.py`:
+
+```
+python check_mata_mirror.py 130 500 300 11 2 2000   # FIRMS MOVERS STAYERS SEED CONTROLS DRAWS
+```
+
+`results/check_mata_mirror.txt` holds runs with zero, two and six controls.
+The check covers the algorithm and the unit ordering, not Mata syntax.
+
 ## Limits
 
 - The solver is a direct sparse factorisation of the firm Laplacian, not the

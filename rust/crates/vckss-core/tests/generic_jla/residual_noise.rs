@@ -267,10 +267,7 @@ fn pooled_fixed_offset_standard_errors_match_dense_expectations() {
         .component_inference
         .expect("attached standard errors");
     let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
-    assert_eq!(
-        attached.variance_source,
-        ComponentVarianceSource::LeaveOutResidual
-    );
+    assert_eq!(attached.variance_source, ComponentVarianceSource::Oracle);
     assert_eq!(
         attached.independent_units,
         hybrid.receipt.combined_deletion_units

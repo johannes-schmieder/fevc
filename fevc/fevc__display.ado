@@ -82,7 +82,10 @@ program define fevc__display
     _fevc_display_decomp
     _fevc_display_inference
 
-    if "`e(inference_variance_fit)'"!="" & e(inference_joint_posted)==0 {
+    if "`e(inference_variance_fit)'"=="leaveout_residual" {
+        _fevc_display_residual_se
+    }
+    else if "`e(inference_variance_fit)'"!="" & e(inference_joint_posted)==0 {
         di as txt _newline "Inference: use the reported individual intervals; component e(V) is not posted."
     }
     else if inlist("`e(inference)'","highrank","q1") {
@@ -92,6 +95,11 @@ program define fevc__display
     else if "`e(projection_effect)'" != "" {
         di as txt _newline "Projection covariance: " as result  ///
             "e(projection_V)" as txt "; component e(V) is not posted."
+    }
+    else if "$VCKSS_SE_AUTO"=="1" {
+        di as txt _newline "Standard errors: not computed; " ///
+            "$VCKSS_SE_AUTO_REASON."
+        di as txt "e(V) is not posted. Numerical MCSE is computational, not sampling."
     }
     else if e(mcse_available)==1 {
         di as txt _newline "Inference: not requested; e(V) not posted; " ///
@@ -322,6 +330,36 @@ program define _fevc_display_inference
         di as txt "{hline 78}"
         di as txt "Constant: normalization-dependent. "          ///
             "Projection slopes: location-invariant."
+    }
+end
+
+// Leave-out residual standard errors: what was computed, what it assumes,
+// and the diagnostics that say when the normal interval is doubtful.
+program define _fevc_display_residual_se
+    version 18.0
+    tempname rank
+    matrix `rank' = e(inference_effective_rank)
+    di as txt _newline "Standard errors: leave-out residual (" ///
+        as result e(inference_draws) as txt " pseudo-noise draws; " ///
+        as result %12.0fc e(inference_independent_units) as txt " deletion units)."
+    if e(inference_joint_posted)==1 {
+        di as txt "e(V) is posted for the four components. Numerical MCSE is computational only."
+    }
+    else {
+        di as txt "e(V) is not posted; use the available individual intervals."
+    }
+    di as txt "Assumes independent deletion units and similar error variances among units"
+    di as txt "that share a worker or a firm. Not robust to arbitrary heteroskedasticity."
+    di as txt "Effective rank (worker, firm, covariance): " as result ///
+        %9.1f `rank'[1,1] %9.1f `rank'[2,1] %9.1f `rank'[3,1] ///
+        as txt "; largest unit influence share: " as result %6.4f e(inference_max_influence_share)
+    if e(inference_low_rank_warning)==1 {
+        di as txt "Warning: a low effective rank means few directions carry a component;"
+        di as txt "         normal confidence intervals can then under-cover."
+    }
+    if "`e(centering)'"=="corrected" | "$VCKSS_CENTERING"=="corrected" {
+        di as txt "Standard errors describe the mean-centred estimate; the corrected-centering"
+        di as txt "increment is treated as fixed."
     }
 end
 

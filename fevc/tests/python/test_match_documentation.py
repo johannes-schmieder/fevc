@@ -25,6 +25,7 @@ INVENTORY = {
         "fevc.mata",
         "fevc_numerical.mata",
         "fevc_inference.mata",
+        "fevc_residual_se.mata",
         "fevc_graph.mata",
         "fevc_cmg.mata",
         "fevc_solver.mata",
@@ -57,6 +58,7 @@ INVENTORY = {
         "fevc__rust_component_attach.ado",
         "fevc__rust_component_fetch.ado",
         "fevc__rust_component_post.ado",
+        "fevc__residual_se_post.ado",
         "fevc__failure_guidance.ado",
         "fevc.sthlp"
     ]

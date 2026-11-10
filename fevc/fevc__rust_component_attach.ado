@@ -12,6 +12,9 @@ program define fevc__rust_component_attach, rclass
     // This is a pre-RNG budget, not a relaxed residual gate or a retry.
     local spectrum_iterations = cond("`deletion'"=="observation" | "`reference'"=="q0",512,128)
     local selector augmentcomponentv4
+    // The leave-out residual source fits no Gram matrix. The transport still
+    // takes a count, so send its smallest valid one; the receipt reports zero.
+    if "`model'"=="leaveout_residual" local gramprobes = 512
     local attachment_batch = `batch'
     if `batchauto'==1 {
         local selector augmentcomponentv5
@@ -30,7 +33,8 @@ program define fevc__rust_component_attach, rclass
             phase(component_augmentation)
         exit `failure_rc'
     }
-    local model_code = cond("`model'"=="structured_common",1,2)
+    local model_code = cond("`model'"=="structured_common",1, ///
+        cond("`model'"=="leaveout_residual",3,2))
     local reference_code = ("`reference'"=="q1")
     local ok = r(schema_version)==1 & r(rows)==`rows' &              ///
         r(variance_source)==`model_code' &                           ///

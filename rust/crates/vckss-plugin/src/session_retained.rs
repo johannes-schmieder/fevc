@@ -627,6 +627,7 @@ impl PreparedProblemWithMask {
         self.augment_component_inference_with_reporting(
             inference_unit,
             variance_source,
+            false,
             options,
             structured_options,
             ComponentInferencePolicy::Legacy,
@@ -645,6 +646,7 @@ impl PreparedProblemWithMask {
         self.augment_component_inference_with_reporting(
             inference_unit,
             variance_source,
+            false,
             options,
             structured_options,
             ComponentInferencePolicy::IndividualV2,
@@ -652,10 +654,12 @@ impl PreparedProblemWithMask {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn augment_component_inference_with_reporting(
         &mut self,
         inference_unit: ComponentInferenceUnit,
         variance_source: ComponentVarianceSource,
+        leave_out_residual: bool,
         options: ComponentInferenceOptions,
         structured_options: StructuredVarianceOptions,
         policy: ComponentInferencePolicy,
@@ -731,7 +735,7 @@ impl PreparedProblemWithMask {
             ));
         }
         let individual = policy != ComponentInferencePolicy::Legacy;
-        let mut core = if variance_source == ComponentVarianceSource::LeaveOutResidual {
+        let mut core = if leave_out_residual {
             // Only the individual-interval result transport carries this source.
             if !matches!(
                 policy,

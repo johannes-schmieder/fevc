@@ -1258,9 +1258,7 @@ fn run_generic_jla_with_execution_interrupt(
     // Leave-out residual standard errors describe the mean-centred estimate
     // and treat the corrected-centering increment as fixed.
     let centering_bound_attachment = projection.is_some()
-        || component_inference.is_some_and(|prepared| {
-            prepared.variance_source != ComponentVarianceSource::LeaveOutResidual
-        });
+        || component_inference.is_some_and(|prepared| !prepared.leave_out_residual);
     if centering_bound_attachment && options.centering == crate::types::Centering::Corrected {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
@@ -2623,7 +2621,7 @@ fn run_generic_jla_with_execution_interrupt(
     // term. Its unit aggregates use the geometry released just below.
     let residual_control_adjustment = match component_inference {
         Some(prepared)
-            if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual
+            if prepared.leave_out_residual
                 && prepared.inference_unit == ComponentInferenceUnit::Match
                 && controls > 0 =>
         {
@@ -3123,10 +3121,13 @@ fn validate_component_inference_request(
     }
     let expected_variance = prepared.unit_count(problem);
     let variance_shape_valid = match prepared.variance_source {
+        ComponentVarianceSource::Oracle if prepared.leave_out_residual => {
+            prepared.variance.is_empty()
+        }
         ComponentVarianceSource::Oracle => prepared.variance.len() == expected_variance,
-        ComponentVarianceSource::StructuredCommon
-        | ComponentVarianceSource::StructuredLeverage
-        | ComponentVarianceSource::LeaveOutResidual => prepared.variance.is_empty(),
+        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
+            prepared.variance.is_empty() && !prepared.leave_out_residual
+        }
     };
     if prepared.schema_version != crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION
         || !variance_shape_valid
@@ -3163,8 +3164,7 @@ fn validate_component_inference_request(
         ComponentInferenceUnit::Match => {
             // Without controls the two nuisance modes are one estimator, and
             // the leave-out residual source needs no offset to hold fixed.
-            let no_offset = prepared.variance_source == ComponentVarianceSource::LeaveOutResidual
-                && problem.controls.is_empty();
+            let no_offset = prepared.leave_out_residual && problem.controls.is_empty();
             if options.deletion != DeletionMode::Match
                 || (options.nuisance != NuisanceMode::FixedOffset && !no_offset)
             {
@@ -3179,10 +3179,7 @@ fn validate_component_inference_request(
     if hybrid.is_some()
         && (prepared.inference_unit != ComponentInferenceUnit::Match
             || (!prepared.unified_variance_fit
-                && !matches!(
-                    prepared.variance_source,
-                    ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual
-                )))
+                && prepared.variance_source != ComponentVarianceSource::Oracle))
     {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
@@ -3200,9 +3197,7 @@ fn validate_component_inference_request(
     // The leave-out residual source runs no spectral iteration whose budget
     // was qualified per route, so it follows the automatic route as the point
     // estimate does.
-    if routing.route == ModelSolverRoute::Auto
-        && prepared.variance_source != ComponentVarianceSource::LeaveOutResidual
-    {
+    if routing.route == ModelSolverRoute::Auto && !prepared.leave_out_residual {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "generic_jla_component_inference",
@@ -5939,7 +5934,7 @@ struct ComponentInferenceCounterPlan {
 /// Gaussian pseudo-outcome draws addressed by one attachment. The leave-out
 /// residual source draws only its pseudo-noise: no spectrum and no Gram.
 fn component_counter_probes(prepared: &ComponentExecution<'_>) -> Option<u64> {
-    if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual {
+    if prepared.leave_out_residual {
         return Some(u64::from(
             prepared.options.probes / crate::component_inference::RESIDUAL_NOISE_SOLVES_PER_DRAW,
         ));
@@ -6009,7 +6004,7 @@ fn plan_component_inference_counter(
         0
     } else {
         match prepared.variance_source {
-            ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => {
+            ComponentVarianceSource::Oracle => {
                 if structured_class_count.is_some() {
                     return Err(BackendError::invariant(
                         "generic_jla_component_counter",
@@ -6203,7 +6198,7 @@ fn plan_grouped_component_inference_counter(
         0
     } else {
         match prepared.variance_source {
-            ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => {
+            ComponentVarianceSource::Oracle => {
                 if structured_class_count.is_some() {
                     return Err(BackendError::invariant(
                         "generic_jla_component_counter",
@@ -7567,7 +7562,7 @@ fn run_component_inference_attachment(
             "component-inference retained state has inconsistent dimensions",
         ));
     }
-    if prepared.variance_source == ComponentVarianceSource::LeaveOutResidual {
+    if prepared.leave_out_residual {
         return residual_noise_attachment::run(
             problem,
             prepared,
@@ -10184,6 +10179,7 @@ mod tests {
             schema_version: crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION,
             inference_unit: ComponentInferenceUnit::Observation,
             variance_source: ComponentVarianceSource::Oracle,
+            leave_out_residual: false,
             variance: Vec::new(),
             options: crate::component_inference::ComponentInferenceOptions {
                 probes: 7,

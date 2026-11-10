@@ -10,6 +10,7 @@ f fevc.ado
 f fevc.mata
 f fevc_numerical.mata
 f fevc_inference.mata
+f fevc_residual_se.mata
 f fevc_graph.mata
 f fevc_cmg.mata
 f fevc_solver.mata
@@ -50,6 +51,7 @@ f fevc__rust_component_attach.ado
 f fevc__rust_comp_batch_receipt.ado
 f fevc__rust_component_fetch.ado
 f fevc__rust_component_post.ado
+f fevc__residual_se_post.ado
 f fevc__failure_guidance.ado
 f fevc.sthlp
 f fevc__memory_options.ado

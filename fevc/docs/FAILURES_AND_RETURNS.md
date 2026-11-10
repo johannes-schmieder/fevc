@@ -395,6 +395,15 @@ The explicitly selected Rust structured modes use
 `FEVC_STRUCTURED_Q0_INFERENCE` and `FEVC_STRUCTURED_Q1_INFERENCE`. The FEVC
 prefix is intentional: these are pragmatic structured-variance extensions,
 not the paper's unrestricted-heteroskedastic KSS variance-product estimator.
+Leave-out residual standard errors post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
+`FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL` when a component variance is withheld,
+with `e(inference_variance_fit)` equal to `leaveout_residual`,
+`e(inference_draws)`, `e(inference_effective_rank)`,
+`e(inference_max_influence_share)`, `e(inference_low_rank_warning)` and the
+assumption text in `e(inference_variance_warning)`. After `inference(auto)`,
+`e(inference_auto)` is 1 and `e(inference_auto_reason)` is empty when they
+were computed and otherwise states why the request returned point estimates
+only; that outcome is not a failure and keeps the point-estimate status.
 
 ## Withholding statuses
 
@@ -435,6 +444,11 @@ estimand. The catalog includes:
   `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED` for a structured request
   outside its supported explicit tuple; unknown model tokens instead fail
   as `INVALID_INFERENCE_MODEL`;
+- `LEAVEOUT_RESIDUAL_TUPLE_REQUIRED` for an explicit
+  `inferencemodel(leaveout_residual)` request outside the routes that carry
+  it or with a plugin that lacks the capability, and
+  `LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED` when it is combined with
+  `inference(q1)`; `inference(auto)` does not raise the former;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
   `INFERENCE_INTERVAL_FAILED`, and

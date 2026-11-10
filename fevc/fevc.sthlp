@@ -223,7 +223,9 @@ covariance and sorting may be negative. Shares need not lie between 0 and
 With controls, this total concerns the two fixed effects; it is not a
 bias-corrected decomposition of the controls or the full model's R-squared.
 Point estimation remains the default. Standard errors and confidence
-intervals require an explicit {help fevc##inference:inference request}.
+intervals require an explicit {help fevc##inference:inference request};
+{cmd:inference(auto)} adds {help fevc##se:leave-out residual standard errors}
+wherever the request as written supports them.
 
 {marker centering}
 {title:Outcome centering}
@@ -344,8 +346,9 @@ controls are not silently dropped. See the
 
   {it:Option}{col 40}Description
   {hline 76}
-    {cmd:inference(none|highrank|q1)}{col 40}experimental intervals; default none
-    {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}optional structured variance model
+    {cmd:inference(none|auto|highrank|q1)}{col 40}standard errors and intervals; default none
+    {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}variance method; see below
+    {cmd:inferencedraws(}{it:#}{cmd:)}{col 40}pseudo-noise draws for leaveout_residual; default 8
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
     {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}variance-model probes; default 2,048
@@ -353,7 +356,104 @@ controls are not silently dropped. See the
     {cmd:inferencebins(}{it:#}{cmd:)}{col 40}target_lowess bins; default 1,000
   {hline 76}
 
+{marker se}{...}
 {pstd}
+{bf:Standard errors with inferencemodel(leaveout_residual).} This method
+reports a standard error and a normal confidence interval for each of the
+four components and posts their covariance as {cmd:e(V)}, so {cmd:lincom}
+and {cmd:test} work. It costs about 35 linear solves beyond the point
+estimate with the default {cmd:inferencedraws(8)}. Request it explicitly with
+
+{phang2}{cmd:inference(highrank) inferencemodel(leaveout_residual)}{p_end}
+
+{pstd}
+or with {cmd:inference(auto)}, which computes these standard errors when the
+request as written can carry them and otherwise returns point estimates with
+a one-line reason. {cmd:inference(auto)} never changes the backend, engine,
+solver route, or point estimate.
+
+{pstd}
+{it:What it does.} The KSS estimate is a quadratic form in the outcome. Its
+sampling variance has a leading part that is linear in the errors and a
+smaller part that is quadratic in them. The leading part is estimated from
+squared regression residuals, each divided by its residual-maker diagonal
+(the HC2 form). The quadratic part, and the pure-noise amount that squaring
+noisy estimates adds to the leading part, are found by passing simulated
+noise through exactly the calculation applied to the data. A small working
+model of the error variances (ranks of leverage and unit size, by movers and
+stayers) is used only to generate that noise. With controls under
+{cmd:nuisance(fixedoffset)}, a first-order term adds the uncertainty in the
+estimated control coefficients. See the technical supplement
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/standard_errors/standard_errors.tex":docs/standard_errors}.
+
+{pstd}
+{it:What it assumes.} These standard errors need more than the point
+estimates do:
+
+{phang2}1. Deletion units are independent. Under match deletion each stayer
+observation is its own unit, as in the point correction for stayers.{p_end}
+{phang2}2. Error variances are similar among units that share a worker or a
+firm, or their differences are unrelated to the squared influence of those
+units. {bf:The standard errors are not robust to arbitrary}
+{bf:heteroskedasticity.} With the high leverage of worker-firm data a
+squared residual averages the variances of linked units, so this cannot be
+avoided without the leave-two-out sample splitting of KSS, which {cmd:fevc}
+does not implement.{p_end}
+{phang2}3. For the normal interval, no single direction and no single unit
+dominates a component.{p_end}
+
+{pstd}
+Heavy-tailed errors make these standard errors too large rather than too
+small. Under {cmd:centering(corrected)} they describe the mean-centred
+estimate and treat the small corrected-centering increment as fixed. The
+numerical MCSE remains a separate, computational quantity.
+
+{pstd}
+{it:Diagnostics.} {cmd:e(inference_effective_rank)} reports, for each
+component, the effective rank of the squared kernel estimated from the
+draws, with the implied lower and upper bounds on the share of the leading
+direction. Values in the hundreds or more indicate a diffuse component. A
+value near one means a few directions carry the component, as when two
+groups of firms are joined by a handful of movers; normal intervals then
+under-cover whatever variance estimate is used, the display warns, and
+{cmd:inference(q1)} is the method designed for that case.
+{cmd:e(inference_max_influence_share)} is the largest share of the squared
+first-order influence held by one unit. {cmd:e(inference_psd_cleanup)}
+records any truncation of the leading part to a positive semidefinite
+matrix, and {cmd:e(variance_floor_share)} the share of units at the working
+variance floor.
+
+{pstd}
+{it:Where it is available.} In this version the method runs on
+
+{phang2}{cmd:backend(rust) rng(counter_v1) algorithm(jla)} with
+{cmd:preconditioner(diagonal)} or {cmd:preconditioner(cmg)} and either
+{cmd:deletion(observation)} without frequency weights (controls stay in the
+model), or {cmd:deletion(match) engine(generic)} with
+{cmd:nuisance(fixedoffset)}, or with no controls; and{p_end}
+{phang2}{cmd:backend(mata) algorithm(exact) deletion(match)} with
+{cmd:nuisance(fixedoffset)}, or with no controls, for small designs.{p_end}
+
+{pstd}
+Both accept {cmd:stayers(both)}, {cmd:deletionid()}, {cmd:targetweight()}
+and, under match deletion, frequency weights. It is not yet available on the
+default automatic route for match deletion without controls (the compressed
+engine), with {cmd:preconditioner(auto)}, for match deletion with controls
+under the default {cmd:nuisance(joint)}, on Mata JLA, or together with
+{cmd:project()}. For those requests {cmd:inference(auto)} returns point
+estimates and says why. For example,
+
+{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset)}
+{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)}
+{cmd:preconditioner(cmg) inference(auto)}{p_end}
+
+{pstd}
+The evidence for this method is a simulation study and dense-oracle tests
+described in the supplement; it is development evidence, not a coverage
+guarantee.
+
+{pstd}
+{bf:Other inference methods.}
 Component inference is experimental. {cmd:inference(highrank)} requests
 normal-approximation (Gaussian) intervals for the four components. They
 require that no single direction in the data dominate a component and that
@@ -422,6 +522,10 @@ one-dominant-direction assumptions are appropriate. See the
 
 {pstd}
 The inference calculations have their own numerical settings.
+{cmd:inferencedraws()} sets the pseudo-noise draws of
+{cmd:leaveout_residual}; each draw costs four linear solves on the Rust
+route. {cmd:inferencesimulations()}, {cmd:inferencegramprobes()} and
+{cmd:inferencebins()} do not apply to that method.
 {cmd:inferencesimulations()} sets the number of simulation draws used for the
 covariance on both backends; {cmd:inferencegramprobes()} sets the random
 probes Rust uses to fit the structured variance model; {cmd:inferencebins()}
@@ -779,6 +883,16 @@ this calculation fails, the MCSE is withheld and
 Sample counts include {cmd:e(N)}, {cmd:e(worker_levels)}, and
 {cmd:e(firm_levels)}. Component covariance is posted in {cmd:e(V)} only for
 supported successful inference requests; q1 intervals have separate returns.
+For {help fevc##se:leave-out residual standard errors},
+{cmd:e(inference_variance_fit)} is {cmd:leaveout_residual},
+{cmd:e(component_inference)} holds the estimates, standard errors and
+interval limits, {cmd:e(V)} and {cmd:e(V_primitive)} the covariance,
+{cmd:e(inference_draws)} the draws, {cmd:e(inference_effective_rank)} and
+{cmd:e(inference_max_influence_share)} the diagnostics, and
+{cmd:e(inference_variance_warning)} the variance assumption. After
+{cmd:inference(auto)}, {cmd:e(inference_auto)} is 1 and
+{cmd:e(inference_auto_reason)} is empty when standard errors were computed
+and otherwise says why they were not.
 {cmd:e(projection_b)}, {cmd:e(projection_V)}, and
 {cmd:e(projection_results)} contain projection results. Timing diagnostics
 use only Stata timers that are not already in use and leave the caller's

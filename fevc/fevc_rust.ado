@@ -64,7 +64,7 @@ program define fevc_rust, rclass
         // successful response fails during collection.
         local probe_scalars abi_compiled abi_runtime core_flags support_flags ///
             deterministic progress_api execution_api numerical_api centering_api ///
-            proj_center_api comp_center_api comp_mixed_api exact_api exact_resolved_api exact_legacy_api
+            proj_center_api comp_center_api comp_mixed_api comp_residual_api exact_api exact_resolved_api exact_legacy_api
         foreach name of local probe_scalars {
             capture scalar drop __vckss_rust_`name'
         }
@@ -107,6 +107,12 @@ program define fevc_rust, rclass
             if !_rc local component_mixed_api = scalar(__vckss_rust_comp_mixed_api)
             capture scalar drop __vckss_rust_comp_mixed_api
             return scalar component_mixed_api = `component_mixed_api'
+            // Leave-out residual standard errors: absent in older plugins.
+            local component_residual_api = 0
+            capture confirm scalar __vckss_rust_comp_residual_api
+            if !_rc local component_residual_api = scalar(__vckss_rust_comp_residual_api)
+            capture scalar drop __vckss_rust_comp_residual_api
+            return scalar component_residual_api = `component_residual_api'
             return scalar exact_api = `exact_api'
             return scalar exact_resolved_api = `exact_resolved_api'
             return scalar exact_legacy_api = `exact_legacy_api'
@@ -579,7 +585,15 @@ program define fevc_rust, rclass
             local gram_arg `gramprobes'
         }
         else if `"`gramprobes'"'!="" exit 198
-        if !inlist("`model'", "structured_common", "structured_leverage") | ///
+        // For leaveout_residual a probe is one pseudo-noise solve: four per
+        // draw, at least two draws, and the normal reference only.
+        if "`model'"=="leaveout_residual" & ("`reference'"!="q0" | ///
+            `probes' < 8 | mod(`probes',4) != 0) {
+            di as err "invalid leave-out residual standard-error request"
+            exit 198
+        }
+        if !inlist("`model'", "structured_common", "structured_leverage", ///
+            "leaveout_residual") | ///
             !inlist("`reference'", "q0", "q1") | `probes' < 2 | ///
             (`batch' < 1 & "`subcommand'"!="augmentcomponentv5") | ///
             ("`subcommand'"=="augmentcomponentv5" & `batch'!=0) | ///

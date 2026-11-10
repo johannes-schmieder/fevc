@@ -6,7 +6,10 @@ program define fevc__component_model_route, rclass
     args inference inferencemodel project projecteffect projectweight ///
         inferencesimulations inferencebins inferenceseed backend rng  ///
         algorithm engine preconditioner batch stayers deletionid     ///
-        targetweight deletion nuisance weighted inferencegramprobes
+        targetweight deletion nuisance weighted inferencegramprobes ///
+        inferencedraws hascontrols
+    if "`inferencedraws'"=="" local inferencedraws = 8
+    if "`hascontrols'"=="" local hascontrols = 1
 
     local gram_supplied = (strtrim(`"`inferencegramprobes'"') != "")
     if `gram_supplied' {
@@ -22,11 +25,32 @@ program define fevc__component_model_route, rclass
     local inference_supplied = (strtrim(`"`inference'"') != "")
     if !`inference_supplied' local inference none
     local inference = lower(strtrim(`"`inference'"'))
-    if !inlist("`inference'", "none", "highrank", "q1") {
+    if !inlist("`inference'", "none", "auto", "highrank", "q1") {
         quietly _fevc_component_route_failure "INVALID_INFERENCE"          ///
-            "inference() must be none, highrank, or q1."
-        di as error "inference() must be none, highrank, or q1"
+            "inference() must be none, auto, highrank, or q1."
+        di as error "inference() must be none, auto, highrank, or q1"
         exit 198
+    }
+    if !inrange(`inferencedraws',2,4096) {
+        quietly _fevc_component_route_failure "INVALID_INFERENCE_TUNING"   ///
+            "inferencedraws() must be an integer in [2,4096]."
+        di as error "inferencedraws() must be an integer in [2,4096]"
+        exit 198
+    }
+    // inference(auto) asks for leave-out residual standard errors whenever
+    // this exact request can carry them and otherwise for point estimates
+    // only. It never changes the backend, engine, or solver route.
+    local se_auto = ("`inference'"=="auto")
+    local se_auto_reason ""
+    local residual_model = lower(strtrim(`"`inferencemodel'"'))
+    if `se_auto' & !inlist("`residual_model'","","leaveout_residual") {
+        quietly _fevc_component_route_failure "INFERENCE_MODEL_WITHOUT_INFERENCE" ///
+            "inference(auto) selects inferencemodel(leaveout_residual); other models need inference(highrank) or inference(q1)."
+        exit 198
+    }
+    if `se_auto' {
+        local inferencemodel leaveout_residual
+        local inference highrank
     }
     local project_supplied = (strtrim(`"`project'"') != "")
     local projecteffect_supplied = (strtrim(`"`projecteffect'"') != "")
@@ -82,9 +106,9 @@ program define fevc__component_model_route, rclass
     if !`supplied' local inferencemodel target_lowess
     local inferencemodel = lower(strtrim(`"`inferencemodel'"'))
     if !inlist("`inferencemodel'","target_lowess",               ///
-        "structured_common","structured_leverage") {
+        "structured_common","structured_leverage","leaveout_residual") {
         quietly _fevc_component_route_failure "INVALID_INFERENCE_MODEL"   ///
-            "inferencemodel() must be target_lowess, structured_common, or structured_leverage."
+            "inferencemodel() must be leaveout_residual, target_lowess, structured_common, or structured_leverage."
         exit 198
     }
     if `supplied' & "`inference'"=="none" {
@@ -94,6 +118,17 @@ program define fevc__component_model_route, rclass
     }
     local structured = "`inference'"!="none" &                  ///
         inlist("`inferencemodel'","structured_common","structured_leverage")
+    local residual = "`inference'"!="none" & "`inferencemodel'"=="leaveout_residual"
+    if `residual' & "`inference'"=="q1" {
+        quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED" ///
+            "inferencemodel(leaveout_residual) uses the normal reference; specify inference(highrank) or inference(auto)."
+        exit 498
+    }
+    if `residual' & `gram_supplied' {
+        quietly _fevc_component_route_failure "INFERENCE_GRAM_TUPLE_REQUIRED" ///
+            "inferencegramprobes() does not apply to inferencemodel(leaveout_residual); use inferencedraws()."
+        exit 498
+    }
     if `structured' & `project_supplied' {
         quietly _fevc_component_route_failure "COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED" ///
             "Structured component inference and project() cannot share one prepared generation."
@@ -124,6 +159,83 @@ program define fevc__component_model_route, rclass
         `preconditioner_supplied' &                               ///
         inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") & ///
         inlist(lower(strtrim("`engine'")),"","auto","generic")
+    // Leave-out residual standard errors use the same explicit Rust tuple.
+    // Match units need a fixed offset only when there are controls.
+    local residual_match_tuple = lower(strtrim("`deletion'"))=="match" & ///
+        inlist(lower(strtrim("`stayers'")),"","movers","both") &         ///
+        (lower(strtrim("`nuisance'"))=="fixedoffset" |                    ///
+            (!`hascontrols' & inlist(lower(strtrim("`nuisance'")),"","joint"))) & ///
+        lower(strtrim("`engine'"))=="generic"
+    local residual_scalable = `residual' & !`project_supplied' &         ///
+        "`backend_requested'"=="rust" & "`rng_requested'"=="counter_v1" & ///
+        `algorithm_supplied' & lower(strtrim("`algorithm'"))=="jla" &   ///
+        ((`observation_tuple' & strtrim(`"`weighted'"')=="") |          ///
+            `residual_match_tuple') &                                     ///
+        `preconditioner_supplied' &                                      ///
+        inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") &  ///
+        inlist(lower(strtrim("`engine'")),"","auto","generic")
+    // The exact Mata route carries them for fixed-offset match units.
+    local residual_exact = `residual' & !`project_supplied' &             ///
+        "`backend_requested'"=="mata" &                                  ///
+        inlist("`rng_requested'","auto","stata") & `algorithm_supplied' & ///
+        lower(strtrim("`algorithm'"))=="exact" &                         ///
+        lower(strtrim("`deletion'"))=="match" &                          ///
+        (lower(strtrim("`nuisance'"))=="fixedoffset" |                    ///
+            (!`hascontrols' & inlist(lower(strtrim("`nuisance'")),"","joint")))
+    local residual_reason ""
+    if `residual' & !`residual_scalable' & !`residual_exact' {
+        local residual_reason "this request is outside the routes that carry them (see help fevc, Standard errors)"
+    }
+    if `residual_scalable' {
+        capture quietly fevc__rust_public_call probe
+        local residual_rc = _rc
+        if !`residual_rc' local residual_rc = (r(component_residual_api)!=1)
+        if !`residual_rc' & `residual_match_tuple' &                     ///
+            lower(strtrim("`stayers'"))!="movers" {
+            local residual_rc = (r(component_mixed_api)!=1)
+        }
+        if !`residual_rc' {
+            capture quietly fevc__rust_public_call componentversion
+            local residual_rc = _rc
+            if !`residual_rc' local residual_rc = (r(interface_version)!=4)
+        }
+        if `residual_rc' {
+            local residual_scalable = 0
+            local residual_reason "the installed native plugin does not provide them"
+        }
+    }
+    if `residual' & !`residual_scalable' & !`residual_exact' {
+        if `se_auto' {
+            // Point estimates only, exactly as with inference(none).
+            local se_auto_reason "`residual_reason'"
+            local inference none
+            local inferencemodel target_lowess
+            local supplied = 0
+            local residual = 0
+            local inference_requested = `project_supplied'
+        }
+        else {
+            quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_TUPLE_REQUIRED" ///
+                "Leave-out residual standard errors require explicit Rust/Counter-V1 JLA with diagonal or CMG, and observation deletion without weights or engine(generic) match deletion with fixedoffset nuisance (or no controls); or explicit Mata/exact match deletion with fixedoffset nuisance (or no controls); `residual_reason'."
+            di as error "leave-out residual standard errors are not available for this request"
+            exit 498
+        }
+    }
+    if `residual_scalable' {
+        local scalable = 1
+        // One probe is one pseudo-noise solve: a fit and three kernel images
+        // per draw. No Gram matrix is fitted.
+        local inferencesimulations = 4*`inferencedraws'
+        local inferencegramprobes = 0
+        c_local inferencesimulations `inferencesimulations'
+    }
+    if `residual_exact' {
+        // The exact route shares the mixed-unit posting of exact structured
+        // inference; its simulation count is the number of draws.
+        local exact_structured = 1
+        local inferencegramprobes = 0
+        c_local inferencesimulations `inferencedraws'
+    }
     if `structured' & !(`scalable' | `exact_structured') {
         quietly _fevc_component_route_failure "STRUCTURED_INFERENCE_TUPLE_REQUIRED" ///
             "Structured inference requires explicit Rust/Counter-V1 JLA with diagonal or CMG, or explicit Mata/exact match deletion with fixedoffset nuisance. Match inference permits stayers(both) or stayers(movers)."
@@ -156,6 +268,10 @@ program define fevc__component_model_route, rclass
         }
     }
     c_local inferencemodel "`inferencemodel'"
+    c_local inferencedraws `inferencedraws'
+    c_local se_auto `se_auto'
+    c_local se_auto_reason "`se_auto_reason'"
+    c_local residual_se_requested `residual_scalable'
     c_local inferencegramprobes `inferencegramprobes'
     c_local inferencemodel_supplied `supplied'
     c_local scalable_component_requested `scalable'

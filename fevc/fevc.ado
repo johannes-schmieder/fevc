@@ -4,7 +4,8 @@
 *! backend and an optional Rust backend. This file validates requests,
 *! prepares the sample, dispatches computation, and posts checked results.
 *! Point estimation is the default; projection and component inference
-*! require explicit requests on supported routes.
+*! require explicit requests on supported routes. inference(auto) attaches
+*! leave-out residual standard errors where the requested route carries them.
 
 program define fevc, eclass
     version 18.0
@@ -137,12 +138,18 @@ program define _fevc_command, eclass
     quietly fevc__numerical init `nmc_cond' `nmc_lev' `nmc_raw' `nmc_all' ///
         `nmc_se' `nmc_meta' `nmc_rhs'
     capture macro drop VCKSS_INFERENCE_ERROR VCKSS_INFERENCE_DETAIL
+    capture macro drop VCKSS_SE_AUTO VCKSS_SE_AUTO_REASON
     capture noisily _vckss_impl `0'
     local command_rc = _rc
     if `command_rc' & "$VCKSS_INFERENCE_ERROR"!="" {
         quietly _vckss_post_failure "$VCKSS_INFERENCE_ERROR" `"$VCKSS_INFERENCE_DETAIL"'
     }
     capture macro drop VCKSS_INFERENCE_ERROR VCKSS_INFERENCE_DETAIL
+    if !`command_rc' & "$VCKSS_SE_AUTO"=="1" {
+        ereturn scalar inference_auto = 1
+        ereturn local inference_auto_reason "$VCKSS_SE_AUTO_REASON"
+    }
+    capture macro drop VCKSS_SE_AUTO VCKSS_SE_AUTO_REASON
     if !`command_rc' {
         capture noisily fevc__numerical post
         local command_rc = _rc
@@ -1345,7 +1352,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     local projection_requested = (strtrim(`"`project'"') != "")
     local component_requested = ("`inference'" != "none" &       ///
         inlist(lower(strtrim("`inferencemodel'")),                 ///
-            "structured_common", "structured_leverage"))
+            "structured_common", "structured_leverage",            ///
+            "leaveout_residual"))
     local generic_execution = 0
     local legacy_execution_platform = strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix"
     local cmg_execution_platform = `legacy_execution_platform' | `"`c(os)'"'=="Windows"
@@ -4336,6 +4344,7 @@ program define _vckss_impl, eclass sortpreserve
         INFERENCESeed(integer 8675309)                            ///
         INFERENCEGRAMProbes(string)                               ///
         INFERENCEBins(integer 1000)                               ///
+        INFERENCEDraws(integer 8)                                 ///
         PROJECT(varlist numeric) PROJECTEffect(string)            ///
         PROJECTWeight(string) NODISPlay NOLOG VERBOSE                           ///
     ]
@@ -4346,7 +4355,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
-    _vckss_centering request `"`centering'"' `"`inference'"' `"`project'"'
+    _vckss_centering request `"`centering'"' `"`inference'"' `"`project'"' `"`inferencemodel'"'
     fevc__numerical request `"`mcse'"' `"`inference'"' `"`project'"' `"`numericalmcse'"'
     _fevc_native_threads `"`nativethreads'"'
     global VCKSS_REPORT_LEVEL 0
@@ -4364,7 +4373,12 @@ program define _vckss_impl, eclass sortpreserve
         `"`backend'"' `"`rng'"' `"`algorithm'"' `"`engine'"'     ///
         `"`preconditioner'"' `"`batch'"' `"`stayers'"'            ///
         `"`deletionid'"' `"`targetweight'"' `"`deletion'"'       ///
-        `"`nuisance'"' `"`weight'"' `"`inferencegramprobes'"'
+        `"`nuisance'"' `"`weight'"' `"`inferencegramprobes'"'     ///
+        `inferencedraws' `=(`: word count `varlist'' > 1)'
+    // inference(auto): the display and e() report whether standard errors
+    // were attached and, if not, why.
+    global VCKSS_SE_AUTO `se_auto'
+    global VCKSS_SE_AUTO_REASON "`se_auto_reason'"
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
@@ -4396,7 +4410,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         else {
             quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
-                "Rust component inference requires explicit inferencemodel(structured_common|structured_leverage), deletion(observation), algorithm(jla), rng(counter_v1), joint nuisance handling, mover-only data, and diagonal PCG or forced CMG."
+                "Rust component inference requires explicit inferencemodel(leaveout_residual|structured_common|structured_leverage), deletion(observation), algorithm(jla), rng(counter_v1), joint nuisance handling, mover-only data, and diagonal PCG or forced CMG."
             di as error "backend(rust) component inference is outside the explicit structured tuple"
         }
         exit 498
@@ -7029,7 +7043,47 @@ program define _vckss_impl, eclass sortpreserve
                 exit 498
             }
         }
-        capture noisily mata: vckss_inference__stata(            ///
+        if "`inferencemodel'"=="leaveout_residual" & "`inference'"!="none" {
+            // Separate lazily loaded runtime; exact structured inference and
+            // its file are untouched by this model.
+            capture mata: assert(vckss_rse__api_level() == 1 &    ///
+                vckss_rse__build_id() == "vckss-residual-se-api1")
+            if _rc {
+                capture findfile fevc_residual_se.mata
+                if _rc {
+                    quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
+                        "fevc_residual_se.mata was not found on the Stata adopath."
+                    di as error "fevc_residual_se.mata was not found"
+                    exit 601
+                }
+                quietly do `"`r(fn)'"'
+            }
+            local se_worker "`id_worker'"
+            local se_firm "`id_firm'"
+            local se_deletion "`deletion_id'"
+            local se_sample "`touse'"
+            local se_stayer ""
+            if "`stayers'" == "both" {
+                local se_worker "`hybrid_worker'"
+                local se_firm "`hybrid_firm'"
+                local se_deletion "`hybrid_deletion'"
+                local se_sample "`hybrid_touse'"
+                local se_stayer "`hybrid_stayer'"
+            }
+            matrix `inference_q1' = J(1,1,.)
+            matrix `inference_q1_status' = J(1,1,.)
+            capture noisily mata: vckss_residual_se__stata(       ///
+                "`depvar'", "`se_worker'", "`se_firm'",        ///
+                `"`controlvars'"', "`frequency'", "`target'",   ///
+                "`se_deletion'", "`se_stayer'", "`se_sample'", ///
+                `level', `inferencedraws', `inferenceseed',        ///
+                `rank_tolerance', `block_tolerance', "`corrected'", ///
+                "`inference_V_primitive'", "`inference_V'",      ///
+                "`inference_highrank'", "`inference_diagnostics'", ///
+                "`inference_varfit'", "`inference_spectrum'",    ///
+                "inference_status", "inference_message")
+        }
+        else capture noisily mata: vckss_inference__stata(       ///
             "`depvar'", "`id_worker'", "`id_firm'",          ///
             `"`controlvars'"', "`frequency'", "`target'",     ///
             "`deletion_id'", "`touse'", "`hybrid_worker'",   ///
@@ -7839,6 +7893,10 @@ program define _vckss_impl, eclass sortpreserve
                     "KSS_POINT_ESTIMATES_ONLY"))))
     if "`inference'"=="q1" {
         if e(q1_computed_targets)<4 ereturn local status "KSS_Q1_PARTIAL"
+    }
+    if "`inference'"=="highrank" & "`inferencemodel'"=="leaveout_residual" {
+        fevc__residual_se_post `inferencedraws' "`deletion'"       ///
+            `inference_nuisance_omitted' mata
     }
 
     quietly mata: vckss_timer__off($VCKSS_STAGE_VALIDATION_TIMER)

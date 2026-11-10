@@ -6,7 +6,7 @@ program define fevc__centering, eclass
     gettoken action 0 : 0
     macro shift
     if "`action'"=="request" {
-        args centering inference project
+        args centering inference project inferencemodel
         local centering = lower(strtrim("`centering'"))
         if "`centering'"=="" local centering mean
         if !inlist("`centering'","none","mean","corrected") {
@@ -14,7 +14,11 @@ program define fevc__centering, eclass
             exit 198
         }
         global VCKSS_CENTERING `centering'
-        if "`centering'"=="corrected" & !inlist(lower(strtrim("`inference'")),"","none") {
+        // Leave-out residual standard errors describe the mean-centred
+        // estimate and treat the corrected increment as fixed. inference(auto)
+        // resolves to that model or to no inference.
+        if "`centering'"=="corrected" & !inlist(lower(strtrim("`inference'")),"","none","auto") & ///
+            lower(strtrim("`inferencemodel'"))!="leaveout_residual" {
             global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
             di as error "inference() supports centering(none) or centering(mean)"
             exit 498

@@ -89,7 +89,7 @@ pub fn prepare_with_interrupt(
     let terms = match source {
         ComponentVarianceSource::StructuredCommon => 15,
         ComponentVarianceSource::StructuredLeverage => 3,
-        ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => {
+        ComponentVarianceSource::Oracle => {
             return Err(BackendError::invalid(
                 "residual_moment_inference_prepare",
                 "residual moments require a named structured basis",

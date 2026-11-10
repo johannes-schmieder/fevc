@@ -7,7 +7,12 @@ program define fevc__rust_component_fetch, rclass
         outprimitive outcovariance outmcse outspectrum outq1raw           ///
         outsummaries outfolds outcv outreceipt outresults outq1results      ///
         outunits deletion expectedunits expectedgramprobes
-    local modelcode = cond("`model'"=="structured_common",1,2)
+    local modelcode = cond("`model'"=="structured_common",1, ///
+        cond("`model'"=="leaveout_residual",3,2))
+    // Leave-out residual standard errors: a probe is one pseudo-noise solve
+    // (four per draw); there is no Gram fit and no spectral iteration.
+    local expectedfit = cond(`modelcode'==3,3,2)
+    local expectedspectrumprobes = cond(`modelcode'==3,`simulations'/4,128)
     local referencecode = ("`reference'"=="q1")
     capture noisily fevc__rust_public_call componentresultv5 `handle', reference(`reference')
     // The owning fevc program releases the prepared generation on any error;
@@ -64,7 +69,7 @@ program define fevc__rust_component_fetch, rclass
         rowsof(`cv')==70 & colsof(`cv')==7 &                       ///
         rowsof(`target_status')==4 & colsof(`target_status')==2 & ///
         inlist(`joint_status',0,1,2) &                           ///
-        `variance_fit'==2 &                                    ///
+        `variance_fit'==`expectedfit' &                        ///
         `receipt'[1,1]==5 & `receipt'[1,2]==`modelcode' &          ///
         `receipt'[1,3]==`referencecode' &                          ///
         `receipt'[1,4]==`simulations' & `receipt'[1,5]>0 &         ///
@@ -78,7 +83,8 @@ program define fevc__rust_component_fetch, rclass
         `receipt'[1,23]<=4*`receipt'[1,20] &                         ///
         inlist(`units'[1,1],1,2) & `units'[1,2]==cond("`deletion'"=="match",1,2) & ///
         `units'[1,3]==`expectedunits' & `units'[1,3]>0 &            ///
-        `units'[1,4]==("`deletion'"=="match")
+        (`units'[1,4]==("`deletion'"=="match") |                   ///
+            (`modelcode'==3 & `units'[1,4]==0))
     if "`deletion'"=="match" local ok = `ok' &                     ///
         `units'[1,5]>=1 & `units'[1,5]<=`expectedunits'*(1+1e-12) &  ///
         `units'[1,6]>0 & `units'[1,6]<=1 &                         ///
@@ -95,8 +101,9 @@ program define fevc__rust_component_fetch, rclass
                 forvalues column = 1/`=colsof(``matrix_name'')' {
                     local expected_missing =                              ///
                         (`joint_status'>0 & inlist("`matrix_name'","primitive","covariance")) | ///
-                        (`variance_fit'==2 & inlist("`matrix_name'","summaries","folds","cv")) | ///
-                        ("`matrix_name'"=="receipt" & `variance_fit'==2 & inrange(`column',16,19)) | ///
+                        (inlist(`variance_fit',2,3) & inlist("`matrix_name'","summaries","folds","cv")) | ///
+                        ("`matrix_name'"=="receipt" & inlist(`variance_fit',2,3) & inrange(`column',16,19)) | ///
+                        ("`matrix_name'"=="receipt" & `variance_fit'==3 & inrange(`column',28,30)) | ///
                         ("`matrix_name'"=="receipt" & `variance_fit'==1 & inrange(`column',28,31))
                     if missing(``matrix_name''[`row',`column']) != `expected_missing' local ok = 0
                 }
@@ -107,6 +114,11 @@ program define fevc__rust_component_fetch, rclass
             `receipt'[1,28]>0 & `receipt'[1,29]>=0 & ///
             `receipt'[1,30]>=0 & `receipt'[1,31]>0 & `receipt'[1,32]<`expectedunits' & ///
             `receipt'[1,33]<=`receipt'[1,32]
+        else if `variance_fit'==3 local ok = `ok' & `receipt'[1,26]==0 & ///
+            `receipt'[1,27]==0 & `receipt'[1,31]>0 & `receipt'[1,32]>=0 & ///
+            `receipt'[1,32]<`expectedunits' & `receipt'[1,33]==0 & ///
+            `simulations'>=8 & mod(`simulations',4)==0 & ///
+            `receipt'[1,22]==`simulations'+3 & "`reference'"=="q0"
         else local ok = `ok' & `receipt'[1,26]==0 & `receipt'[1,27]==0 & ///
             `receipt'[1,32]==0 & `receipt'[1,33]==0
         local q0computed = 0
@@ -154,8 +166,8 @@ program define fevc__rust_component_fetch, rclass
         if `receipt'[1,22]!=floor(`receipt'[1,22]) local ok = 0
         forvalues row = 1/4 {
             if `joint_status'==0 & reldif(`target_status'[`row',1],`covariance'[`row',`row'])>1e-12 local ok = 0
-            if `spectrum'[`row',13]!=128 | `spectrum'[`row',14]!= ///
-                cond("`deletion'"=="observation" | "`reference'"=="q0",512,128) local ok = 0
+            if `spectrum'[`row',13]!=`expectedspectrumprobes' | `spectrum'[`row',14]!= ///
+                cond(`modelcode'==3,0,cond("`deletion'"=="observation" | "`reference'"=="q0",512,128)) local ok = 0
             local spectral_missing_allowed = (`target_status'[`row',2]==6)
             if "`reference'"=="q1" local spectral_missing_allowed = (`q1_raw'[`row',17]==6)
             forvalues column = 1/15 {

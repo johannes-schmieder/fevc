@@ -97,7 +97,7 @@ def test_tagged_repository_archive_keeps_installable_plugins():
 def test_current_adopted_payload_and_catalogs_agree():
     root = TOOLS.parents[1]
     files, _ = release.adopted_package(root, root / "native/windows-cmg-20261107/manifest.json")
-    assert len(files) == 63
+    assert len(files) == 65
 
 
 def qualified(adopted):

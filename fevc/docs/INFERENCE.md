@@ -11,6 +11,18 @@ RNG; all other tuple restrictions remain.
 The centered point estimator's numerical MCSE is a separate diagnostic,
 with the fixed-mean/increment conventions in [CENTERING.md](CENTERING.md).
 
+## Leave-out residual standard errors
+
+`inferencemodel(leaveout_residual)` and `inference(auto)` use a different
+construction from the methods described below: squared residuals carry the
+leading term of the KSS variance formula, and simulated noise passed through
+the estimator supplies the quadratic term and a calibration. They assume
+similar error variances among units that share a worker or a firm and are not
+robust to arbitrary heteroskedasticity. The method, its assumptions,
+diagnostics, evidence and supported routes are in the
+[technical supplement](standard_errors/standard_errors.tex). The rest of this
+document concerns the earlier exact and structured methods.
+
 ## Scope
 
 FEVC provides opt-in econometric component inference through two

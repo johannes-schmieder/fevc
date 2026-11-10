@@ -98,6 +98,7 @@ fevc/fevc__native_threads.ado
 fevc/fevc__numerical.ado
 fevc/fevc__observation_population.ado
 fevc/fevc__progress.ado
+fevc/fevc__residual_se_post.ado
 fevc/fevc__rust_capture_stayers.ado
 fevc/fevc__rust_cmg_model.ado
 fevc/fevc__rust_comp_batch_receipt.ado
@@ -127,6 +128,7 @@ fevc/fevc_estat.ado
 fevc/fevc_graph.mata
 fevc/fevc_inference.mata
 fevc/fevc_numerical.mata
+fevc/fevc_residual_se.mata
 fevc/fevc_resource.mata
 fevc/fevc_rng.mata
 fevc/fevc_run.ado

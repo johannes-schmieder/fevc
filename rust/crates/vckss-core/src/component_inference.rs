@@ -41,16 +41,13 @@ pub enum ComponentVarianceSource {
     Oracle = 0,
     StructuredCommon = 1,
     StructuredLeverage = 2,
-    /// Squared-residual signal term with pseudo-noise calibration; the working
-    /// variance is fitted internally and no spectral pass is run.
-    LeaveOutResidual = 3,
 }
 
 impl ComponentVarianceSource {
     #[must_use]
     pub fn structured_model(self) -> Option<StructuredVarianceModel> {
         match self {
-            Self::Oracle | Self::LeaveOutResidual => None,
+            Self::Oracle => None,
             Self::StructuredCommon => Some(StructuredVarianceModel::Common),
             Self::StructuredLeverage => Some(StructuredVarianceModel::LeverageOnly),
         }
@@ -239,6 +236,13 @@ pub struct PreparedComponentInference {
     pub schema_version: u32,
     pub inference_unit: ComponentInferenceUnit,
     pub variance_source: ComponentVarianceSource,
+    /// Leave-out residual standard errors: squared residuals carry the signal
+    /// term and internally fitted working variances drive pseudo-noise only.
+    /// `variance_source` is then `Oracle` with an empty `variance`. The public
+    /// transports report this as its own source; it is a flag here so that
+    /// the variance-source enumeration, which registered campaign sources
+    /// match exhaustively, is unchanged.
+    pub leave_out_residual: bool,
     pub variance: Vec<f64>,
     pub options: ComponentInferenceOptions,
     pub structured_options: StructuredVarianceOptions,
@@ -387,6 +391,7 @@ pub fn prepare_oracle_component_inference_with_interrupt(
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
         inference_unit: ComponentInferenceUnit::Observation,
         variance_source: ComponentVarianceSource::Oracle,
+        leave_out_residual: false,
         variance: owned_variance,
         options,
         structured_options: StructuredVarianceOptions::default(),
@@ -445,6 +450,7 @@ pub fn prepare_structured_component_inference_with_interrupt(
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
         inference_unit: ComponentInferenceUnit::Observation,
         variance_source,
+        leave_out_residual: false,
         variance: Vec::new(),
         options,
         structured_options,
@@ -493,7 +499,9 @@ pub fn prepare_residual_noise_with_interrupt(
     Ok(PreparedComponentInference {
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
         inference_unit: unit,
-        variance_source: ComponentVarianceSource::LeaveOutResidual,
+        // No variance model is named and no variances are supplied.
+        variance_source: ComponentVarianceSource::Oracle,
+        leave_out_residual: true,
         variance: Vec::new(),
         options,
         structured_options,
@@ -593,7 +601,7 @@ pub(crate) fn residual_noise_result(
         largest_match_mass_share: 0.0,
         largest_match_leverage: 0.0,
         smallest_maker_denominator: 0.0,
-        variance_source: ComponentVarianceSource::LeaveOutResidual,
+        variance_source: ComponentVarianceSource::Oracle,
         structured_variance: None,
         residual_moments: None,
         residual_noise: Some(diagnostic),
@@ -653,6 +661,7 @@ pub fn prepare_grouped_structured_component_inference(
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
         inference_unit: ComponentInferenceUnit::Match,
         variance_source,
+        leave_out_residual: false,
         variance: Vec::new(),
         options,
         structured_options,
@@ -685,6 +694,7 @@ pub fn prepare_grouped_oracle_component_inference(
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
         inference_unit: ComponentInferenceUnit::Match,
         variance_source: ComponentVarianceSource::Oracle,
+        leave_out_residual: false,
         variance: variance.to_vec(),
         options,
         structured_options: StructuredVarianceOptions::default(),

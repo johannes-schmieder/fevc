@@ -422,3 +422,25 @@ executors and adds separate replay accounting, including existing Windows
 routes. Binary refresh and scoped Linux SCC qualification are authorized;
 release, CI policy and large cluster campaigns remain separate decisions.
 See [the interface decision](MCSE_DEFAULT_INTERFACE_2026-09-30.md).
+
+## 2026-11-10: leave-out residual standard errors
+
+The owner chose a residual-based sampling standard error for the four
+components over the KSS leave-two-out construction, accepted its stronger
+assumption (similar error variances among units that share a worker or firm;
+not robust to arbitrary heteroskedasticity), and decided that it should be
+posted as `e(V)` by default with stated caveats once every default route can
+carry it. `centering(corrected)` reports the mean-centred standard error and
+treats the increment as fixed.
+
+Implemented now: `inferencemodel(leaveout_residual)` and the non-failing
+`inference(auto)`, on the explicit Rust generic tuple and the exact Mata
+match route. `inference(none)` stays the default because the compressed
+engine, the automatic-preconditioner front-end path, joint nuisance with
+match deletion and controls, and Mata JLA cannot carry the attachment yet;
+`inference(auto)` never reroutes a point request to obtain it. Additive
+readiness bit 18 and variance-source code 3 gate the native path; no ABI
+layout changes. Shipped binaries predate the capability. The Stata and Mata
+sources were written without access to Stata and are unexecuted. See the
+[technical supplement](standard_errors/standard_errors.tex).
+
