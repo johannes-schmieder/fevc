@@ -189,7 +189,8 @@ program define fevc__component_model_route, rclass
         `residual_units_ok' &                                             ///
         !("`residual_deletion'"=="observation" & strtrim(`"`weighted'"')!="")
     local residual_mata = `residual' & !`project_supplied' &              ///
-        "`backend_requested'"=="mata" &                                  ///
+        ("`backend_requested'"=="mata" |                                 ///
+            ("`backend_requested'"=="auto" & "`rng_requested'"=="stata")) & ///
         inlist("`rng_requested'","auto","stata") &                       ///
         inlist(lower(strtrim("`algorithm'")),"","jla","exact") &         ///
         `residual_units_ok'

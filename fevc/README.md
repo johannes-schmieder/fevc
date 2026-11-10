@@ -169,9 +169,17 @@ These views show the decomposition, retained population, computation choices,
 and diagnostics. Estimates and supporting results are also stored in `e()`;
 see `help fevc` for their names.
 
-Projection standard errors and component confidence intervals require
+By default the command reports leave-out residual standard errors and normal
+intervals for the four components and posts their covariance as `e(V)`. They
+assume independent deletion units and similar error variances among units
+that share a worker or a firm; they are not robust to arbitrary
+heteroskedasticity. `inference(none)` gives point estimates only. See
+`help fevc##se` and the
+[technical supplement](docs/standard_errors/standard_errors.tex).
+
+Projection standard errors and the other component intervals require
 explicit options and have different assumptions. Both accept mean (the
-default) and no centering. Component inference is experimental: it relies
+default) and no centering. That component inference is experimental: it relies
 on a model for the error variances, structured models impose further
 assumptions, fixed-offset match inference omits the uncertainty from
 estimating the controls, and observation-q1 calibration retains a

@@ -9,10 +9,15 @@ The command supports controls, frequency weights, and leaving out either
 whole worker–firm matches or single observations. It uses exact calculation
 for small problems and a randomized approximation for large ones. A native
 Rust plugin provides speed on large datasets, and a Mata implementation runs
-wherever Stata runs. Point estimation is the default. Standard errors for
-projections of fixed effects on covariates, and experimental confidence
-intervals for the variance components, are available on request for
-supported models; see the
+wherever Stata runs. By default the command also reports standard errors and
+confidence intervals for the four components; they assume similar error
+variances among observations that share a worker or a firm and are not robust
+to arbitrary heteroskedasticity (`inference(none)` gives point estimates
+only; see the
+[technical supplement](fevc/docs/standard_errors/standard_errors.tex)).
+Standard errors for projections of fixed effects on covariates, and other
+experimental intervals for the variance components, are available on request
+for supported models; see the
 [inference guide](fevc/docs/INFERENCE.md).
 
 Because the randomized approximation depends on random draws, `fevc` reports
