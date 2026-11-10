@@ -1365,9 +1365,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if "$VCKSS_NATIVE_SELECTED"!="" local native_threads = real("$VCKSS_NATIVE_SELECTED")
     local projection_requested = (strtrim(`"`project'"') != "")
     local component_requested = ("`inference'" != "none" &       ///
-        inlist(lower(strtrim("`inferencemodel'")),                 ///
-            "structured_common", "structured_leverage",            ///
-            "leaveout_residual"))
+        !inlist(lower(strtrim("`inferencemodel'")),"","target_lowess"))
     local generic_execution = 0
     local legacy_execution_platform = strpos(lower(`"`c(machine_type)'"'),"mac")>0 | `"`c(os)'"'=="Unix"
     local cmg_execution_platform = `legacy_execution_platform' | `"`c(os)'"'=="Windows"
@@ -2415,6 +2413,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname component_inference_receipt component_unit_receipt
     matrix `component_inference_receipt' = J(1,21,0)
     local ci_result_peak = 0
+    local component_plan_rhs = 0
     if `component_requested' {
         capture noisily fevc__rust_component_fetch `handle'             ///
             `component_reference' `component_model' `inferencesimulations' ///
@@ -2432,6 +2431,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             exit `failure_rc'
         }
         local ci_result_peak = r(peak)
+        local component_plan_rhs = r(plan_rhs)
         // Other routes retain their existing export path. Full CMG restores
         // the first validated export after all auxiliary receipts are checked.
         if !`saved_cmg_result' {
@@ -3330,13 +3330,6 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_plan_route_sel'==`r_sel_route' &                      ///
         `r_plan_route_fallback'==`r_fallback' &                  ///
         `r_plan_route_error'==`r_fallback_err'
-    // Structured sources solve one system per simulation plus three; the
-    // leave-out residual source reports its own count, which also includes
-    // the offset pass under joint nuisance with controls.
-    local component_plan_rhs = `component_requested'*(`inferencesimulations'+3)+`component_gram_probes'
-    if `component_requested' {
-        if "`component_model'"=="leaveout_residual" local component_plan_rhs = `component_inference_receipt'[1,22]
-    }
     local plan_result_ok =                                       ///
         `r_plan_struct'==1000 & `r_plan_schema'==1 &             ///
         `r_plan_route_schema'==2 & `r_plan_resolved'==1 &        ///
@@ -4395,13 +4388,6 @@ program define _vckss_impl, eclass sortpreserve
         `"`deletionid'"' `"`targetweight'"' `"`deletion'"'       ///
         `"`nuisance'"' `"`weight'"' `"`inferencegramprobes'"'     ///
         `inferencedraws' `=(`: word count `varlist'' > 1)'
-    // inference(auto): the display and e() report whether standard errors
-    // were attached and, if not, why.
-    global VCKSS_SE_AUTO `se_auto'
-    global VCKSS_SE_AUTO_REASON "`se_auto_reason'"
-    // Default-on standard errors must never cost the point estimate: the
-    // caller reruns the command without them if this attempt fails.
-    global VCKSS_SE_ATTACHED = (`se_auto' & `residual_se_requested')
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
@@ -4614,8 +4600,6 @@ program define _vckss_impl, eclass sortpreserve
     }
 
     if "`algorithm'" == "" {
-        // Leave-out residual standard errors run on the default randomized
-        // route; the other inference methods select the exact runtime.
         if `inference_requested' & !`residual_se_requested' local algorithm exact
         else local algorithm jla
     }
@@ -7037,101 +7021,19 @@ program define _vckss_impl, eclass sortpreserve
         worker_firm_covariance total_variance
 
     if `inference_requested' {
-        local inference_runtime_loaded = 0
-        capture mata: vckss_inference__api_level()
-        if !_rc local inference_runtime_loaded = 1
-        capture mata: assert(vckss_inference__api_level() == 2 & ///
-            vckss_inference__build_id() ==                       ///
-            "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1-mixed1")
-        if _rc {
-            if `inference_runtime_loaded' {
-                quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
-                    "A different fevc inference runtime is already loaded."
-                di as error "restart Stata or run discard before loading this inference runtime"
-                exit 498
-            }
-            capture findfile fevc_inference.mata
-            if _rc {
-                quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
-                    "fevc_inference.mata was not found on the Stata adopath."
-                di as error "fevc_inference.mata was not found"
-                exit 601
-            }
-            quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_inference__api_level() == 2 & ///
-                vckss_inference__build_id() ==                   ///
-                "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1-mixed1")
-            if _rc {
-                quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
-                    "The installed fevc inference runtime is incompatible with this command."
-                di as error "the installed inference runtime is incompatible"
-                exit 498
-            }
-        }
+        _fevc_inference_runtime_load
         if "`inferencemodel'"=="leaveout_residual" & "`inference'"!="none" {
-            // Separate lazily loaded runtime; exact structured inference and
-            // its file are untouched by this model.
-            capture mata: assert(vckss_rse__api_level() == 1 &    ///
-                vckss_rse__build_id() == "vckss-residual-se-api2")
-            if _rc {
-                capture findfile fevc_residual_se.mata
-                if _rc {
-                    quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
-                        "fevc_residual_se.mata was not found on the Stata adopath."
-                    di as error "fevc_residual_se.mata was not found"
-                    exit 601
-                }
-                quietly do `"`r(fn)'"'
-            }
-            local se_worker "`id_worker'"
-            local se_firm "`id_firm'"
-            local se_deletion "`deletion_id'"
-            local se_sample "`touse'"
-            local se_stayer ""
-            if "`deletion'" == "match" & "`stayers'" == "both" {
-                local se_worker "`hybrid_worker'"
-                local se_firm "`hybrid_firm'"
-                local se_deletion "`hybrid_deletion'"
-                local se_sample "`hybrid_touse'"
-                local se_stayer "`hybrid_stayer'"
-            }
-            if "`deletion'" == "observation" {
-                // Every physical observation is its own deletion unit.
-                tempvar se_every
-                quietly generate byte `se_every' = 1
-                local se_stayer "`se_every'"
-            }
-            matrix `inference_q1' = J(1,1,.)
-            matrix `inference_q1_status' = J(1,1,.)
-            if "`selected_algorithm'" == "exact" & "`deletion'" == "match" {
-                // The unit kernel reproduces the posted estimate only when
-                // that estimate holds the control offset fixed.
-                local se_identity = (`control_count'==0 | "`nuisance'"=="fixedoffset")
-                capture noisily mata: vckss_residual_se__stata(       ///
-                    "`depvar'", "`se_worker'", "`se_firm'",        ///
-                    `"`controlvars'"', "`frequency'", "`target'",   ///
-                    "`se_deletion'", "`se_stayer'", "`se_sample'", ///
-                    `level', `inferencedraws', `inferenceseed',        ///
-                    `rank_tolerance', `block_tolerance', `se_identity', ///
-                    "`corrected'",                                   ///
-                    "`inference_V_primitive'", "`inference_V'",      ///
-                    "`inference_highrank'", "`inference_diagnostics'", ///
-                    "`inference_varfit'", "`inference_spectrum'",    ///
-                    "inference_status", "inference_message")
-            }
-            else {
-                capture noisily mata: vckss_residual_se_jla__stata(   ///
-                    "`depvar'", "`se_worker'", "`se_firm'",        ///
-                    `"`controlvars'"', "`frequency'", "`target'",   ///
-                    "`se_deletion'", "`se_stayer'", "`se_sample'", ///
-                    `level', `inferencedraws', `inferenceseed',        ///
-                    `probes', `tolerance', `maxiter', `rank_tolerance', ///
-                    "`corrected'",                                   ///
-                    "`inference_V_primitive'", "`inference_V'",      ///
-                    "`inference_highrank'", "`inference_diagnostics'", ///
-                    "`inference_varfit'", "`inference_spectrum'",    ///
-                    "inference_status", "inference_message")
-            }
+            capture noisily _fevc_residual_se_mata "`depvar'" "`id_worker'" ///
+                "`id_firm'" `"`controlvars'"' "`frequency'" "`target'" ///
+                "`deletion_id'" "`touse'" "`hybrid_worker'" "`hybrid_firm'" ///
+                "`hybrid_deletion'" "`hybrid_stayer'" "`hybrid_touse'" ///
+                "`deletion'" "`stayers'" "`nuisance'" "`selected_algorithm'" ///
+                `control_count' `level' `inferencedraws' `inferenceseed' ///
+                `probes' `tolerance' `maxiter' `rank_tolerance' ///
+                `block_tolerance' `corrected' `inference_V_primitive' ///
+                `inference_V' `inference_highrank' `inference_diagnostics' ///
+                `inference_varfit' `inference_spectrum' `inference_q1' ///
+                `inference_q1_status'
         }
         else capture noisily mata: vckss_inference__stata(       ///
             "`depvar'", "`id_worker'", "`id_firm'",          ///
@@ -7944,10 +7846,7 @@ program define _vckss_impl, eclass sortpreserve
     if "`inference'"=="q1" {
         if e(q1_computed_targets)<4 ereturn local status "KSS_Q1_PARTIAL"
     }
-    if "`inference'"=="highrank" & "`inferencemodel'"=="leaveout_residual" {
-        fevc__residual_se_post `inferencedraws' "`deletion'"       ///
-            `inference_nuisance_omitted' mata
-    }
+    if "`inferencemodel'"=="leaveout_residual" fevc__residual_se_post `inferencedraws' "`deletion'" `inference_nuisance_omitted' mata
 
     quietly mata: vckss_timer__off($VCKSS_STAGE_VALIDATION_TIMER)
     quietly fevc__timer read $VCKSS_STAGE_VALIDATION_TIMER
@@ -9759,6 +9658,130 @@ program define _vckss_post_failure, eclass
                 real("${VCKSS_ROUTE_DELETIONID_SUPPLIED}")
         }
     }
+end
+
+// Loads the exact-Mata inference runtime, or stops with the same typed
+// failures the caller used to post inline. Kept out of the estimator program
+// to respect Stata's compiled-program size limit.
+program define _fevc_inference_runtime_load
+    version 18.0
+    local inference_runtime_loaded = 0
+    capture mata: vckss_inference__api_level()
+    if !_rc local inference_runtime_loaded = 1
+    capture mata: assert(vckss_inference__api_level() == 2 & ///
+        vckss_inference__build_id() ==                       ///
+        "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1-mixed1")
+    if _rc {
+        if `inference_runtime_loaded' {
+            quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
+                "A different fevc inference runtime is already loaded."
+            di as error "restart Stata or run discard before loading this inference runtime"
+            exit 498
+        }
+        capture findfile fevc_inference.mata
+        if _rc {
+            quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
+                "fevc_inference.mata was not found on the Stata adopath."
+            di as error "fevc_inference.mata was not found"
+            exit 601
+        }
+        quietly do `"`r(fn)'"'
+        capture mata: assert(vckss_inference__api_level() == 2 & ///
+            vckss_inference__build_id() ==                   ///
+            "vckss-inference-api2-q1-target-status-projection-mean1-component-mean1-mixed1")
+        if _rc {
+            quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
+                "The installed fevc inference runtime is incompatible with this command."
+            di as error "the installed inference runtime is incompatible"
+            exit 498
+        }
+    }
+end
+
+// Leave-out residual standard errors on the Mata backend: exact kernels for
+// exact match requests, linear solves otherwise. The Mata routines report
+// through locals of the calling program, which are passed back here.
+program define _fevc_residual_se_mata
+    version 18.0
+    args depvar id_worker id_firm controlvars frequency target deletion_id ///
+        touse hybrid_worker hybrid_firm hybrid_deletion hybrid_stayer     ///
+        hybrid_touse deletion stayers nuisance selected_algorithm         ///
+        control_count level inferencedraws inferenceseed probes tolerance ///
+        maxiter rank_tolerance block_tolerance corrected                  ///
+        inference_V_primitive inference_V inference_highrank              ///
+        inference_diagnostics inference_varfit inference_spectrum         ///
+        inference_q1 inference_q1_status
+    local inference_status "INFERENCE_RUNTIME_FAILED"
+    local inference_message "the standard-error runtime stopped unexpectedly"
+    local inference_joint_available 0
+    local inference_nuisance_omitted 0
+    capture mata: assert(vckss_rse__api_level() == 1 &            ///
+        vckss_rse__build_id() == "vckss-residual-se-api2")
+    if _rc {
+        capture findfile fevc_residual_se.mata
+        if _rc {
+            quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
+                "fevc_residual_se.mata was not found on the Stata adopath."
+            di as error "fevc_residual_se.mata was not found"
+            exit 601
+        }
+        quietly do `"`r(fn)'"'
+    }
+    local se_worker "`id_worker'"
+    local se_firm "`id_firm'"
+    local se_deletion "`deletion_id'"
+    local se_sample "`touse'"
+    local se_stayer ""
+    if "`deletion'" == "match" & "`stayers'" == "both" {
+        local se_worker "`hybrid_worker'"
+        local se_firm "`hybrid_firm'"
+        local se_deletion "`hybrid_deletion'"
+        local se_sample "`hybrid_touse'"
+        local se_stayer "`hybrid_stayer'"
+    }
+    if "`deletion'" == "observation" {
+        // Every physical observation is its own deletion unit.
+        tempvar se_every
+        quietly generate byte `se_every' = 1
+        local se_stayer "`se_every'"
+    }
+    matrix `inference_q1' = J(1,1,.)
+    matrix `inference_q1_status' = J(1,1,.)
+    if "`selected_algorithm'" == "exact" & "`deletion'" == "match" {
+        // The unit kernel reproduces the posted estimate only when that
+        // estimate holds the control offset fixed.
+        local se_identity = (`control_count'==0 | "`nuisance'"=="fixedoffset")
+        capture noisily mata: vckss_residual_se__stata(           ///
+            "`depvar'", "`se_worker'", "`se_firm'",            ///
+            `"`controlvars'"', "`frequency'", "`target'",       ///
+            "`se_deletion'", "`se_stayer'", "`se_sample'",     ///
+            `level', `inferencedraws', `inferenceseed',            ///
+            `rank_tolerance', `block_tolerance', `se_identity',    ///
+            "`corrected'",                                       ///
+            "`inference_V_primitive'", "`inference_V'",          ///
+            "`inference_highrank'", "`inference_diagnostics'",   ///
+            "`inference_varfit'", "`inference_spectrum'",        ///
+            "inference_status", "inference_message")
+    }
+    else {
+        capture noisily mata: vckss_residual_se_jla__stata(       ///
+            "`depvar'", "`se_worker'", "`se_firm'",            ///
+            `"`controlvars'"', "`frequency'", "`target'",       ///
+            "`se_deletion'", "`se_stayer'", "`se_sample'",     ///
+            `level', `inferencedraws', `inferenceseed',            ///
+            `probes', `tolerance', `maxiter', `rank_tolerance',    ///
+            "`corrected'",                                       ///
+            "`inference_V_primitive'", "`inference_V'",          ///
+            "`inference_highrank'", "`inference_diagnostics'",   ///
+            "`inference_varfit'", "`inference_spectrum'",        ///
+            "inference_status", "inference_message")
+    }
+    local mata_rc = _rc
+    c_local inference_status "`inference_status'"
+    c_local inference_message `"`inference_message'"'
+    c_local inference_joint_available `inference_joint_available'
+    c_local inference_nuisance_omitted `inference_nuisance_omitted'
+    exit `mata_rc'
 end
 
 program define _vckss_route_context_clear

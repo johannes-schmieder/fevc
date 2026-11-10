@@ -287,6 +287,13 @@ program define fevc__component_model_route, rclass
             exit 498
         }
     }
+    // The display and e() report whether default standard errors were
+    // attached and, if not, why. They must never cost the point estimate: the
+    // public entry point reruns the command without them if this attempt
+    // fails, which it recognizes by VCKSS_SE_ATTACHED.
+    global VCKSS_SE_AUTO `se_auto'
+    global VCKSS_SE_AUTO_REASON "`se_auto_reason'"
+    global VCKSS_SE_ATTACHED = (`se_auto' & `residual')
     c_local inferencemodel "`inferencemodel'"
     c_local inferencedraws `inferencedraws'
     c_local se_auto `se_auto'

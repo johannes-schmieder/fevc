@@ -11,7 +11,8 @@ program define fevc__display
         exit
     }
     if "`inferencediagnosticsonly'" != "" {
-        _fevc_display_structured
+        if "`e(inference_variance_fit)'"=="leaveout_residual" _fevc_display_residual_se
+        else _fevc_display_structured
         exit
     }
 

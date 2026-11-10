@@ -55,8 +55,10 @@ def test_probe_count_convention_is_four_solves_per_draw():
     # point estimate keeps controls in its operator.
     assert "`receipt'[1,22]>=`simulations'+3" in fetch
     assert "mod(`receipt'[1,22]-`simulations'-3,2)==0" in fetch
+    assert "return scalar plan_rhs = cond(`variance_fit'==3,`receipt'[1,22]," in fetch
     command = read("fevc/fevc.ado")
-    assert "local component_plan_rhs = `component_inference_receipt'[1,22]" in command
+    assert "local component_plan_rhs = r(plan_rhs)" in command
+    assert "`r_plan_rhs'==`expected_rhs_rows'+`component_plan_rhs'" in command
     assert "mod(`probes',4) != 0" in read("fevc/fevc_rust.ado")
 
 
@@ -97,7 +99,7 @@ def test_standard_errors_are_the_default_and_never_reroute_or_cost_the_estimate(
     assert entry.count("capture noisily _fevc_command `0'") == 2
     assert '"$VCKSS_SE_ATTACHED"=="1"' in entry and "`command_rc'!=1" in entry
     assert "global VCKSS_SE_SUPPRESS 1" in entry
-    assert "global VCKSS_SE_ATTACHED = (`se_auto' & `residual_se_requested')" in command
+    assert "global VCKSS_SE_ATTACHED = (`se_auto' & `residual')" in route
     assert '"$VCKSS_SE_SUPPRESS"=="1"' in route
 
 
@@ -138,10 +140,17 @@ def test_mata_runtime_is_separate_and_lazily_loaded():
     start = """if "`inferencemodel'"=="leaveout_residual" & "`inference'"!="none" {"""
     branch = command[command.index(start) :]
     branch = branch[: branch.index("else capture noisily mata: vckss_inference__stata(")]
-    assert "findfile fevc_residual_se.mata" in branch
-    assert 'vckss_rse__build_id() == "vckss-residual-se-api2"' in branch
-    assert "vckss_residual_se__stata(" in branch
-    assert "vckss_residual_se_jla__stata(" in branch
+    assert "capture noisily _fevc_residual_se_mata" in branch
+    helper = command[command.index("program define _fevc_residual_se_mata") :]
+    helper = helper[: helper.index("\nend\n")]
+    assert "findfile fevc_residual_se.mata" in helper
+    assert 'vckss_rse__build_id() == "vckss-residual-se-api2"' in helper
+    assert "vckss_residual_se__stata(" in helper
+    assert "vckss_residual_se_jla__stata(" in helper
+    # The Mata routines report through locals of the helper, which must pass
+    # them back to the estimator program.
+    for name in ("inference_status", "inference_joint_available", "inference_nuisance_omitted"):
+        assert f"c_local {name} " in helper
     # The exact structured runtime is not edited for this model.
     exact = read("fevc/fevc_inference.mata")
     assert "vckss_rse__" not in exact and '"leaveout_residual"' not in exact
@@ -162,3 +171,42 @@ def test_package_ships_the_new_files_and_help_documents_the_method():
     assert "{cmd:inference(none)} gives point estimates only." in help_text
     assert (PACKAGE / "docs/standard_errors/standard_errors.tex").is_file()
     assert (PACKAGE / "tests/stata/test_leaveout_residual_se.do").is_file()
+
+
+def _program_code_characters(source, name):
+    """Characters of code in one Stata program: comments, blank lines and
+    continuation markers removed."""
+    total, inside, continued, block = 0, False, False, False
+    for line in source.split("\n"):
+        if re.match(rf"\s*program define {name}\b", line):
+            inside = True
+            continue
+        if not inside:
+            continue
+        if re.match(r"\s*end\s*$", line) and not continued:
+            break
+        text = line.strip()
+        if block:
+            block = "*/" not in text
+            continue
+        if text.startswith("/*") and "*/" not in text:
+            block = True
+            continue
+        if not continued and (
+            text == ""
+            or text.startswith(("//", "*"))
+            or (text.startswith("/*") and text.endswith("*/"))
+        ):
+            continue
+        total += len(re.sub(r"\s*///.*$", "", line).strip()) + 1
+        continued = "///" in line
+    return total
+
+
+def test_largest_programs_stay_within_their_earlier_size():
+    # Both programs sit just under Stata's compiled-program size limit; the
+    # repository has exceeded it before. These bounds are their sizes, by this
+    # measure, before leave-out residual standard errors were added.
+    command = read("fevc/fevc.ado")
+    assert _program_code_characters(command, "_vckss_impl") <= 131_933
+    assert _program_code_characters(command, "_fevc_rust_generic_planned") <= 131_552

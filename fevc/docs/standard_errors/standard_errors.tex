@@ -449,7 +449,9 @@ Total extra solves & 11,901 & 35 \\
 \end{tabular}
 \caption{Linear solves beyond the point estimate, which itself needs 601
 solves with 200 probes and no controls, or about 801 with the default
-numerical MCSE.}\label{tab:cost}
+numerical MCSE. With controls kept in the regression operator under match
+deletion, this method adds one target pass for the fixed-offset unit
+geometry: two solves per probe, 400 at the default.}\label{tab:cost}
 \end{table}
 
 \section{Simulation evidence}\label{sec:evidence}

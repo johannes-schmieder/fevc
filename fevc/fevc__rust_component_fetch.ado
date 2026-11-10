@@ -287,4 +287,10 @@ program define fevc__rust_component_fetch, rclass
         matrix `outq1results' = `q1_results'
     }
     return scalar peak = `receipt'[1,7]
+    // Right-hand sides the plan must hold for this attachment. Structured
+    // sources solve one system per simulation plus three and their Gram
+    // probes; the leave-out residual source reports its own count, which
+    // includes the offset pass under joint nuisance with controls.
+    return scalar plan_rhs = cond(`variance_fit'==3,`receipt'[1,22], ///
+        `simulations'+3+`expectedgramprobes')
 end
