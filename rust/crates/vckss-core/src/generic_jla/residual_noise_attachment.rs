@@ -378,9 +378,10 @@ pub(super) fn run(
             kernel_rhs(
                 outcome,
                 &fitted.solution[local].coefficients,
-                &mut kernel_worker[base * problem.workers()
-                    ..(base + PRIMITIVE_TARGETS) * problem.workers()],
-                &mut kernel_firm[base * problem.firms()..(base + PRIMITIVE_TARGETS) * problem.firms()],
+                &mut kernel_worker
+                    [base * problem.workers()..(base + PRIMITIVE_TARGETS) * problem.workers()],
+                &mut kernel_firm
+                    [base * problem.firms()..(base + PRIMITIVE_TARGETS) * problem.firms()],
                 &mut kernel_control
                     [base * controls.len()..(base + PRIMITIVE_TARGETS) * controls.len()],
                 interrupt,
@@ -450,7 +451,12 @@ pub(super) fn run(
         &moments,
         interrupt,
     )?;
-    let diagnostic = Diagnostic::new(&fit, control.map_or(0, |value| value.controls), &moments, &covariance)?;
+    let diagnostic = Diagnostic::new(
+        &fit,
+        control.map_or(0, |value| value.controls),
+        &moments,
+        &covariance,
+    )?;
     let mut result = residual_noise_result(rows, &covariance, &moments, diagnostic)?;
 
     let mut maximum_iterations = 0_u32;

@@ -268,6 +268,12 @@ fn receipt_v5(
         receipt.floored_predictions = to_u64(fit.fit.floored_predictions, "floored predictions")?;
         receipt.nonpositive_predictions =
             to_u64(fit.fit.nonpositive_predictions, "nonpositive predictions")?;
+    } else if let Some(noise) = &result.residual_noise {
+        // No Gram matrix and no ordering contract: the working variance is an
+        // ordinary least-squares fit of the leave-out products.
+        receipt.variance_fit = 3;
+        receipt.positivity_floor = noise.working_floor;
+        receipt.floored_predictions = noise.working_floored;
     } else if result.structured_variance.is_none() {
         return Err(BackendError::invalid(
             "component_result_v5",

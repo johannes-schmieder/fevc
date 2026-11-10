@@ -23,9 +23,17 @@ fn working_variance_recovers_a_function_in_its_span_by_type() {
     let stayers = 300;
     let rows = movers + stayers;
     let mut state = 7;
-    let leverage = (0..rows).map(|_| 0.1 + 0.8 * splitmix(&mut state)).collect::<Vec<_>>();
+    let leverage = (0..rows)
+        .map(|_| 0.1 + 0.8 * splitmix(&mut state))
+        .collect::<Vec<_>>();
     let mass = (0..rows)
-        .map(|row| if row < movers { 1.0 + (row % 6) as f64 } else { 1.0 })
+        .map(|row| {
+            if row < movers {
+                1.0 + (row % 6) as f64
+            } else {
+                1.0
+            }
+        })
         .collect::<Vec<_>>();
     let lever_rank = [
         normalized_midranks(&leverage[..movers], &mut NeverInterrupt).unwrap(),
@@ -57,31 +65,54 @@ fn working_variance_recovers_a_function_in_its_span_by_type() {
     assert_eq!(fit.terms, [5, 3]);
     assert_eq!(fit.floored, 0);
     for row in 0..rows {
-        assert!((fit.variance[row] - truth[row]).abs() < 1.0e-10, "row {row}");
+        assert!(
+            (fit.variance[row] - truth[row]).abs() < 1.0e-10,
+            "row {row}"
+        );
     }
 }
 
 #[test]
 fn working_variance_shortens_small_types_and_floors_negative_fits() {
     let rows = 150;
-    let leverage = (0..rows).map(|row| row as f64 / rows as f64).collect::<Vec<_>>();
+    let leverage = (0..rows)
+        .map(|row| row as f64 / rows as f64)
+        .collect::<Vec<_>>();
     // One permitted term: the fit is the mean of the leave-out products.
-    let proxy = (0..rows).map(|row| if row % 2 == 0 { 3.0 } else { 1.0 }).collect::<Vec<_>>();
+    let proxy = (0..rows)
+        .map(|row| if row % 2 == 0 { 3.0 } else { 1.0 })
+        .collect::<Vec<_>>();
     let residual = vec![1.0; rows];
     let maker = vec![1.0; rows];
     let fit = fit_working_variance(
-        &proxy, &residual, &maker, &leverage, None, rows, 1.0e-8, &mut NeverInterrupt,
+        &proxy,
+        &residual,
+        &maker,
+        &leverage,
+        None,
+        rows,
+        1.0e-8,
+        &mut NeverInterrupt,
     )
     .unwrap();
     assert_eq!(fit.terms, [1, 0]);
-    assert!(fit.variance.iter().all(|value| (value - 2.0).abs() < 1.0e-12));
+    assert!(fit
+        .variance
+        .iter()
+        .all(|value| (value - 2.0).abs() < 1.0e-12));
 
     let rows = 400;
     let leverage = (0..rows).map(|row| row as f64).collect::<Vec<_>>();
     let rank = normalized_midranks(&leverage, &mut NeverInterrupt).unwrap();
     let proxy = rank.iter().map(|value| 0.2 + value).collect::<Vec<_>>();
     let fit = fit_working_variance(
-        &proxy, &vec![1.0; rows], &vec![1.0; rows], &leverage, None, rows, 1.0e-3,
+        &proxy,
+        &vec![1.0; rows],
+        &vec![1.0; rows],
+        &leverage,
+        None,
+        rows,
+        1.0e-3,
         &mut NeverInterrupt,
     )
     .unwrap();
@@ -90,7 +121,13 @@ fn working_variance_shortens_small_types_and_floors_negative_fits() {
     assert!(fit.variance.iter().all(|value| *value >= fit.floor));
     let all_negative = vec![-1.0; rows];
     assert!(fit_working_variance(
-        &all_negative, &vec![1.0; rows], &vec![1.0; rows], &leverage, None, rows, 1.0e-3,
+        &all_negative,
+        &vec![1.0; rows],
+        &vec![1.0; rows],
+        &leverage,
+        None,
+        rows,
+        1.0e-3,
         &mut NeverInterrupt,
     )
     .is_err());
@@ -107,7 +144,11 @@ fn centering_removes_the_collapsed_mean_direction() {
     for index in 0..3 {
         assert!((values[index] - expected[index]).abs() < 1.0e-14);
     }
-    let projection = values.iter().zip(mass).map(|(v, m)| v * m.sqrt()).sum::<f64>();
+    let projection = values
+        .iter()
+        .zip(mass)
+        .map(|(v, m)| v * m.sqrt())
+        .sum::<f64>();
     assert!(projection.abs() < 1.0e-13);
 }
 
@@ -182,8 +223,12 @@ fn apply(matrix: &[Vec<f64>], vector: &[f64]) -> Vec<f64> {
 fn pseudo_noise_moments_match_closed_forms() {
     let rows = 40;
     let (maker, kernel) = dense_design(rows);
-    let variance = (0..rows).map(|row| 0.5 + (row % 5) as f64 * 0.2).collect::<Vec<_>>();
-    let weight = (0..rows).map(|row| 1.0 / maker[row][row]).collect::<Vec<_>>();
+    let variance = (0..rows)
+        .map(|row| 0.5 + (row % 5) as f64 * 0.2)
+        .collect::<Vec<_>>();
+    let weight = (0..rows)
+        .map(|row| 1.0 / maker[row][row])
+        .collect::<Vec<_>>();
     // Closed forms: tr(K_t V K_s V) and sum_a w_a [E_a c_a + 2 k_ta k_sa].
     let mut trace = [0.0; SQUARE];
     let mut noise = [0.0; SQUARE];
@@ -210,11 +255,20 @@ fn pseudo_noise_moments_match_closed_forms() {
     let mut state = 23;
     let draws = 20_000;
     for _ in 0..draws {
-        let zeta = variance.iter().map(|v| v.sqrt() * normal(&mut state)).collect::<Vec<_>>();
+        let zeta = variance
+            .iter()
+            .map(|v| v.sqrt() * normal(&mut state))
+            .collect::<Vec<_>>();
         let pseudo_residual = apply(&maker, &zeta);
         let image = core::array::from_fn(|target| apply(&kernel[target], &zeta));
         accumulator
-            .push(&variance, &weight, &pseudo_residual, image, &mut NeverInterrupt)
+            .push(
+                &variance,
+                &weight,
+                &pseudo_residual,
+                image,
+                &mut NeverInterrupt,
+            )
             .unwrap();
     }
     let moments = accumulator.finish().unwrap();
@@ -222,7 +276,8 @@ fn pseudo_noise_moments_match_closed_forms() {
     for index in 0..SQUARE {
         let scale = trace[0].abs().max(trace[4].abs());
         assert!(
-            (moments.trace[index] - trace[index]).abs() < 6.0 * moments.trace_mcse[index] + 1e-12 * scale,
+            (moments.trace[index] - trace[index]).abs()
+                < 6.0 * moments.trace_mcse[index] + 1e-12 * scale,
             "trace {index}: {} vs {}",
             moments.trace[index],
             trace[index]
@@ -277,20 +332,39 @@ fn covariance_assembly_truncates_only_the_signal_and_applies_controls() {
         draws: 8,
         effective_rank: [f64::NAN; REPORTED_TARGETS],
     };
-    let plain = finish_covariance(&influence, &residual, &maker, &variance, None, &moments, &mut NeverInterrupt).unwrap();
+    let plain = finish_covariance(
+        &influence,
+        &residual,
+        &maker,
+        &variance,
+        None,
+        &moments,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
     for left in 0..PRIMITIVE_TARGETS {
         for right in 0..PRIMITIVE_TARGETS {
             let index = left * PRIMITIVE_TARGETS + right;
             let stat = (0..rows)
-                .map(|a| 4.0 * influence[left][a] * influence[right][a] * residual[a] * residual[a] * maker[a])
+                .map(|a| {
+                    4.0 * influence[left][a]
+                        * influence[right][a]
+                        * residual[a]
+                        * residual[a]
+                        * maker[a]
+                })
                 .sum::<f64>();
-            assert!((plain.signal[index] - (stat - 4.0 * moments.residual_noise[index])).abs() < 1e-13);
+            assert!(
+                (plain.signal[index] - (stat - 4.0 * moments.residual_noise[index])).abs() < 1e-13
+            );
             assert!((plain.trace_term[index] - 2.0 * moments.trace[index]).abs() < 1e-15);
         }
     }
     assert_eq!(plain.signal_truncation, 0.0);
     for index in 0..SQUARE {
-        assert!((plain.primitive[index] - plain.signal[index] - plain.trace_term[index]).abs() < 1e-12);
+        assert!(
+            (plain.primitive[index] - plain.signal[index] - plain.trace_term[index]).abs() < 1e-12
+        );
     }
     for share in plain.influence_concentration {
         assert!(share > 0.0 && share <= 1.0);
@@ -299,7 +373,16 @@ fn covariance_assembly_truncates_only_the_signal_and_applies_controls() {
     // A noise correction larger than the statistic makes the raw signal
     // indefinite; the reported covariance must still dominate the trace term.
     moments.residual_noise = [5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-    let clipped = finish_covariance(&influence, &residual, &maker, &variance, None, &moments, &mut NeverInterrupt).unwrap();
+    let clipped = finish_covariance(
+        &influence,
+        &residual,
+        &maker,
+        &variance,
+        None,
+        &moments,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
     assert!(clipped.smallest_signal_eigenvalue < 0.0);
     assert!(clipped.signal_truncation > 0.0);
     assert!(clipped.primitive[0] >= clipped.trace_term[0] - 1e-12);
@@ -314,9 +397,22 @@ fn covariance_assembly_truncates_only_the_signal_and_applies_controls() {
         within: vec![0.05, 0.0, -0.02, 0.0, 0.01, 0.0],
         precision: vec![0.5],
     };
-    let adjusted = finish_covariance(&influence, &residual, &maker, &variance, Some(&control), &moments, &mut NeverInterrupt).unwrap();
+    let adjusted = finish_covariance(
+        &influence,
+        &residual,
+        &maker,
+        &variance,
+        Some(&control),
+        &moments,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
     let load = (0..PRIMITIVE_TARGETS)
-        .map(|t| 0.5 * (0..rows).map(|a| -2.0 * control.collapsed[a] * influence[t][a]).sum::<f64>())
+        .map(|t| {
+            0.5 * (0..rows)
+                .map(|a| -2.0 * control.collapsed[a] * influence[t][a])
+                .sum::<f64>()
+        })
         .collect::<Vec<_>>();
     let score = |t: usize, a: usize| {
         (2.0 * influence[t][a] + control.residualized[a] * load[t]) * residual[a] * maker[a].sqrt()
@@ -324,7 +420,9 @@ fn covariance_assembly_truncates_only_the_signal_and_applies_controls() {
     };
     for left in 0..PRIMITIVE_TARGETS {
         for right in 0..PRIMITIVE_TARGETS {
-            let expected = (0..rows).map(|a| score(left, a) * score(right, a)).sum::<f64>();
+            let expected = (0..rows)
+                .map(|a| score(left, a) * score(right, a))
+                .sum::<f64>();
             assert!((adjusted.signal[left * PRIMITIVE_TARGETS + right] - expected).abs() < 1e-12);
         }
     }

@@ -568,11 +568,15 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
         target_os = "linux",
         target_os = "windows"
     )) {
-        262143
+        524287
     } else {
-        230143
+        492287
     };
     assert_eq!(capabilities.core_ready_flags, expected_ready_flags);
+    assert_ne!(
+        capabilities.core_ready_flags & vckss_plugin::ffi_engine::VCKSS_CORE_RESIDUAL_SE_V1_READY,
+        0
+    );
     assert_ne!(
         capabilities.core_ready_flags
             & vckss_plugin::ffi_engine::VCKSS_CORE_MIXED_COMPONENT_V1_READY,

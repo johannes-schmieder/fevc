@@ -2629,10 +2629,11 @@ fn run_generic_jla_with_execution_interrupt(
                     "control-estimation term lost its match plan",
                 )
             })?;
-            let (plan, mover_units) = pooled_plan.as_ref().map_or(
-                (match_plan, match_plan.rows.len()),
-                |mixed| (&mixed.plan, mixed.mover_units),
-            );
+            let (plan, mover_units) = pooled_plan
+                .as_ref()
+                .map_or((match_plan, match_plan.rows.len()), |mixed| {
+                    (&mixed.plan, mixed.mover_units)
+                });
             Some(residual_noise_attachment::control_adjustment(
                 problem,
                 plan,

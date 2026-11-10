@@ -30,7 +30,11 @@ fn dense_units(
     let (raw_x, p) = super::component_centering::design(problem, false);
     let working =
         super::component_centering::working_outcome(problem, ComponentInferenceUnit::Match);
-    let weight = problem.frequency.iter().map(|&f| f as f64).collect::<Vec<_>>();
+    let weight = problem
+        .frequency
+        .iter()
+        .map(|&f| f as f64)
+        .collect::<Vec<_>>();
     let center = working.iter().zip(&weight).map(|(y, f)| y * f).sum::<f64>()
         / problem.physical_total as f64;
     // Controls residualized on the two-way effects over physical observations.
@@ -50,7 +54,9 @@ fn dense_units(
             1,
         );
         let fitted = dense_multiply(&raw_x, stored, p, &beta, 1);
-        (0..stored).map(|row| problem.controls[j][row] - fitted[row]).collect()
+        (0..stored)
+            .map(|row| problem.controls[j][row] - fitted[row])
+            .collect()
     });
     let mut information = vec![0.0; 4];
     for left in 0..2 {
@@ -248,10 +254,18 @@ fn pooled_fixed_offset_standard_errors_match_dense_expectations() {
     {
         assert!((a - b).abs() <= 1e-12 * a.abs().max(1.0), "{a} versus {b}");
     }
-    let attached = result.component_inference.expect("attached standard errors");
+    let attached = result
+        .component_inference
+        .expect("attached standard errors");
     let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
-    assert_eq!(attached.variance_source, ComponentVarianceSource::LeaveOutResidual);
-    assert_eq!(attached.independent_units, hybrid.receipt.combined_deletion_units);
+    assert_eq!(
+        attached.variance_source,
+        ComponentVarianceSource::LeaveOutResidual
+    );
+    assert_eq!(
+        attached.independent_units,
+        hybrid.receipt.combined_deletion_units
+    );
     assert_eq!(attached.solve_receipts.len(), 3 + 4 * DRAWS as usize);
     assert_eq!(diagnostic.draws, DRAWS);
     assert_eq!(diagnostic.controls, 2);
@@ -297,8 +311,10 @@ fn pooled_fixed_offset_standard_errors_match_dense_expectations() {
                 let mut covariance = [0.0; 2];
                 for b in 0..rows {
                     let maker = dense.maker[a * rows + b];
-                    let (k_left, k_right) =
-                        (dense.kernel[left][a * rows + b], dense.kernel[right][a * rows + b]);
+                    let (k_left, k_right) = (
+                        dense.kernel[left][a * rows + b],
+                        dense.kernel[right][a * rows + b],
+                    );
                     expected_square += maker * maker * variance[b];
                     cross += k_left * k_right * variance[b];
                     covariance[0] += k_left * maker * variance[b];
@@ -308,7 +324,9 @@ fn pooled_fixed_offset_standard_errors_match_dense_expectations() {
                 noise += attached.maker_inverse[a]
                     * (expected_square * cross + 2.0 * covariance[0] * covariance[1]);
             }
-            let scale = attached.trace_term[0].abs().max(attached.trace_term[4].abs());
+            let scale = attached.trace_term[0]
+                .abs()
+                .max(attached.trace_term[4].abs());
             assert!(
                 (attached.trace_term[index] - 2.0 * trace).abs()
                     <= 6.0 * attached.trace_mcse[index] + 1e-9 * scale,
@@ -330,7 +348,9 @@ fn pooled_fixed_offset_standard_errors_match_dense_expectations() {
     // engine's own pseudo-noise correction.
     let load: [[f64; 2]; 3] = core::array::from_fn(|t| {
         let slope: [f64; 2] = core::array::from_fn(|j| {
-            -2.0 * (0..rows).map(|a| dense.collapsed[j][a] * influence[t][a]).sum::<f64>()
+            -2.0 * (0..rows)
+                .map(|a| dense.collapsed[j][a] * influence[t][a])
+                .sum::<f64>()
         });
         core::array::from_fn(|j| (0..2).map(|k| dense.precision[j * 2 + k] * slope[k]).sum())
     });
@@ -344,11 +364,15 @@ fn pooled_fixed_offset_standard_errors_match_dense_expectations() {
         }
         slope * scaled + shift
     };
-    let scale = attached.influence_term[0].abs().max(attached.influence_term[4].abs());
+    let scale = attached.influence_term[0]
+        .abs()
+        .max(attached.influence_term[4].abs());
     for left in 0..3 {
         for right in 0..3 {
             let index = left * 3 + right;
-            let expected = (0..rows).map(|a| score(left, a) * score(right, a)).sum::<f64>()
+            let expected = (0..rows)
+                .map(|a| score(left, a) * score(right, a))
+                .sum::<f64>()
                 - 4.0 * diagnostic.residual_noise[index];
             assert!(
                 (attached.influence_term[index] - expected).abs() <= 1e-7 * scale,

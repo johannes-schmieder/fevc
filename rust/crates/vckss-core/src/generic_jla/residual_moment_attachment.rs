@@ -100,9 +100,9 @@ pub(super) fn terms(prepared: &ComponentExecution<'_>) -> Result<usize> {
             },
         ),
         ComponentVarianceSource::StructuredLeverage => Ok(3),
-        ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => Err(invalid(
-            "residual moments cannot have oracle variance source",
-        )),
+        ComponentVarianceSource::Oracle | ComponentVarianceSource::LeaveOutResidual => Err(
+            invalid("residual moments cannot have oracle variance source"),
+        ),
     }
 }
 

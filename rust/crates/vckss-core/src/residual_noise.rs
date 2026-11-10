@@ -109,17 +109,28 @@ pub fn fit_working_variance(
             _ => None,
         };
         let units = range.len();
-        let available = if mass_rank.is_some() { MAXIMUM_WORKING_TERMS } else { 3 };
+        let available = if mass_rank.is_some() {
+            MAXIMUM_WORKING_TERMS
+        } else {
+            3
+        };
         let permitted = (units / UNITS_PER_WORKING_TERM).clamp(1, available);
         let basis = |local: usize| -> [f64; MAXIMUM_WORKING_TERMS] {
             let lever = leverage_rank[local];
             // Linear terms precede squares so a shortened basis stays monotone.
             match &mass_rank {
-                Some(rank) => [1.0, lever, rank[local], lever * lever, rank[local] * rank[local]],
+                Some(rank) => [
+                    1.0,
+                    lever,
+                    rank[local],
+                    lever * lever,
+                    rank[local] * rank[local],
+                ],
                 None => [1.0, lever, lever * lever, 0.0, 0.0],
             }
         };
-        let mut gram = [[StableAccumulator::default(); MAXIMUM_WORKING_TERMS]; MAXIMUM_WORKING_TERMS];
+        let mut gram =
+            [[StableAccumulator::default(); MAXIMUM_WORKING_TERMS]; MAXIMUM_WORKING_TERMS];
         let mut moment = [StableAccumulator::default(); MAXIMUM_WORKING_TERMS];
         for local in 0..units {
             checkpoint_chunk(interrupt, local, "residual_noise_working_variance")?;
@@ -404,7 +415,8 @@ impl NoiseAccumulator {
             return Err(invalid("no pseudo-noise draw was accumulated"));
         }
         let draws = f64::from(self.draws);
-        let summarize = |sum: &[StableAccumulator; SQUARE], square: &[StableAccumulator; SQUARE]| {
+        let summarize = |sum: &[StableAccumulator; SQUARE],
+                         square: &[StableAccumulator; SQUARE]| {
             let mut mean = [0.0; SQUARE];
             let mut mcse = [0.0; SQUARE];
             for index in 0..SQUARE {
@@ -519,7 +531,9 @@ pub fn finish_covariance(
         || maker_inverse
             .iter()
             .any(|value| !value.is_finite() || *value <= 0.0)
-        || variance.iter().any(|value| !value.is_finite() || *value <= 0.0)
+        || variance
+            .iter()
+            .any(|value| !value.is_finite() || *value <= 0.0)
     {
         return Err(invalid("residual covariance inputs are invalid"));
     }
@@ -540,10 +554,14 @@ pub fn finish_covariance(
             for row in 0..rows {
                 checkpoint_chunk(interrupt, row, "residual_noise_control")?;
                 for (index, value) in slope.iter_mut().enumerate() {
-                    value.add(-2.0 * control.collapsed[index * rows + row] * influence[target][row]);
+                    value
+                        .add(-2.0 * control.collapsed[index * rows + row] * influence[target][row]);
                 }
             }
-            let slope = slope.into_iter().map(StableAccumulator::finish).collect::<Vec<_>>();
+            let slope = slope
+                .into_iter()
+                .map(StableAccumulator::finish)
+                .collect::<Vec<_>>();
             let mut weight = vec![0.0; q];
             for left in 0..q {
                 let mut value = StableAccumulator::default();
@@ -609,7 +627,8 @@ pub fn finish_covariance(
             let value = residual_signal[index].finish() - 4.0 * moments.residual_noise[index];
             // Swap only the squared two-way influence for its working-variance
             // counterpart; control-estimation pieces stay residual-based.
-            let model = value - (influence_square[index].finish() - 4.0 * moments.residual_noise[index])
+            let model = value
+                - (influence_square[index].finish() - 4.0 * moments.residual_noise[index])
                 + (model_square[index].finish() - 4.0 * moments.trace[index]);
             if !value.is_finite() || !model.is_finite() {
                 return Err(nonfinite("the component signal covariance is nonfinite"));

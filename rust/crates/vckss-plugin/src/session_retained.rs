@@ -731,7 +731,27 @@ impl PreparedProblemWithMask {
             ));
         }
         let individual = policy != ComponentInferencePolicy::Legacy;
-        let mut core = if let ComponentInferencePolicy::DirectV4 { gram_probes }
+        let mut core = if variance_source == ComponentVarianceSource::LeaveOutResidual {
+            // Only the individual-interval result transport carries this source.
+            if !matches!(
+                policy,
+                ComponentInferencePolicy::DirectV4 { .. }
+                    | ComponentInferencePolicy::DirectAutomaticV5 { .. }
+            ) {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "session_component_inference_augmentation",
+                    "leave-out residual standard errors require the V4 or V5 attachment",
+                ));
+            }
+            vckss_core::component_inference::prepare_residual_noise_with_interrupt(
+                inference_problem,
+                inference_unit,
+                options,
+                structured_options,
+                interrupt,
+            )?
+        } else if let ComponentInferencePolicy::DirectV4 { gram_probes }
         | ComponentInferencePolicy::DirectAutomaticV5 { gram_probes } = policy
         {
             vckss_core::residual_moment_inference::prepare_direct_with_interrupt(

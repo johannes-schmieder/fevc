@@ -551,7 +551,11 @@ pub(crate) fn residual_noise_result(
             trace_square_raw: trace_square,
             trace_square,
             trace_square_mcse: mcse,
-            leading_share: if rank.is_finite() { rank.sqrt().recip() } else { 1.0 },
+            leading_share: if rank.is_finite() {
+                rank.sqrt().recip()
+            } else {
+                1.0
+            },
             probes: moments.draws,
             ..ComponentSpectrumDiagnostics::default()
         }

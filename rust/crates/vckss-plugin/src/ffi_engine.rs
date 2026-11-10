@@ -149,6 +149,8 @@ pub const VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY: u64 = 1 << 15;
 /// Component inference supports Mean with the observed centering mean fixed.
 pub const VCKSS_CORE_COMPONENT_CENTERING_V1_READY: u64 = 1 << 16;
 pub const VCKSS_CORE_MIXED_COMPONENT_V1_READY: u64 = 1 << 17;
+/// Leave-out residual standard errors on the generic-JLA component attachment.
+pub const VCKSS_CORE_RESIDUAL_SE_V1_READY: u64 = 1 << 18;
 const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 = if cfg!(any(
     target_os = "macos",
     target_os = "linux",
@@ -182,7 +184,8 @@ const VCKSS_BACKEND_CAPABILITIES_V1_CORE_READY_FLAGS: u64 = VCKSS_CORE_MATCH_GRA
     | VCKSS_CORE_PROJECTION_JLA_READY
     | VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY
     | VCKSS_CORE_COMPONENT_CENTERING_V1_READY
-    | VCKSS_CORE_MIXED_COMPONENT_V1_READY;
+    | VCKSS_CORE_MIXED_COMPONENT_V1_READY
+    | VCKSS_CORE_RESIDUAL_SE_V1_READY;
 const VCKSS_BACKEND_CAPABILITIES_V1_SUPPORT_FLAGS: u64 =
     VCKSS_SUPPORT_JLA | VCKSS_SUPPORT_MATCH_DELETION | VCKSS_SUPPORT_DIAGONAL;
 pub const VCKSS_INTERRUPT_CONTINUE: i32 = 0;
@@ -246,6 +249,7 @@ pub const VCKSS_PROJECTION_WEIGHT_TARGET: u32 = 2;
 pub const VCKSS_PROJECTION_SCHEMA_V1: u32 = 1;
 pub const VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON: u32 = 1;
 pub const VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE: u32 = 2;
+pub const VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL: u32 = 3;
 pub const VCKSS_COMPONENT_REFERENCE_Q0: u32 = 0;
 pub const VCKSS_COMPONENT_REFERENCE_Q1: u32 = 1;
 pub const VCKSS_COMPONENT_INFERENCE_SCHEMA_V1: u32 = 1;
@@ -10131,6 +10135,7 @@ fn component_variance_source_from_code(value: u32) -> Result<ComponentVarianceSo
         VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE => {
             Ok(ComponentVarianceSource::StructuredLeverage)
         }
+        VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL => Ok(ComponentVarianceSource::LeaveOutResidual),
         _ => Err(BackendError::invalid(
             "engine_component_inference_augmentation",
             "unknown or private component variance-source code",
@@ -10143,6 +10148,7 @@ const fn component_variance_source_code(value: ComponentVarianceSource) -> u32 {
         ComponentVarianceSource::Oracle => 0,
         ComponentVarianceSource::StructuredCommon => VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
         ComponentVarianceSource::StructuredLeverage => VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE,
+        ComponentVarianceSource::LeaveOutResidual => VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL,
     }
 }
 

@@ -63,6 +63,8 @@ _Static_assert(sizeof(VckssComponentInferenceUnitReceiptV1) == 64, "component un
 _Static_assert(sizeof(VckssComponentInferenceUnitReceiptV2) == 80, "mixed unit receipt size");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV2, mover_units) == 64, "mixed mover count offset");
 _Static_assert(VCKSS_CORE_MIXED_COMPONENT_V1_READY == UINT64_C(131072), "mixed capability bit");
+_Static_assert(VCKSS_CORE_RESIDUAL_SE_V1_READY == UINT64_C(262144), "residual standard-error capability bit");
+_Static_assert(VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL == 3u, "leave-out residual variance source");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, independent_units) == 24, "component independent unit offset changed");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, effective_match_count) == 32, "component match mass offset changed");
 
