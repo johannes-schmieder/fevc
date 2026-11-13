@@ -64,7 +64,7 @@ program define fevc_rust, rclass
         // successful response fails during collection.
         local probe_scalars abi_compiled abi_runtime core_flags support_flags ///
             deterministic progress_api execution_api numerical_api centering_api ///
-            proj_center_api comp_center_api comp_mixed_api comp_residual_api exact_api exact_resolved_api exact_legacy_api
+            proj_center_api comp_center_api comp_mixed_api comp_residual_api comp_repeat_api exact_api exact_resolved_api exact_legacy_api
         foreach name of local probe_scalars {
             capture scalar drop __vckss_rust_`name'
         }
@@ -113,6 +113,12 @@ program define fevc_rust, rclass
             if !_rc local component_residual_api = scalar(__vckss_rust_comp_residual_api)
             capture scalar drop __vckss_rust_comp_residual_api
             return scalar component_residual_api = `component_residual_api'
+            // Repeat-measurement standard errors: a later capability bit.
+            local component_repeat_api = 0
+            capture confirm scalar __vckss_rust_comp_repeat_api
+            if !_rc local component_repeat_api = scalar(__vckss_rust_comp_repeat_api)
+            capture scalar drop __vckss_rust_comp_repeat_api
+            return scalar component_repeat_api = `component_repeat_api'
             return scalar exact_api = `exact_api'
             return scalar exact_resolved_api = `exact_resolved_api'
             return scalar exact_legacy_api = `exact_legacy_api'
@@ -587,13 +593,13 @@ program define fevc_rust, rclass
         else if `"`gramprobes'"'!="" exit 198
         // For leaveout_residual a probe is one pseudo-noise solve: four per
         // draw, at least two draws, and the normal reference only.
-        if "`model'"=="leaveout_residual" & ("`reference'"!="q0" | ///
-            `probes' < 8 | mod(`probes',4) != 0) {
+        if inlist("`model'","leaveout_residual","repeat_measurement") & ///
+            ("`reference'"!="q0" | `probes' < 8 | mod(`probes',4) != 0) {
             di as err "invalid leave-out residual standard-error request"
             exit 198
         }
         if !inlist("`model'", "structured_common", "structured_leverage", ///
-            "leaveout_residual") | ///
+            "leaveout_residual", "repeat_measurement") | ///
             !inlist("`reference'", "q0", "q1") | `probes' < 2 | ///
             (`batch' < 1 & "`subcommand'"!="augmentcomponentv5") | ///
             ("`subcommand'"=="augmentcomponentv5" & `batch'!=0) | ///
@@ -787,6 +793,25 @@ program define fevc_rust, rclass
                 capture scalar drop __vckss_rse_rank_`index'
             }
             return matrix leaveout_residual = `residual_diagnostic'
+        }
+        // Repeat-measurement standard errors add the shape of their
+        // variances: the movers' two steps and the stayers' own variances.
+        capture confirm scalar __vckss_rm_scale_terms
+        if !_rc {
+            tempname repeat_shape
+            matrix `repeat_shape' = J(1,14,.)
+            local column = 0
+            foreach name in scale_terms profile_terms scale_floor scale_floored ///
+                stayers stayer_units stayer_floored pair_term {
+                local ++column
+                matrix `repeat_shape'[1,`column'] = scalar(__vckss_rm_`name')
+                capture scalar drop __vckss_rm_`name'
+            }
+            forvalues index = 1/6 {
+                matrix `repeat_shape'[1,8+`index'] = scalar(__vckss_rm_profile_`index')
+                capture scalar drop __vckss_rm_profile_`index'
+            }
+            return matrix repeat_measurement = `repeat_shape'
         }
         return matrix primitive_covariance = `primitive'
         return matrix covariance = `covariance'
@@ -1105,6 +1130,14 @@ program define fevc_rust, rclass
         local signature_hi = scalar(__vckss_rust_solve_signature_hi)
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
         if `capability_schema' == 3 {
+            // Under joint nuisance with controls the residual-pass standard
+            // errors on match units add an offset pass of two solves per
+            // point-estimate probe; they are part of the plan's right-hand
+            // sides (deletion 1 is match, nuisance 1 is joint).
+            if `componentinference' & "$VCKSS_SE_MODEL"!="" & `generic_controls'>0 & ///
+                `native_nuisance'==1 & `native_deletion'==1 {
+                local componentprobes = `componentprobes'+2*`leverage_rhs'
+            }
             capture noisily fevc__rust_plan_receipt                      ///
                 `componentinference' `componentprobes' `componentgramprobes' `execution' ///
                 `exactexecution' `exactthreads' `exact_work' `handle'

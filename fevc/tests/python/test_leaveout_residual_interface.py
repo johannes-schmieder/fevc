@@ -55,7 +55,7 @@ def test_probe_count_convention_is_four_solves_per_draw():
     # point estimate keeps controls in its operator.
     assert "`receipt'[1,22]>=`simulations'+3" in fetch
     assert "mod(`receipt'[1,22]-`simulations'-3,2)==0" in fetch
-    assert "return scalar plan_rhs = cond(`variance_fit'==3,`receipt'[1,22]," in fetch
+    assert "return scalar plan_rhs = cond(inlist(`variance_fit',3,4),`receipt'[1,22]," in fetch
     command = read("fevc/fevc.ado")
     assert "local component_plan_rhs = r(plan_rhs)" in command
     assert "`r_plan_rhs'==`expected_rhs_rows'+`component_plan_rhs'" in command
@@ -65,10 +65,11 @@ def test_probe_count_convention_is_four_solves_per_draw():
 def test_helpers_map_the_model_to_source_three_and_fit_three():
     attach = read("fevc/fevc__rust_component_attach.ado")
     fetch = read("fevc/fevc__rust_component_fetch.ado")
-    mapping = """cond("`model'"=="leaveout_residual",3,2)"""
+    # Code 4 is the repeat-measurement variant of the same pass.
+    mapping = """cond("`model'"=="leaveout_residual",3,cond("`model'"=="repeat_measurement",4,2))"""
     for text in (attach, fetch):
         assert mapping in text
-    assert "local expectedfit = cond(`modelcode'==3,3,2)" in fetch
+    assert "local expectedfit = cond(inlist(`modelcode',3,4),`modelcode',2)" in fetch
     assert "fevc__residual_se_post" in read("fevc/fevc__rust_component_post.ado")
     batch = read("fevc/fevc__rust_comp_batch_receipt.ado")
     assert "`batch'[1,7]==(`gram_probes'>0)" in batch
@@ -118,7 +119,10 @@ def test_native_engine_selection_and_offset_pass_are_bound_to_the_flag():
 
 def test_corrected_centering_is_admitted_only_for_this_model():
     centering = read("fevc/fevc__centering.ado")
-    assert """lower(strtrim("`inferencemodel'"))!="leaveout_residual\"""" in centering
+    assert (
+        """!inlist(lower(strtrim("`inferencemodel'")),"leaveout_residual","repeat_measurement")"""
+        in centering
+    )
     plugin = read("rust/crates/vckss-plugin/src/ffi_engine.rs")
     assert "fn centering_bound_component(" in plugin
 
@@ -137,19 +141,20 @@ def test_display_and_returns_state_the_assumption():
 def test_mata_runtime_is_separate_and_lazily_loaded():
     mata = read("fevc/fevc_residual_se.mata")
     assert "mata set matastrict on" in mata
-    assert 'return("vckss-residual-se-api2")' in mata
+    assert 'return("vckss-residual-se-api3")' in mata
     assert "void vckss_residual_se__stata(" in mata
     assert "void vckss_residual_se_jla__stata(" in mata
     assert "real colvector vckss_rse__finite_projection(" in mata
     command = read("fevc/fevc.ado")
-    start = """if "`inferencemodel'"=="leaveout_residual" & "`inference'"!="none" {"""
+    # The route helper names the model of a residual-pass request in a global.
+    start = """if "$VCKSS_SE_MODEL"!="" & "`inference'"!="none" {"""
     branch = command[command.index(start) :]
     branch = branch[: branch.index("else capture noisily mata: vckss_inference__stata(")]
     assert "capture noisily _fevc_residual_se_mata" in branch
     helper = command[command.index("program define _fevc_residual_se_mata") :]
     helper = helper[: helper.index("\nend\n")]
     assert "findfile fevc_residual_se.mata" in helper
-    assert 'vckss_rse__build_id() == "vckss-residual-se-api2"' in helper
+    assert 'vckss_rse__build_id() == "vckss-residual-se-api3"' in helper
     assert "vckss_rse__loaded() == 1" in helper and "real scalar vckss_rse__loaded()" in mata
     assert "vckss_residual_se__stata(" in helper
     assert "vckss_residual_se_jla__stata(" in helper

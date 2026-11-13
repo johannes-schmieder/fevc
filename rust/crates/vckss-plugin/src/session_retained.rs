@@ -628,6 +628,7 @@ impl PreparedProblemWithMask {
             inference_unit,
             variance_source,
             false,
+            false,
             options,
             structured_options,
             ComponentInferencePolicy::Legacy,
@@ -647,6 +648,7 @@ impl PreparedProblemWithMask {
             inference_unit,
             variance_source,
             false,
+            false,
             options,
             structured_options,
             ComponentInferencePolicy::IndividualV2,
@@ -660,6 +662,7 @@ impl PreparedProblemWithMask {
         inference_unit: ComponentInferenceUnit,
         variance_source: ComponentVarianceSource,
         leave_out_residual: bool,
+        repeat_measurement: bool,
         options: ComponentInferenceOptions,
         structured_options: StructuredVarianceOptions,
         policy: ComponentInferencePolicy,
@@ -748,13 +751,23 @@ impl PreparedProblemWithMask {
                     "leave-out residual standard errors require the V4 or V5 attachment",
                 ));
             }
-            vckss_core::component_inference::prepare_residual_noise_with_interrupt(
-                inference_problem,
-                inference_unit,
-                options,
-                structured_options,
-                interrupt,
-            )?
+            if repeat_measurement {
+                vckss_core::component_inference::prepare_repeat_measurement_with_interrupt(
+                    inference_problem,
+                    inference_unit,
+                    options,
+                    structured_options,
+                    interrupt,
+                )?
+            } else {
+                vckss_core::component_inference::prepare_residual_noise_with_interrupt(
+                    inference_problem,
+                    inference_unit,
+                    options,
+                    structured_options,
+                    interrupt,
+                )?
+            }
         } else if let ComponentInferencePolicy::DirectV4 { gram_probes }
         | ComponentInferencePolicy::DirectAutomaticV5 { gram_probes } = policy
         {

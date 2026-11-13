@@ -571,11 +571,15 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
         target_os = "linux",
         target_os = "windows"
     )) {
-        524287
+        1048575
     } else {
-        492287
+        1016575
     };
     assert_eq!(capabilities.core_ready_flags, expected_ready_flags);
+    assert_ne!(
+        capabilities.core_ready_flags & vckss_plugin::ffi_engine::VCKSS_CORE_REPEAT_SE_V1_READY,
+        0
+    );
     assert_ne!(
         capabilities.core_ready_flags & vckss_plugin::ffi_engine::VCKSS_CORE_RESIDUAL_SE_V1_READY,
         0
@@ -4352,6 +4356,198 @@ fn check_leaveout_residual_export(grouped: bool, route: u32, corrected: bool) {
         let mapped = covariance[column] + covariance[4 + column] + 2.0 * covariance[8 + column];
         assert!((covariance[12 + column] - mapped).abs() <= 1e-12 * covariance[15].abs().max(1.0));
     }
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+    reset();
+}
+
+/// Repeat-measurement standard errors use the collapsed-match attachment and
+/// report their own source, fit code and diagnostic.
+#[test]
+fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
+    use vckss_plugin::ffi_engine::{
+        vckss_rust_engine_augment_component_inference_interrupt_v4,
+        vckss_rust_engine_augment_match_component_inference_interrupt_v4,
+        vckss_rust_engine_component_inference_result_v5,
+        vckss_rust_engine_leaveout_residual_diagnostic_v1,
+        vckss_rust_engine_repeat_measurement_diagnostic_v1, VckssComponentInferenceResultReceiptV5,
+        VckssLeaveoutResidualDiagnosticV1, VckssRepeatMeasurementDiagnosticV1,
+        VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL, VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT,
+        VCKSS_CORE_REPEAT_SE_V1_READY,
+    };
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    assert_eq!(VCKSS_CORE_REPEAT_SE_V1_READY, 1 << 19);
+    assert_eq!(VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT, 4);
+    let mut columns = OwnedColumns::structured_component();
+    for row in 0..columns.worker.len() {
+        columns.deletion[row] = (row / 2 + 1) as f64;
+        columns.frequency[row] = 2.0;
+    }
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    assert_eq!(
+        vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+            &mut augmentation,
+            bytes::<VckssComponentInferenceAugmentationRequestInterruptV1>()
+        ),
+        0
+    );
+    augmentation.options.variance_source = VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT;
+    augmentation.options.seed = 8_675_309;
+    augmentation.options.probes = 32;
+
+    // Observation units have no collapsed matches: refused before any work.
+    let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
+    assert_eq!(
+        vckss_rust_engine_augment_component_inference_interrupt_v4(generation, &augmentation, 512),
+        ErrorCode::UnsupportedFeature as i32
+    );
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+
+    let run = |source: u32| -> u64 {
+        let mut request = augmentation;
+        request.options.variance_source = source;
+        let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
+        assert_eq!(
+            vckss_rust_engine_augment_match_component_inference_interrupt_v4(
+                generation, &request, 512
+            ),
+            0,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+        let capability = planned_capability_request(
+            VCKSS_ALGORITHM_JLA,
+            VCKSS_ENGINE_GENERIC,
+            VCKSS_ROUTE_DIAGONAL_PCG,
+            VCKSS_DELETION_MATCH,
+            VCKSS_NUISANCE_FIXED_OFFSET,
+            0,
+            VCKSS_BATCH_MODE_EXPLICIT,
+            VCKSS_BATCH_MODE_EXPLICIT,
+        );
+        let mut solve = planned_solve_request(capability, 16, 16);
+        solve.v3.v2.v1.seed = 8_675_309;
+        solve.v3.v2.v1.probes = 200;
+        assert_eq!(
+            vckss_rust_engine_solve_v4(generation, &solve),
+            0,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+        generation
+    };
+    let generation = run(VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT);
+    let mut primitive = [42.0; 9];
+    let mut covariance = [42.0; 16];
+    let mut mcse = [42.0; 9];
+    let mut spectrum = [42.0; 60];
+    let mut summaries = [42.0; 24];
+    let mut folds = [42.0; 150];
+    let mut cv = [42.0; 490];
+    let mut targets = [42.0; 8];
+    let mut receipt = VckssComponentInferenceResultReceiptV5::default();
+    assert_eq!(
+        vckss_rust_engine_component_inference_result_v5(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            ptr::null_mut(),
+            0,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            targets.as_mut_ptr(),
+            8,
+            &mut receipt,
+            288,
+        ),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let base = &receipt.v4.v3.v2;
+    assert_eq!(
+        base.variance_source,
+        VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT
+    );
+    assert_eq!(
+        (base.reference_distribution, base.probes, base.q1_present),
+        (0, 32, 0)
+    );
+    assert_eq!(receipt.variance_fit, 4);
+    assert_eq!(receipt.gram_probes, 0);
+    assert_eq!(receipt.v4.solver_columns, 35);
+    assert!(receipt.positivity_floor > 0.0);
+    assert!(base.point_correction_identity_error <= 1e-10);
+    assert!(base.maximum_complete_residual <= base.full_residual_tolerance);
+    assert!(primitive.iter().chain(&covariance).all(|x| x.is_finite()));
+    for column in 0..4 {
+        let mapped = covariance[column] + covariance[4 + column] + 2.0 * covariance[8 + column];
+        assert!((covariance[12 + column] - mapped).abs() <= 1e-12 * covariance[15].abs().max(1.0));
+    }
+    for target in 0..4 {
+        assert_eq!(targets[2 * target], covariance[5 * target]);
+        assert_eq!(spectrum[15 * target + 12], 8.0);
+    }
+
+    // The shape of the variances, through its own export.
+    let mut shape = VckssRepeatMeasurementDiagnosticV1::default();
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_diagnostic_v1(generation, &mut shape, 120),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    assert_eq!(
+        (shape.struct_size, shape.schema_version, shape.generation),
+        (120, 1, generation)
+    );
+    // Mover matches only: no stayer, hence no pair term.
+    assert_eq!(
+        (shape.stayers, shape.stayer_units, shape.stayer_floored),
+        (0, 0, 0)
+    );
+    assert_eq!(shape.stayer_pair_term, 0.0);
+    assert!(shape.scale_terms >= 1 && shape.profile_terms >= 1);
+    assert!(shape.scale_floor > 0.0 && shape.profile[0].is_finite() && shape.profile[0] != 0.0);
+    // A caller built against another layout is refused.
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_diagnostic_v1(generation, &mut shape, 119),
+        ErrorCode::AbiMismatch as i32
+    );
+    // The shared diagnostic is exported too: no control term, no truncation.
+    let mut shared = VckssLeaveoutResidualDiagnosticV1::default();
+    assert_eq!(
+        vckss_rust_engine_leaveout_residual_diagnostic_v1(generation, &mut shared, 368),
+        0
+    );
+    assert_eq!((shared.draws, shared.controls), (8, 0));
+    assert_eq!(
+        (shared.mover_terms, shared.stayer_terms),
+        (shape.scale_terms, shape.profile_terms)
+    );
+    assert_eq!(shared.signal_truncation, 0.0);
+    assert!(shared.residual_noise.iter().all(|&value| value == 0.0));
+    for index in 0..16 {
+        assert_eq!(shared.model_covariance[index], covariance[index]);
+    }
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+
+    // A leave-out residual generation has no repeat-measurement shape.
+    let generation = run(VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL);
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_diagnostic_v1(generation, &mut shape, 120),
+        ErrorCode::UnsupportedFeature as i32
+    );
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);
     reset();
 }

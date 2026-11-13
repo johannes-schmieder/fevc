@@ -38,6 +38,7 @@ do `"`pkgroot'/tests/stata/test_centering_options.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_component_centering_exact.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' mata structured_leverage
 do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' mata structured_common
+do `"`pkgroot'/tests/stata/test_repeat_measurement_se.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_projection_mean.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_centering_exact.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_centering_jla.do"' `"`pkgroot'"' mata

@@ -395,6 +395,16 @@ The explicitly selected Rust structured modes use
 `FEVC_STRUCTURED_Q0_INFERENCE` and `FEVC_STRUCTURED_Q1_INFERENCE`. The FEVC
 prefix is intentional: these are pragmatic structured-variance extensions,
 not the paper's unrestricted-heteroskedastic KSS variance-product estimator.
+Repeat-measurement standard errors
+(`inference(highrank) inferencemodel(repeat_measurement)`) post
+`FEVC_REPEAT_MEASUREMENT_SE`, or `FEVC_REPEAT_MEASUREMENT_SE_PARTIAL` when a
+component variance is withheld, with `e(inference_variance_fit)` equal to
+`repeat_measurement`, the returns of the leave-out residual pass listed next,
+`e(inference_nuisance_omitted)` equal to one, and the shape of the variances
+in `e(inference_repeat)` (one row: scale terms, profile terms, scale floor,
+units at the scale floor, stayers, stayer observations, stayer observations at
+the variance floor, the stayer pair term, six profile coefficients), with
+`e(inference_stayers)` and `e(inference_stayer_pair_term)` as scalars.
 Leave-out residual standard errors post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
 `FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL` when a component variance is withheld,
 with `e(inference_variance_fit)` equal to `leaveout_residual`,
@@ -458,6 +468,11 @@ estimand. The catalog includes:
   selected options or the installed plugin cannot carry, and
   `LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED` when it is combined with
   `inference(q1)`; `inference(auto)` does not raise the former;
+- `REPEAT_MEASUREMENT_TUPLE_REQUIRED` for
+  `inferencemodel(repeat_measurement)` outside match deletion, with
+  `project()`, or on a backend or plugin that cannot carry it, and
+  `REPEAT_MEASUREMENT_Q1_UNSUPPORTED` when it is combined with
+  `inference(q1)`;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
   `INFERENCE_INTERVAL_FAILED`, and

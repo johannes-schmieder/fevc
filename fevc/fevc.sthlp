@@ -350,7 +350,7 @@ controls are not silently dropped. See the
   {hline 76}
     {cmd:inference(auto|none|highrank|q1)}{col 40}standard errors and intervals; default auto
     {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}variance method; see below
-    {cmd:inferencedraws(}{it:#}{cmd:)}{col 40}pseudo-noise draws for leaveout_residual; default 8
+    {cmd:inferencedraws(}{it:#}{cmd:)}{col 40}pseudo-noise draws for leaveout_residual and repeat_measurement; default 8
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
     {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}variance-model probes; default 2,048
@@ -370,6 +370,24 @@ that carries them stops, the command runs once more without them so that the
 point estimates are always returned. {cmd:inference(none)} turns them off.
 {cmd:inference(highrank) inferencemodel(leaveout_residual)} requests the same
 standard errors strictly: the command stops if they cannot be computed.
+
+{pstd}
+{bf:Repeat-measurement standard errors.}
+{cmd:inference(highrank) inferencemodel(repeat_measurement)} requests a
+different variance method on the same units and with the same linear solves.
+A stayer's observations are independent repeat measurements of one mean, so
+each stayer's error variance is estimated by its own sample variance, with no
+model linking it to other workers. A mover's collapsed match has no repeat
+measurement; mover units receive a fitted model, a scale that depends on the
+ranks of leverage and match size times a quadratic in the standardised
+estimated worker and firm effects, both fitted to the movers' own leave-out
+variance products. The covariance is the KSS high-rank form with these
+variances plus a closed-form term for the pairs of observations of one
+stayer; it is reported as computed, without truncation. The method requires
+{cmd:deletion(match)} (the default) and is never selected by
+{cmd:inference(auto)}. It treats estimated control coefficients as known and
+is only as good as the fitted model for movers. {cmd:inference(q1)} is not
+available with it.
 
 {pstd}
 {it:Cost.} On the native backend they add three linear solves plus four per
@@ -534,8 +552,8 @@ one-dominant-direction assumptions are appropriate. See the
 {pstd}
 The inference calculations have their own numerical settings.
 {cmd:inferencedraws()} sets the pseudo-noise draws of
-{cmd:leaveout_residual}; each draw costs four linear solves on the Rust
-route. {cmd:inferencesimulations()}, {cmd:inferencegramprobes()} and
+{cmd:leaveout_residual} and {cmd:repeat_measurement}; each draw costs four
+linear solves on the Rust route. {cmd:inferencesimulations()}, {cmd:inferencegramprobes()} and
 {cmd:inferencebins()} do not apply to that method.
 {cmd:inferencesimulations()} sets the number of simulation draws used for the
 covariance on both backends; {cmd:inferencegramprobes()} sets the random
@@ -894,6 +912,12 @@ this calculation fails, the MCSE is withheld and
 Sample counts include {cmd:e(N)}, {cmd:e(worker_levels)}, and
 {cmd:e(firm_levels)}. Component covariance is posted in {cmd:e(V)} only for
 supported successful inference requests; q1 intervals have separate returns.
+For repeat-measurement standard errors {cmd:e(inference_variance_fit)} is
+{cmd:repeat_measurement}; {cmd:e(inference_repeat)} holds the numbers of
+scale and profile terms, the scale floor and how often it bound, the numbers
+of stayers and of their observations, the stayer pair term and the six
+profile coefficients, and {cmd:e(inference_stayers)} and
+{cmd:e(inference_stayer_pair_term)} repeat two of them as scalars.
 For {help fevc##se:leave-out residual standard errors},
 {cmd:e(inference_variance_fit)} is {cmd:leaveout_residual},
 {cmd:e(component_inference)} holds the estimates, standard errors and

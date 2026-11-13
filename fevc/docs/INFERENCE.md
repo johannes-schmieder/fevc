@@ -23,6 +23,50 @@ diagnostics, evidence and supported routes are in the
 [technical supplement](standard_errors/standard_errors.tex). The rest of this
 document concerns the earlier exact and structured methods.
 
+## Repeat-measurement standard errors
+
+`inference(highrank) inferencemodel(repeat_measurement)` is an explicit
+request on match deletion; `inference(auto)` never selects it. It runs the
+same pass as the leave-out residual method (collapsed mover deletion units,
+one unit per physical stayer observation, three influence solves and four
+solves per pseudo-noise draw) and differs in the variances and in how the
+covariance is assembled:
+
+- every eligible stayer receives the sample variance of its own
+  observations, which are independent repeat measurements of one mean under
+  the independence the point estimator already assumes;
+- mover units receive a scale, the least-squares fit of their leave-out
+  variance products on the normalized midranks of leverage and unit mass and
+  their squares (floored at five per cent of the mean product), times a
+  quadratic in the worker and firm effects of the fit, standardised over
+  physical observations and limited to three standard deviations, with the
+  six coefficients fitted to the same products; a type keeps one coefficient
+  per hundred units in each step;
+- the covariance is `4 sum_a v_a (K_t z)_a (K_s z)_a - 2 tr(K_t V K_s V)`
+  plus, in the worker variance, `4 sum_g c_g^2 q_g^2 (T_g-2)(T_g-1)/(T_g+1)`
+  for the pairs of observations of stayer `g`, where `q_g` is the sample
+  variance, `T_g` the number of observations and `c_g` the weight between
+  two of them. Nothing is truncated or projected: a nonpositive variance is
+  reported as a withheld target.
+
+With true mover variances the estimate is exactly unbiased when stayers'
+errors are normal with one variance per stayer, whatever those variances
+are. With the fitted model it is as good as that model; estimated effects
+enter the profile, estimated control coefficients are treated as known
+(`e(inference_nuisance_omitted)` is one), and the observed mean is handled
+as in the leave-out residual pass. The method reports the normal interval
+only; `inference(q1)` with this model is rejected with
+`REPEAT_MEASUREMENT_Q1_UNSUPPORTED`. Derivation, assumptions, simulation
+evidence and limits are in a technical note maintained with the companion
+paper, not in this repository.
+
+Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
+addition to the bits of the leave-out residual pass; variance-source code 4
+and the diagnostic export
+`vckss_rust_engine_repeat_measurement_diagnostic_v1` are additive. The Mata
+routes (`backend(mata)`, exact or `algorithm(jla)`) carry the model without
+a plugin.
+
 ## Scope
 
 FEVC provides opt-in econometric component inference through two

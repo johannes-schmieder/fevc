@@ -266,7 +266,7 @@ program define _fevc_estat_diagnostics
 
     fevc__display, numericaldiagnosticsonly
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") | ///
-        "`e(inference_variance_fit)'"=="leaveout_residual" {
+        inlist("`e(inference_variance_fit)'","leaveout_residual","repeat_measurement") {
         fevc__display, inferencediagnosticsonly
     }
     di as txt _newline "Type " as result "ereturn list" as txt ///

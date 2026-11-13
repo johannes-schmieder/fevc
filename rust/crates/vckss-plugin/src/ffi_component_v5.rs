@@ -271,7 +271,8 @@ fn receipt_v5(
     } else if let Some(noise) = &result.residual_noise {
         // No Gram matrix and no ordering contract: the working variance is an
         // ordinary least-squares fit of the leave-out products.
-        receipt.variance_fit = 3;
+        // Repeat-measurement variances report their own fit code.
+        receipt.variance_fit = if noise.repeat.is_some() { 4 } else { 3 };
         receipt.positivity_floor = noise.working_floor;
         receipt.floored_predictions = noise.working_floored;
     } else if result.structured_variance.is_none() {
@@ -362,6 +363,88 @@ pub extern "C" fn vckss_rust_engine_leaveout_residual_diagnostic_v1(
                 model_covariance: diagnostic.model_covariance,
                 residual_noise: diagnostic.residual_noise,
                 residual_noise_mcse: diagnostic.residual_noise_mcse,
+            },
+        );
+        Ok(())
+    })
+}
+
+/// Shape of the repeat-measurement variances: the movers' two-step model and
+/// the stayers who received their own sample variance.
+///
+/// `profile` holds the coefficients of the intercept, the standardised worker
+/// effect and its square, the standardised firm effect and its square, and
+/// their product, zero where a term is inactive. `stayer_pair_term` is the
+/// closed-form term for the pairs of rows of one stayer in the worker-variance
+/// entry of the covariance.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssRepeatMeasurementDiagnosticV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub scale_terms: u32,
+    pub profile_terms: u32,
+    pub scale_floored: u64,
+    pub stayers: u64,
+    pub stayer_units: u64,
+    pub stayer_floored: u64,
+    pub scale_floor: f64,
+    pub stayer_pair_term: f64,
+    pub profile: [f64; 6],
+}
+
+const _: [(); 120] = [(); size_of::<VckssRepeatMeasurementDiagnosticV1>()];
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_repeat_measurement_diagnostic_v1(
+    generation: u64,
+    output: *mut VckssRepeatMeasurementDiagnosticV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssRepeatMeasurementDiagnosticV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "repeat-measurement diagnostic",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_repeat_measurement_diagnostic")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_repeat_measurement_diagnostic",
+                "repeat-measurement diagnostics require generic JLA",
+            ));
+        };
+        let shape = generic
+            .component_inference
+            .as_ref()
+            .and_then(|result| result.residual_noise.as_ref())
+            .and_then(|diagnostic| diagnostic.repeat.as_ref())
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "engine_repeat_measurement_diagnostic",
+                    "the generation has no repeat-measurement standard errors",
+                )
+            })?;
+        write_output(
+            output,
+            VckssRepeatMeasurementDiagnosticV1 {
+                struct_size: struct_size_u32::<VckssRepeatMeasurementDiagnosticV1>()?,
+                schema_version: 1,
+                generation,
+                scale_terms: to_u32(shape.scale_terms, "scale terms")?,
+                profile_terms: to_u32(shape.profile_terms, "profile terms")?,
+                scale_floored: shape.scale_floored,
+                stayers: shape.stayers,
+                stayer_units: shape.stayer_units,
+                stayer_floored: shape.stayer_floored,
+                scale_floor: shape.scale_floor,
+                stayer_pair_term: shape.stayer_pair_term,
+                profile: shape.profile,
             },
         );
         Ok(())

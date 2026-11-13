@@ -1,7 +1,10 @@
 *! Leave-out residual standard errors for the exact Mata route: collapsed
 *! deletion units, exact kernels, pseudo-noise trace and calibration, and the
-*! first-order term for estimated control coefficients.
-*! See docs/standard_errors/standard_errors.tex for the method.
+*! first-order term for estimated control coefficients. The same pass carries
+*! repeat-measurement standard errors: stayers' own sample variances, a
+*! two-step fitted model for mover units, and the high-rank covariance with a
+*! closed-form term for the pairs of rows of one stayer.
+*! See docs/standard_errors/standard_errors.tex for the methods.
 
 version 18.0
 
@@ -16,7 +19,7 @@ real scalar vckss_rse__api_level()
 
 string scalar vckss_rse__build_id()
 {
-    return("vckss-residual-se-api2")
+    return("vckss-residual-se-api3")
 }
 
 // Subtract the mass-weighted mean of every column in unit space. For one row
@@ -106,6 +109,113 @@ real colvector vckss_rse__working(
     floor_value = 1e-8*scale
     variance = rowmax((fitted,J(n,1,floor_value)))
     info = (terms,floor_value,sum(fitted:<floor_value),min(fitted))
+    return(variance)
+}
+
+// Variances for repeat-measurement standard errors. A stayer's physical
+// observations are independent repeat measurements of one mean, so each
+// stayer receives its own sample variance. Mover units receive a scale (the
+// working-variance features of leverage and mass ranks) times a quadratic in
+// the standardised worker and firm effects limited to three standard
+// deviations, both steps by least squares on the movers' leave-out products.
+// `info' receives (terms, floor, floored, minimum) as in vckss_rse__working;
+// `shape' receives (scale terms, profile terms, scale floor, scale floored,
+// stayers, stayer units, stayer floored, pair term, six profile
+// coefficients). The pair term is the closed-form covariance term for the
+// pairs of rows of one stayer; it belongs to the worker variance alone.
+real colvector vckss_rse__repeat(
+    real colvector product,
+    real colvector y,
+    real colvector residual,
+    real colvector leverage,
+    real colvector mass,
+    real scalar movers,
+    real colvector unit_worker,
+    real colvector worker_effect,
+    real colvector firm_effect,
+    real colvector worker_diagonal,
+    real rowvector info,
+    real rowvector shape)
+{
+    real colvector sorted, variance, scale, fitted, a, f, coefficient
+    real colvector permutation, members
+    real matrix basis, profile, panel, inverse
+    real scalar n, middle, floor_value, scale_floor, permitted, g, count
+    real scalar sample, pair, pair_term, total, mean_effect, deviation
+
+    n = rows(product)
+    sorted = sort(residual:^2:/(1:-leverage),1)
+    middle = floor(n/2)
+    floor_value = 1e-8*(mod(n,2) ? sorted[middle+1] :
+        (sorted[middle]+sorted[middle+1])/2)
+    variance = J(n,1,.)
+    info = (0,floor_value,0,.)
+    shape = J(1,14,0)
+    if (floor_value <= 0 | missing(floor_value)) return(variance)
+    if (movers > 0) {
+        // Step 1: the scale, floored at five per cent of the mean product.
+        basis = vckss_rse__features(leverage[|1\movers|],mass[|1\movers|],1)
+        inverse = invsym(quadcross(basis,basis))
+        scale = basis*(inverse*quadcross(basis,product[|1\movers|]))
+        scale_floor = 0.05*mean(product[|1\movers|])
+        if (scale_floor <= 0 | missing(scale_floor)) {
+            info[2] = 0
+            return(variance)
+        }
+        // Terms that the others do not span, as the native route counts them.
+        shape[1] = sum(diagonal(inverse):!=0)
+        shape[3] = scale_floor
+        shape[4] = sum(scale:<scale_floor)
+        scale = rowmax((scale,J(movers,1,scale_floor)))
+        // Step 2: the profile. Effects are standardised over the physical
+        // observations of all units, so a common shift between worker and
+        // firm effects does not matter.
+        total = sum(mass)
+        mean_effect = quadcross(mass,worker_effect)/total
+        deviation = sqrt(quadcross(mass,(worker_effect:-mean_effect):^2)/total)
+        a = deviation > 0 ? (worker_effect[|1\movers|]:-mean_effect):/deviation :
+            J(movers,1,0)
+        mean_effect = quadcross(mass,firm_effect)/total
+        deviation = sqrt(quadcross(mass,(firm_effect:-mean_effect):^2)/total)
+        f = deviation > 0 ? (firm_effect[|1\movers|]:-mean_effect):/deviation :
+            J(movers,1,0)
+        a = rowmax((rowmin((a,J(movers,1,3))),J(movers,1,-3)))
+        f = rowmax((rowmin((f,J(movers,1,3))),J(movers,1,-3)))
+        profile = (J(movers,1,1),a,a:^2,f,f:^2,a:*f)
+        permitted = max((1,min((6,floor(movers/100)))))
+        profile = scale:*profile[.,1..permitted]
+        inverse = invsym(quadcross(profile,profile))
+        coefficient = inverse*quadcross(profile,product[|1\movers|])
+        fitted = profile*coefficient
+        shape[2] = sum(diagonal(inverse):!=0)
+        shape[|9\8+permitted|] = coefficient'
+        info[1] = shape[1]+shape[2]
+        info[3] = sum(fitted:<floor_value)
+        info[4] = min(fitted)
+        variance[|1\movers|] = rowmax((fitted,J(movers,1,floor_value)))
+    }
+    pair_term = 0
+    if (movers < n) {
+        permutation = order(unit_worker[|movers+1\n|],1):+movers
+        panel = panelsetup(unit_worker[permutation],1)
+        for (g=1; g<=rows(panel); g++) {
+            members = permutation[|panel[g,1]\panel[g,2]|]
+            count = rows(members)
+            if (count < 2) {
+                info[2] = 0
+                return(J(n,1,.))
+            }
+            sample = quadvariance(y[members])
+            // Two rows of one stayer share the weight B_aa T/(T-1).
+            pair = mean(worker_diagonal[members])*count/(count-1)
+            pair_term = pair_term+4*pair^2*sample^2*(count-2)*(count-1)/(count+1)
+            shape[7] = shape[7]+count*(sample < floor_value)
+            variance[members] = J(count,1,max((sample,floor_value)))
+        }
+        shape[5] = rows(panel)
+        shape[6] = n-movers
+    }
+    shape[8] = pair_term
     return(variance)
 }
 
@@ -200,10 +310,11 @@ void vckss_residual_se__stata(
     real matrix transform, V, results, spectrum, eigenvectors
     real matrix residualized, precision, collapsed, collapsed_residualized
     real matrix within, load, posted_corrected, total_image
-    real rowvector info
+    real rowvector info, shape
+    real colvector unit_worker, worker_effect, firm_effect
     real scalar n, parameters, worker_levels, firm_levels, control_count
     real scalar centered, j, k, z, point_identity, begin, finish, batch
-    real scalar pairs, width, effective, truncation
+    real scalar pairs, width, effective, truncation, repeat
 
     st_local(status_local,"INVALID_INPUT")
     st_local(message_local,"standard-error inputs were not accepted")
@@ -335,8 +446,26 @@ void vckss_residual_se__stata(
         }
     }
 
+    // Repeat-measurement standard errors share this pass and differ in the
+    // unit variances and in how the covariance is assembled from them.
+    repeat = st_global("VCKSS_SE_MODEL") == "repeat_measurement"
     info = J(1,4,.)
-    variance = vckss_rse__working(product,residual,leverage,units.mass,
+    shape = J(1,14,0)
+    if (repeat) {
+        unit_worker = round((design[|1,1\n,worker_levels|]*
+            (1::worker_levels)):/root)
+        worker_effect = (design[|1,1\n,worker_levels|]*
+            beta[|1\worker_levels|]):/root
+        if (firm_levels > 1) {
+            firm_effect = (design[|1,worker_levels+1\n,parameters|]*
+                beta[|worker_levels+1\parameters|]):/root
+        }
+        else firm_effect = J(n,1,0)
+        variance = vckss_rse__repeat(product,y,residual,leverage,units.mass,
+            units.movers,unit_worker,worker_effect,firm_effect,
+            ratio[.,1]:/maker_inverse,info,shape)
+    }
+    else variance = vckss_rse__working(product,residual,leverage,units.mass,
         units.movers,info)
     if (info[2] <= 0 | missing(info[2]) | hasmissing(variance) | info[3] == n) {
         st_local(status_local,"INFERENCE_VARIANCE_INVALID")
@@ -403,13 +532,26 @@ void vckss_residual_se__stata(
     }
     quadratic = quadratic:/draws
     calibration = calibration:/draws
-    signal = quadcross(score,score)-4:*calibration
-    signal = (signal+signal'):/2
-    eigenvectors = eigenvalues = .
-    symeigensystem(signal,eigenvectors,eigenvalues)
-    truncation = max((0,-min(eigenvalues)))
-    eigenvalues = eigenvalues:*(eigenvalues:>0)
-    V_primitive = eigenvectors*diag(eigenvalues)*eigenvectors'+2:*quadratic
+    if (repeat) {
+        // The high-rank form with the unit variances, plus the pair term of
+        // the stayers in the worker variance. Nothing is truncated: a
+        // nonpositive diagonal is reported as such below.
+        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic
+        signal[1,1] = signal[1,1]+shape[8]
+        signal = (signal+signal'):/2
+        truncation = 0
+        V_primitive = signal+2:*quadratic
+        score = 2:*influence:*sqrt(variance)
+    }
+    else {
+        signal = quadcross(score,score)-4:*calibration
+        signal = (signal+signal'):/2
+        eigenvectors = eigenvalues = .
+        symeigensystem(signal,eigenvectors,eigenvalues)
+        truncation = max((0,-min(eigenvalues)))
+        eigenvalues = eigenvalues:*(eigenvalues:>0)
+        V_primitive = eigenvectors*diag(eigenvalues)*eigenvectors'+2:*quadratic
+    }
     V_primitive = (V_primitive+V_primitive'):/2
     if (hasmissing(V_primitive) | min(diagonal(V_primitive)) <= 0) {
         st_local(status_local,"INFERENCE_VARIANCE_INVALID")
@@ -450,9 +592,15 @@ void vckss_residual_se__stata(
     st_matrix(variance_diagnostics_name,(info[1],.,.,.,info[2],info[3],n,info[4]))
     st_matrix(spectrum_name,spectrum)
     st_local("inference_joint_available","1")
-    st_local("inference_nuisance_omitted",control_count > 0 ? "0" : "1")
+    // Repeat-measurement standard errors hold the estimated offset fixed.
+    st_local("inference_nuisance_omitted",
+        (control_count > 0 & !repeat) ? "0" : "1")
+    st_local("inference_repeat_shape",
+        repeat ? invtokens(strofreal(shape,"%21.0g")) : "")
     st_local(status_local,"CONVERGED")
-    st_local(message_local,"exact leave-out residual standard errors converged")
+    st_local(message_local,repeat ?
+        "exact repeat-measurement standard errors converged" :
+        "exact leave-out residual standard errors converged")
 }
 
 // ---------------------------------------------------------------------------
@@ -628,10 +776,12 @@ void vckss_residual_se_jla__stata(
     real matrix posted_corrected, total_image, panel, projected, direction
     real matrix full, pseudo_residual, target_diagonal, outcome_fit
     real matrix control_fit, kernel_residual, moments, probe, square
-    real matrix complement
-    real rowvector info
+    real matrix complement, effects
+    real rowvector info, shape
+    real colvector worker_effect, firm_effect
     real scalar n, workers, firms, control_count, centered, j, k, z
     real scalar begin, finish, batch, pairs, width, effective, truncation
+    real scalar repeat
     real scalar movers, total, g, row, copy, out, clipped, unit_mass
     string scalar kernel_status
 
@@ -694,6 +844,7 @@ void vckss_residual_se_jla__stata(
         vckss__fe_transpose(base,frequency:*y),tolerance,maxiter)
     if (solved.status != "CONVERGED") return
     outcome_fit = vckss__fe_predict(base,solved.coefficient)
+    effects = solved.coefficient
     working_y = y
     residual = y-outcome_fit
     if (control_count > 0) {
@@ -704,6 +855,7 @@ void vckss_residual_se_jla__stata(
         residualized = controls-control_fit
         precision = invsym(quadcross(residualized,frequency,residualized))
         gamma = precision*quadcross(residualized,frequency,residual)
+        effects = effects-solved.coefficient*gamma
         working_y = y-controls*gamma
         residual = residual-residualized*gamma
         collapsed = vckss_rse__aggregate(controls,working_y,frequency,
@@ -808,8 +960,20 @@ void vckss_residual_se_jla__stata(
     if (kernel_status != "CONVERGED") return
     if (centered) influence = vckss_rse__center(influence,root)
 
+    repeat = st_global("VCKSS_SE_MODEL") == "repeat_measurement"
     info = J(1,4,.)
-    variance = vckss_rse__working(product,residual,leverage,mass,movers,info)
+    shape = J(1,14,0)
+    if (repeat) {
+        // Effects of the offset outcome; the last firm is the grounded one.
+        worker_effect = effects[unit_worker]
+        firm_effect = J(n,1,0)
+        ix = selectindex(unit_firm:<firms)
+        if (rows(ix) > 0) firm_effect[ix] = effects[workers:+unit_firm[ix]]
+        variance = vckss_rse__repeat(product,y,residual,leverage,mass,movers,
+            unit_worker,worker_effect,firm_effect,target_diagonal[.,1],
+            info,shape)
+    }
+    else variance = vckss_rse__working(product,residual,leverage,mass,movers,info)
     if (info[2] <= 0 | missing(info[2]) | hasmissing(variance) | info[3] == n) {
         st_local(status_local,"INFERENCE_VARIANCE_INVALID")
         st_local(message_local,
@@ -863,13 +1027,26 @@ void vckss_residual_se_jla__stata(
     }
     quadratic = quadratic:/draws
     calibration = calibration:/draws
-    signal = quadcross(score,score)-4:*calibration
-    signal = (signal+signal'):/2
-    eigenvectors = eigenvalues = .
-    symeigensystem(signal,eigenvectors,eigenvalues)
-    truncation = max((0,-min(eigenvalues)))
-    eigenvalues = eigenvalues:*(eigenvalues:>0)
-    V_primitive = eigenvectors*diag(eigenvalues)*eigenvectors'+2:*quadratic
+    if (repeat) {
+        // The high-rank form with the unit variances, plus the pair term of
+        // the stayers in the worker variance. Nothing is truncated: a
+        // nonpositive diagonal is reported as such below.
+        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic
+        signal[1,1] = signal[1,1]+shape[8]
+        signal = (signal+signal'):/2
+        truncation = 0
+        V_primitive = signal+2:*quadratic
+        score = 2:*influence:*sqrt(variance)
+    }
+    else {
+        signal = quadcross(score,score)-4:*calibration
+        signal = (signal+signal'):/2
+        eigenvectors = eigenvalues = .
+        symeigensystem(signal,eigenvectors,eigenvalues)
+        truncation = max((0,-min(eigenvalues)))
+        eigenvalues = eigenvalues:*(eigenvalues:>0)
+        V_primitive = eigenvectors*diag(eigenvalues)*eigenvectors'+2:*quadratic
+    }
     V_primitive = (V_primitive+V_primitive'):/2
     if (hasmissing(V_primitive) | min(diagonal(V_primitive)) <= 0) {
         st_local(status_local,"INFERENCE_VARIANCE_INVALID")
@@ -911,9 +1088,15 @@ void vckss_residual_se_jla__stata(
     st_matrix(variance_diagnostics_name,(info[1],.,.,.,info[2],info[3],n,info[4]))
     st_matrix(spectrum_name,spectrum)
     st_local("inference_joint_available","1")
-    st_local("inference_nuisance_omitted",control_count > 0 ? "0" : "1")
+    // Repeat-measurement standard errors hold the estimated offset fixed.
+    st_local("inference_nuisance_omitted",
+        (control_count > 0 & !repeat) ? "0" : "1")
+    st_local("inference_repeat_shape",
+        repeat ? invtokens(strofreal(shape,"%21.0g")) : "")
     st_local(status_local,"CONVERGED")
-    st_local(message_local,"matrix-free leave-out residual standard errors converged")
+    st_local(message_local,repeat ?
+        "matrix-free repeat-measurement standard errors converged" :
+        "matrix-free leave-out residual standard errors converged")
 }
 
 // Defined last: present only when the whole file compiled.

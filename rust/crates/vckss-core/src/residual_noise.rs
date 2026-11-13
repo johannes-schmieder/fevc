@@ -29,6 +29,12 @@ pub const MAXIMUM_WORKING_TERMS: usize = 5;
 const TOTAL_WEIGHT: [f64; PRIMITIVE_TARGETS] = [1.0, 1.0, 2.0];
 const SQUARE: usize = PRIMITIVE_TARGETS * PRIMITIVE_TARGETS;
 
+mod repeat;
+pub use repeat::{
+    finish_repeat_covariance, fit_repeat_variance, RepeatInputs, RepeatVariance, PROFILE_CAP,
+    PROFILE_TERMS, SCALE_FLOOR_SHARE,
+};
+
 #[derive(Clone, Copy, Debug, Default)]
 struct StableAccumulator {
     sum: f64,
@@ -209,14 +215,14 @@ pub fn fit_working_variance(
 
 /// Solve a small normal system, dropping columns that the retained ones span.
 /// Pivot order is the fixed term order, so the choice uses no outcome.
-fn solve_reduced(
-    matrix: &[[f64; MAXIMUM_WORKING_TERMS]; MAXIMUM_WORKING_TERMS],
-    rhs: &[f64; MAXIMUM_WORKING_TERMS],
+fn solve_reduced<const N: usize>(
+    matrix: &[[f64; N]; N],
+    rhs: &[f64; N],
     terms: usize,
-) -> Result<([f64; MAXIMUM_WORKING_TERMS], usize)> {
+) -> Result<([f64; N], usize)> {
     const SPAN_TOLERANCE: f64 = 1.0e-10;
-    let mut factor = [[0.0; MAXIMUM_WORKING_TERMS]; MAXIMUM_WORKING_TERMS];
-    let mut kept = [false; MAXIMUM_WORKING_TERMS];
+    let mut factor = [[0.0; N]; N];
+    let mut kept = [false; N];
     for column in 0..terms {
         let mut pivot = matrix[column][column];
         for prior in (0..column).filter(|&prior| kept[prior]) {
@@ -241,7 +247,7 @@ fn solve_reduced(
     if !kept[0] {
         return Err(invalid("the working-variance intercept is not identified"));
     }
-    let mut forward = [0.0; MAXIMUM_WORKING_TERMS];
+    let mut forward = [0.0; N];
     for row in (0..terms).filter(|&row| kept[row]) {
         let mut value = rhs[row];
         for prior in (0..row).filter(|&prior| kept[prior]) {
@@ -249,7 +255,7 @@ fn solve_reduced(
         }
         forward[row] = value / factor[row][row];
     }
-    let mut coefficient = [0.0; MAXIMUM_WORKING_TERMS];
+    let mut coefficient = [0.0; N];
     for row in (0..terms).rev().filter(|&row| kept[row]) {
         let mut value = forward[row];
         for later in (row + 1..terms).filter(|&later| kept[later]) {
@@ -691,6 +697,24 @@ pub struct Diagnostic {
     pub model_primitive: [f64; SQUARE],
     /// Four-target map of `model_primitive`, row-major.
     pub model_covariance: [f64; REPORTED_TARGETS * REPORTED_TARGETS],
+    /// Present for repeat-measurement standard errors only.
+    pub repeat: Option<RepeatDiagnostic>,
+}
+
+/// Shape of the repeat-measurement variances: stayers' own sample variances
+/// and the movers' two-step model.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RepeatDiagnostic {
+    pub scale_terms: usize,
+    pub profile_terms: usize,
+    pub profile: [f64; PROFILE_TERMS],
+    pub scale_floor: f64,
+    pub scale_floored: u64,
+    pub stayers: u64,
+    pub stayer_units: u64,
+    pub stayer_floored: u64,
+    /// Closed-form term for the pairs of rows of one stayer (worker variance).
+    pub stayer_pair_term: f64,
 }
 
 impl Diagnostic {
@@ -715,6 +739,43 @@ impl Diagnostic {
             model_covariance: crate::component_inference::map_primitive_covariance(
                 &covariance.model_primitive,
             )?,
+            repeat: None,
+        })
+    }
+
+    /// Diagnostic of a repeat-measurement pass. The working terms are the
+    /// movers' scale and profile; no calibration statistic is formed.
+    pub fn repeat(
+        fit: &RepeatVariance,
+        moments: &NoiseMoments,
+        covariance: &ResidualCovariance,
+    ) -> Result<Self> {
+        Ok(Self {
+            draws: moments.draws,
+            working_terms: [fit.scale_terms, fit.profile_terms],
+            working_floor: fit.floor,
+            working_floored: fit.floored,
+            controls: 0,
+            offset_pass_solves: 0,
+            effective_rank: moments.effective_rank,
+            signal_truncation: 0.0,
+            residual_noise: [0.0; SQUARE],
+            residual_noise_mcse: [0.0; SQUARE],
+            model_primitive: covariance.model_primitive,
+            model_covariance: crate::component_inference::map_primitive_covariance(
+                &covariance.model_primitive,
+            )?,
+            repeat: Some(RepeatDiagnostic {
+                scale_terms: fit.scale_terms,
+                profile_terms: fit.profile_terms,
+                profile: fit.profile,
+                scale_floor: fit.scale_floor,
+                scale_floored: fit.scale_floored,
+                stayers: fit.stayers,
+                stayer_units: fit.stayer_units,
+                stayer_floored: fit.stayer_floored,
+                stayer_pair_term: fit.adjustment[0],
+            }),
         })
     }
 }

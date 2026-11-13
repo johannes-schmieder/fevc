@@ -70,6 +70,12 @@ _Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, offset_pass_solves) =
 _Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, effective_rank) == 64, "leave-out residual rank offset");
 _Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, model_covariance) == 96, "leave-out residual covariance offset");
 _Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, residual_noise) == 224, "leave-out residual calibration offset");
+_Static_assert(VCKSS_CORE_REPEAT_SE_V1_READY == UINT64_C(524288), "repeat-measurement standard-error capability bit");
+_Static_assert(VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT == 4u, "repeat-measurement variance source");
+_Static_assert(sizeof(VckssRepeatMeasurementDiagnosticV1) == 120, "repeat-measurement diagnostic size");
+_Static_assert(offsetof(VckssRepeatMeasurementDiagnosticV1, scale_floored) == 24, "repeat-measurement floor count offset");
+_Static_assert(offsetof(VckssRepeatMeasurementDiagnosticV1, scale_floor) == 56, "repeat-measurement scale floor offset");
+_Static_assert(offsetof(VckssRepeatMeasurementDiagnosticV1, profile) == 72, "repeat-measurement profile offset");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, independent_units) == 24, "component independent unit offset changed");
 _Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, effective_match_count) == 32, "component match mass offset changed");
 

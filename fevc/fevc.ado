@@ -7036,7 +7036,7 @@ program define _vckss_impl, eclass sortpreserve
 
     if `inference_requested' {
         _fevc_inference_runtime_load
-        if "`inferencemodel'"=="leaveout_residual" & "`inference'"!="none" {
+        if "$VCKSS_SE_MODEL"!="" & "`inference'"!="none" {
             capture noisily _fevc_residual_se_mata "`depvar'" "`id_worker'" ///
                 "`id_firm'" `"`controlvars'"' "`frequency'" "`target'" ///
                 "`deletion_id'" "`touse'" "`hybrid_worker'" "`hybrid_firm'" ///
@@ -7860,7 +7860,7 @@ program define _vckss_impl, eclass sortpreserve
     if "`inference'"=="q1" {
         if e(q1_computed_targets)<4 ereturn local status "KSS_Q1_PARTIAL"
     }
-    if "`inferencemodel'"=="leaveout_residual" fevc__residual_se_post `inferencedraws' "`deletion'" `inference_nuisance_omitted' mata
+    if "$VCKSS_SE_MODEL"!="" fevc__residual_se_post `inferencedraws' "`deletion'" `inference_nuisance_omitted' mata
 
     quietly mata: vckss_timer__off($VCKSS_STAGE_VALIDATION_TIMER)
     quietly fevc__timer read $VCKSS_STAGE_VALIDATION_TIMER
@@ -9730,12 +9730,14 @@ program define _fevc_residual_se_mata
     local inference_message "the standard-error runtime stopped unexpectedly"
     local inference_joint_available 0
     local inference_nuisance_omitted 0
+    local inference_repeat_shape ""
+    global VCKSS_SE_SHAPE ""
     // Load the runtime once; refuse a different or partly loaded build. The
     // caller posts the typed status returned through inference_status.
     capture mata: vckss_rse__api_level()
     local runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rse__api_level() == 1 &            ///
-        vckss_rse__build_id() == "vckss-residual-se-api2" &       ///
+        vckss_rse__build_id() == "vckss-residual-se-api3" &       ///
         vckss_rse__loaded() == 1)
     if _rc & `runtime_loaded' {
         c_local inference_status "STALE_INFERENCE_RUNTIME"
@@ -9751,7 +9753,7 @@ program define _fevc_residual_se_mata
         }
         capture quietly do `"`r(fn)'"'
         capture mata: assert(vckss_rse__api_level() == 1 &        ///
-            vckss_rse__build_id() == "vckss-residual-se-api2" &   ///
+            vckss_rse__build_id() == "vckss-residual-se-api3" &   ///
             vckss_rse__loaded() == 1)
         if _rc {
             c_local inference_status "INVALID_INFERENCE_RUNTIME"
@@ -9811,6 +9813,8 @@ program define _fevc_residual_se_mata
     local mata_rc = _rc
     // Observation units carry no fixed offset to omit, as on the native route.
     if "`deletion'" == "observation" local inference_nuisance_omitted 0
+    // Shape of repeat-measurement variances, for the posting helper.
+    global VCKSS_SE_SHAPE "`inference_repeat_shape'"
     c_local inference_status "`inference_status'"
     c_local inference_message `"`inference_message'"'
     c_local inference_joint_available `inference_joint_available'

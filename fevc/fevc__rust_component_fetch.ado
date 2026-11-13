@@ -8,13 +8,14 @@ program define fevc__rust_component_fetch, rclass
         outsummaries outfolds outcv outreceipt outresults outq1results      ///
         outunits deletion expectedunits expectedgramprobes
     local modelcode = cond("`model'"=="structured_common",1, ///
-        cond("`model'"=="leaveout_residual",3,2))
+        cond("`model'"=="leaveout_residual",3,cond("`model'"=="repeat_measurement",4,2)))
     // Leave-out residual standard errors: a probe is one pseudo-noise solve
     // (four per draw); there is no Gram fit and no spectral iteration. Under
     // joint nuisance with controls the solver count also holds the offset
     // pass, two solves per point probe.
-    local expectedfit = cond(`modelcode'==3,3,2)
-    local expectedspectrumprobes = cond(`modelcode'==3,`simulations'/4,128)
+    // Repeat-measurement standard errors (code 4) share that accounting.
+    local expectedfit = cond(inlist(`modelcode',3,4),`modelcode',2)
+    local expectedspectrumprobes = cond(inlist(`modelcode',3,4),`simulations'/4,128)
     local referencecode = ("`reference'"=="q1")
     capture noisily fevc__rust_public_call componentresultv5 `handle', reference(`reference')
     // The owning fevc program releases the prepared generation on any error;
@@ -31,6 +32,14 @@ program define fevc__rust_component_fetch, rclass
         capture local residual_present = (rowsof(`residual_diagnostic')==1 & ///
             colsof(`residual_diagnostic')==26)
         if _rc local residual_present = 0
+    }
+    tempname repeat_shape
+    local repeat_present = 0
+    capture matrix `repeat_shape' = r(repeat_measurement)
+    if !_rc {
+        capture local repeat_present = (rowsof(`repeat_shape')==1 & ///
+            colsof(`repeat_shape')==14)
+        if _rc local repeat_present = 0
     }
     local joint_status = r(joint_status)
     local variance_fit = r(variance_fit)
@@ -112,9 +121,9 @@ program define fevc__rust_component_fetch, rclass
                 forvalues column = 1/`=colsof(``matrix_name'')' {
                     local expected_missing =                              ///
                         (`joint_status'>0 & inlist("`matrix_name'","primitive","covariance")) | ///
-                        (inlist(`variance_fit',2,3) & inlist("`matrix_name'","summaries","folds","cv")) | ///
-                        ("`matrix_name'"=="receipt" & inlist(`variance_fit',2,3) & inrange(`column',16,19)) | ///
-                        ("`matrix_name'"=="receipt" & `variance_fit'==3 & inrange(`column',28,30)) | ///
+                        (inlist(`variance_fit',2,3,4) & inlist("`matrix_name'","summaries","folds","cv")) | ///
+                        ("`matrix_name'"=="receipt" & inlist(`variance_fit',2,3,4) & inrange(`column',16,19)) | ///
+                        ("`matrix_name'"=="receipt" & inlist(`variance_fit',3,4) & inrange(`column',28,30)) | ///
                         ("`matrix_name'"=="receipt" & `variance_fit'==1 & inrange(`column',28,31))
                     if missing(``matrix_name''[`row',`column']) != `expected_missing' local ok = 0
                 }
@@ -125,7 +134,7 @@ program define fevc__rust_component_fetch, rclass
             `receipt'[1,28]>0 & `receipt'[1,29]>=0 & ///
             `receipt'[1,30]>=0 & `receipt'[1,31]>0 & `receipt'[1,32]<`expectedunits' & ///
             `receipt'[1,33]<=`receipt'[1,32]
-        else if `variance_fit'==3 local ok = `ok' & `receipt'[1,26]==0 & ///
+        else if inlist(`variance_fit',3,4) local ok = `ok' & `receipt'[1,26]==0 & ///
             `receipt'[1,27]==0 & `receipt'[1,31]>0 & `receipt'[1,32]>=0 & ///
             `receipt'[1,32]<`expectedunits' & `receipt'[1,33]==0 & ///
             `simulations'>=8 & mod(`simulations',4)==0 & ///
@@ -179,7 +188,7 @@ program define fevc__rust_component_fetch, rclass
         forvalues row = 1/4 {
             if `joint_status'==0 & reldif(`target_status'[`row',1],`covariance'[`row',`row'])>1e-12 local ok = 0
             if `spectrum'[`row',13]!=`expectedspectrumprobes' | `spectrum'[`row',14]!= ///
-                cond(`modelcode'==3,0,cond("`deletion'"=="observation" | "`reference'"=="q0",512,128)) local ok = 0
+                cond(inlist(`modelcode',3,4),0,cond("`deletion'"=="observation" | "`reference'"=="q0",512,128)) local ok = 0
             local spectral_missing_allowed = (`target_status'[`row',2]==6)
             if "`reference'"=="q1" local spectral_missing_allowed = (`q1_raw'[`row',17]==6)
             forvalues column = 1/15 {
@@ -188,18 +197,20 @@ program define fevc__rust_component_fetch, rclass
             }
         }
     }
-    if `ok' & `variance_fit'==3 & `residual_present' {
+    if `ok' & inlist(`variance_fit',3,4) & `residual_present' {
         // Draws, offset-pass solves and working-variance terms must agree
         // with the shared receipt; model-based variances must be positive.
         local ok = `residual_diagnostic'[1,1]==`simulations'/4 &           ///
             `residual_diagnostic'[1,5]==`receipt'[1,22]-`simulations'-3 &  ///
             inrange(`residual_diagnostic'[1,3],0,5) &                      ///
-            inrange(`residual_diagnostic'[1,4],0,3) &                      ///
+            inrange(`residual_diagnostic'[1,4],0,cond(`variance_fit'==4,6,3)) & ///
             `residual_diagnostic'[1,3]+`residual_diagnostic'[1,4]>0 &      ///
             `residual_diagnostic'[1,6]>=0 & !missing(`residual_diagnostic'[1,6])
+        // The repeat-measurement covariance is reported as computed: a
+        // nonpositive diagonal is a target status there, not a failure.
         forvalues index = 1/4 {
             local diagonal = `residual_diagnostic'[1,2+5*`index']
-            if missing(`diagonal') | `diagonal'<=0 local ok = 0
+            if missing(`diagonal') | (`diagonal'<=0 & `variance_fit'==3) local ok = 0
         }
     }
     if `ok' & `joint_status'==0 {
@@ -302,7 +313,7 @@ program define fevc__rust_component_fetch, rclass
     matrix `outsummaries' = `summaries'
     matrix `outfolds' = `folds'
     matrix `outcv' = `cv'
-    if `variance_fit'==3 & `residual_present' {
+    if inlist(`variance_fit',3,4) & `residual_present' {
         // Receipt columns 39-64 for leave-out residual standard errors.
         matrix colnames `residual_diagnostic' = draws controls mover_terms  ///
             stayer_terms offset_pass_solves signal_truncation               ///
@@ -310,6 +321,14 @@ program define fevc__rust_component_fetch, rclass
             vm_c_w vm_c_f vm_c_c vm_c_t vm_t_w vm_t_f vm_t_c vm_t_t         ///
             rank_worker rank_firm rank_covariance rank_total
         matrix `receipt' = (`receipt',`residual_diagnostic')
+        // Columns 65-78: shape of repeat-measurement variances.
+        if `variance_fit'==4 & `repeat_present' {
+            matrix colnames `repeat_shape' = scale_terms profile_terms     ///
+                scale_floor scale_floored stayers stayer_units             ///
+                stayer_floored pair_term profile_1 profile_2 profile_3     ///
+                profile_4 profile_5 profile_6
+            matrix `receipt' = (`receipt',`repeat_shape')
+        }
     }
     matrix `outreceipt' = `receipt'
     matrix `outunits' = `units'
@@ -323,6 +342,6 @@ program define fevc__rust_component_fetch, rclass
     // sources solve one system per simulation plus three and their Gram
     // probes; the leave-out residual source reports its own count, which
     // includes the offset pass under joint nuisance with controls.
-    return scalar plan_rhs = cond(`variance_fit'==3,`receipt'[1,22], ///
+    return scalar plan_rhs = cond(inlist(`variance_fit',3,4),`receipt'[1,22], ///
         `simulations'+3+`expectedgramprobes')
 end

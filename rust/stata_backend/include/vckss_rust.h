@@ -43,6 +43,7 @@ int32_t vckss_rust_engine_centering_v1(uint64_t generation, uint32_t mode);
 #define VCKSS_CORE_COMPONENT_CENTERING_V1_READY (UINT64_C(1) << 16)
 #define VCKSS_CORE_MIXED_COMPONENT_V1_READY (UINT64_C(1) << 17)
 #define VCKSS_CORE_RESIDUAL_SE_V1_READY (UINT64_C(1) << 18)
+#define VCKSS_CORE_REPEAT_SE_V1_READY (UINT64_C(1) << 19)
 #define VCKSS_SUPPORT_EXACT (UINT64_C(1) << 0)
 #define VCKSS_SUPPORT_JLA (UINT64_C(1) << 1)
 #define VCKSS_SUPPORT_MATCH_DELETION (UINT64_C(1) << 2)
@@ -68,6 +69,7 @@ int32_t vckss_rust_engine_centering_v1(uint64_t generation, uint32_t mode);
 #define VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON 1u
 #define VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE 2u
 #define VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL 3u
+#define VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT 4u
 #define VCKSS_COMPONENT_REFERENCE_Q0 0u
 #define VCKSS_COMPONENT_REFERENCE_Q1 1u
 #define VCKSS_COMPONENT_INFERENCE_SCHEMA_V1 1u
@@ -959,6 +961,26 @@ typedef struct VckssLeaveoutResidualDiagnosticV1 {
     double residual_noise_mcse[9];
 } VckssLeaveoutResidualDiagnosticV1;
 
+/* Shape of repeat-measurement variances: the movers' two-step model (scale,
+ * then a profile in the standardised worker and firm effects: intercept, a,
+ * a^2, p, p^2, a p) and the stayers who received their own sample variance.
+ * stayer_pair_term is the closed-form term for the pairs of rows of one
+ * stayer in the worker-variance entry of the covariance. */
+typedef struct VckssRepeatMeasurementDiagnosticV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t scale_terms;
+    uint32_t profile_terms;
+    uint64_t scale_floored;
+    uint64_t stayers;
+    uint64_t stayer_units;
+    uint64_t stayer_floored;
+    double scale_floor;
+    double stayer_pair_term;
+    double profile[6];
+} VckssRepeatMeasurementDiagnosticV1;
+
 typedef struct VckssComponentVectorV1 {
     double worker;
     double firm;
@@ -1773,6 +1795,11 @@ int32_t vckss_rust_engine_component_inference_unit_receipt_v2(
 int32_t vckss_rust_engine_leaveout_residual_diagnostic_v1(
     uint64_t generation,
     VckssLeaveoutResidualDiagnosticV1 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_repeat_measurement_diagnostic_v1(
+    uint64_t generation,
+    VckssRepeatMeasurementDiagnosticV1 *output,
     uint32_t output_capacity_bytes
 );
 /* V2 changes policy, not the frozen V1 tuning-request layout. */

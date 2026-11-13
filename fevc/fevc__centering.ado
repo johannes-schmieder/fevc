@@ -18,7 +18,7 @@ program define fevc__centering, eclass
         // estimate and treat the corrected increment as fixed. inference(auto)
         // resolves to that model or to no inference.
         if "`centering'"=="corrected" & !inlist(lower(strtrim("`inference'")),"","none","auto") & ///
-            lower(strtrim("`inferencemodel'"))!="leaveout_residual" {
+            !inlist(lower(strtrim("`inferencemodel'")),"leaveout_residual","repeat_measurement") {
             global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
             di as error "inference() supports centering(none) or centering(mean)"
             exit 498

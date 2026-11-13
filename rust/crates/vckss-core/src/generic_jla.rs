@@ -2720,8 +2720,10 @@ fn run_generic_jla_with_execution_interrupt(
     // the standard error needs their estimation as an explicit first-order
     // term. Its unit aggregates use the geometry released just below.
     let residual_control_adjustment = match component_inference {
+        // Repeat-measurement standard errors hold the estimated offset fixed.
         Some(prepared)
             if prepared.leave_out_residual
+                && !prepared.repeat_measurement
                 && prepared.inference_unit == ComponentInferenceUnit::Match
                 && controls > 0 =>
         {
@@ -10414,6 +10416,7 @@ mod tests {
             inference_unit: ComponentInferenceUnit::Observation,
             variance_source: ComponentVarianceSource::Oracle,
             leave_out_residual: false,
+            repeat_measurement: false,
             variance: Vec::new(),
             options: crate::component_inference::ComponentInferenceOptions {
                 probes: 7,

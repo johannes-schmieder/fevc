@@ -151,6 +151,9 @@ pub const VCKSS_CORE_COMPONENT_CENTERING_V1_READY: u64 = 1 << 16;
 pub const VCKSS_CORE_MIXED_COMPONENT_V1_READY: u64 = 1 << 17;
 /// Leave-out residual standard errors on the generic-JLA component attachment.
 pub const VCKSS_CORE_RESIDUAL_SE_V1_READY: u64 = 1 << 18;
+/// Repeat-measurement standard errors on the same attachment: stayers' own
+/// sample variances and a two-step fitted model for mover units.
+pub const VCKSS_CORE_REPEAT_SE_V1_READY: u64 = 1 << 19;
 const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 = if cfg!(any(
     target_os = "macos",
     target_os = "linux",
@@ -185,7 +188,8 @@ const VCKSS_BACKEND_CAPABILITIES_V1_CORE_READY_FLAGS: u64 = VCKSS_CORE_MATCH_GRA
     | VCKSS_CORE_DELETION_UNIT_MOVERS_V1_READY
     | VCKSS_CORE_COMPONENT_CENTERING_V1_READY
     | VCKSS_CORE_MIXED_COMPONENT_V1_READY
-    | VCKSS_CORE_RESIDUAL_SE_V1_READY;
+    | VCKSS_CORE_RESIDUAL_SE_V1_READY
+    | VCKSS_CORE_REPEAT_SE_V1_READY;
 const VCKSS_BACKEND_CAPABILITIES_V1_SUPPORT_FLAGS: u64 =
     VCKSS_SUPPORT_JLA | VCKSS_SUPPORT_MATCH_DELETION | VCKSS_SUPPORT_DIAGONAL;
 pub const VCKSS_INTERRUPT_CONTINUE: i32 = 0;
@@ -250,6 +254,7 @@ pub const VCKSS_PROJECTION_SCHEMA_V1: u32 = 1;
 pub const VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON: u32 = 1;
 pub const VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE: u32 = 2;
 pub const VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL: u32 = 3;
+pub const VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT: u32 = 4;
 pub const VCKSS_COMPONENT_REFERENCE_Q0: u32 = 0;
 pub const VCKSS_COMPONENT_REFERENCE_Q1: u32 = 1;
 pub const VCKSS_COMPONENT_INFERENCE_SCHEMA_V1: u32 = 1;
@@ -4036,9 +4041,12 @@ fn attach_component_inference_inner(
             "component-inference augmentation request is malformed",
         ));
     }
-    // Code 3 is the leave-out residual source: a flag on the prepared
-    // attachment rather than a named variance model.
-    let leave_out_residual = request.variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL;
+    // Codes 3 and 4 are the leave-out residual source and its
+    // repeat-measurement variant: flags on the prepared attachment rather
+    // than named variance models.
+    let repeat_measurement = request.variance_source == VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT;
+    let leave_out_residual =
+        repeat_measurement || request.variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL;
     let variance_source = if leave_out_residual {
         ComponentVarianceSource::Oracle
     } else {
@@ -4091,6 +4099,7 @@ fn attach_component_inference_inner(
             inference_unit,
             variance_source,
             leave_out_residual,
+            repeat_measurement,
             options,
             structured_options,
             policy,
@@ -4138,7 +4147,9 @@ pub extern "C" fn vckss_rust_engine_component_inference_augmentation_receipt_v1(
                 schema_version: VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
                 generation,
                 rows: receipt.rows,
-                variance_source: if component.core.leave_out_residual {
+                variance_source: if component.core.repeat_measurement {
+                    VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT
+                } else if component.core.leave_out_residual {
                     VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL
                 } else {
                     component_variance_source_code(receipt.variance_source)
@@ -9843,7 +9854,13 @@ fn component_inference_result_receipt(
         struct_size: struct_size_u32::<VckssComponentInferenceResultReceiptV2>()?,
         schema_version: VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2,
         generation,
-        variance_source: if result.residual_noise.is_some() {
+        variance_source: if result
+            .residual_noise
+            .as_ref()
+            .is_some_and(|diagnostic| diagnostic.repeat.is_some())
+        {
+            VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT
+        } else if result.residual_noise.is_some() {
             VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL
         } else {
             component_variance_source_code(result.variance_source)

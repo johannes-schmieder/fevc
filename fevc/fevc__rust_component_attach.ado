@@ -14,7 +14,7 @@ program define fevc__rust_component_attach, rclass
     local selector augmentcomponentv4
     // The leave-out residual source fits no Gram matrix. The transport still
     // takes a count, so send its smallest valid one; the receipt reports zero.
-    if "`model'"=="leaveout_residual" local gramprobes = 512
+    if inlist("`model'","leaveout_residual","repeat_measurement") local gramprobes = 512
     local attachment_batch = `batch'
     if `batchauto'==1 {
         local selector augmentcomponentv5
@@ -34,7 +34,7 @@ program define fevc__rust_component_attach, rclass
         exit `failure_rc'
     }
     local model_code = cond("`model'"=="structured_common",1, ///
-        cond("`model'"=="leaveout_residual",3,2))
+        cond("`model'"=="leaveout_residual",3,cond("`model'"=="repeat_measurement",4,2)))
     local reference_code = ("`reference'"=="q1")
     local ok = r(schema_version)==1 & r(rows)==`rows' &              ///
         r(variance_source)==`model_code' &                           ///

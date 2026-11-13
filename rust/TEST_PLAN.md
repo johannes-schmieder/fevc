@@ -10,6 +10,34 @@ exact binaries, corresponding source and evidence. Windows scope is one/two
 workers; Mac x86-64 runtime tests use Rosetta. Published installation checks
 are recorded separately. Historical evidence below retains its original scope.
 
+## November 13 repeat-measurement standard errors (source only)
+
+Focused gates: `cargo test -p vckss-core residual_noise` now also runs the
+unit tests of `residual_noise::repeat` (stayers' sample variances and the
+pair term on a hand-computed case; the movers' two steps against an
+independent least-squares oracle, with invariance to a common shift of the
+effects; shortened bases; floors; the covariance assembly without
+truncation) and, in `generic_jla::residual_noise`,
+`repeat_measurement_standard_errors_match_dense_expectations` (pooled
+fixed-offset match units against the dense unit oracle: variances rebuilt
+independently, the trace term against its closed form within its Monte Carlo
+error, the assembled covariance, the pair term on its own scale),
+`repeat_measurement_standard_errors_do_not_depend_on_the_solver_route` and
+`repeat_measurement_requires_match_units`.
+`cargo test -p vckss-plugin --test engine_ffi repeat_measurement` crosses the
+C ABI: source 4, fit 4, the shared and the new diagnostic export, the refusal
+for observation units and for a caller with another layout. The C shim's
+capability scalar and the header layout are checked in
+`cshim_error_transport_test.c` and `abi_header_compat_test.c`. On the Stata
+side `fevc/tests/stata/test_repeat_measurement_se.do` compares the exact Mata
+route with an independent dense calculation and exercises the matrix-free
+Mata route, controls, the mover-only population, centering modes and the
+typed refusals; `fevc/tests/python/test_repeat_measurement_interface.py` pins
+the identifiers shared across layers. Not run: the native route from Stata,
+any installed-plugin or platform gate; no binary has been rebuilt. The
+memory forecast of the shared pass is not separately checked against the heap
+for this variant.
+
 ## November 10 leave-out residual standard errors (source only)
 
 Focused gates: `cargo test -p vckss-core residual_noise` (unit tests and the

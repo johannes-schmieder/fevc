@@ -123,9 +123,10 @@ program define fevc__component_model_route, rclass
     if !`supplied' & !`se_auto' local inferencemodel target_lowess
     local inferencemodel = lower(strtrim(`"`inferencemodel'"'))
     if !inlist("`inferencemodel'","target_lowess",               ///
-        "structured_common","structured_leverage","leaveout_residual") {
+        "structured_common","structured_leverage","leaveout_residual", ///
+        "repeat_measurement") {
         quietly _fevc_component_route_failure "INVALID_INFERENCE_MODEL"   ///
-            "inferencemodel() must be leaveout_residual, target_lowess, structured_common, or structured_leverage."
+            "inferencemodel() must be leaveout_residual, repeat_measurement, target_lowess, structured_common, or structured_leverage."
         exit 198
     }
     if `supplied' & "`inference'"=="none" {
@@ -135,7 +136,18 @@ program define fevc__component_model_route, rclass
     }
     local structured = "`inference'"!="none" &                  ///
         inlist("`inferencemodel'","structured_common","structured_leverage")
-    local residual = "`inference'"!="none" & "`inferencemodel'"=="leaveout_residual"
+    // Repeat-measurement standard errors are a variant of the leave-out
+    // residual pass: same units, solves and routes; stayers receive their
+    // own sample variance and mover units a two-step fitted model. They are
+    // an explicit request and need the collapsed units of match deletion.
+    local repeat = "`inference'"!="none" & "`inferencemodel'"=="repeat_measurement"
+    local residual = "`inference'"!="none" &                     ///
+        inlist("`inferencemodel'","leaveout_residual","repeat_measurement")
+    if `repeat' & "`inference'"=="q1" {
+        quietly _fevc_component_route_failure "REPEAT_MEASUREMENT_Q1_UNSUPPORTED" ///
+            "inferencemodel(repeat_measurement) reports the normal interval; specify inference(highrank)."
+        exit 498
+    }
     if `residual' & "`inference'"=="q1" {
         quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED" ///
             "inferencemodel(leaveout_residual) uses the normal reference; specify inference(highrank) or inference(auto)."
@@ -143,7 +155,7 @@ program define fevc__component_model_route, rclass
     }
     if `residual' & `gram_supplied' {
         quietly _fevc_component_route_failure "INFERENCE_GRAM_TUPLE_REQUIRED" ///
-            "inferencegramprobes() does not apply to inferencemodel(leaveout_residual); use inferencedraws()."
+            "inferencegramprobes() does not apply to inferencemodel(`inferencemodel'); use inferencedraws()."
         exit 498
     }
     if `structured' & `project_supplied' {
@@ -184,7 +196,7 @@ program define fevc__component_model_route, rclass
     local residual_units_ok =                                             ///
         inlist(lower(strtrim("`stayers'")),"","movers","both") &         ///
         (inlist("`residual_deletion'","","match") |                       ///
-            ("`residual_deletion'"=="observation" &                       ///
+            ("`residual_deletion'"=="observation" & !`repeat' &           ///
                 inlist(lower(strtrim("`nuisance'")),"","joint")))
     local residual_native = `residual' & !`project_supplied' &            ///
         inlist("`backend_requested'","auto","rust") &                    ///
@@ -215,7 +227,8 @@ program define fevc__component_model_route, rclass
         capture quietly fevc__rust_public_call probe
         local residual_rc = _rc
         if !`residual_rc' {
-            if r(component_residual_api)!=1 | r(component_mixed_api)!=1 {
+            if r(component_residual_api)!=1 | r(component_mixed_api)!=1 | ///
+                (`repeat' & r(component_repeat_api)!=1) {
                 local residual_native = 0
                 local residual_reason "the installed native plugin predates them; reinstall the matching plugin"
             }
@@ -241,6 +254,12 @@ program define fevc__component_model_route, rclass
             local supplied = 0
             local residual = 0
             local inference_requested = `project_supplied'
+        }
+        else if `repeat' {
+            quietly _fevc_component_route_failure "REPEAT_MEASUREMENT_TUPLE_REQUIRED" ///
+                "Repeat-measurement standard errors need match deletion, Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)), and no project(); `residual_reason'."
+            di as error "repeat-measurement standard errors are not available for this request"
+            exit 498
         }
         else {
             quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_TUPLE_REQUIRED" ///
@@ -301,6 +320,9 @@ program define fevc__component_model_route, rclass
     global VCKSS_SE_AUTO `se_auto'
     global VCKSS_SE_AUTO_REASON "`se_auto_reason'"
     global VCKSS_SE_ATTACHED = (`se_auto' & `residual')
+    // Read by the Mata runtimes and the posting helper; empty unless this
+    // request carries one of the two residual-pass standard errors.
+    global VCKSS_SE_MODEL = cond(`residual',"`inferencemodel'","")
     c_local inferencemodel "`inferencemodel'"
     c_local inferencedraws `inferencedraws'
     c_local se_auto `se_auto'

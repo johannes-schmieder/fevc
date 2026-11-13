@@ -157,6 +157,7 @@ mod tests {
             inference_unit: ComponentInferenceUnit::Observation,
             variance_source: ComponentVarianceSource::Oracle,
             leave_out_residual: false,
+            repeat_measurement: false,
             variance: vec![0.04; 5],
             options: ComponentInferenceOptions {
                 probes: 129,

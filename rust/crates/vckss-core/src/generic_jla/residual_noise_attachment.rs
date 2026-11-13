@@ -8,8 +8,8 @@
 use super::*;
 use crate::component_inference::residual_noise_result;
 use crate::residual_noise::{
-    center_units, finish_covariance, fit_working_variance, ControlAdjustment, Diagnostic,
-    NoiseAccumulator,
+    center_units, finish_covariance, finish_repeat_covariance, fit_repeat_variance,
+    fit_working_variance, ControlAdjustment, Diagnostic, NoiseAccumulator, RepeatInputs,
 };
 
 /// Unit-level inputs for the first-order control-estimation term.
@@ -202,6 +202,14 @@ pub(super) fn peak_bytes(
                 checked_product(&[controls, controls, 4, 8], "control information")?,
             ])?;
         }
+    }
+    if prepared.repeat_measurement {
+        // Unit workers, the two effects, the fitted scale, two rank vectors
+        // and the stayer ordering of the repeat-measurement variances.
+        retained = checked_sum(&[
+            retained,
+            checked_product(&[units, 7, 8], "repeat-measurement unit state")?,
+        ])?;
     }
     if prepared.mixed_units.is_some() {
         retained = checked_sum(&[
@@ -414,18 +422,77 @@ pub(super) fn run(
             ));
         }
     }
-    let fit = fit_working_variance(
-        &proxy,
-        residual,
-        maker_inverse,
-        leverage,
-        match_mass,
-        mover_units,
-        prepared.structured_options.positivity_multiplier,
-        interrupt,
-    )?;
+    // Either source ends in one positive variance per unit for the
+    // pseudo-noise; they differ in how it is formed and assembled.
+    let (fit, repeat) = if prepared.repeat_measurement {
+        let (ComponentInferenceRows::Match { plan, .. }, Some(mass)) = (inference_rows, match_mass)
+        else {
+            return Err(BackendError::invariant(
+                "residual_noise_attachment",
+                "repeat-measurement standard errors lost their match units",
+            ));
+        };
+        if control.is_some() {
+            return Err(BackendError::invariant(
+                "residual_noise_attachment",
+                "repeat-measurement standard errors hold the offset fixed",
+            ));
+        }
+        let mut worker = Vec::new();
+        let mut worker_effect = Vec::new();
+        let mut firm_effect = Vec::new();
+        reserve_exact(&mut worker, rows, "repeat-measurement unit workers")?;
+        reserve_exact(
+            &mut worker_effect,
+            rows,
+            "repeat-measurement worker effects",
+        )?;
+        reserve_exact(&mut firm_effect, rows, "repeat-measurement firm effects")?;
+        for unit in 0..rows {
+            checkpoint_chunk(interrupt, unit, "repeat_measurement_units")?;
+            let cell = plan.cell[unit] as usize;
+            let unit_worker = problem.cell_worker[cell];
+            worker.push(unit_worker);
+            worker_effect.push(coefficients.worker[unit_worker as usize]);
+            firm_effect.push(coefficients.firm[problem.cell_firm[cell] as usize]);
+        }
+        let repeat = fit_repeat_variance(
+            RepeatInputs {
+                proxy: &proxy,
+                outcome: working_y,
+                residual,
+                maker_inverse,
+                leverage,
+                mass,
+                mover_units,
+                worker: &worker,
+                worker_effect: &worker_effect,
+                firm_effect: &firm_effect,
+                worker_diagonal: &target_diagonal[0],
+                positivity_multiplier: prepared.structured_options.positivity_multiplier,
+            },
+            interrupt,
+        )?;
+        (None, Some(repeat))
+    } else {
+        let fit = fit_working_variance(
+            &proxy,
+            residual,
+            maker_inverse,
+            leverage,
+            match_mass,
+            mover_units,
+            prepared.structured_options.positivity_multiplier,
+            interrupt,
+        )?;
+        (Some(fit), None)
+    };
     drop(proxy);
-    let variance = &fit.variance;
+    let variance: &[f64] = match (&fit, &repeat) {
+        (Some(fit), _) => &fit.variance,
+        (None, Some(repeat)) => &repeat.variance,
+        (None, None) => unreachable!("one variance source is always formed"),
+    };
 
     let mut solve_receipts = Vec::new();
     let draws = crate::component_inference::residual_noise_draws(prepared.options.probes)?;
@@ -633,21 +700,38 @@ pub(super) fn run(
     }
     crate::progress::advance(crate::progress::INFERENCE, draws, draws);
     let moments = accumulator.finish()?;
-    let covariance = finish_covariance(
-        &influence,
-        residual,
-        maker_inverse,
-        variance,
-        control,
-        &moments,
-        interrupt,
-    )?;
-    let diagnostic = Diagnostic::new(
-        &fit,
-        control.map_or(0, |value| value.controls),
-        &moments,
-        &covariance,
-    )?;
+    let (covariance, diagnostic) = match (&fit, &repeat) {
+        (Some(fit), _) => {
+            let covariance = finish_covariance(
+                &influence,
+                residual,
+                maker_inverse,
+                variance,
+                control,
+                &moments,
+                interrupt,
+            )?;
+            let diagnostic = Diagnostic::new(
+                fit,
+                control.map_or(0, |value| value.controls),
+                &moments,
+                &covariance,
+            )?;
+            (covariance, diagnostic)
+        }
+        (None, Some(repeat)) => {
+            let covariance = finish_repeat_covariance(
+                &influence,
+                variance,
+                &repeat.adjustment,
+                &moments,
+                interrupt,
+            )?;
+            let diagnostic = Diagnostic::repeat(repeat, &moments, &covariance)?;
+            (covariance, diagnostic)
+        }
+        (None, None) => unreachable!("one variance source is always formed"),
+    };
     let mut result = residual_noise_result(rows, &covariance, &moments, diagnostic)?;
     // Transports reconcile probes with pseudo-noise solves; the draw count
     // stays in the diagnostic and the spectrum row.

@@ -141,4 +141,63 @@ program define fevc__residual_se_post, eclass
     ereturn local status "FEVC_LEAVEOUT_RESIDUAL_SE"
     if e(inference_computed_targets)<4 ereturn local status "FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL"
     if e(inference_computed_targets)==0 ereturn local status "FEVC_STRUCTURED_INFERENCE_UNAVAILABLE"
+    if "$VCKSS_SE_MODEL"=="repeat_measurement" _fevc_repeat_se_post `route'
+end
+
+// Repeat-measurement standard errors share the pass above and replace the
+// description of the variances, the assumptions, and the status.
+program define _fevc_repeat_se_post, eclass
+    version 18.0
+    args route
+    ereturn local inference_variance_fit "repeat_measurement"
+    ereturn local inference_method                              ///
+        "repeat-measurement standard errors: stayers' own sample variances, two-step fitted model for mover units, high-rank covariance with a stayer pair term"
+    ereturn local inference_variance_response                    ///
+        "stayers: sample variance of the worker's observations; movers: leave-out products"
+    ereturn local inference_variance_conditioning                ///
+        "movers: scale on midranks of leverage and unit mass (linear and squared) times a quadratic in the standardised estimated worker and firm effects, limited to three standard deviations"
+    ereturn local inference_positivity                           ///
+        "covariance reported as computed, no truncation; fitted scale floored at five per cent of the movers' mean leave-out product; variances floored at 1e-8 times the median squared residual over the maker diagonal"
+    ereturn local inference_support_status "fitted_model_for_movers"
+    ereturn local inference_qualification                         ///
+        "development evidence from a Python prototype, simulations on one data set, and Rust dense oracles; not a qualified release claim"
+    ereturn local inference_variance_warning                      ///
+        "as good as the fitted variance model for movers; stayers' errors assumed independent across observations with one variance per stayer"
+    ereturn local inference_capability = cond("`route'"=="rust", ///
+        "repeat-measurement standard errors; generic JLA; fixed-offset unit geometry, match deletion", ///
+        "repeat-measurement standard errors; Mata exact kernels or linear solves; fixed-offset unit geometry, match deletion")
+    ereturn local inference_offset_warning                        ///
+        "estimated control coefficients are treated as known"
+    // Shape of the variances: from the native receipt (columns 65-78) or
+    // from the Mata runtime.
+    tempname shape native
+    local shape_ok = 0
+    if "`route'"=="rust" {
+        capture matrix `native' = e(component_inference_receipt)
+        if !_rc {
+            if colsof(`native')==78 {
+                matrix `shape' = `native'[1,65..78]
+                local shape_ok = 1
+            }
+        }
+    }
+    else if `: word count $VCKSS_SE_SHAPE'==14 {
+        matrix `shape' = J(1,14,.)
+        forvalues index = 1/14 {
+            matrix `shape'[1,`index'] = real("`: word `index' of $VCKSS_SE_SHAPE'")
+        }
+        local shape_ok = 1
+    }
+    if `shape_ok' {
+        matrix colnames `shape' = scale_terms profile_terms scale_floor ///
+            scale_floored stayers stayer_units stayer_floored pair_term ///
+            profile_1 profile_2 profile_3 profile_4 profile_5 profile_6
+        matrix rownames `shape' = repeat_measurement
+        ereturn scalar inference_stayers = `shape'[1,5]
+        ereturn scalar inference_stayer_pair_term = `shape'[1,8]
+        ereturn matrix inference_repeat = `shape'
+    }
+    ereturn local status "FEVC_REPEAT_MEASUREMENT_SE"
+    if e(inference_computed_targets)<4 ereturn local status "FEVC_REPEAT_MEASUREMENT_SE_PARTIAL"
+    if e(inference_computed_targets)==0 ereturn local status "FEVC_STRUCTURED_INFERENCE_UNAVAILABLE"
 end

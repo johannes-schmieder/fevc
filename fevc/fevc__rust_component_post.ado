@@ -29,8 +29,8 @@ program define fevc__rust_component_post, eclass
         ereturn matrix structured_variance_folds = `folds'
         ereturn matrix structured_variance_cv = `cv'
     }
-    else if `variance_fit'==3 {
-        // Leave-out residual standard errors fit no Gram matrix.
+    else if inlist(`variance_fit',3,4) {
+        // Leave-out residual and repeat-measurement standard errors fit no Gram matrix.
         ereturn scalar variance_floor = `receipt'[1,31]
         ereturn scalar variance_floor_share = `receipt'[1,32]/`units'[1,3]
     }
@@ -185,7 +185,7 @@ program define fevc__rust_component_post, eclass
     }
     ereturn matrix component_unit_receipt = `units'
     fevc__centering inference
-    if `variance_fit'==3 {
+    if inlist(`variance_fit',3,4) {
         fevc__residual_se_post `=`simulations'/4' "`deletion'" ///
             `=e(inference_nuisance_omitted)' rust
         exit

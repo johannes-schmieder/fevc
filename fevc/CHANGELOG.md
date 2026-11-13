@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Add repeat-measurement standard errors as an explicit request,
+  `inference(highrank) inferencemodel(repeat_measurement)`, on match deletion:
+  each stayer's error variance is its own sample variance over its
+  observations; mover units receive a two-step fitted model (a scale on the
+  ranks of leverage and match size times a quadratic in the standardised
+  estimated worker and firm effects, limited to three standard deviations);
+  the covariance is the KSS high-rank form plus a closed-form term for the
+  pairs of observations of one stayer, reported without truncation.
+  Estimated control coefficients are treated as known. The default
+  (`inference(auto)`, `leaveout_residual`) is unchanged, and `inference(q1)`
+  is not available with the new model.
+- The new model is a variant of the leave-out residual pass: same units,
+  solves, routes and memory accounting. Native capability bit 19 and
+  variance-source code 4 are additive, with a new diagnostic export
+  (`vckss_rust_engine_repeat_measurement_diagnostic_v1`); the distributed
+  plugins predate them. The Mata runtime build is
+  `vckss-residual-se-api3`. Exact Mata results agree with an independent
+  dense calculation; the Rust core is covered by unit tests with independent
+  oracles, a dense end-to-end test and a plugin-boundary test. The native
+  route has not been run from Stata.
+- Fix the default request: under `inference(auto)` without a typed
+  `inferencemodel()`, the model was reset to `target_lowess` and the command
+  stopped with `INFERENCE_DELETION_UNSUPPORTED` for match deletion, so a
+  plain `fevc y, worker() firm()` failed unless
+  `FEVC_DEFAULT_INFERENCE=none` was set.
 - Report leave-out residual standard errors, normal intervals and `e(V)` for
   the four components by default (`inference(auto)`). `inference(none)` gives
   point estimates only; `inference(highrank) inferencemodel(leaveout_residual)`

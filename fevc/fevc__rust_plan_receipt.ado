@@ -291,6 +291,10 @@ program define fevc__rust_plan_receipt, rclass
             // requests retain their additive post-plan attachment increment.
             if "`plan_name'" == "batch_command" & `component_inference' & `execution'==0 {
                 local values_match = (`result_value' > `plan_value')
+                // The residual-pass standard errors carry their own lifetime
+                // forecast, which need not exceed the batch plan's peak; the
+                // command peak then equals it.
+                if "$VCKSS_SE_MODEL"!="" local values_match = (`result_value' >= `plan_value')
             }
             if !`values_match' {
                 local receipt_mismatch = 1

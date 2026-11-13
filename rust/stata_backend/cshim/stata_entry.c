@@ -922,6 +922,8 @@ static int vckss_probe(void)
             (capabilities.core_ready_flags & VCKSS_CORE_MIXED_COMPONENT_V1_READY) != 0 ? 1u : 0u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_comp_residual_api",
             (capabilities.core_ready_flags & VCKSS_CORE_RESIDUAL_SE_V1_READY) != 0 ? 1u : 0u)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_comp_repeat_api",
+            (capabilities.core_ready_flags & VCKSS_CORE_REPEAT_SE_V1_READY) != 0 ? 1u : 0u)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_numerical_api", vckss_rust_numerical_schema_v2())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_api", vckss_rust_exact_execution_schema_v1())) != 0 ||
         (status = vckss_save_u64("__vckss_rust_exact_resolved_api", vckss_rust_exact_resolved_execution_schema_v2())) != 0 ||
@@ -1134,6 +1136,10 @@ static int vckss_parse_component_variance(const char *text, uint32_t *output)
     }
     if (strcmp(text, "leaveout_residual") == 0) {
         *output = VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL;
+        return 0;
+    }
+    if (strcmp(text, "repeat_measurement") == 0) {
+        *output = VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT;
         return 0;
     }
     return -1;
@@ -2166,7 +2172,8 @@ static int vckss_export_component_inference_augmentation(uint64_t generation)
         receipt.generation != generation || receipt.rows == 0 ||
         (receipt.variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON &&
          receipt.variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE &&
-         receipt.variance_source != VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL) ||
+         receipt.variance_source != VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL &&
+         receipt.variance_source != VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT) ||
         (receipt.reference_distribution != VCKSS_COMPONENT_REFERENCE_Q0 &&
          receipt.reference_distribution != VCKSS_COMPONENT_REFERENCE_Q1) ||
         receipt.reserved != 0 ||
@@ -3743,6 +3750,7 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
     VckssComponentInferenceResultReceiptV5 receipt5;
     VckssComponentInferenceUnitReceiptV2 units;
     VckssLeaveoutResidualDiagnosticV1 noise;
+    VckssRepeatMeasurementDiagnosticV1 repeat;
     VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
@@ -3864,10 +3872,14 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         base->generation != generation ||
         (base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON &&
          base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE &&
-         base->variance_source != VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL) ||
-        /* Fit 3 is the leave-out residual source and no other source may claim it. */
+         base->variance_source != VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL &&
+         base->variance_source != VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT) ||
+        /* Fit 3 is the leave-out residual source and fit 4 its
+         * repeat-measurement variant; no other source may claim either. */
         ((base->variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL) !=
             (individual && receipt5.variance_fit == 3u)) ||
+        ((base->variance_source == VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT) !=
+            (individual && receipt5.variance_fit == 4u)) ||
         base->reference_distribution != reference ||
         base->q1_present != (uint32_t)q1_present ||
         base->probes < 2 || base->counter_atoms == 0 || base->counter_words == 0 ||
@@ -3880,7 +3892,8 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         !isfinite(base->maximum_complete_residual) ||
         !isfinite(base->full_residual_tolerance) ||
         base->maximum_complete_residual > base->full_residual_tolerance ||
-        (individual && (receipt5.variance_fit == 2u || receipt5.variance_fit == 3u) ?
+        (individual && (receipt5.variance_fit == 2u || receipt5.variance_fit == 3u ||
+                receipt5.variance_fit == 4u) ?
             (base->structured_schema_version != 0 || base->fold_rows != 0 || base->cv_rows != 0) :
             (base->structured_schema_version == 0 || base->fold_rows != 10 || base->cv_rows != 70)) ||
         receipt.v3.q1_columns != (q1_present ? 20u : 0u) ||
@@ -3890,7 +3903,8 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         (q1_present && receipt.v3.critical_simulations < 100000u) ||
         !isfinite(receipt.v3.maximum_remainder_identity_error) ||
         receipt.v3.maximum_remainder_identity_error < 0.0 ||
-        (!(individual && (receipt5.variance_fit == 2u || receipt5.variance_fit == 3u)) &&
+        (!(individual && (receipt5.variance_fit == 2u || receipt5.variance_fit == 3u ||
+                receipt5.variance_fit == 4u)) &&
             (!isfinite(base->median_absolute_log_ratio) ||
         !isfinite(base->p90_absolute_log_ratio) ||
         !isfinite(base->maximum_absolute_log_ratio) ||
@@ -3956,7 +3970,7 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         size_t i;
         if (receipt5.joint_status > 2u ||
             (receipt5.variance_fit != 1u && receipt5.variance_fit != 2u &&
-             receipt5.variance_fit != 3u)) {
+             receipt5.variance_fit != 3u && receipt5.variance_fit != 4u)) {
             free(storage);
             return vckss_usage("invalid individual-inference method or joint status");
         }
@@ -4050,6 +4064,65 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
             base->maximum_absolute_log_ratio = SV_missval;
             base->log_variance_correlation = SV_missval;
         }
+        if (receipt5.variance_fit == 4u) {
+            /* Repeat-measurement standard errors share the pseudo-noise pass:
+             * no Gram matrix, no cross-validation, the same solve accounting.
+             * The offset is held fixed, so no control term and no truncation. */
+            if (q1_present || receipt5.gram_probes != 0u ||
+                !isfinite(receipt5.positivity_floor) || receipt5.positivity_floor <= 0.0 ||
+                receipt5.floored_predictions >= units.independent_units ||
+                units.deletion_mode != VCKSS_DELETION_MATCH) {
+                free(storage); return vckss_usage("invalid repeat-measurement diagnostics");
+            }
+            memset(&noise, 0, sizeof(noise));
+            memset(&repeat, 0, sizeof(repeat));
+            status = vckss_rust_engine_leaveout_residual_diagnostic_v1(
+                generation, &noise, (uint32_t)sizeof(noise));
+            if (status == 0) {
+                status = vckss_rust_engine_repeat_measurement_diagnostic_v1(
+                    generation, &repeat, (uint32_t)sizeof(repeat));
+            }
+            if (status != 0) { free(storage); return vckss_rust_failure(status); }
+            if (noise.struct_size != sizeof(noise) || noise.schema_version != 1u ||
+                noise.generation != generation || noise.draws < 2u ||
+                (uint64_t)noise.draws * 4u != base->probes ||
+                noise.offset_pass_solves % 2u != 0u ||
+                receipt.solver_columns != (uint64_t)base->probes + 3u + noise.offset_pass_solves ||
+                noise.controls != 0u || noise.signal_truncation != 0.0 ||
+                noise.working_floored != receipt5.floored_predictions ||
+                noise.working_floor != receipt5.positivity_floor ||
+                repeat.struct_size != sizeof(repeat) || repeat.schema_version != 1u ||
+                repeat.generation != generation ||
+                repeat.scale_terms != noise.mover_terms || repeat.profile_terms != noise.stayer_terms ||
+                repeat.scale_terms == 0u || repeat.scale_terms > 5u ||
+                repeat.profile_terms == 0u || repeat.profile_terms > 6u ||
+                repeat.stayer_units != units.stayer_observations ||
+                repeat.stayers > repeat.stayer_units / 2u ||
+                (repeat.stayer_units != 0u && repeat.stayers == 0u) ||
+                repeat.stayer_floored > repeat.stayer_units ||
+                repeat.scale_floored > units.mover_units ||
+                !isfinite(repeat.scale_floor) || repeat.scale_floor <= 0.0 ||
+                !isfinite(repeat.stayer_pair_term) || repeat.stayer_pair_term < 0.0) {
+                free(storage); return vckss_usage("repeat-measurement diagnostics did not reconcile");
+            }
+            for (i = 0; i < 16u; ++i) {
+                if (!isfinite(noise.model_covariance[i]) ||
+                    noise.model_covariance[i] != covariance[i] ||
+                    (i < 6u && !isfinite(repeat.profile[i])) ||
+                    (i < 4u && !isnan(noise.effective_rank[i]) &&
+                        (!isfinite(noise.effective_rank[i]) || noise.effective_rank[i] < 1.0))) {
+                    free(storage); return vckss_usage("invalid repeat-measurement covariance, profile or rank");
+                }
+            }
+            for (i = 0; i < 664u; ++i) {
+                if (!isnan(summaries[i])) { free(storage); return vckss_usage("repeat-measurement source exported inapplicable CV results"); }
+                summaries[i] = SV_missval;
+            }
+            base->median_absolute_log_ratio = SV_missval;
+            base->p90_absolute_log_ratio = SV_missval;
+            base->maximum_absolute_log_ratio = SV_missval;
+            base->log_variance_correlation = SV_missval;
+        }
         if ((status = vckss_store_result_matrix(argv[argc-1], 4, 2, targets)) != 0) {
             free(storage); return status;
         }
@@ -4108,7 +4181,7 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
     }
     if (individual) {
         const int residual = receipt5.variance_fit == 2u;
-        const int floored = residual || receipt5.variance_fit == 3u;
+        const int floored = residual || receipt5.variance_fit == 3u || receipt5.variance_fit == 4u;
         if ((status = vckss_save_u64("__vckss_comp_joint_status", receipt5.joint_status)) != 0 ||
             (status = vckss_save_u64("__vckss_comp_fit", receipt5.variance_fit)) != 0 ||
             (status = vckss_save_u64("__vckss_comp_computed", receipt.computed_targets)) != 0 ||
@@ -4120,7 +4193,24 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
             (status = vckss_save_double("__vckss_comp_floor", floored ? receipt5.positivity_floor : SV_missval)) != 0 ||
             (status = vckss_save_u64("__vckss_comp_floored", receipt5.floored_predictions)) != 0 ||
             (status = vckss_save_u64("__vckss_comp_nonpositive", receipt5.nonpositive_predictions)) != 0) return status;
-        if (receipt5.variance_fit == 3u) {
+        if (receipt5.variance_fit == 4u) {
+            /* The movers' two-step model and the stayers' own variances. */
+            char name[32];
+            unsigned int index;
+            if ((status = vckss_save_u64("__vckss_rm_scale_terms", repeat.scale_terms)) != 0 ||
+                (status = vckss_save_u64("__vckss_rm_profile_terms", repeat.profile_terms)) != 0 ||
+                (status = vckss_save_u64("__vckss_rm_scale_floored", repeat.scale_floored)) != 0 ||
+                (status = vckss_save_u64("__vckss_rm_stayers", repeat.stayers)) != 0 ||
+                (status = vckss_save_u64("__vckss_rm_stayer_units", repeat.stayer_units)) != 0 ||
+                (status = vckss_save_u64("__vckss_rm_stayer_floored", repeat.stayer_floored)) != 0 ||
+                (status = vckss_save_double("__vckss_rm_scale_floor", repeat.scale_floor)) != 0 ||
+                (status = vckss_save_double("__vckss_rm_pair_term", repeat.stayer_pair_term)) != 0) return status;
+            for (index = 0; index < 6u; ++index) {
+                snprintf(name, sizeof(name), "__vckss_rm_profile_%u", index + 1u);
+                if ((status = vckss_save_double(name, repeat.profile[index])) != 0) return status;
+            }
+        }
+        if (receipt5.variance_fit == 3u || receipt5.variance_fit == 4u) {
             /* Row-major model-based covariance, then the effective ranks. */
             char name[32];
             unsigned int index;

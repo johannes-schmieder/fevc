@@ -243,6 +243,12 @@ pub struct PreparedComponentInference {
     /// the variance-source enumeration, which registered campaign sources
     /// match exhaustively, is unchanged.
     pub leave_out_residual: bool,
+    /// Repeat-measurement standard errors: a variant of the leave-out residual
+    /// pass (`leave_out_residual` is then also set, so routing, admission and
+    /// the pseudo-noise solves are shared) in which stayers receive their own
+    /// sample variance, mover units a two-step fitted model, and the
+    /// covariance is the high-rank form with a closed-form stayer pair term.
+    pub repeat_measurement: bool,
     pub variance: Vec<f64>,
     pub options: ComponentInferenceOptions,
     pub structured_options: StructuredVarianceOptions,
@@ -392,6 +398,7 @@ pub fn prepare_oracle_component_inference_with_interrupt(
         inference_unit: ComponentInferenceUnit::Observation,
         variance_source: ComponentVarianceSource::Oracle,
         leave_out_residual: false,
+        repeat_measurement: false,
         variance: owned_variance,
         options,
         structured_options: StructuredVarianceOptions::default(),
@@ -451,6 +458,7 @@ pub fn prepare_structured_component_inference_with_interrupt(
         inference_unit: ComponentInferenceUnit::Observation,
         variance_source,
         leave_out_residual: false,
+        repeat_measurement: false,
         variance: Vec::new(),
         options,
         structured_options,
@@ -502,6 +510,7 @@ pub fn prepare_residual_noise_with_interrupt(
         // No variance model is named and no variances are supplied.
         variance_source: ComponentVarianceSource::Oracle,
         leave_out_residual: true,
+        repeat_measurement: false,
         variance: Vec::new(),
         options,
         structured_options,
@@ -511,6 +520,36 @@ pub fn prepare_residual_noise_with_interrupt(
         design_only_order: false,
         unified_variance_fit: false,
     })
+}
+
+/// Prepare repeat-measurement standard errors.
+///
+/// The units are collapsed mover matches and physical stayer observations, so
+/// only the match inference unit is admitted. The pass shares the solves, the
+/// probe accounting and the normal reference of the leave-out residual source.
+pub fn prepare_repeat_measurement_with_interrupt(
+    problem: &CompressedProblem,
+    unit: ComponentInferenceUnit,
+    options: ComponentInferenceOptions,
+    structured_options: StructuredVarianceOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PreparedComponentInference> {
+    if unit != ComponentInferenceUnit::Match {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "component_inference_prepare",
+            "repeat-measurement standard errors require match deletion units",
+        ));
+    }
+    let mut prepared = prepare_residual_noise_with_interrupt(
+        problem,
+        unit,
+        options,
+        structured_options,
+        interrupt,
+    )?;
+    prepared.repeat_measurement = true;
+    Ok(prepared)
 }
 
 /// Linear solves per pseudo-noise draw of the leave-out residual source: one
@@ -662,6 +701,7 @@ pub fn prepare_grouped_structured_component_inference(
         inference_unit: ComponentInferenceUnit::Match,
         variance_source,
         leave_out_residual: false,
+        repeat_measurement: false,
         variance: Vec::new(),
         options,
         structured_options,
@@ -695,6 +735,7 @@ pub fn prepare_grouped_oracle_component_inference(
         inference_unit: ComponentInferenceUnit::Match,
         variance_source: ComponentVarianceSource::Oracle,
         leave_out_residual: false,
+        repeat_measurement: false,
         variance: variance.to_vec(),
         options,
         structured_options: StructuredVarianceOptions::default(),

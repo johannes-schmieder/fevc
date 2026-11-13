@@ -11,7 +11,7 @@ program define fevc__display
         exit
     }
     if "`inferencediagnosticsonly'" != "" {
-        if "`e(inference_variance_fit)'"=="leaveout_residual" _fevc_display_residual_se
+        if inlist("`e(inference_variance_fit)'","leaveout_residual","repeat_measurement") _fevc_display_residual_se
         else _fevc_display_structured
         exit
     }
@@ -83,7 +83,7 @@ program define fevc__display
     _fevc_display_decomp
     _fevc_display_inference
 
-    if "`e(inference_variance_fit)'"=="leaveout_residual" {
+    if inlist("`e(inference_variance_fit)'","leaveout_residual","repeat_measurement") {
         _fevc_display_residual_se
     }
     else if "`e(inference_variance_fit)'"!="" & e(inference_joint_posted)==0 {
@@ -340,7 +340,9 @@ program define _fevc_display_residual_se
     version 18.0
     tempname rank
     matrix `rank' = e(inference_effective_rank)
-    di as txt _newline "Standard errors: leave-out residual (" ///
+    local repeat = ("`e(inference_variance_fit)'"=="repeat_measurement")
+    di as txt _newline "Standard errors: " ///
+        cond(`repeat',"repeat-measurement","leave-out residual") " (" ///
         as result e(inference_draws) as txt " pseudo-noise draws; " ///
         as result %12.0fc e(inference_independent_units) as txt " deletion units)."
     if e(inference_joint_posted)==1 {
@@ -349,8 +351,16 @@ program define _fevc_display_residual_se
     else {
         di as txt "e(V) is not posted; use the available individual intervals."
     }
-    di as txt "Assumes independent deletion units and similar error variances among units"
-    di as txt "that share a worker or a firm. Not robust to arbitrary heteroskedasticity."
+    if `repeat' {
+        di as txt "Each stayer's error variance is its own sample variance over its observations;"
+        di as txt "mover units use a fitted model (leverage, match size, estimated effects)."
+        di as txt "Assumes independent deletion units. The standard error is as good as that"
+        di as txt "model for movers; estimated control coefficients are treated as known."
+    }
+    else {
+        di as txt "Assumes independent deletion units and similar error variances among units"
+        di as txt "that share a worker or a firm. Not robust to arbitrary heteroskedasticity."
+    }
     di as txt "Effective rank (worker, firm, covariance): " as result ///
         %9.1f `rank'[1,1] %9.1f `rank'[2,1] %9.1f `rank'[3,1] ///
         as txt "; largest unit influence share: " as result %6.4f e(inference_max_influence_share)
