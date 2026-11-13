@@ -118,7 +118,9 @@ program define fevc__component_model_route, rclass
 
     local supplied = (strtrim(`"`inferencemodel'"')!="")
     if `se_auto' local supplied = `model_typed'
-    if !`supplied' local inferencemodel target_lowess
+    // inference(auto) has already selected leaveout_residual; only a request
+    // without it falls back to the exact target-specific model.
+    if !`supplied' & !`se_auto' local inferencemodel target_lowess
     local inferencemodel = lower(strtrim(`"`inferencemodel'"'))
     if !inlist("`inferencemodel'","target_lowess",               ///
         "structured_common","structured_leverage","leaveout_residual") {

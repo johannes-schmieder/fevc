@@ -30,12 +30,13 @@ program define _se_check
     assert e(inference_auto)==1 & "`e(inference_auto_reason)'"==""
     assert e(inference_draws)==`draws'
     confirm matrix e(V)
-    tempname V b ci rank
+    tempname V Vt b ci rank
     matrix `V' = e(V)
+    matrix `Vt' = `V''
     matrix `b' = e(b)
     matrix `ci' = e(component_inference)
     assert rowsof(`V')==4 & colsof(`V')==4
-    assert mreldif(`V',`V'')<1e-12
+    assert mreldif(`V',`Vt')<1e-12
     forvalues j = 1/4 {
         assert `V'[`j',`j']>0
         assert reldif(`ci'[`j',1],`b'[1,`j'])<1e-12
@@ -100,7 +101,8 @@ foreach controls in "" "x1 x2" {
             forvalues j = 1/4 {
                 assert Vm[`j',`j']>0 & reldif(sem[1,`j'],sqrt(Vm[`j',`j']))<1e-12
             }
-            assert mreldif(Vm,Vm')<1e-10
+            matrix Vmt = Vm'
+            assert mreldif(Vm,Vmt)<1e-10
         }
     }
     else {
