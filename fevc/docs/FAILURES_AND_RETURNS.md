@@ -402,9 +402,13 @@ component variance is withheld, with `e(inference_variance_fit)` equal to
 `repeat_measurement`, the returns of the leave-out residual pass listed next,
 `e(inference_nuisance_omitted)` equal to one, and the shape of the variances
 in `e(inference_repeat)` (one row: scale terms, profile terms, scale floor,
-units at the scale floor, stayers, stayer observations, stayer observations at
-the variance floor, the stayer pair term, six profile coefficients), with
-`e(inference_stayers)` and `e(inference_stayer_pair_term)` as scalars.
+units at the scale floor, repeat-measurement sets, their units, their units
+at the variance floor, the worker-variance entry of the pair term, six
+profile coefficients), with `e(inference_repeat_sets)` and
+`e(inference_pair_term)` as scalars. A set is a worker-firm cell with two or
+more deletion units: an eligible stayer under match deletion, and under
+observation deletion also every match of a mover with two or more
+observations.
 Leave-out residual standard errors post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
 `FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL` when a component variance is withheld,
 with `e(inference_variance_fit)` equal to `leaveout_residual`,

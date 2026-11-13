@@ -9737,7 +9737,7 @@ program define _fevc_residual_se_mata
     capture mata: vckss_rse__api_level()
     local runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rse__api_level() == 1 &            ///
-        vckss_rse__build_id() == "vckss-residual-se-api3" &       ///
+        vckss_rse__build_id() == "vckss-residual-se-api4" &       ///
         vckss_rse__loaded() == 1)
     if _rc & `runtime_loaded' {
         c_local inference_status "STALE_INFERENCE_RUNTIME"
@@ -9753,7 +9753,7 @@ program define _fevc_residual_se_mata
         }
         capture quietly do `"`r(fn)'"'
         capture mata: assert(vckss_rse__api_level() == 1 &        ///
-            vckss_rse__build_id() == "vckss-residual-se-api3" &   ///
+            vckss_rse__build_id() == "vckss-residual-se-api4" &   ///
             vckss_rse__loaded() == 1)
         if _rc {
             c_local inference_status "INVALID_INFERENCE_RUNTIME"
@@ -9781,7 +9781,8 @@ program define _fevc_residual_se_mata
     }
     matrix `inference_q1' = J(1,1,.)
     matrix `inference_q1_status' = J(1,1,.)
-    if "`selected_algorithm'" == "exact" & "`deletion'" == "match" {
+    if "`selected_algorithm'" == "exact" & ("`deletion'" == "match" | ///
+        "$VCKSS_SE_MODEL" == "repeat_measurement") {
         // The unit kernel reproduces the posted estimate only when that
         // estimate holds the control offset fixed.
         local se_identity = (`control_count'==0 | "`nuisance'"=="fixedoffset")
@@ -9811,8 +9812,11 @@ program define _fevc_residual_se_mata
             "inference_status", "inference_message")
     }
     local mata_rc = _rc
-    // Observation units carry no fixed offset to omit, as on the native route.
-    if "`deletion'" == "observation" local inference_nuisance_omitted 0
+    // Observation units carry no fixed offset to omit, as on the native
+    // route; repeat-measurement standard errors hold it fixed on any unit.
+    if "`deletion'" == "observation" & "$VCKSS_SE_MODEL" != "repeat_measurement" {
+        local inference_nuisance_omitted 0
+    }
     // Shape of repeat-measurement variances, for the posting helper.
     global VCKSS_SE_SHAPE "`inference_repeat_shape'"
     c_local inference_status "`inference_status'"

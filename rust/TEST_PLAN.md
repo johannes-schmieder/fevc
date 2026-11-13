@@ -22,19 +22,26 @@ truncation) and, in `generic_jla::residual_noise`,
 fixed-offset match units against the dense unit oracle: variances rebuilt
 independently, the trace term against its closed form within its Monte Carlo
 error, the assembled covariance, the pair term on its own scale),
-`repeat_measurement_standard_errors_do_not_depend_on_the_solver_route` and
-`repeat_measurement_requires_match_units`.
+`repeat_measurement_standard_errors_do_not_depend_on_the_solver_route`,
+`repeat_measurement_on_observation_units_matches_dense_expectations`
+(physical rows with matches of one to three observations and stayers,
+against dense kernels: sets by cell, the borrowed model sample, the pair
+term in every entry) and
+`repeat_measurement_on_observation_units_holds_joint_controls_fixed` (the
+offset pass against the dense fixed-offset calculation).
 `cargo test -p vckss-plugin --test engine_ffi repeat_measurement` crosses the
-C ABI: source 4, fit 4, the shared and the new diagnostic export, the refusal
-for observation units and for a caller with another layout. The C shim's
+C ABI: source 4, fit 4, the shared and the new diagnostic export, admission
+of observation units, and the refusal of a caller with another layout. The C shim's
 capability scalar and the header layout are checked in
 `cshim_error_transport_test.c` and `abi_header_compat_test.c`. On the Stata
 side `fevc/tests/stata/test_repeat_measurement_se.do` compares the exact Mata
 route with an independent dense calculation and exercises the matrix-free
 Mata route, controls, the mover-only population, centering modes and the
 typed refusals; `fevc/tests/python/test_repeat_measurement_interface.py` pins
-the identifiers shared across layers. Not run: the native route from Stata,
-any installed-plugin or platform gate; no binary has been rebuilt. The
+the identifiers shared across layers. The same Stata file covers observation
+deletion on both Mata routes and, with a plugin built from the source, on the
+native route with and without controls. Not run: any installed-plugin or
+platform gate; no distributed binary has been rebuilt. The
 memory forecast of the shared pass is not separately checked against the heap
 for this variant.
 

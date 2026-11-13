@@ -2690,6 +2690,39 @@ fn run_generic_jla_with_execution_interrupt(
                         interrupt,
                     )?;
                 }
+                if offset_pass {
+                    let no_controls = zeroed_f64_with_interrupt(
+                        rows,
+                        "offset-pass zero control leverage",
+                        interrupt,
+                        "generic_jla_observation_allocate",
+                    )?;
+                    let mut offset = observation_deleted_adjustment(
+                        problem,
+                        &classes,
+                        &moments,
+                        &signs,
+                        &residual,
+                        &no_controls,
+                        &row_order,
+                        options,
+                        true,
+                        interrupt,
+                    )?;
+                    let retained = |value: Option<Vec<f64>>| {
+                        value.ok_or_else(|| {
+                            BackendError::invariant(
+                                "generic_jla_component_inference",
+                                "offset-pass row geometry was not retained",
+                            )
+                        })
+                    };
+                    let row_geometry = (
+                        retained(offset.inference_leverage.take())?,
+                        retained(offset.inference_maker_inverse.take())?,
+                    );
+                    offset_state = Some((offset.values, row_geometry));
+                }
                 if component_inference.is_some() {
                     component_geometry = Some((
                         adjusted.inference_leverage.take().ok_or_else(|| {
@@ -2851,32 +2884,84 @@ fn run_generic_jla_with_execution_interrupt(
             Some((leverage, maker_inverse)),
             Some(counter_plan),
         ) => Some(match prepared.inference_unit {
-            ComponentInferenceUnit::Observation => run_component_inference_attachment(
-                problem,
-                prepared,
-                working_solver,
-                coefficients,
-                ComponentInferenceRows::Observation {
-                    controls: &canonical.columns,
-                    row_order: &row_order,
-                },
-                &working_y,
-                outcome_center,
-                options.centering != crate::types::Centering::None,
-                &residual,
-                &deleted_adjusted,
-                leverage,
-                maker_inverse,
-                diagonal,
-                addresses,
-                structured_fold_entity.as_deref(),
-                None,
-                None,
-                target.mean_centered,
-                memory.component_inference,
-                counter_plan,
-                interrupt,
-            )?,
+            ComponentInferenceUnit::Observation => {
+                // With an offset pass every row quantity is the fixed-offset
+                // one and the controls leave the row geometry.
+                let offset_coefficients;
+                let (
+                    row_y,
+                    row_adjusted,
+                    diagonal,
+                    leverage,
+                    maker_inverse,
+                    row_solver,
+                    row_coefficients,
+                    row_controls,
+                    row_correction,
+                ): (_, _, _, _, _, _, _, &[Vec<f64>], _) =
+                    match (&offset_y, &offset_state, &offset_target) {
+                        (Some(outcome), Some((adjusted, row_geometry)), Some(correction)) => {
+                            offset_coefficients = ModelCoefficients {
+                                worker: coefficients.worker.clone(),
+                                firm: coefficients.firm.clone(),
+                                control: Vec::new(),
+                            };
+                            (
+                                outcome.as_slice(),
+                                adjusted.as_slice(),
+                                correction.diagonal.as_ref().ok_or_else(|| {
+                                    BackendError::invariant(
+                                        "generic_jla_component_inference",
+                                        "the offset pass retained no target diagonals",
+                                    )
+                                })?,
+                                &row_geometry.0,
+                                &row_geometry.1,
+                                &fe_solver,
+                                &offset_coefficients,
+                                &[],
+                                correction.mean_centered,
+                            )
+                        }
+                        _ => (
+                            working_y.as_slice(),
+                            deleted_adjusted.as_slice(),
+                            diagonal,
+                            leverage,
+                            maker_inverse,
+                            working_solver,
+                            coefficients,
+                            canonical.columns.as_slice(),
+                            target.mean_centered,
+                        ),
+                    };
+                run_component_inference_attachment(
+                    problem,
+                    prepared,
+                    row_solver,
+                    row_coefficients,
+                    ComponentInferenceRows::Observation {
+                        controls: row_controls,
+                        row_order: &row_order,
+                    },
+                    row_y,
+                    outcome_center,
+                    options.centering != crate::types::Centering::None,
+                    &residual,
+                    row_adjusted,
+                    leverage,
+                    maker_inverse,
+                    diagonal,
+                    addresses,
+                    structured_fold_entity.as_deref(),
+                    None,
+                    None,
+                    row_correction,
+                    memory.component_inference,
+                    counter_plan,
+                    interrupt,
+                )?
+            }
             ComponentInferenceUnit::Match => {
                 let match_plan = match_rows_for_target.as_ref().ok_or_else(|| {
                     BackendError::invariant(
@@ -3411,6 +3496,13 @@ fn validate_component_inference_request(
             "generic_jla_component_inference",
             "component inference requires an explicit diagonal or CMG solver route",
         ));
+    }
+    // Repeat-measurement standard errors on observation units treat a stayer's
+    // observations as rows like any other: each is deleted alone and the
+    // stayer's cell is a repeat-measurement set.
+    if prepared.repeat_measurement && prepared.inference_unit == ComponentInferenceUnit::Observation
+    {
+        return Ok(());
     }
     // Match movers need independent deletion blocks, even when their model
     // firm is constant. Observation inference retains its firm-based scope.
@@ -6138,13 +6230,18 @@ struct CollapsedMatchComponentData {
 /// forms that geometry beside the joint point estimate: the leverage moments
 /// are shared, the leave-out adjustments are recomputed without controls, and
 /// one further target pass uses the worker-firm solver on the offset outcome.
+/// Repeat-measurement standard errors need the same geometry on observation
+/// units, where the rows of one cell are repeat measurements only once the
+/// controls are held fixed.
 fn offset_pass_requested(
     component_inference: Option<&ComponentExecution<'_>>,
     options: GenericJlaOptions,
     controls: usize,
 ) -> bool {
     component_inference.is_some_and(|prepared| {
-        prepared.leave_out_residual && prepared.inference_unit == ComponentInferenceUnit::Match
+        prepared.leave_out_residual
+            && (prepared.inference_unit == ComponentInferenceUnit::Match
+                || prepared.repeat_measurement)
     }) && options.nuisance == NuisanceMode::Joint
         && controls > 0
 }

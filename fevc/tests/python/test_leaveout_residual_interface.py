@@ -141,7 +141,7 @@ def test_display_and_returns_state_the_assumption():
 def test_mata_runtime_is_separate_and_lazily_loaded():
     mata = read("fevc/fevc_residual_se.mata")
     assert "mata set matastrict on" in mata
-    assert 'return("vckss-residual-se-api3")' in mata
+    assert 'return("vckss-residual-se-api4")' in mata
     assert "void vckss_residual_se__stata(" in mata
     assert "void vckss_residual_se_jla__stata(" in mata
     assert "real colvector vckss_rse__finite_projection(" in mata
@@ -154,7 +154,7 @@ def test_mata_runtime_is_separate_and_lazily_loaded():
     helper = command[command.index("program define _fevc_residual_se_mata") :]
     helper = helper[: helper.index("\nend\n")]
     assert "findfile fevc_residual_se.mata" in helper
-    assert 'vckss_rse__build_id() == "vckss-residual-se-api3"' in helper
+    assert 'vckss_rse__build_id() == "vckss-residual-se-api4"' in helper
     assert "vckss_rse__loaded() == 1" in helper and "real scalar vckss_rse__loaded()" in mata
     assert "vckss_residual_se__stata(" in helper
     assert "vckss_residual_se_jla__stata(" in helper

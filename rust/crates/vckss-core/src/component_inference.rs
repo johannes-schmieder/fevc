@@ -524,8 +524,9 @@ pub fn prepare_residual_noise_with_interrupt(
 
 /// Prepare repeat-measurement standard errors.
 ///
-/// The units are collapsed mover matches and physical stayer observations, so
-/// only the match inference unit is admitted. The pass shares the solves, the
+/// The units are the deletion units: collapsed mover matches and physical
+/// stayer observations under match deletion, physical observations of unit
+/// frequency under observation deletion. The pass shares the solves, the
 /// probe accounting and the normal reference of the leave-out residual source.
 pub fn prepare_repeat_measurement_with_interrupt(
     problem: &CompressedProblem,
@@ -534,13 +535,6 @@ pub fn prepare_repeat_measurement_with_interrupt(
     structured_options: StructuredVarianceOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PreparedComponentInference> {
-    if unit != ComponentInferenceUnit::Match {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "component_inference_prepare",
-            "repeat-measurement standard errors require match deletion units",
-        ));
-    }
     let mut prepared = prepare_residual_noise_with_interrupt(
         problem,
         unit,

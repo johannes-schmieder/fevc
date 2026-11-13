@@ -3852,7 +3852,11 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
          * report none omitted for match units with controls. */
         (units.nuisance_uncertainty_omitted != (uint32_t)(units.deletion_mode == VCKSS_DELETION_MATCH) &&
             !(base->variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL &&
-              units.nuisance_uncertainty_omitted == 0u)) ||
+              units.nuisance_uncertainty_omitted == 0u) &&
+            /* Repeat-measurement standard errors hold the offset fixed on
+             * observation units as well. */
+            !(base->variance_source == VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT &&
+              units.nuisance_uncertainty_omitted == 1u)) ||
         !isfinite(units.effective_match_count) || !isfinite(units.largest_match_mass_share) ||
         !isfinite(units.largest_match_leverage) || !isfinite(units.smallest_maker_denominator) ||
         (units.deletion_mode == VCKSS_DELETION_MATCH &&
@@ -4070,8 +4074,7 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
              * The offset is held fixed, so no control term and no truncation. */
             if (q1_present || receipt5.gram_probes != 0u ||
                 !isfinite(receipt5.positivity_floor) || receipt5.positivity_floor <= 0.0 ||
-                receipt5.floored_predictions >= units.independent_units ||
-                units.deletion_mode != VCKSS_DELETION_MATCH) {
+                receipt5.floored_predictions >= units.independent_units) {
                 free(storage); return vckss_usage("invalid repeat-measurement diagnostics");
             }
             memset(&noise, 0, sizeof(noise));
@@ -4094,14 +4097,25 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
                 repeat.struct_size != sizeof(repeat) || repeat.schema_version != 1u ||
                 repeat.generation != generation ||
                 repeat.scale_terms != noise.mover_terms || repeat.profile_terms != noise.stayer_terms ||
-                repeat.scale_terms == 0u || repeat.scale_terms > 5u ||
-                repeat.profile_terms == 0u || repeat.profile_terms > 6u ||
-                repeat.stayer_units != units.stayer_observations ||
+                repeat.scale_terms > 5u || repeat.profile_terms > 6u ||
+                (repeat.scale_terms == 0u) != (repeat.profile_terms == 0u) ||
+                /* Sets are the eligible stayers under match deletion and the
+                 * cells of two or more observations under observation
+                 * deletion; the fitted model covers the remaining units and
+                 * is absent only when there are none. */
+                (units.deletion_mode == VCKSS_DELETION_MATCH &&
+                    (repeat.stayer_units != units.stayer_observations ||
+                     repeat.scale_terms == 0u ||
+                     repeat.scale_floored > units.mover_units)) ||
+                (units.deletion_mode == VCKSS_DELETION_OBSERVATION &&
+                    (repeat.stayer_units > units.independent_units ||
+                     (repeat.scale_terms == 0u) != (repeat.stayer_units == units.independent_units) ||
+                     repeat.scale_floored > units.independent_units - repeat.stayer_units)) ||
                 repeat.stayers > repeat.stayer_units / 2u ||
                 (repeat.stayer_units != 0u && repeat.stayers == 0u) ||
                 repeat.stayer_floored > repeat.stayer_units ||
-                repeat.scale_floored > units.mover_units ||
-                !isfinite(repeat.scale_floor) || repeat.scale_floor <= 0.0 ||
+                !isfinite(repeat.scale_floor) ||
+                (repeat.scale_terms != 0u && repeat.scale_floor <= 0.0) ||
                 !isfinite(repeat.stayer_pair_term) || repeat.stayer_pair_term < 0.0) {
                 free(storage); return vckss_usage("repeat-measurement diagnostics did not reconcile");
             }

@@ -13,21 +13,25 @@ are recorded separately. Historical evidence below retains its original scope.
 ## November 13 repeat-measurement standard errors (source only)
 
 `vckss-core::residual_noise::repeat` adds a second standard error on the
-leave-out residual pass, for match units only. Each eligible stayer receives
-the sample variance of its own observations; mover units receive a two-step
-fitted model (a scale on the ranks of leverage and mass, times a quadratic in
-the standardised worker and firm effects of the fit, limited to three
-standard deviations); the covariance is the high-rank form with these
-variances plus a closed-form term for the pairs of observations of one
-stayer, reported without truncation. The estimated offset is held fixed, so
-no control term is formed. The method is a second flag on the prepared
+leave-out residual pass, for match and for observation units. Units that
+share a worker-firm cell receive the sample variance of their outcomes (an
+eligible stayer's observations; on observation units also a mover's match of
+two or more observations); the remaining units receive a two-step fitted
+model (a scale on the ranks of leverage and mass, times a quadratic in the
+standardised worker and firm effects of the fit, limited to three standard
+deviations); the covariance is the high-rank form with these variances plus
+a closed-form term for the pairs of units of one cell, reported without
+truncation. The estimated offset is held fixed, so no control term is
+formed; on observation units with jointly estimated controls the offset pass
+supplies the worker-firm geometry. The method is a second flag on the prepared
 attachment (`repeat_measurement`, with `leave_out_residual` also set), so
 routing, admission, probe accounting and the pseudo-noise solves are shared.
 The public ABI reports it as variance source 4 behind additive capability
 bit 19, with fit code 4 in the V5 result receipt and its own diagnostic
 export, `vckss_rust_engine_repeat_measurement_diagnostic_v1`. The
 registered variance-source enumeration is unchanged. No distributed binary
-contains it, and the native route has not been run from Stata.
+contains it; the native route passes the Stata regression with a plugin
+built from this source.
 
 ## November 10 leave-out residual standard errors (source only)
 

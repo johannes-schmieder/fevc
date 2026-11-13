@@ -26,35 +26,50 @@ document concerns the earlier exact and structured methods.
 ## Repeat-measurement standard errors
 
 `inference(highrank) inferencemodel(repeat_measurement)` is an explicit
-request on match deletion; `inference(auto)` never selects it. It runs the
-same pass as the leave-out residual method (collapsed mover deletion units,
-one unit per physical stayer observation, three influence solves and four
-solves per pseudo-noise draw) and differs in the variances and in how the
-covariance is assembled:
+request; `inference(auto)` never selects it. It runs the same pass as the
+leave-out residual method on the deletion units (under match deletion the
+collapsed mover matches and one unit per physical stayer observation; under
+observation deletion every physical observation), with three influence
+solves and four solves per pseudo-noise draw, and differs in the variances
+and in how the covariance is assembled:
 
-- every eligible stayer receives the sample variance of its own
-  observations, which are independent repeat measurements of one mean under
-  the independence the point estimator already assumes;
-- mover units receive a scale, the least-squares fit of their leave-out
-  variance products on the normalized midranks of leverage and unit mass and
-  their squares (floored at five per cent of the mean product), times a
-  quadratic in the worker and firm effects of the fit, standardised over
-  physical observations and limited to three standard deviations, with the
-  six coefficients fitted to the same products; a type keeps one coefficient
-  per hundred units in each step;
+- deletion units that share a worker-firm cell have identical regressors and
+  independent errors under the independence the point estimator already
+  assumes, so a cell with two or more units is a repeat-measurement set and
+  its units receive the sample variance of their outcomes. Under match
+  deletion the sets are the eligible stayers; under observation deletion
+  every match of a mover with two or more observations is a set as well;
+- the remaining units (a collapsed mover match; under observation deletion a
+  mover's match of one observation) receive a scale, the least-squares fit
+  of leave-out variance products on the normalized midranks of leverage and
+  unit mass and their squares (floored at five per cent of the mean
+  product), times a quadratic in the worker and firm effects of the fit,
+  standardised over physical observations and limited to three standard
+  deviations, with the six coefficients fitted to the same products; each
+  step keeps one coefficient per hundred fitted units. The model is fitted
+  on the units it is used for when there are at least a hundred of them,
+  and otherwise on all units of movers;
 - the covariance is `4 sum_a v_a (K_t z)_a (K_s z)_a - 2 tr(K_t V K_s V)`
-  plus, in the worker variance, `4 sum_g c_g^2 q_g^2 (T_g-2)(T_g-1)/(T_g+1)`
-  for the pairs of observations of stayer `g`, where `q_g` is the sample
-  variance, `T_g` the number of observations and `c_g` the weight between
-  two of them. Nothing is truncated or projected: a nonpositive variance is
-  reported as a withheld target.
+  plus `4 sum_g c_g^t c_g^s q_g^2 (T_g-2)(T_g-1)/(T_g+1)` for the pairs of
+  units of set `g`, where `q_g` is the sample variance, `T_g` the number of
+  units and `c_g^t = B_gg^t / (1 - P_gg)` the weight of target `t` between
+  two of them. A stayer's leverage is `1/T_g` and its firm and covariance
+  diagonals vanish, so stayers contribute to the worker variance alone; a
+  mover's set contributes to every entry. Nothing is truncated or
+  projected: a nonpositive variance is reported as a withheld target.
 
-With true mover variances the estimate is exactly unbiased when stayers'
-errors are normal with one variance per stayer, whatever those variances
-are. With the fitted model it is as good as that model; estimated effects
+With true variances for the units outside sets the estimate is exactly
+unbiased when the errors of every set are normal with one variance per set,
+whatever those variances are. With the fitted model it is as good as that model; estimated effects
 enter the profile, estimated control coefficients are treated as known
 (`e(inference_nuisance_omitted)` is one), and the observed mean is handled
-as in the leave-out residual pass. The method reports the normal interval
+as in the leave-out residual pass. Under observation deletion with jointly
+estimated controls the rows of one cell differ in their regressors; the
+standard error is then the one of the model without controls for the
+outcome net of the estimated control index, which the native route forms in
+an offset pass of two solves per point-estimate probe beside the joint
+point estimate. Observation deletion needs joint nuisance and, natively,
+unit frequencies. The method reports the normal interval
 only; `inference(q1)` with this model is rejected with
 `REPEAT_MEASUREMENT_Q1_UNSUPPORTED`. Derivation, assumptions, simulation
 evidence and limits are in a technical note maintained with the companion

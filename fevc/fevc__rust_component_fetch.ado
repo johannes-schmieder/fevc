@@ -104,7 +104,8 @@ program define fevc__rust_component_fetch, rclass
         inlist(`units'[1,1],1,2) & `units'[1,2]==cond("`deletion'"=="match",1,2) & ///
         `units'[1,3]==`expectedunits' & `units'[1,3]>0 &            ///
         (`units'[1,4]==("`deletion'"=="match") |                   ///
-            (`modelcode'==3 & `units'[1,4]==0))
+            (`modelcode'==3 & `units'[1,4]==0) |                    ///
+            (`modelcode'==4 & `units'[1,4]==1))
     if "`deletion'"=="match" local ok = `ok' &                     ///
         `units'[1,5]>=1 & `units'[1,5]<=`expectedunits'*(1+1e-12) &  ///
         `units'[1,6]>0 & `units'[1,6]<=1 &                         ///
@@ -324,8 +325,8 @@ program define fevc__rust_component_fetch, rclass
         // Columns 65-78: shape of repeat-measurement variances.
         if `variance_fit'==4 & `repeat_present' {
             matrix colnames `repeat_shape' = scale_terms profile_terms     ///
-                scale_floor scale_floored stayers stayer_units             ///
-                stayer_floored pair_term profile_1 profile_2 profile_3     ///
+                scale_floor scale_floored sets set_units                   ///
+                set_floored pair_term profile_1 profile_2 profile_3        ///
                 profile_4 profile_5 profile_6
             matrix `receipt' = (`receipt',`repeat_shape')
         }

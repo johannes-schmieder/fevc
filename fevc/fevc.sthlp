@@ -375,17 +375,19 @@ standard errors strictly: the command stops if they cannot be computed.
 {bf:Repeat-measurement standard errors.}
 {cmd:inference(highrank) inferencemodel(repeat_measurement)} requests a
 different variance method on the same units and with the same linear solves.
-A stayer's observations are independent repeat measurements of one mean, so
-each stayer's error variance is estimated by its own sample variance, with no
-model linking it to other workers. A mover's collapsed match has no repeat
-measurement; mover units receive a fitted model, a scale that depends on the
-ranks of leverage and match size times a quadratic in the standardised
-estimated worker and firm effects, both fitted to the movers' own leave-out
-variance products. The covariance is the KSS high-rank form with these
-variances plus a closed-form term for the pairs of observations of one
-stayer; it is reported as computed, without truncation. The method requires
-{cmd:deletion(match)} (the default) and is never selected by
-{cmd:inference(auto)}. It treats estimated control coefficients as known and
+Deletion units that share a worker and a firm are independent repeat
+measurements of one mean, so their error variance is estimated by their own
+sample variance, with no model linking them to other workers. Under
+{cmd:deletion(match)} these are the observations of a stayer, and a mover's
+collapsed match has no repeat measurement; under {cmd:deletion(observation)}
+every match with two or more observations has them. The remaining units
+receive a fitted model, a scale that depends on the ranks of leverage and
+match size times a quadratic in the standardised estimated worker and firm
+effects, both fitted to leave-out variance products. The covariance is the
+KSS high-rank form with these variances plus a closed-form term for the
+pairs of units of one repeat-measurement set; it is reported as computed,
+without truncation. The method is available under both deletion modes and is
+never selected by {cmd:inference(auto)}. It treats estimated control coefficients as known and
 is only as good as the fitted model for movers. {cmd:inference(q1)} is not
 available with it.
 
@@ -915,9 +917,12 @@ supported successful inference requests; q1 intervals have separate returns.
 For repeat-measurement standard errors {cmd:e(inference_variance_fit)} is
 {cmd:repeat_measurement}; {cmd:e(inference_repeat)} holds the numbers of
 scale and profile terms, the scale floor and how often it bound, the numbers
-of stayers and of their observations, the stayer pair term and the six
-profile coefficients, and {cmd:e(inference_stayers)} and
-{cmd:e(inference_stayer_pair_term)} repeat two of them as scalars.
+of repeat-measurement sets and of their units (the eligible stayers and
+their observations under match deletion; under observation deletion also
+every match of a mover with two or more observations), the worker-variance
+entry of the pair term and the six profile coefficients, and
+{cmd:e(inference_repeat_sets)} and {cmd:e(inference_pair_term)} repeat two
+of them as scalars.
 For {help fevc##se:leave-out residual standard errors},
 {cmd:e(inference_variance_fit)} is {cmd:leaveout_residual},
 {cmd:e(component_inference)} holds the estimates, standard errors and

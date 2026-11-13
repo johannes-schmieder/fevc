@@ -1,9 +1,11 @@
-* Repeat-measurement standard errors on the Mata routes: stayers' own sample
-* variances, the two-step model for mover units, and the high-rank covariance
-* with the stayer pair term. Expected values come from an independent dense
-* calculation in Python on the same deterministic panel (exact trace term);
-* the command simulates that term, so standard errors agree to its Monte
-* Carlo error. Every fevc call names inference().
+* Repeat-measurement standard errors on the Mata routes: the sample variance
+* of every repeat-measurement set (an eligible stayer's observations; under
+* observation deletion also a mover's match of two or more observations),
+* the two-step model for the remaining units, and the high-rank covariance
+* with the pair term of the sets. Expected values come from an independent
+* dense calculation in Python on the same deterministic panels (exact trace
+* term); the command simulates that term, so standard errors agree to its
+* Monte Carlo error. Every fevc call names inference().
 version 18.0
 clear all
 set more off
@@ -31,13 +33,13 @@ matrix expected_se = (.2595212617894884, .2433340968591373, ///
     .1263905520856996, .2676009330004356)
 
 program define _rm_check
-    args draws stayers
+    args draws sets
     assert "`e(inference)'"=="highrank"
     assert "`e(inference_model)'"=="repeat_measurement"
     assert "`e(inference_variance_fit)'"=="repeat_measurement"
     assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
     assert e(inference_draws)==`draws'
-    assert e(inference_stayers)==`stayers'
+    assert e(inference_repeat_sets)==`sets'
     * The estimated offset is held fixed, with or without controls.
     assert e(inference_nuisance_omitted)==1
     assert strpos("`e(inference_variance_warning)'","model for movers")>0
@@ -48,7 +50,7 @@ program define _rm_check
     matrix `b' = e(b)
     matrix `ci' = e(component_inference)
     matrix `shape' = e(inference_repeat)
-    assert colsof(`shape')==14 & `shape'[1,5]==`stayers'
+    assert colsof(`shape')==14 & `shape'[1,5]==`sets'
     assert inrange(`shape'[1,1],1,5) & inrange(`shape'[1,2],1,6)
     assert `shape'[1,3]>0 & `shape'[1,8]>=0
     assert mreldif(`V',`Vt')<1e-12
@@ -76,7 +78,7 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
 _rm_check 512 150
 assert mreldif(point,e(kss))<1e-12
 assert e(inference_independent_units)==1200
-assert reldif(e(inference_stayer_pair_term),expected_pair)<1e-8
+assert reldif(e(inference_pair_term),expected_pair)<1e-8
 matrix shape = e(inference_repeat)
 * Every match has two observations here, so the two mass terms of the scale
 * are spanned by the intercept: three active scale terms, six profile terms.
@@ -121,7 +123,7 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) stayers(movers) inference(highrank) ///
     inferencemodel(repeat_measurement) nodisplay
 _rm_check 8 0
-assert e(inference_stayer_pair_term)==0
+assert e(inference_pair_term)==0
 foreach centering in none corrected {
     quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
         algorithm(exact) centering(`centering') inference(highrank) ///
@@ -144,7 +146,7 @@ if `native' {
     assert colsof(e(component_inference_receipt))==78
     assert e(inference_independent_units)==1200
     * Projected target diagonals: the pair term agrees to projection noise.
-    assert reldif(e(inference_stayer_pair_term),expected_pair)<0.2
+    assert reldif(e(inference_pair_term),expected_pair)<0.2
     matrix ci = e(component_inference)
     forvalues j = 1/4 {
         assert reldif(ci[`j',2],expected_se[1,`j'])<0.15
@@ -168,12 +170,101 @@ else {
     }
 }
 
+* --- observation deletion ----------------------------------------------------
+* Every physical observation is a unit. The panel gets matches of one, two
+* and three observations: a match of two or more is a repeat-measurement set
+* like a stayer, and the 66 single observations of movers receive the model,
+* fitted on all observations of movers because there are fewer than a hundred.
+preserve
+bysort worker_id (firm_id log_wage): generate long seq = _n
+quietly drop if worker_id<=200 & mod(worker_id,3)==0 & seq==2
+quietly expand 2 if worker_id<=200 & mod(worker_id,3)==1 & seq==1, generate(extra)
+quietly replace log_wage = log_wage+0.1*cos(worker_id) if extra==1
+drop seq extra
+assert _N==1801
+* Independent dense calculation on this panel; with x1 the estimated control
+* index of the full regression is held fixed.
+matrix observation_b = (2.154005266392971, 1.171084753616503, -.2944140523794802)
+scalar observation_pair = 1.434113200955210e-04
+matrix observation_se = (.2661415525311538, .2647469861814654, ///
+    .1714761737879706, .2121325734000382)
+matrix observation_se_x1 = (.2660014404422780, .2644807941651816, ///
+    .1712614183010554, .2121175684510716)
+
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) deletion(observation) inference(none) nodisplay
+matrix observation_point = e(kss)
+forvalues j = 1/3 {
+    assert reldif(observation_point[1,`j'],observation_b[1,`j'])<1e-10
+}
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) deletion(observation) inference(highrank) ///
+    inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
+_rm_check 512 684
+assert mreldif(observation_point,e(kss))<1e-12
+assert e(inference_independent_units)==1801
+assert reldif(e(inference_pair_term),observation_pair)<1e-8
+matrix shape = e(inference_repeat)
+* Unit mass is one throughout, so the two mass terms of the scale are
+* spanned by the intercept; 1,735 observations lie in the 684 sets.
+assert shape[1,1]==3 & shape[1,2]==6 & shape[1,6]==1735 & shape[1,7]==0
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    assert reldif(ci[`j',2],observation_se[1,`j'])<0.01
+}
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(jla) probes(800) deletion(observation) inference(highrank) ///
+    inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+_rm_check 64 684
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    assert reldif(ci[`j',2],observation_se[1,`j'])<0.15
+}
+* Jointly estimated controls: the point estimate keeps them in the model,
+* the standard error holds their estimated index fixed.
+quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) deletion(observation) inference(highrank) ///
+    inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
+_rm_check 512 684
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    assert reldif(ci[`j',2],observation_se_x1[1,`j'])<0.01
+}
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) deletion(observation) stayers(movers) ///
+    inference(highrank) inferencemodel(repeat_measurement) nodisplay
+_rm_check 8 534
+if `native' {
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+        probes(800) deletion(observation) inference(highrank) ///
+        inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+    _rm_check 64 684
+    assert "`e(backend_selected)'"=="rust"
+    assert e(inference_independent_units)==1801
+    assert reldif(e(inference_pair_term),observation_pair)<0.2
+    matrix ci = e(component_inference)
+    forvalues j = 1/4 {
+        assert reldif(ci[`j',2],observation_se[1,`j'])<0.15
+    }
+    quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(rust) ///
+        probes(800) deletion(observation) inference(highrank) ///
+        inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+    _rm_check 64 684
+    assert "`e(backend_selected)'"=="rust"
+    matrix ci = e(component_inference)
+    forvalues j = 1/4 {
+        assert reldif(ci[`j',2],observation_se_x1[1,`j'])<0.15
+    }
+}
+restore
+
 * --- what the model does not accept ------------------------------------------
 capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     inference(q1) inferencemodel(repeat_measurement) nodisplay
 assert _rc==498 & "`e(withholding_status)'"=="REPEAT_MEASUREMENT_Q1_UNSUPPORTED"
-capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
-    deletion(observation) inference(highrank) inferencemodel(repeat_measurement) nodisplay
+capture quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
+    deletion(observation) nuisance(fixedoffset) inference(highrank) ///
+    inferencemodel(repeat_measurement) nodisplay
 assert _rc==498 & "`e(withholding_status)'"=="REPEAT_MEASUREMENT_TUPLE_REQUIRED"
 capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     inference(auto) inferencemodel(repeat_measurement) nodisplay

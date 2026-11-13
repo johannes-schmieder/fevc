@@ -204,11 +204,13 @@ pub(super) fn peak_bytes(
         }
     }
     if prepared.repeat_measurement {
-        // Unit workers, the two effects, the fitted scale, two rank vectors
-        // and the stayer ordering of the repeat-measurement variances.
+        // Unit cells and mobility, the two effects, unit mass, the set
+        // ordering, and for the fitted units their index, leverage, mass, two
+        // rank vectors and fitted scale; one firm count per worker.
         retained = checked_sum(&[
             retained,
-            checked_product(&[units, 7, 8], "repeat-measurement unit state")?,
+            checked_product(&[units, 13, 8], "repeat-measurement unit state")?,
+            checked_product(&[workers, 4], "repeat-measurement worker firm counts")?,
         ])?;
     }
     if prepared.mixed_units.is_some() {
@@ -425,37 +427,88 @@ pub(super) fn run(
     // Either source ends in one positive variance per unit for the
     // pseudo-noise; they differ in how it is formed and assembled.
     let (fit, repeat) = if prepared.repeat_measurement {
-        let (ComponentInferenceRows::Match { plan, .. }, Some(mass)) = (inference_rows, match_mass)
-        else {
-            return Err(BackendError::invariant(
-                "residual_noise_attachment",
-                "repeat-measurement standard errors lost their match units",
-            ));
-        };
-        if control.is_some() {
-            return Err(BackendError::invariant(
+        if control.is_some() || !controls.is_empty() {
+            // Units of one cell are repeat measurements only when the
+            // controls are not part of the unit geometry.
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
                 "residual_noise_attachment",
                 "repeat-measurement standard errors hold the offset fixed",
             ));
         }
-        let mut worker = Vec::new();
+        let mut set = Vec::new();
+        let mut mover = Vec::new();
         let mut worker_effect = Vec::new();
         let mut firm_effect = Vec::new();
-        reserve_exact(&mut worker, rows, "repeat-measurement unit workers")?;
+        reserve_exact(&mut set, rows, "repeat-measurement unit cells")?;
+        reserve_exact(&mut mover, rows, "repeat-measurement unit mobility")?;
         reserve_exact(
             &mut worker_effect,
             rows,
             "repeat-measurement worker effects",
         )?;
         reserve_exact(&mut firm_effect, rows, "repeat-measurement firm effects")?;
+        // Physical observations of one worker-firm cell have identical
+        // regressors and form a set. A collapsed mover match is scaled by its
+        // own mass, so it is always a unit of its own, whatever cell it is in.
+        let mut unit_mass = Vec::new();
+        let unit_cell = |unit: usize| -> usize {
+            match inference_rows {
+                ComponentInferenceRows::Match { plan, .. } => plan.cell[unit] as usize,
+                ComponentInferenceRows::Observation { .. } => problem.row_cell[unit] as usize,
+            }
+        };
+        match inference_rows {
+            ComponentInferenceRows::Match { .. } => {
+                for unit in 0..rows {
+                    checkpoint_chunk(interrupt, unit, "repeat_measurement_units")?;
+                    let stayer = unit >= mover_units;
+                    set.push(if stayer {
+                        rows as u64 + unit_cell(unit) as u64
+                    } else {
+                        unit as u64
+                    });
+                    mover.push(!stayer);
+                }
+            }
+            ComponentInferenceRows::Observation { .. } => {
+                let mut firms = Vec::new();
+                reserve_exact(
+                    &mut firms,
+                    problem.workers(),
+                    "repeat-measurement worker firm counts",
+                )?;
+                firms.resize(problem.workers(), 0_u32);
+                for cell in 0..problem.cells() {
+                    checkpoint_chunk(interrupt, cell, "repeat_measurement_units")?;
+                    let worker = problem.cell_worker[cell] as usize;
+                    firms[worker] = firms[worker].saturating_add(1);
+                }
+                reserve_exact(&mut unit_mass, rows, "repeat-measurement unit mass")?;
+                for unit in 0..rows {
+                    checkpoint_chunk(interrupt, unit, "repeat_measurement_units")?;
+                    set.push(u64::from(problem.row_cell[unit]));
+                    mover.push(firms[problem.row_worker[unit] as usize] > 1);
+                    unit_mass.push(1.0);
+                }
+            }
+        }
         for unit in 0..rows {
             checkpoint_chunk(interrupt, unit, "repeat_measurement_units")?;
-            let cell = plan.cell[unit] as usize;
-            let unit_worker = problem.cell_worker[cell];
-            worker.push(unit_worker);
-            worker_effect.push(coefficients.worker[unit_worker as usize]);
+            let cell = unit_cell(unit);
+            worker_effect.push(coefficients.worker[problem.cell_worker[cell] as usize]);
             firm_effect.push(coefficients.firm[problem.cell_firm[cell] as usize]);
         }
+        let mass = match (inference_rows, match_mass) {
+            (ComponentInferenceRows::Match { .. }, Some(mass)) => mass,
+            (ComponentInferenceRows::Observation { .. }, None) => unit_mass.as_slice(),
+            _ => {
+                return Err(BackendError::invariant(
+                    "residual_noise_attachment",
+                    "repeat-measurement standard errors lost their unit mass",
+                ));
+            }
+        };
         let repeat = fit_repeat_variance(
             RepeatInputs {
                 proxy: &proxy,
@@ -464,11 +517,15 @@ pub(super) fn run(
                 maker_inverse,
                 leverage,
                 mass,
-                mover_units,
-                worker: &worker,
+                set: &set,
+                mover: &mover,
                 worker_effect: &worker_effect,
                 firm_effect: &firm_effect,
-                worker_diagonal: &target_diagonal[0],
+                target_diagonal: [
+                    &target_diagonal[0],
+                    &target_diagonal[1],
+                    &target_diagonal[2],
+                ],
                 positivity_multiplier: prepared.structured_options.positivity_multiplier,
             },
             interrupt,
@@ -759,9 +816,10 @@ pub(super) fn run(
     result.counter_atoms = counter_plan.logical_atoms;
     result.counter_words = counter_plan.unique_words;
     result.inference_unit = prepared.inference_unit;
-    // The control term accounts for the estimated offset to first order.
-    result.nuisance_uncertainty_conditioned_away =
-        prepared.inference_unit == ComponentInferenceUnit::Match && control.is_none();
+    // The control term accounts for the estimated offset to first order;
+    // repeat-measurement standard errors hold the offset fixed on any unit.
+    result.nuisance_uncertainty_conditioned_away = prepared.repeat_measurement
+        || (prepared.inference_unit == ComponentInferenceUnit::Match && control.is_none());
     result.mixed_units = prepared
         .mixed_units
         .map(|(movers, stayers)| (movers as u64, stayers as u64));

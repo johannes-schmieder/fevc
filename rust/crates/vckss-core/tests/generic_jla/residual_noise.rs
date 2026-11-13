@@ -968,11 +968,85 @@ fn run_repeat(
     .expect("pooled repeat-measurement run")
 }
 
-#[test]
-fn repeat_measurement_requires_match_units() {
-    let hybrid = super::pooled_component::fixture(false);
-    let error = prepare_repeat_measurement_with_interrupt(
-        &hybrid.problem,
+/// Thirty movers with two cells of one to three observations each and ten
+/// stayers with two to four observations, on six firms.
+fn observation_repeat_fixture() -> CompressedProblem {
+    let (worker, firm, outcome, _) = observation_repeat_columns();
+    observation_repeat_problem(worker, firm, outcome, Vec::new())
+}
+
+/// Worker, firm, outcome and two controls that vary within cells, in input
+/// order.
+fn observation_repeat_columns() -> (Vec<u64>, Vec<u64>, Vec<f64>, Vec<Vec<f64>>) {
+    let mut worker = Vec::new();
+    let mut firm = Vec::new();
+    let mut outcome = Vec::new();
+    let mut push = |w: u64, f: u64, copies: u64| {
+        for copy in 0..copies {
+            let row = worker.len() as u64;
+            worker.push(10 + w);
+            firm.push(100 + f);
+            outcome.push(
+                0.31 * (w % 7) as f64 - 0.22 * f as f64
+                    + ((row * 11 + copy * 5) % 17) as f64 / 13.0
+                    + ((row * row) % 7) as f64 / 29.0,
+            );
+        }
+    };
+    for mover in 0..30_u64 {
+        let first = mover % 6;
+        let second = (first + 1 + mover / 6) % 6;
+        push(mover, first, 1 + mover % 3);
+        push(mover, second, 1 + (mover / 3) % 3);
+    }
+    for stayer in 0..10_u64 {
+        push(30 + stayer, stayer % 6, 2 + stayer % 3);
+    }
+    let rows = worker.len() as u64;
+    let controls = vec![
+        (0..rows)
+            .map(|row| ((row * 13) % 19) as f64 / 7.0 + (row % 4) as f64 / 3.0)
+            .collect(),
+        (0..rows)
+            .map(|row| ((row * 5 + 3) % 23) as f64 / 11.0 - ((row * row) % 5) as f64 / 4.0)
+            .collect(),
+    ];
+    (worker, firm, outcome, controls)
+}
+
+fn observation_repeat_problem(
+    worker: Vec<u64>,
+    firm: Vec<u64>,
+    outcome: Vec<f64>,
+    controls: Vec<Vec<f64>>,
+) -> CompressedProblem {
+    let rows = worker.len();
+    CanonicalInput::from_validated(
+        InputColumns {
+            worker,
+            firm,
+            deletion: (0..rows as u64).map(|row| 1_000 + row).collect(),
+            outcome,
+            frequency: vec![1; rows],
+            target_weight: vec![1.0; rows],
+            controls,
+        }
+        .validate()
+        .expect("observation fixture validates"),
+    )
+    .expect("observation fixture canonicalizes")
+    .compress(&vec![true; rows])
+    .expect("observation fixture compresses")
+}
+
+fn run_observation_repeat(
+    problem: &CompressedProblem,
+) -> vckss_core::generic_jla::GenericJlaResult {
+    let mut estimator = options(DeletionMode::Observation, NuisanceMode::Joint);
+    estimator.probes = 200;
+    estimator.centering = Centering::Mean;
+    let prepared = prepare_repeat_measurement_with_interrupt(
+        problem,
         ComponentInferenceUnit::Observation,
         ComponentInferenceOptions {
             probes: 4 * DRAWS,
@@ -981,8 +1055,299 @@ fn repeat_measurement_requires_match_units() {
         StructuredVarianceOptions::default(),
         &mut NeverInterrupt,
     )
-    .expect_err("observation units carry no collapsed matches");
-    assert_eq!(error.code, ErrorCode::UnsupportedFeature);
+    .expect("repeat-measurement preparation");
+    assert!(prepared.leave_out_residual && prepared.repeat_measurement);
+    run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("observation run")
+}
+
+/// Dense expectations for repeat-measurement standard errors on physical
+/// rows: the worker-firm kernels `H C_t H` with the engine's own leverage and
+/// target diagonals, applied to `outcome`; the sample variance of every cell
+/// of two or more rows; the common variance of the single rows of movers; the
+/// pair term in all entries; and the assembled covariance.
+fn assert_observation_repeat(
+    problem: &CompressedProblem,
+    outcome: &[f64],
+    attached: &vckss_core::component_inference::ComponentInferenceResult,
+    tolerance: f64,
+) {
+    let n = outcome.len();
+    let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
+    let shape = diagnostic
+        .repeat
+        .as_ref()
+        .expect("repeat-measurement shape");
+    assert_eq!(attached.inference_unit, ComponentInferenceUnit::Observation);
+    assert_eq!(attached.independent_units as usize, n);
+    assert_eq!(attached.psd_cleanup, 0.0);
+    assert_eq!(diagnostic.controls, 0);
+
+    let (x, p) = super::component_centering::design(problem, false);
+    let xt = dense_transpose(&x, n, p);
+    let inverse = dense_inverse(&dense_multiply(&xt, p, n, &x, p), p);
+    let bread = dense_multiply(&x, n, p, &inverse, p);
+    let bread_t = dense_transpose(&bread, n, p);
+    let projection = dense_multiply(&bread, n, p, &xt, n);
+    let mut worker_mean = vec![0.0; p];
+    let mut firm_mean = vec![0.0; p];
+    for cell in 0..problem.cells() {
+        let share = problem.cell_target_sum[cell] / problem.target_total;
+        worker_mean[problem.cell_worker[cell] as usize] += share;
+        let firm = problem.cell_firm[cell] as usize;
+        if firm + 1 < problem.firms() {
+            firm_mean[problem.workers() + firm] += share;
+        }
+    }
+    let mut targets: [Vec<f64>; 3] = core::array::from_fn(|_| vec![0.0; p * p]);
+    for cell in 0..problem.cells() {
+        let share = problem.cell_target_sum[cell] / problem.target_total;
+        let mut worker: Vec<f64> = worker_mean.iter().map(|v| -v).collect();
+        let mut firm: Vec<f64> = firm_mean.iter().map(|v| -v).collect();
+        worker[problem.cell_worker[cell] as usize] += 1.0;
+        let firm_index = problem.cell_firm[cell] as usize;
+        if firm_index + 1 < problem.firms() {
+            firm[problem.workers() + firm_index] += 1.0;
+        }
+        for i in 0..p {
+            for j in 0..p {
+                targets[0][i * p + j] += share * worker[i] * worker[j];
+                targets[1][i * p + j] += share * firm[i] * firm[j];
+                targets[2][i * p + j] += 0.5 * share * (worker[i] * firm[j] + firm[i] * worker[j]);
+            }
+        }
+    }
+    let mean = outcome.iter().sum::<f64>() / n as f64;
+    let centered: Vec<f64> = outcome.iter().map(|y| y - mean).collect();
+    let center = |matrix: &mut Vec<f64>| {
+        // H M H with H = I - 11'/n.
+        let row_mean: Vec<f64> = (0..n)
+            .map(|i| matrix[i * n..(i + 1) * n].iter().sum::<f64>() / n as f64)
+            .collect();
+        let column_mean: Vec<f64> = (0..n)
+            .map(|j| (0..n).map(|i| matrix[i * n + j]).sum::<f64>() / n as f64)
+            .collect();
+        let grand = row_mean.iter().sum::<f64>() / n as f64;
+        for i in 0..n {
+            for j in 0..n {
+                matrix[i * n + j] += grand - row_mean[i] - column_mean[j];
+            }
+        }
+    };
+    let kernel: [Vec<f64>; 3] = core::array::from_fn(|target| {
+        let mut raw = dense_multiply(
+            &dense_multiply(&bread, n, p, &targets[target], p),
+            n,
+            p,
+            &bread_t,
+            n,
+        );
+        for i in 0..n {
+            for j in 0..n {
+                let maker = f64::from(i == j) - projection[i * n + j];
+                raw[i * n + j] -= 0.5
+                    * maker
+                    * (attached.target_diagonal[target][i] * attached.maker_inverse[i]
+                        + attached.target_diagonal[target][j] * attached.maker_inverse[j]);
+            }
+        }
+        center(&mut raw);
+        raw
+    });
+    let influence: [Vec<f64>; 3] =
+        core::array::from_fn(|t| dense_multiply(&kernel[t], n, n, outcome, 1));
+    for target in 0..3 {
+        let largest = influence[target]
+            .iter()
+            .fold(0.0_f64, |a, b| a.max(b.abs()));
+        for (expected, &actual) in influence[target].iter().zip(&attached.influence[target]) {
+            assert!(
+                (expected - actual).abs() <= tolerance * largest,
+                "influence {target}: {actual} versus {expected}"
+            );
+        }
+    }
+
+    // Variances. A cell with two or more rows is a set; the single rows of
+    // movers share the mean leave-out product of all rows of movers, because
+    // there are fewer than a hundred of them.
+    let beta = dense_multiply(&inverse, p, p, &dense_multiply(&xt, p, n, outcome, 1), 1);
+    let fitted = dense_multiply(&x, n, p, &beta, 1);
+    let proxy: Vec<f64> = (0..n)
+        .map(|a| centered[a] * attached.maker_inverse[a] * (outcome[a] - fitted[a]))
+        .collect();
+    let mut firms_of = vec![0; problem.workers()];
+    for cell in 0..problem.cells() {
+        firms_of[problem.cell_worker[cell] as usize] += 1;
+    }
+    let mover = |row: usize| firms_of[problem.row_worker[row] as usize] > 1;
+    let mover_rows: Vec<usize> = (0..n).filter(|&row| mover(row)).collect();
+    let common = mover_rows.iter().map(|&row| proxy[row]).sum::<f64>() / mover_rows.len() as f64;
+    assert!(common > 0.0);
+    let mut variance = vec![0.0; n];
+    let mut adjustment = [0.0; 9];
+    let (mut sets, mut set_units, mut singles, mut mover_sets) = (0_u64, 0_u64, 0_u64, 0);
+    for cell in 0..problem.cells() {
+        let units: Vec<usize> = (0..n)
+            .filter(|&row| problem.row_cell[row] as usize == cell)
+            .collect();
+        if units.len() == 1 {
+            assert!(mover(units[0]));
+            variance[units[0]] = common;
+            singles += 1;
+            continue;
+        }
+        let count = units.len() as f64;
+        let cell_mean = units.iter().map(|&u| outcome[u]).sum::<f64>() / count;
+        let sample = units
+            .iter()
+            .map(|&u| (outcome[u] - cell_mean).powi(2))
+            .sum::<f64>()
+            / (count - 1.0);
+        let weight: [f64; 3] = core::array::from_fn(|target| {
+            if mover(units[0]) {
+                units
+                    .iter()
+                    .map(|&u| attached.target_diagonal[target][u] * attached.maker_inverse[u])
+                    .sum::<f64>()
+                    / count
+            } else if target == 0 {
+                units
+                    .iter()
+                    .map(|&u| attached.target_diagonal[0][u])
+                    .sum::<f64>()
+                    / (count - 1.0)
+            } else {
+                0.0
+            }
+        });
+        let factor = 4.0 * sample * sample * (count - 2.0) * (count - 1.0) / (count + 1.0);
+        for left in 0..3 {
+            for right in 0..3 {
+                adjustment[left * 3 + right] += factor * weight[left] * weight[right];
+            }
+        }
+        for &u in &units {
+            variance[u] = sample;
+        }
+        sets += 1;
+        set_units += units.len() as u64;
+        mover_sets += usize::from(mover(units[0]));
+    }
+    assert_eq!((shape.stayers, shape.stayer_units), (sets, set_units));
+    assert_eq!(singles + set_units, n as u64);
+    assert!(singles >= 10 && mover_sets >= 20 && sets as usize > mover_sets);
+    assert_eq!(diagnostic.working_terms, [1, 1]);
+    assert!(adjustment[0] > 0.0 && adjustment[4] > 0.0);
+    assert!(
+        (adjustment[0] - shape.stayer_pair_term).abs() <= 10.0 * tolerance * adjustment[0],
+        "pair term {} versus {}",
+        shape.stayer_pair_term,
+        adjustment[0]
+    );
+
+    let scale_value = attached.trace_term[0]
+        .abs()
+        .max(attached.trace_term[4].abs())
+        .max(attached.primitive_covariance[0].abs());
+    for left in 0..3 {
+        for right in 0..3 {
+            let index = left * 3 + right;
+            let mut trace = 0.0;
+            for u in 0..n {
+                for v in 0..n {
+                    trace += kernel[left][u * n + v]
+                        * variance[v]
+                        * kernel[right][v * n + u]
+                        * variance[u];
+                }
+            }
+            assert!(
+                (attached.trace_term[index] - 2.0 * trace).abs()
+                    <= 6.0 * attached.trace_mcse[index] + 100.0 * tolerance * scale_value,
+                "trace {index}: {} versus {}",
+                attached.trace_term[index],
+                2.0 * trace
+            );
+            let leading = (0..n)
+                .map(|u| 4.0 * variance[u] * influence[left][u] * influence[right][u])
+                .sum::<f64>();
+            // With the engine's own draws for the trace, the rest is exact;
+            // the pair term of the sets of movers reaches every entry.
+            let expected = leading - attached.trace_term[index] + adjustment[index];
+            assert!(
+                (attached.primitive_covariance[index] - expected).abs()
+                    <= 100.0 * tolerance * scale_value,
+                "covariance {index}: {} versus {expected}",
+                attached.primitive_covariance[index]
+            );
+            assert!(adjustment[index].abs() > 1e-6 * scale_value || index == 0);
+        }
+    }
+}
+
+#[test]
+fn repeat_measurement_on_observation_units_matches_dense_expectations() {
+    let problem = observation_repeat_fixture();
+    let attached = run_observation_repeat(&problem)
+        .component_inference
+        .expect("standard errors");
+    assert_eq!(attached.solve_receipts.len(), 3 + 4 * DRAWS as usize);
+    assert!(attached.nuisance_uncertainty_conditioned_away);
+    assert_observation_repeat(&problem, &problem.outcome, &attached, 2.0e-9);
+}
+
+// With jointly estimated controls the rows of one cell differ in their
+// regressors. The standard error holds the estimated control index fixed: it
+// is the one of the model without controls for the outcome net of that index,
+// formed beside the joint point estimate by the offset pass. The reference
+// uses the dense control coefficients and the run the solver's, so the two
+// agree to the solver's accuracy, far inside what a wrong geometry would give.
+#[test]
+fn repeat_measurement_on_observation_units_holds_joint_controls_fixed() {
+    let (worker, firm, outcome, controls) = observation_repeat_columns();
+    let problem = observation_repeat_problem(worker, firm, outcome, controls);
+    let n = problem.outcome.len();
+    assert_eq!(problem.controls.len(), 2);
+    let (x, p) = super::component_centering::design(&problem, true);
+    let xt = dense_transpose(&x, n, p);
+    let beta = dense_multiply(
+        &dense_inverse(&dense_multiply(&xt, p, n, &x, p), p),
+        p,
+        p,
+        &dense_multiply(&xt, p, n, &problem.outcome, 1),
+        1,
+    );
+    let net: Vec<f64> = (0..n)
+        .map(|row| {
+            problem.outcome[row]
+                - (0..2)
+                    .map(|j| problem.controls[j][row] * beta[p - 2 + j])
+                    .sum::<f64>()
+        })
+        .collect();
+    let result = run_observation_repeat(&problem);
+    let attached = result.component_inference.expect("standard errors");
+    let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
+    let probes = 200;
+    assert_eq!(diagnostic.offset_pass_solves, 2 * probes);
+    assert_eq!(
+        attached.solve_receipts.len(),
+        3 + 4 * DRAWS as usize + 2 * probes
+    );
+    assert_observation_repeat(&problem, &net, &attached, 1.0e-5);
+    // The control index matters: against the raw outcome the same checks fail.
+    let raw = std::panic::catch_unwind(|| {
+        assert_observation_repeat(&problem, &problem.outcome, &attached, 1.0e-5);
+    });
+    assert!(raw.is_err());
 }
 
 #[test]

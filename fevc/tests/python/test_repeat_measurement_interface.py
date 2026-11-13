@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: MIT
 """Static interface checks for repeat-measurement standard errors.
 
-The method is a variant of the leave-out residual pass: stayers receive their
-own sample variance, mover units a two-step fitted model, and the covariance
-is the high-rank form with a closed-form stayer pair term. These checks pin
-the identifiers that the Rust core, the plugin boundary, the C shim and the
-Stata front end must agree on. They do not run Stata.
+The method is a variant of the leave-out residual pass: the deletion units of
+one worker-firm cell are repeat measurements and receive their sample variance
+(an eligible stayer's observations; under observation deletion also a mover's
+match of two or more observations), the remaining units a two-step fitted
+model, and the covariance is the high-rank form with a closed-form pair term
+of the sets. These checks pin the identifiers that the Rust core, the plugin
+boundary, the C shim and the Stata front end must agree on. They do not run
+Stata.
 """
 from __future__ import annotations
 
@@ -44,7 +47,9 @@ def test_the_variant_is_a_flag_on_the_residual_pass():
     prepare = core[core.index("pub fn prepare_repeat_measurement_with_interrupt(") :]
     prepare = prepare[: prepare.index("\n}\n")]
     assert "prepare_residual_noise_with_interrupt(" in prepare
-    assert "unit != ComponentInferenceUnit::Match" in prepare
+    # Both deletion units are admitted; observation units need unit frequencies,
+    # which the shared preparation enforces.
+    assert "ComponentInferenceUnit::Match" not in prepare
     # The registered variance-source enumeration stays as it is.
     body = core[core.index("pub enum ComponentVarianceSource") :]
     body = body[: body.index("}")]
@@ -58,6 +63,14 @@ def test_the_variant_is_a_flag_on_the_residual_pass():
     assert "finish_repeat_covariance(" in attachment
     engine = read("rust/crates/vckss-core/src/generic_jla.rs")
     assert "&& !prepared.repeat_measurement" in engine
+    # Observation units get the fixed-offset pass under joint nuisance, and a
+    # stayer's observations are rows like any other.
+    offset = engine[engine.index("fn offset_pass_requested(") :]
+    offset = offset[: offset.index("\n}\n")]
+    assert "|| prepared.repeat_measurement)" in offset
+    repeat = read("rust/crates/vckss-core/src/residual_noise/repeat.rs")
+    assert "pub set: &'a [u64]," in repeat
+    assert "pub mover: &'a [bool]," in repeat
 
 
 def test_variance_rule_constants():
@@ -69,7 +82,9 @@ def test_variance_rule_constants():
     assert "signal_truncation: 0.0," in repeat
     mata = read("fevc/fevc_residual_se.mata")
     assert "real colvector vckss_rse__repeat(" in mata
-    assert "scale_floor = 0.05*mean(product[|1\\movers|])" in mata
+    assert "scale_floor = 0.05*mean(product[fit])" in mata
+    assert "void vckss_rse__sets(" in mata
+    assert "fit = units >= 100 ? selectindex(single) : selectindex(unit_mover)" in mata
     assert "(count-2)*(count-1)/(count+1)" in mata
     assert "(count - 2.0) * (count - 1.0)" in repeat and "/ (count + 1.0)" in repeat
 
@@ -89,12 +104,13 @@ def test_diagnostic_export_and_shim_reconciliation():
     assert "__vckss_rm_pair_term" in shim
 
 
-def test_stata_front_end_admits_the_model_explicitly_and_only_for_match_units():
+def test_stata_front_end_admits_the_model_explicitly_for_both_deletion_modes():
     route = read("fevc/fevc__component_model_route.ado")
     assert '"repeat_measurement") {' in route
     assert "REPEAT_MEASUREMENT_Q1_UNSUPPORTED" in route
     assert "REPEAT_MEASUREMENT_TUPLE_REQUIRED" in route
-    assert """("`residual_deletion'"=="observation" & !`repeat' &""" in route
+    assert "!`repeat' &" not in route
+    assert """("`residual_deletion'"=="observation" &                       ///""" in route
     assert "(`repeat' & r(component_repeat_api)!=1)" in route
     assert 'global VCKSS_SE_MODEL = cond(`residual\',"`inferencemodel\'","")' in route
     # The default is unchanged: inference(auto) selects leaveout_residual.

@@ -151,21 +151,21 @@ program define _fevc_repeat_se_post, eclass
     args route
     ereturn local inference_variance_fit "repeat_measurement"
     ereturn local inference_method                              ///
-        "repeat-measurement standard errors: stayers' own sample variances, two-step fitted model for mover units, high-rank covariance with a stayer pair term"
+        "repeat-measurement standard errors: sample variance of every repeat-measurement set (the deletion units of one worker-firm cell), two-step fitted model for the remaining units, high-rank covariance with a pair term for the sets"
     ereturn local inference_variance_response                    ///
-        "stayers: sample variance of the worker's observations; movers: leave-out products"
+        "sets: sample variance of the outcomes of the cell; remaining units: leave-out products"
     ereturn local inference_variance_conditioning                ///
-        "movers: scale on midranks of leverage and unit mass (linear and squared) times a quadratic in the standardised estimated worker and firm effects, limited to three standard deviations"
+        "units outside sets: scale on midranks of leverage and unit mass (linear and squared) times a quadratic in the standardised estimated worker and firm effects, limited to three standard deviations"
     ereturn local inference_positivity                           ///
-        "covariance reported as computed, no truncation; fitted scale floored at five per cent of the movers' mean leave-out product; variances floored at 1e-8 times the median squared residual over the maker diagonal"
+        "covariance reported as computed, no truncation; fitted scale floored at five per cent of the mean leave-out product of the fitted units; variances floored at 1e-8 times the median squared residual over the maker diagonal"
     ereturn local inference_support_status "fitted_model_for_movers"
     ereturn local inference_qualification                         ///
         "development evidence from a Python prototype, simulations on one data set, and Rust dense oracles; not a qualified release claim"
     ereturn local inference_variance_warning                      ///
-        "as good as the fitted variance model for movers; stayers' errors assumed independent across observations with one variance per stayer"
+        "as good as the fitted variance model for movers; errors assumed independent across the units of a worker-firm cell with one variance per cell"
     ereturn local inference_capability = cond("`route'"=="rust", ///
-        "repeat-measurement standard errors; generic JLA; fixed-offset unit geometry, match deletion", ///
-        "repeat-measurement standard errors; Mata exact kernels or linear solves; fixed-offset unit geometry, match deletion")
+        "repeat-measurement standard errors; generic JLA; fixed-offset unit geometry, match or observation deletion", ///
+        "repeat-measurement standard errors; Mata exact kernels or linear solves; fixed-offset unit geometry, match or observation deletion")
     ereturn local inference_offset_warning                        ///
         "estimated control coefficients are treated as known"
     // Shape of the variances: from the native receipt (columns 65-78) or
@@ -190,11 +190,11 @@ program define _fevc_repeat_se_post, eclass
     }
     if `shape_ok' {
         matrix colnames `shape' = scale_terms profile_terms scale_floor ///
-            scale_floored stayers stayer_units stayer_floored pair_term ///
+            scale_floored sets set_units set_floored pair_term ///
             profile_1 profile_2 profile_3 profile_4 profile_5 profile_6
         matrix rownames `shape' = repeat_measurement
-        ereturn scalar inference_stayers = `shape'[1,5]
-        ereturn scalar inference_stayer_pair_term = `shape'[1,8]
+        ereturn scalar inference_repeat_sets = `shape'[1,5]
+        ereturn scalar inference_pair_term = `shape'[1,8]
         ereturn matrix inference_repeat = `shape'
     }
     ereturn local status "FEVC_REPEAT_MEASUREMENT_SE"

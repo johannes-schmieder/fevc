@@ -19,7 +19,7 @@ real scalar vckss_rse__api_level()
 
 string scalar vckss_rse__build_id()
 {
-    return("vckss-residual-se-api3")
+    return("vckss-residual-se-api4")
 }
 
 // Subtract the mass-weighted mean of every column in unit space. For one row
@@ -112,36 +112,45 @@ real colvector vckss_rse__working(
     return(variance)
 }
 
-// Variances for repeat-measurement standard errors. A stayer's physical
-// observations are independent repeat measurements of one mean, so each
-// stayer receives its own sample variance. Mover units receive a scale (the
-// working-variance features of leverage and mass ranks) times a quadratic in
-// the standardised worker and firm effects limited to three standard
-// deviations, both steps by least squares on the movers' leave-out products.
-// `info' receives (terms, floor, floored, minimum) as in vckss_rse__working;
-// `shape' receives (scale terms, profile terms, scale floor, scale floored,
-// stayers, stayer units, stayer floored, pair term, six profile
-// coefficients). The pair term is the closed-form covariance term for the
-// pairs of rows of one stayer; it belongs to the worker variance alone.
+// Variances for repeat-measurement standard errors. Deletion units that
+// share a worker-firm cell have identical regressors and independent errors,
+// so a cell with two or more units is a repeat-measurement set and its units
+// receive the sample variance of their outcomes: the physical observations
+// of an eligible stayer under match deletion, and every match of two or more
+// observations under observation deletion. Units alone in their cell receive
+// a scale (the working-variance features of leverage and mass ranks) times a
+// quadratic in the standardised worker and firm effects limited to three
+// standard deviations, both steps by least squares on leave-out products;
+// with fewer than a hundred such units the model is fitted on all units of
+// movers. `diagonal' holds the three target diagonals. `info' receives
+// (terms, floor, floored, minimum) as in vckss_rse__working; `shape' receives
+// (scale terms, profile terms, scale floor, scale floored, sets, set units,
+// set units floored, worker-variance pair term, six profile coefficients);
+// `pair' receives the 3 x 3 closed-form covariance term for the pairs of
+// units of one set. A stayer's errors are absorbed by its worker effect, so
+// a stayer contributes to the worker variance alone.
 real colvector vckss_rse__repeat(
     real colvector product,
     real colvector y,
     real colvector residual,
     real colvector leverage,
+    real colvector maker_inverse,
     real colvector mass,
-    real scalar movers,
-    real colvector unit_worker,
+    real colvector unit_set,
+    real colvector unit_mover,
     real colvector worker_effect,
     real colvector firm_effect,
-    real colvector worker_diagonal,
+    real matrix diagonal,
     real rowvector info,
-    real rowvector shape)
+    real rowvector shape,
+    real matrix pair)
 {
     real colvector sorted, variance, scale, fitted, a, f, coefficient
-    real colvector permutation, members
+    real colvector permutation, members, single, fit, used
     real matrix basis, profile, panel, inverse
+    real rowvector weight
     real scalar n, middle, floor_value, scale_floor, permitted, g, count
-    real scalar sample, pair, pair_term, total, mean_effect, deviation
+    real scalar sample, total, mean_effect, deviation, units
 
     n = rows(product)
     sorted = sort(residual:^2:/(1:-leverage),1)
@@ -151,72 +160,124 @@ real colvector vckss_rse__repeat(
     variance = J(n,1,.)
     info = (0,floor_value,0,.)
     shape = J(1,14,0)
+    pair = J(3,3,0)
     if (floor_value <= 0 | missing(floor_value)) return(variance)
-    if (movers > 0) {
+
+    // Sets: the sample variance of the outcomes of one cell, and the pair
+    // term. Two units a, b of one cell share the weight B_aa/(1 - P_aa); a
+    // stayer's leverage is exactly 1/T, which gives B_aa T/(T-1).
+    single = J(n,1,0)
+    permutation = order((unit_set,(1::n)),(1,2))
+    panel = panelsetup(unit_set[permutation],1)
+    for (g=1; g<=rows(panel); g++) {
+        members = permutation[|panel[g,1]\panel[g,2]|]
+        count = rows(members)
+        if (count < 2) {
+            if (!unit_mover[members[1]]) {
+                info[2] = 0
+                return(J(n,1,.))
+            }
+            single[members[1]] = 1
+            continue
+        }
+        sample = quadvariance(y[members])
+        if (unit_mover[members[1]]) {
+            weight = mean(diagonal[members,.]:*maker_inverse[members])
+        }
+        else weight = (mean(diagonal[members,1])*count/(count-1),0,0)
+        pair = pair+(4*sample^2*(count-2)*(count-1)/(count+1)):*
+            quadcross(weight,weight)
+        shape[5] = shape[5]+1
+        shape[6] = shape[6]+count
+        shape[7] = shape[7]+count*(sample < floor_value)
+        variance[members] = J(count,1,max((sample,floor_value)))
+    }
+    shape[8] = pair[1,1]
+    units = sum(single)
+    if (units > 0) {
+        // The model is fitted where it is used; too few units alone in
+        // their cell cannot carry it, and all units of movers then do. Under
+        // match deletion the two samples coincide.
+        fit = units >= 100 ? selectindex(single) : selectindex(unit_mover)
+        used = single[fit]
         // Step 1: the scale, floored at five per cent of the mean product.
-        basis = vckss_rse__features(leverage[|1\movers|],mass[|1\movers|],1)
+        basis = vckss_rse__features(leverage[fit],mass[fit],1)
         inverse = invsym(quadcross(basis,basis))
-        scale = basis*(inverse*quadcross(basis,product[|1\movers|]))
-        scale_floor = 0.05*mean(product[|1\movers|])
+        scale = basis*(inverse*quadcross(basis,product[fit]))
+        scale_floor = 0.05*mean(product[fit])
         if (scale_floor <= 0 | missing(scale_floor)) {
             info[2] = 0
-            return(variance)
+            return(J(n,1,.))
         }
         // Terms that the others do not span, as the native route counts them.
         shape[1] = sum(diagonal(inverse):!=0)
         shape[3] = scale_floor
-        shape[4] = sum(scale:<scale_floor)
-        scale = rowmax((scale,J(movers,1,scale_floor)))
+        shape[4] = sum(used:*(scale:<scale_floor))
+        scale = rowmax((scale,J(rows(fit),1,scale_floor)))
         // Step 2: the profile. Effects are standardised over the physical
         // observations of all units, so a common shift between worker and
         // firm effects does not matter.
         total = sum(mass)
         mean_effect = quadcross(mass,worker_effect)/total
         deviation = sqrt(quadcross(mass,(worker_effect:-mean_effect):^2)/total)
-        a = deviation > 0 ? (worker_effect[|1\movers|]:-mean_effect):/deviation :
-            J(movers,1,0)
+        a = deviation > 0 ? (worker_effect[fit]:-mean_effect):/deviation :
+            J(rows(fit),1,0)
         mean_effect = quadcross(mass,firm_effect)/total
         deviation = sqrt(quadcross(mass,(firm_effect:-mean_effect):^2)/total)
-        f = deviation > 0 ? (firm_effect[|1\movers|]:-mean_effect):/deviation :
-            J(movers,1,0)
-        a = rowmax((rowmin((a,J(movers,1,3))),J(movers,1,-3)))
-        f = rowmax((rowmin((f,J(movers,1,3))),J(movers,1,-3)))
-        profile = (J(movers,1,1),a,a:^2,f,f:^2,a:*f)
-        permitted = max((1,min((6,floor(movers/100)))))
+        f = deviation > 0 ? (firm_effect[fit]:-mean_effect):/deviation :
+            J(rows(fit),1,0)
+        a = rowmax((rowmin((a,J(rows(fit),1,3))),J(rows(fit),1,-3)))
+        f = rowmax((rowmin((f,J(rows(fit),1,3))),J(rows(fit),1,-3)))
+        profile = (J(rows(fit),1,1),a,a:^2,f,f:^2,a:*f)
+        permitted = max((1,min((6,floor(rows(fit)/100)))))
         profile = scale:*profile[.,1..permitted]
         inverse = invsym(quadcross(profile,profile))
-        coefficient = inverse*quadcross(profile,product[|1\movers|])
-        fitted = profile*coefficient
+        coefficient = inverse*quadcross(profile,product[fit])
+        fitted = select(profile*coefficient,used)
         shape[2] = sum(diagonal(inverse):!=0)
         shape[|9\8+permitted|] = coefficient'
         info[1] = shape[1]+shape[2]
         info[3] = sum(fitted:<floor_value)
         info[4] = min(fitted)
-        variance[|1\movers|] = rowmax((fitted,J(movers,1,floor_value)))
+        variance[selectindex(single)] = rowmax((fitted,J(units,1,floor_value)))
     }
-    pair_term = 0
-    if (movers < n) {
-        permutation = order(unit_worker[|movers+1\n|],1):+movers
-        panel = panelsetup(unit_worker[permutation],1)
-        for (g=1; g<=rows(panel); g++) {
-            members = permutation[|panel[g,1]\panel[g,2]|]
-            count = rows(members)
-            if (count < 2) {
-                info[2] = 0
-                return(J(n,1,.))
-            }
-            sample = quadvariance(y[members])
-            // Two rows of one stayer share the weight B_aa T/(T-1).
-            pair = mean(worker_diagonal[members])*count/(count-1)
-            pair_term = pair_term+4*pair^2*sample^2*(count-2)*(count-1)/(count+1)
-            shape[7] = shape[7]+count*(sample < floor_value)
-            variance[members] = J(count,1,max((sample,floor_value)))
-        }
-        shape[5] = rows(panel)
-        shape[6] = n-movers
-    }
-    shape[8] = pair_term
     return(variance)
+}
+
+// Repeat-measurement sets of the units of vckss_inf__units(). A collapsed
+// mover match is scaled by its own mass, so it is a unit of its own.
+// Physical observations (stayer copies under match deletion, every
+// observation under observation deletion) share a set with the other
+// observations of their worker-firm cell; `unit_firm' may use any code for
+// the grounded firm. `unit_mover' marks the units of workers with more than
+// one firm.
+void vckss_rse__sets(
+    real scalar movers,
+    real colvector unit_worker,
+    real colvector unit_firm,
+    real colvector unit_set,
+    real colvector unit_mover)
+{
+    real colvector ix, permutation, first, cells, firm_code
+    real matrix panel
+    real scalar n, g, firms
+
+    n = rows(unit_worker)
+    unit_set = (1::n)
+    unit_mover = J(n,1,1)
+    if (movers >= n) return
+    ix = (movers+1)::n
+    firm_code = unit_firm[ix]:-min(unit_firm[ix])
+    firms = max(firm_code)+1
+    unit_set[ix] = n:+(unit_worker[ix]:-1):*firms:+firm_code
+    permutation = ix[order((unit_set[ix],ix),(1,2))]
+    panel = panelsetup(unit_set[permutation],1)
+    first = permutation[panel[.,1]]
+    cells = J(max(unit_worker[ix]),1,0)
+    for (g=1; g<=rows(first); g++) {
+        cells[unit_worker[first[g]]] = cells[unit_worker[first[g]]]+1
+    }
+    unit_mover[ix] = cells[unit_worker[ix]]:>1
 }
 
 // Unit aggregates of physical columns in the order of vckss_inf__units():
@@ -312,6 +373,8 @@ void vckss_residual_se__stata(
     real matrix within, load, posted_corrected, total_image
     real rowvector info, shape
     real colvector unit_worker, worker_effect, firm_effect
+    real colvector unit_set, unit_mover, unit_firm
+    real matrix pair
     real scalar n, parameters, worker_levels, firm_levels, control_count
     real scalar centered, j, k, z, point_identity, begin, finish, batch
     real scalar pairs, width, effective, truncation, repeat
@@ -461,9 +524,15 @@ void vckss_residual_se__stata(
                 beta[|worker_levels+1\parameters|]):/root
         }
         else firm_effect = J(n,1,0)
-        variance = vckss_rse__repeat(product,y,residual,leverage,units.mass,
-            units.movers,unit_worker,worker_effect,firm_effect,
-            ratio[.,1]:/maker_inverse,info,shape)
+        if (firm_levels > 1) {
+            unit_firm = round((design[|1,worker_levels+1\n,parameters|]*
+                (1::(firm_levels-1))):/root)
+        }
+        else unit_firm = J(n,1,0)
+        vckss_rse__sets(units.movers,unit_worker,unit_firm,unit_set,unit_mover)
+        variance = vckss_rse__repeat(product,y,residual,leverage,
+            maker_inverse,units.mass,unit_set,unit_mover,worker_effect,
+            firm_effect,ratio:/maker_inverse,info,shape,pair)
     }
     else variance = vckss_rse__working(product,residual,leverage,units.mass,
         units.movers,info)
@@ -534,10 +603,9 @@ void vckss_residual_se__stata(
     calibration = calibration:/draws
     if (repeat) {
         // The high-rank form with the unit variances, plus the pair term of
-        // the stayers in the worker variance. Nothing is truncated: a
-        // nonpositive diagonal is reported as such below.
-        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic
-        signal[1,1] = signal[1,1]+shape[8]
+        // the repeat-measurement sets. Nothing is truncated: a nonpositive
+        // diagonal is reported as such below.
+        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic+pair
         signal = (signal+signal'):/2
         truncation = 0
         V_primitive = signal+2:*quadratic
@@ -768,6 +836,8 @@ void vckss_residual_se_jla__stata(
     real colvector root, product, variance, scaled_residual
     real rowvector eigenvalues
     real colvector fourth, share, unit_worker, unit_firm, mass, unit_y
+    real colvector unit_set, unit_mover
+    real matrix pair
     real colvector ix, permutation, members, gamma
     real matrix controls, residualized, precision, collapsed
     real matrix collapsed_residualized, within, load, noise, image, previous
@@ -969,9 +1039,10 @@ void vckss_residual_se_jla__stata(
         firm_effect = J(n,1,0)
         ix = selectindex(unit_firm:<firms)
         if (rows(ix) > 0) firm_effect[ix] = effects[workers:+unit_firm[ix]]
-        variance = vckss_rse__repeat(product,y,residual,leverage,mass,movers,
-            unit_worker,worker_effect,firm_effect,target_diagonal[.,1],
-            info,shape)
+        vckss_rse__sets(movers,unit_worker,unit_firm,unit_set,unit_mover)
+        variance = vckss_rse__repeat(product,y,residual,leverage,
+            maker_inverse,mass,unit_set,unit_mover,worker_effect,firm_effect,
+            target_diagonal,info,shape,pair)
     }
     else variance = vckss_rse__working(product,residual,leverage,mass,movers,info)
     if (info[2] <= 0 | missing(info[2]) | hasmissing(variance) | info[3] == n) {
@@ -1029,10 +1100,9 @@ void vckss_residual_se_jla__stata(
     calibration = calibration:/draws
     if (repeat) {
         // The high-rank form with the unit variances, plus the pair term of
-        // the stayers in the worker variance. Nothing is truncated: a
-        // nonpositive diagonal is reported as such below.
-        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic
-        signal[1,1] = signal[1,1]+shape[8]
+        // the repeat-measurement sets. Nothing is truncated: a nonpositive
+        // diagonal is reported as such below.
+        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic+pair
         signal = (signal+signal'):/2
         truncation = 0
         V_primitive = signal+2:*quadratic

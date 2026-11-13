@@ -3,13 +3,17 @@
 ## Unreleased
 
 - Add repeat-measurement standard errors as an explicit request,
-  `inference(highrank) inferencemodel(repeat_measurement)`, on match deletion:
-  each stayer's error variance is its own sample variance over its
-  observations; mover units receive a two-step fitted model (a scale on the
-  ranks of leverage and match size times a quadratic in the standardised
-  estimated worker and firm effects, limited to three standard deviations);
-  the covariance is the KSS high-rank form plus a closed-form term for the
-  pairs of observations of one stayer, reported without truncation.
+  `inference(highrank) inferencemodel(repeat_measurement)`, under match and
+  observation deletion: deletion units that share a worker-firm cell (a
+  stayer's observations; under observation deletion also a mover's match of
+  two or more observations) receive the sample variance of their outcomes;
+  the remaining units receive a two-step fitted model (a scale on the ranks
+  of leverage and match size times a quadratic in the standardised estimated
+  worker and firm effects, limited to three standard deviations); the
+  covariance is the KSS high-rank form plus a closed-form term for the pairs
+  of units of one cell, reported without truncation. Under observation
+  deletion with jointly estimated controls the native route adds an offset
+  pass so that the control index is held fixed.
   Estimated control coefficients are treated as known. The default
   (`inference(auto)`, `leaveout_residual`) is unchanged, and `inference(q1)`
   is not available with the new model.
@@ -18,10 +22,12 @@
   variance-source code 4 are additive, with a new diagnostic export
   (`vckss_rust_engine_repeat_measurement_diagnostic_v1`); the distributed
   plugins predate them. The Mata runtime build is
-  `vckss-residual-se-api3`. Exact Mata results agree with an independent
-  dense calculation; the Rust core is covered by unit tests with independent
-  oracles, a dense end-to-end test and a plugin-boundary test. The native
-  route has not been run from Stata.
+  `vckss-residual-se-api4`. Exact Mata results agree with an independent
+  dense calculation under both deletion modes; the Rust core is covered by
+  unit tests with independent oracles, dense end-to-end tests for match and
+  observation units and a plugin-boundary test. The native route passes the
+  Stata regression with a plugin built from this source; no distributed
+  binary contains it.
 - Fix the default request: under `inference(auto)` without a typed
   `inferencemodel()`, the model was reset to `target_lowess` and the command
   stopped with `INFERENCE_DELETION_UNSUPPORTED` for match deletion, so a

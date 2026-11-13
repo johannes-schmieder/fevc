@@ -352,8 +352,10 @@ program define _fevc_display_residual_se
         di as txt "e(V) is not posted; use the available individual intervals."
     }
     if `repeat' {
-        di as txt "Each stayer's error variance is its own sample variance over its observations;"
-        di as txt "mover units use a fitted model (leverage, match size, estimated effects)."
+        di as txt "Deletion units that share a worker-firm cell (a stayer's observations; under"
+        di as txt "observation deletion also a mover's match of two or more observations) get the"
+        di as txt "sample variance of their outcomes; the remaining units of movers use a fitted"
+        di as txt "model (leverage, match size, estimated effects)."
         di as txt "Assumes independent deletion units. The standard error is as good as that"
         di as txt "model for movers; estimated control coefficients are treated as known."
     }

@@ -4395,11 +4395,21 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
     augmentation.options.seed = 8_675_309;
     augmentation.options.probes = 32;
 
-    // Observation units have no collapsed matches: refused before any work.
+    // Observation units need unit frequencies: refused before any work.
     let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
     assert_eq!(
         vckss_rust_engine_augment_component_inference_interrupt_v4(generation, &augmentation, 512),
         ErrorCode::UnsupportedFeature as i32
+    );
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+    // With unit frequencies they are admitted: the rows of one worker-firm
+    // cell are the repeat measurements there. The Stata regression runs that
+    // route through the shim; here the attachment is accepted and released.
+    let unit_frequency = OwnedColumns::structured_component();
+    let generation = prepare_with_controls(&unit_frequency, &[], VCKSS_DELETION_OBSERVATION);
+    assert_eq!(
+        vckss_rust_engine_augment_component_inference_interrupt_v4(generation, &augmentation, 512),
+        0
     );
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);
 

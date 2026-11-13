@@ -1131,11 +1131,13 @@ program define fevc_rust, rclass
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
         if `capability_schema' == 3 {
             // Under joint nuisance with controls the residual-pass standard
-            // errors on match units add an offset pass of two solves per
+            // errors on match units, and the repeat-measurement ones on
+            // observation units too, add an offset pass of two solves per
             // point-estimate probe; they are part of the plan's right-hand
             // sides (deletion 1 is match, nuisance 1 is joint).
             if `componentinference' & "$VCKSS_SE_MODEL"!="" & `generic_controls'>0 & ///
-                `native_nuisance'==1 & `native_deletion'==1 {
+                `native_nuisance'==1 &                                    ///
+                (`native_deletion'==1 | "$VCKSS_SE_MODEL"=="repeat_measurement") {
                 local componentprobes = `componentprobes'+2*`leverage_rhs'
             }
             capture noisily fevc__rust_plan_receipt                      ///

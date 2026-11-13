@@ -71,10 +71,27 @@ struct Units {
     firm_effect: Vec<f64>,
     diagonal: Vec<f64>,
     movers: usize,
+    /// Derived by `input` as match deletion forms them: a mover unit is alone
+    /// in its set, the remaining units are grouped by worker.
+    set: Vec<u64>,
+    mover: Vec<bool>,
+    zero: Vec<f64>,
 }
 
 impl Units {
-    fn input(&self) -> RepeatInputs<'_> {
+    fn input(&mut self) -> RepeatInputs<'_> {
+        let rows = self.proxy.len();
+        self.set = (0..rows)
+            .map(|row| {
+                if row < self.movers {
+                    row as u64
+                } else {
+                    rows as u64 + u64::from(self.worker[row])
+                }
+            })
+            .collect();
+        self.mover = (0..rows).map(|row| row < self.movers).collect();
+        self.zero = vec![0.0; rows];
         RepeatInputs {
             proxy: &self.proxy,
             outcome: &self.outcome,
@@ -82,11 +99,11 @@ impl Units {
             maker_inverse: &self.maker,
             leverage: &self.leverage,
             mass: &self.mass,
-            mover_units: self.movers,
-            worker: &self.worker,
+            set: &self.set,
+            mover: &self.mover,
             worker_effect: &self.worker_effect,
             firm_effect: &self.firm_effect,
-            worker_diagonal: &self.diagonal,
+            target_diagonal: [&self.diagonal, &self.zero, &self.zero],
             positivity_multiplier: 1.0e-8,
         }
     }
@@ -126,6 +143,9 @@ fn mixed_units(movers: usize, stayers: usize, seed: u64) -> Units {
         firm_effect: (0..rows).map(|_| 0.3 * normal(&mut state)).collect(),
         diagonal: vec![0.0; rows],
         movers,
+        set: Vec::new(),
+        mover: Vec::new(),
+        zero: Vec::new(),
     };
     // One worker effect per worker, as in a fitted model.
     let workers = units.worker.iter().copied().max().unwrap() as usize + 1;
@@ -194,7 +214,7 @@ fn stayers_receive_their_own_sample_variance_and_the_pair_term() {
     let outcome = vec![1.0, 0.0, 5.0, 3.0, 3.0, 5.0, 6.0, 5.0, 5.0];
     let diagonal = vec![0.1, 0.2, 0.3, 0.2, 0.1, 0.3, 0.2, 0.3, 0.3];
     let rows = worker.len();
-    let units = Units {
+    let mut units = Units {
         proxy: vec![0.0; rows],
         outcome,
         residual: vec![1.0; rows],
@@ -206,6 +226,9 @@ fn stayers_receive_their_own_sample_variance_and_the_pair_term() {
         firm_effect: vec![0.0; rows],
         diagonal,
         movers: 0,
+        set: Vec::new(),
+        mover: Vec::new(),
+        zero: Vec::new(),
     };
     let fit = fit_repeat_variance(units.input(), &mut NeverInterrupt).unwrap();
     let floor = 2.0e-8;
@@ -396,4 +419,148 @@ fn covariance_is_the_high_rank_form_plus_the_pair_term_without_truncation() {
     assert!(
         (covariance.influence_concentration[0] - 8.0 / shares.iter().sum::<f64>()).abs() <= 1.0e-14
     );
+}
+
+/// Physical observations as units, as observation deletion forms them.
+struct Observations {
+    proxy: Vec<f64>,
+    outcome: Vec<f64>,
+    residual: Vec<f64>,
+    maker: Vec<f64>,
+    leverage: Vec<f64>,
+    mass: Vec<f64>,
+    set: Vec<u64>,
+    mover: Vec<bool>,
+    effect: Vec<f64>,
+    diagonal: [Vec<f64>; 3],
+}
+
+impl Observations {
+    fn input(&self) -> RepeatInputs<'_> {
+        RepeatInputs {
+            proxy: &self.proxy,
+            outcome: &self.outcome,
+            residual: &self.residual,
+            maker_inverse: &self.maker,
+            leverage: &self.leverage,
+            mass: &self.mass,
+            set: &self.set,
+            mover: &self.mover,
+            worker_effect: &self.effect,
+            firm_effect: &self.effect,
+            target_diagonal: [&self.diagonal[0], &self.diagonal[1], &self.diagonal[2]],
+            positivity_multiplier: 1.0e-8,
+        }
+    }
+}
+
+#[test]
+fn a_set_of_a_mover_reaches_all_three_kernels() {
+    // Cell 4 of a mover has the three observations (0, 3, 6), interleaved
+    // with a stayer's cell 9 of three observations (1, 2, 6) and two units of
+    // the mover that are alone in their cells.
+    let set = vec![4, 9, 4, 9, 2, 4, 9, 7];
+    let mover = vec![true, false, true, false, true, true, false, true];
+    let outcome = vec![0.0, 1.0, 3.0, 2.0, 5.0, 6.0, 6.0, -1.0];
+    let rows = set.len();
+    let units = Observations {
+        proxy: vec![0.5; rows],
+        outcome,
+        residual: vec![1.0; rows],
+        maker: vec![1.25; rows],
+        leverage: vec![0.2; rows],
+        mass: vec![1.0; rows],
+        set,
+        mover,
+        effect: vec![0.0; rows],
+        diagonal: [vec![0.2; rows], vec![0.1; rows], vec![-0.05; rows]],
+    };
+    let fit = fit_repeat_variance(units.input(), &mut NeverInterrupt).unwrap();
+    // Sample variances 9 and 7; the two single units share the mean product.
+    let expected = [9.0, 7.0, 9.0, 7.0, 0.5, 9.0, 7.0, 0.5];
+    for (value, expected) in fit.variance.iter().zip(expected) {
+        assert!((value - expected).abs() <= 1.0e-14 * expected);
+    }
+    assert_eq!((fit.stayers, fit.stayer_units), (2, 6));
+    assert_eq!((fit.model_units, fit.model_fit_units), (2, 5));
+    // Mover set: weights B / (1 - P) = 1.25 * (0.2, 0.1, -0.05) and the
+    // factor 4 * 9^2 * (1 * 2 / 4). Stayer set: weight 0.2 * 3 / 2 for the
+    // worker variance only, factor 4 * 7^2 * (1 * 2 / 4).
+    let weight = [0.25, 0.125, -0.0625];
+    let stayer: f64 = 0.2 * 3.0 / 2.0;
+    for left in 0..3 {
+        for right in 0..3 {
+            let mut term = 4.0 * 81.0 * 0.5 * weight[left] * weight[right];
+            if left == 0 && right == 0 {
+                term += 4.0 * 49.0 * 0.5 * stayer * stayer;
+            }
+            assert!(
+                (fit.adjustment[left * 3 + right] - term).abs() <= 1.0e-12 * term.abs(),
+                "entry {left},{right}: {} against {term}",
+                fit.adjustment[left * 3 + right]
+            );
+        }
+    }
+}
+
+#[test]
+fn few_single_units_borrow_the_units_of_all_movers() {
+    // Twenty single units and thirty pairs of movers: fewer than a hundred
+    // single units cannot carry the model, so it is fitted on all eighty
+    // units of movers and, with that many, reduces to their mean product.
+    let rows = 80;
+    let mut state = 77;
+    let mut units = Observations {
+        proxy: (0..rows).map(|_| 1.0 + 0.2 * normal(&mut state)).collect(),
+        outcome: (0..rows).map(|_| normal(&mut state)).collect(),
+        residual: vec![1.0; rows],
+        maker: vec![1.5; rows],
+        leverage: (0..rows)
+            .map(|_| 0.05 + 0.4 * splitmix(&mut state))
+            .collect(),
+        mass: vec![1.0; rows],
+        set: (0..rows as u64)
+            .map(|row| if row < 20 { row } else { 100 + (row - 20) / 2 })
+            .collect(),
+        mover: vec![true; rows],
+        effect: (0..rows).map(|_| normal(&mut state)).collect(),
+        diagonal: [vec![0.0; rows], vec![0.0; rows], vec![0.0; rows]],
+    };
+    let fit = fit_repeat_variance(units.input(), &mut NeverInterrupt).unwrap();
+    let mean = units.proxy.iter().sum::<f64>() / rows as f64;
+    assert_eq!((fit.scale_terms, fit.profile_terms), (1, 1));
+    assert_eq!((fit.model_units, fit.model_fit_units), (20, 80));
+    assert_eq!((fit.stayers, fit.stayer_units), (30, 60));
+    for row in 0..20 {
+        assert!((fit.variance[row] - mean).abs() <= 1.0e-12);
+    }
+    // With a hundred single units the model is fitted on them alone.
+    let rows = 160;
+    units.proxy = (0..rows)
+        .map(|row| if row < 100 { 2.0 } else { 5.0 })
+        .collect();
+    units.outcome = (0..rows).map(|_| normal(&mut state)).collect();
+    units.residual = vec![1.0; rows];
+    units.maker = vec![1.5; rows];
+    units.leverage = (0..rows)
+        .map(|_| 0.05 + 0.4 * splitmix(&mut state))
+        .collect();
+    units.mass = vec![1.0; rows];
+    units.set = (0..rows as u64)
+        .map(|row| {
+            if row < 100 {
+                row
+            } else {
+                1_000 + (row - 100) / 2
+            }
+        })
+        .collect();
+    units.mover = vec![true; rows];
+    units.effect = (0..rows).map(|_| normal(&mut state)).collect();
+    units.diagonal = [vec![0.0; rows], vec![0.0; rows], vec![0.0; rows]];
+    let fit = fit_repeat_variance(units.input(), &mut NeverInterrupt).unwrap();
+    assert_eq!((fit.model_units, fit.model_fit_units), (100, 100));
+    for row in 0..100 {
+        assert!((fit.variance[row] - 2.0).abs() <= 1.0e-12);
+    }
 }

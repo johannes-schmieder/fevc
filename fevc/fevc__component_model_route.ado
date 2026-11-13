@@ -137,9 +137,11 @@ program define fevc__component_model_route, rclass
     local structured = "`inference'"!="none" &                  ///
         inlist("`inferencemodel'","structured_common","structured_leverage")
     // Repeat-measurement standard errors are a variant of the leave-out
-    // residual pass: same units, solves and routes; stayers receive their
-    // own sample variance and mover units a two-step fitted model. They are
-    // an explicit request and need the collapsed units of match deletion.
+    // residual pass: same units, solves and routes. Units that share a
+    // worker-firm cell receive the sample variance of their outcomes (an
+    // eligible stayer's observations; under observation deletion also a
+    // mover's match of two or more observations), the remaining units a
+    // two-step fitted model. They are an explicit request.
     local repeat = "`inference'"!="none" & "`inferencemodel'"=="repeat_measurement"
     local residual = "`inference'"!="none" &                     ///
         inlist("`inferencemodel'","leaveout_residual","repeat_measurement")
@@ -196,7 +198,7 @@ program define fevc__component_model_route, rclass
     local residual_units_ok =                                             ///
         inlist(lower(strtrim("`stayers'")),"","movers","both") &         ///
         (inlist("`residual_deletion'","","match") |                       ///
-            ("`residual_deletion'"=="observation" & !`repeat' &           ///
+            ("`residual_deletion'"=="observation" &                       ///
                 inlist(lower(strtrim("`nuisance'")),"","joint")))
     local residual_native = `residual' & !`project_supplied' &            ///
         inlist("`backend_requested'","auto","rust") &                    ///
@@ -257,7 +259,7 @@ program define fevc__component_model_route, rclass
         }
         else if `repeat' {
             quietly _fevc_component_route_failure "REPEAT_MEASUREMENT_TUPLE_REQUIRED" ///
-                "Repeat-measurement standard errors need match deletion, Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)), and no project(); `residual_reason'."
+                "Repeat-measurement standard errors need Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)), no project(), and, for observation deletion, joint nuisance (natively also no frequency weights); `residual_reason'."
             di as error "repeat-measurement standard errors are not available for this request"
             exit 498
         }
