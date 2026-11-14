@@ -1,0 +1,133 @@
+{
+ "run": "dev5_posting",
+ "purpose": "development probe, not a confirmation: share of samples with the joint covariance posted and coverage in designs without a bottleneck and with 400 firms when the model has controls (design seeds not used by any confirmation)",
+ "run_seed": 40,
+ "pkgroot": "<scratch>/pkgmc/pkg-02d7955f/fevc",
+ "source_commit": "02d7955f",
+ "deletions": [
+  "match",
+  "observation"
+ ],
+ "reps_per_task": 25,
+ "tasks_per_cell": 20,
+ "threads": 1,
+ "options": "none",
+ "expect_model": "repeat_measurement",
+ "expect_threshold": 0.1,
+ "cells": [
+  {
+   "name": "wrk_J400_bnone_profile_skew",
+   "design_seed": 76,
+   "variance": "profile",
+   "errors": "skew",
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   },
+   "nW": 12000,
+   "gap": 0.0,
+   "n_bridge": null,
+   "group": "none",
+   "nJ": 400
+  },
+  {
+   "name": "two_J400_bnone_movers",
+   "design_seed": 77,
+   "variance": "movers",
+   "errors": "normal",
+   "control": {
+    "second": true
+   },
+   "nW": 12000,
+   "gap": 0.0,
+   "n_bridge": null,
+   "group": "none",
+   "nJ": 400
+  },
+  {
+   "name": "wrk_J400_bnone_movers",
+   "design_seed": 78,
+   "variance": "movers",
+   "errors": "normal",
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   },
+   "nW": 12000,
+   "gap": 0.0,
+   "n_bridge": null,
+   "group": "none",
+   "nJ": 400
+  }
+ ],
+ "schema": "PKGMC-MANIFEST-V1",
+ "hashes": {
+  "plugin": "7614016e8697f88a0ce1137edd889c2bd992ce25538ec5f6962128a72f6a892b",
+  "task_do": "450eb72e8306abf156f49beddbc16d958f218f18ec4106559d7d7271557883bc",
+  "driver": "1b7fb97f54b5019b09325f23b832c91ad9a91c271dfff22c08b987edcc170331",
+  "aggregate": "87259015bd0db00b1cdf55c68b6dfaaf6729a6946de9a77985cac13ade3fc7df",
+  "confirm": "07cc70530976fe6869a9dd98467dc4db31e4eb50f9bf477bf9014c5a1517f87d",
+  "design_code": {
+   "designs.py": "08cf47fafb018c816322d140864328206f657a7b7846d25fb23e4ccc6d039798"
+  },
+  "ado": {
+   "fevc.ado": "2b566143e5f75c9cf86f7eaf02e6159b18f7e5ed61117b9a244ad5daf46670f9",
+   "fevc_residual_se.mata": "206f36d9cfaba30506db752f0608c4a728906da7b44cbf8421bd3a9196caba53",
+   "fevc__residual_se_post.ado": "9d7dbbc21bbb70665798b437aa6701fb252382452c79e9f9c34c3ceffd80733c",
+   "fevc__component_model_route.ado": "2d6d184881ad024c67d7abd63ef71281dc0cd3e6775f80780d87506c25a391a7"
+  }
+ },
+ "designs": {
+  "wrk_J400_bnone_profile_skew": {
+   "sha256": "e8693c1727d837916a56dae3c53e9638e1f5423db805813ebc32cfd95fb8f115",
+   "person_years": 47482,
+   "workers": 11873,
+   "firms": 370,
+   "bridge_workers": 0,
+   "collapsed_rows": 39714,
+   "mover_rows": 6739,
+   "control_realised": {
+    "corr_x_effects": 0.5107459812557192,
+    "within_match_share": 0.4863809732614485,
+    "index_sd": 0.14118230271864626,
+    "effects_sd": 0.35858182913814446,
+    "controls": 1
+   }
+  },
+  "two_J400_bnone_movers": {
+   "sha256": "b5abc1e67893093a9beceab858ee08db512ae77c5df02d51fd60bc0f3277c6fa",
+   "person_years": 47649,
+   "workers": 11919,
+   "firms": 380,
+   "bridge_workers": 0,
+   "collapsed_rows": 40036,
+   "mover_rows": 6596,
+   "control_realised": {
+    "corr_x_effects": 0.5453571228033777,
+    "within_match_share": 0.4601012405796703,
+    "index_sd": 0.16275508567258098,
+    "effects_sd": 0.3472387167516467,
+    "controls": 2
+   }
+  },
+  "wrk_J400_bnone_movers": {
+   "sha256": "5072ff75ef48679fba8c6580e89f63261b2efcbf6ddfc03cb34517ef43e65148",
+   "person_years": 47457,
+   "workers": 11936,
+   "firms": 384,
+   "bridge_workers": 0,
+   "collapsed_rows": 40012,
+   "mover_rows": 6549,
+   "control_realised": {
+    "corr_x_effects": 0.5201132012948756,
+    "within_match_share": 0.4772176914633953,
+    "index_sd": 0.14191075296408528,
+    "effects_sd": 0.3449723528691411,
+    "controls": 1
+   }
+  }
+ },
+ "tasks": 120
+}

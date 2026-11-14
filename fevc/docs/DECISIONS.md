@@ -475,7 +475,7 @@ Accordingly `inference(auto)`, the default, selects
 repeat measurements wherever they exist (the rule he set on 2026-11-12,
 with the more conservative model for the units without them), every
 component is reported with the normal interval or the `q = 1` interval of
-KSS Section 6, `e(V)` is posted only when all components are normal, and
+KSS Section 7.1, `e(V)` is posted only when all components are normal, and
 the display says which interval each component received and why.
 `inferencemodel(leaveout_residual)` keeps the default of 2026-11-10. The
 guarantees of that decision stand: the selected backend, algorithm and
@@ -507,3 +507,30 @@ beyond the regression tests.
 The distributed plugins predate the method; until they are rebuilt the
 default reports point estimates and says why. Binaries, tag and release
 remain separate owner decisions.
+
+## 2026-11-14: control term, threshold, harness, release 0.6.0
+
+The owner: "Ok add the control term. I think we stick with 10 percent for
+the interval threshold. Harness can go into the repo. Afterwards we want to
+merge this into main. Build and validate the plugins and release as 0.6.0".
+
+Accordingly the threshold of the rule stays at ten per cent and is now the
+owner's decision. The repeat-measurement standard errors and the `q = 1`
+pieces include the estimation of the control coefficients to first order
+(the variance of the fixed-offset estimate under the noise of the
+control-adjusted outcome), on every route; this replaces the treatment of
+the coefficients as known that the owner had accepted on 2026-11-13. The
+joint estimate's additional term in the control index is not covered and
+is stated as a limit; so are error variances that move with a control
+inside a worker-firm cell and poorly identified coefficients
+([INFERENCE.md](INFERENCE.md)). The Monte Carlo harness and the compact
+records of its runs are in the repository (`tools/default_interval/`,
+`docs/default_interval/`). The registered suites keep the point-only
+default they were written for, and the command's own default has a test of
+its own in every suite and qualifier. The version is 0.6.0.
+
+Merging into `main`, adopting the rebuilt binaries, tagging and publishing
+remain the owner's to carry out. The Windows binary needs, besides, an
+owner-approved change of the private runner's export list and a new
+campaign protocol against 0.5.2 before its licensed qualification can run.
+

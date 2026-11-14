@@ -165,7 +165,7 @@ leading direction and the `q = 1` decomposition along it:
   pseudo-noise draws. The leave-out variance of `b` is unbiased but rests on
   the few units that carry the direction; taking the larger value keeps it
   positive and, for moderate correlation, can only widen the interval;
-- the interval is the Andrews-Mikusheva interval of KSS (Section 6): the
+- the interval is the Andrews-Mikusheva interval of KSS (Section 7.1): the
   range of `lambda b^2 + theta_r` over the ellipse of radius `z(kappa)`
   around the estimates, with `kappa` the curvature
   `2 |lambda| V[b] / (V[theta_r] (1 - rho^2))^(1/2)` and `z` its critical
@@ -357,6 +357,22 @@ the fixed-offset estimate. With a large control index, `nuisance(fixedoffset)`
 is the request whose standard error is the one computed.
 (`nuisance(fixedoffset)` with observation deletion is not covered and
 returns point estimates with a reason: 1,000 fits of that run, by design.)
+
+The same term shows where the two blocks of firms differ by three log
+points and the control loads on the firm effect (`dev6_shapes`,
+`dev7_adv`; three designs, 250 replications per case): under the default
+joint nuisance the standard error of the worker variance, and in two of
+the three designs that of the firm variance, is 0.87 to 0.94 of the
+spread, against 0.95 to 1.02 for the same design shapes without controls.
+In two of the designs these components take the `q = 1` interval; the
+reported intervals of the worker and firm variances cover 0.924 to 0.956.
+Under `nuisance(fixedoffset)` the two designs of `dev6_shapes` give 0.92
+to 0.99 (`dev7_fixedoffset`, match deletion). A control loaded on the
+worker effect, or unrelated to the effects, shows nothing of the kind in
+designs with that gap (0.97 to 1.13). Over the ten further design shapes
+of `dev6_shapes` (5,000 fits, none failed) the lowest coverage is 0.924
+and the mean 0.962; without a bottleneck, `e(V)` is posted in 65% to 92%
+of the samples (`dev5_posting`, three designs with 400 firms).
 
 These are development checks, not confirmations.
 

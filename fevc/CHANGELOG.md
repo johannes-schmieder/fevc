@@ -20,10 +20,26 @@ No unreleased changes.
   the bookkeeping of one fit that returned point estimates; the second, with
   package, designs and tolerances unchanged, passed (40,000 fits; lowest
   coverage 0.930, mean 0.959; `docs/INFERENCE.md`). On three Veneto panels
-  the default adds 24% to 30% to the time of the point estimates. Known
-  limit: control coefficients are treated as known; with a control strongly
-  correlated with the effects the standard error of the total is 9% to 16%
-  too small in a development check.
+  the default adds 24% to 30% to the time of the point estimates.
+- With controls, the repeat-measurement standard errors and the `q = 1`
+  pieces include the estimation of the control coefficients to first order:
+  the variance is that of the fixed-offset estimate under the noise of the
+  control-adjusted outcome, its linear part from the influences projected
+  off the controls with the realised within-unit products, its quadratic
+  part from pseudo-noise transformed as the data are (under match deletion
+  one further standard normal per unit and draw, from its own stream and
+  counted in the random-number receipt). Both Mata routes and the native
+  engine; no further linear solve. `e(inference_nuisance_omitted)` is zero
+  with controls. Requests without controls give bitwise the same native
+  results. In a development check repeating, with the same outcome draws,
+  the designs on which the earlier treatment was found short, the coverage
+  of the variance of the sum goes from 0.904-0.920 to 0.938-0.956 (17,000
+  fits over 19 designs with controls, none failed). Not covered: the
+  joint estimate's additional term in the control index (with an index as
+  large as the effects, the covariance under match deletion covers 0.918;
+  under `nuisance(fixedoffset)` 0.948-0.962), error variances that move
+  with a control inside a worker-firm cell, and coefficients the data
+  identify poorly; `docs/INFERENCE.md` gives the formulas and limits.
 - Add repeat-measurement standard errors,
   `inferencemodel(repeat_measurement)`, under match and
   observation deletion: deletion units that share a worker-firm cell (a
@@ -36,7 +52,6 @@ No unreleased changes.
   of units of one cell, reported without truncation. Under observation
   deletion with jointly estimated controls the native route adds an offset
   pass so that the control index is held fixed.
-  Estimated control coefficients are treated as known.
 - With `inference(auto)` or `inference(q1)` the pass also finds the leading
   direction of every component (a Lanczos iteration, a few dozen linear
   solves) and the `q = 1` decomposition along it, and reports one interval
@@ -53,12 +68,31 @@ No unreleased changes.
   variance-source code 4 are additive, with a new diagnostic export
   (`vckss_rust_engine_repeat_measurement_diagnostic_v1`); the distributed
   plugins predate them. The Mata runtime build is
-  `vckss-residual-se-api5`. Exact Mata results agree with an independent
+  `vckss-residual-se-api6`. Exact Mata results agree with an independent
   dense calculation under both deletion modes; the Rust core is covered by
   unit tests with independent oracles, dense end-to-end tests for match and
   observation units and a plugin-boundary test. The native route passes the
   Stata regression with a plugin built from this source; no distributed
   binary contains it.
+- The registered Stata suites and qualifiers keep the point-only default
+  they were written for: `FEVC_DEFAULT_INFERENCE=none` is set where each
+  starts (as a global in `run_all.do` and the Windows runtime driver, in
+  the environment of the macOS and Linux qualifiers, the local CI runner
+  and the portability job). `test_default_inference.do` checks the
+  command's own default natively and in Mata and runs in the quick suite,
+  both qualifiers and the installer verification; the macOS qualifier also
+  runs both standard-error regression files on each architecture.
+- The Monte Carlo harness for the default interval is in
+  `tools/default_interval/` (designs, driver, aggregation, verdict, tests);
+  compact records of every run are in `docs/default_interval/`. Its
+  requirement `pandas` is pinned in `requirements/dev.txt`.
+- The C shim compiles under MSVC `/W4 /WX` again: a hidden local and
+  three records that MSVC could not prove initialised (no change in what
+  they carry; the macOS plugin is unchanged by the first fix).
+- Corrections: the `q = 1` interval is that of KSS Section 7.1 (it was
+  cited as Section 6, also in the display); the technical supplement no
+  longer calls the joint and the fixed-offset estimate equivalent to first
+  order, and states the term by which they differ.
 - Fix the default request: under `inference(auto)` without a typed
   `inferencemodel()`, the model was reset to `target_lowess` and the command
   stopped with `INFERENCE_DELETION_UNSUPPORTED` for match deletion, so a

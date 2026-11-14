@@ -74,11 +74,30 @@ replications without an interval.
 designs with a control loaded on the worker effect (0.8, 0.2, noise 0.4), both deletion modes, 500
 replications each (2,000 fits), plain default command. No fit failed; coverage 0.932-0.984.
 
+**dev5_posting** (development check; package commit 02d7955f; manifest sha256 `5cc347e2...bead`). Three designs
+without a bottleneck and with 400 firms, with controls, both deletion modes, 500 replications each (3,000 fits),
+to see how often `e(V)` is posted when the model has controls: 65% to 92% of the samples; coverage 0.926-0.970.
+
+**dev6_shapes** (development check; package commit 02d7955f; manifest sha256 `d3c74d5c...d03f`). The ten design
+shapes of the planned confirmation with controls that no earlier run with controls covered (block gap of three
+log points, the bridge variance, flat skewed errors, 200 firms), each with the control kind the planned rotation
+gave it, 250 replications per design and deletion mode (5,000 fits, none failed, none without an interval).
+Lowest coverage 0.924, mean 0.962. Where the blocks differ and the control loads on the firm effect, the
+standard errors of the worker and firm variances are up to 13% short; this led to the assignment rule of
+conf3_controls.
+
+**dev7_fixedoffset** and **dev7_adv** (development checks; package commit 02d7955f; manifest sha256
+`14a624ca...9426` and `d5f542c0...592e`). The two gap-3 designs of dev6_shapes with two controls under
+`nuisance(fixedoffset)` (match deletion, 500 fits): standard errors 0.92-0.99 of the spread; and a gap-3 design
+with the single control loaded on the firm effect under the default (500 fits): worker and firm 0.90-0.94. The
+shortfall comes with the firm-loaded control and is smaller under the fixed offset, as for the joint estimate's
+additional term.
+
 ## What is not here
 
 - Raw task outputs (`out/`), Stata logs (`logs/`), the exported design CSVs (`designs/`) and the large
   `summary.json` files (dev1 1.2 MB, conf2 1.5 MB, dev2_controls 0.3 MB, dev3_controls 1.0 MB and the
-  later runs) are kept outside the repository.
+  later runs) are kept outside the repository, as are the smoke runs made before each campaign.
   The design CSVs can be regenerated with `fevc/tools/default_interval/designs.py`; their sha256 are in
   each manifest (`designs[name].sha256`) and the generator reproduces all of them.
 - conf1 was not aggregated after its verdict, so it has no `cells.csv` or `rules.csv`.

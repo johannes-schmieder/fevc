@@ -413,7 +413,7 @@ program define _fevc_display_interval_notes
     if `q1_components'>0 {
         di as txt "A q = 1 estimate is not close to normal, so it has no standard error; its"
         di as txt "interval is the Andrews-Mikusheva interval along that direction (KSS 2020,"
-        di as txt "Section 6) and need not be symmetric around the estimate."
+        di as txt "Section 7.1) and need not be symmetric around the estimate."
         di as txt "e(V) is not posted: it is posted only when every component is normal."
         di as txt "All intervals and the standard errors of the normal form are in"
         di as txt "e(inference_intervals); the directions are in e(inference_leading)."

@@ -399,7 +399,7 @@ estimate is close to normal and its interval is the estimate plus or minus
 1.96 standard errors. When one direction carries much of the sampling
 variance, as with a bottleneck between two parts of the network, the
 estimate is not close to normal; the interval is then the q = 1 interval of
-Kline, Saggio and S{c o/}lvsten (2020, Section 6), which need not be
+Kline, Saggio and S{c o/}lvsten (2020, Section 7.1), which need not be
 symmetric, and the component has no standard error. A component receives
 the q = 1 interval when its leading direction carries more than 10% of the
 estimated sampling variance or when the variance estimate is not positive,
@@ -442,9 +442,11 @@ the control coefficients enters to first order. This needs coefficients
 that the data identify well and error variances that do not move with a
 control inside a worker-firm cell. Under the default {cmd:nuisance(joint)}
 the point estimate re-estimates the coefficients in every leave-out fit; a
-term that this adds is not covered, and it matters when the control index
-is as large as the worker and firm effects (the inference guide gives the
-formulas and the simulations).{p_end}
+term that this adds is not covered. It matters when the control index is
+as large as the worker and firm effects, or when a control moves with an
+effect that differs strongly between parts of the network; there
+{cmd:nuisance(fixedoffset)} is the request whose standard error is the one
+computed (the inference guide gives the formulas and the simulations).{p_end}
 {phang2}5. The errors are not negligible next to the outcome's explained
 variation. Where they are, the fitted model can lack a positive scale; the
 default then returns point estimates and says so.{p_end}
