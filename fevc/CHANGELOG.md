@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No unreleased changes.
+
+## 0.6.0 — 2026-11-14
+
 - Make repeat-measurement standard errors with one interval per component
   the default. `inference(auto)` without `inferencemodel()` now selects
   `inferencemodel(repeat_measurement)`: every component is reported with the
