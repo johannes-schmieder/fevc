@@ -61,7 +61,7 @@ forvalues j = 1/4 {
     local vars "`vars' double truth`j' double b`j' double se`j' double nlb`j' double nub`j' double qlb`j' double qub`j'"
     local vars "`vars' double lb`j' double ub`j' double regime`j' double share`j' double kappa`j' double crit`j'"
     local vars "`vars' double eigshare`j' double maxw`j' double conv`j' double q1status`j' double lam`j'"
-    local vars "`vars' double b1_`j' double vb_lo`j' double vb_fit`j' double vr`j'"
+    local vars "`vars' double b1_`j' double vb_lo`j' double vb_fit`j' double vr`j' double vb`j'"
 }
 tempname post
 tempfile results
@@ -87,7 +87,7 @@ forvalues r = `first'/`last' {
         local line `"`line' ("`e(withholding_status)'") ("") ("") (.) (`seconds') (.) (.) (.) (.) (.)"'
         forvalues j = 1/4 {
             local line `"`line' (`t`j'')"'
-            forvalues k = 1/21 {
+            forvalues k = 1/22 {
                 local line `"`line' (.)"'
             }
         }
@@ -118,12 +118,14 @@ forvalues r = `first'/`last' {
             foreach k in 2 3 4 5 6 8 9 7 10 11 12 13 14 15 16 {
                 local line `"`line' (`=`T'[`j',`k']')"'
             }
-            foreach k in 5 11 12 13 18 {
+            * Eigenvalue, score, the two candidate variances of the score, the remainder variance,
+            * and the variance of the score the fit used (with controls it has a control part).
+            foreach k in 5 11 12 13 18 14 {
                 local line `"`line' (`=`L'[`j',`k']')"'
             }
         }
         else {
-            forvalues k = 1/20 {
+            forvalues k = 1/21 {
                 local line `"`line' (.)"'
             }
         }

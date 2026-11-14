@@ -39,7 +39,9 @@ def pieces(d, j):
     def g(name):
         return d[f'{name}{j}'].to_numpy(float)
     se, lam, score = g('se'), g('lam'), g('b1_')
-    leadvar = np.fmax(g('vb_lo'), g('vb_fit'))
+    # The variance of the leading score the fit used. Runs made before the task file recorded it
+    # had no controls, where it is the larger of the two candidates.
+    leadvar = g('vb') if f'vb{j}' in d else np.fmax(g('vb_lo'), g('vb_fit'))
     variance = se ** 2
     normal_ok = np.isfinite(se) & (se > 0)
     q1_ok = (g('q1status') == 0) & np.isfinite(g('qlb')) & np.isfinite(g('qub'))

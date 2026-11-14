@@ -30,7 +30,8 @@ def _load():
 designs, pkgmc, aggregate, confirm = _load()
 
 PER = ('truth', 'b', 'se', 'nlb', 'nub', 'qlb', 'qub', 'lb', 'ub', 'regime', 'share', 'kappa',
-       'crit', 'eigshare', 'maxw', 'conv', 'q1status', 'lam', 'b1_', 'vb_lo', 'vb_fit', 'vr')
+       'crit', 'eigshare', 'maxw', 'conv', 'q1status', 'lam', 'b1_', 'vb_lo', 'vb_fit', 'vr',
+       'vb')
 
 
 def task_frame(t, man, rng, share=0.2):
@@ -60,7 +61,7 @@ def task_frame(t, man, rng, share=0.2):
                     crit=np.full(n, 2.0), eigshare=np.full(n, 0.3), maxw=np.full(n, 0.01),
                     conv=np.ones(n), q1status=np.zeros(n), lam=np.full(n, lam), b1_=score,
                     vb_lo=np.full(n, leadvar), vb_fit=np.full(n, 0.5 * leadvar),
-                    vr=np.full(n, 0.01))
+                    vr=np.full(n, 0.01), vb=np.full(n, leadvar))
         vals['lb'] = np.where(regime == 1, vals['qlb'], vals['nlb'])
         vals['ub'] = np.where(regime == 1, vals['qub'], vals['nub'])
         for k in PER:
@@ -456,3 +457,26 @@ def test_run_needs_a_stata_executable(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match='does not exist or is not executable'):
         pkgmc.run(d, 1)
     assert os.listdir(d + '/out') == []
+
+
+def test_the_rule_is_recomputed_from_the_recorded_leading_variance(run):
+    """With controls the variance of the leading score is not the larger of the two recorded
+    candidates; the recomputation must use the recorded one, and fall back for older outputs."""
+    d, man = run
+    names = [f"{t['cell']}__{t['deletion']}__{t['task']}.csv" for t in pkgmc.tasks_of(man)]
+
+    def shrink_candidates(x):
+        for j in range(1, 5):
+            x[f'vb_lo{j}'] = 1e-9
+            x[f'vb_fit{j}'] = 1e-9
+    for name in names:
+        edit(d, name, shrink_candidates)
+    assert aggregate.main(d)['package_rule_mismatches'] == []            # uses vb, not the candidates
+
+    def drop_recorded(x):
+        for j in range(1, 5):
+            del x[f'vb{j}']
+    for name in names:
+        edit(d, name, drop_recorded)
+    out = aggregate.main(d)                                               # older output: candidates
+    assert len(out['package_rule_mismatches']) == 12                      # 2 cells x 2 modes x 3
