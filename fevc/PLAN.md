@@ -30,11 +30,16 @@ joint estimate's additional term in the control index; error variances
 that move with a control inside a cell; two or more dominant directions;
 outcomes with almost no noise.
 
-Native binaries: macOS qualified at `f3938986`
-(`CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION`, before the removal and two
-fixes; to be repeated at the build commit); Linux built and checked on SCC
-by a diagnostic job, not yet the registered qualifier; Windows built and
-audited by the hosted workflow, not yet run under licensed Stata.
+Native binaries at the build commit `d4b2d942`: macOS qualified
+(`CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION`: arm64 `6dc228a0...81c5`,
+x86_64 under Rosetta `8df483a3...7158`, universal `766aa624...6331`);
+Linux built and checked on SCC by a diagnostic job (plain default,
+standard-error regression, quick suite; scheduler `failed=0`), not yet the
+registered qualifier; Windows built and audited by the hosted workflow
+(plugin `addb9a4c...caa8d`, static CRT, PE audit, 149 exports), not yet run
+under licensed Stata. Hosted source checks, Rust backend and
+plugin-interface candidates pass at the build commit. Candidates and
+receipts are kept outside the repository until adoption.
 
 Open, for the owner, in this order:
 

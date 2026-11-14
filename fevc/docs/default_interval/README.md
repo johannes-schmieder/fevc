@@ -102,6 +102,26 @@ draw). Verdict **PASS**: 40,000 fits, no failed fit, no fallback, inventory clea
 every replication; lowest coverage 0.923 (worker variance, `kwrk_J400_b1000_g3_movers`, match deletion), mean
 0.9602.
 
+## Compatibility: conf3_controls and the release source
+
+conf3_controls ran on source `f3938986` with its qualified macOS arm64 plugin (sha256 `95f67941...a7b0e6`). The
+build commit of 0.6.0 is `d4b2d942`. Between them: `18ff8f67` removes the other variance models from the command
+(route and option checks, tests, no change to the computation of the default); `f8f1338c` makes the C shim accept
+automatic component batches without a Gram fit (a receipt check the default's route does not reach) and moves
+two failure routines into their own files; `dcdec97d` and `d4b2d942` change documentation and evidence only.
+Changed production paths: `fevc/fevc__component_model_route.ado`, `fevc/fevc.ado`, `fevc/fevc__centering.ado`,
+`fevc/fevc__failure_guidance.ado`, the five native helper ado files, the new `fevc/fevc__rust_abort.ado` and
+`fevc/fevc__post_failure.ado`, and `rust/stata_backend/cshim/stata_entry.c`; the Rust crates, the Mata runtimes
+and the harness are unchanged. Check: 36 default requests (native, Mata exact and Mata JLA; match and observation
+deletion; without and with a control; `inference(auto)`, `inference(highrank)`, `inference(q1)` with
+`inferencemodel(repeat_measurement)`) written as hexadecimal doubles for every returned matrix give byte-identical
+files for the conf3 package with its qualified plugin, for the source of `f8f1338c` with a local plugin build,
+and for the package of `d4b2d942` with its own qualified arm64 plugin (a repeated run of the conf3 package was
+also byte-identical, so the check is not hiding run-to-run noise). The confirmation's claim (coverage of the
+plain default with controls in the designs of its manifest) therefore carries to `d4b2d942`. Not carried: anything
+about the removed models or the fixed paths, which have their own regressions. The macOS binaries of `d4b2d942`
+were qualified anew (`CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION`, arm64 `6dc228a0...81c5`).
+
 ## What is not here
 
 - Raw task outputs (`out/`), Stata logs (`logs/`), the exported design CSVs (`designs/`) and the large
