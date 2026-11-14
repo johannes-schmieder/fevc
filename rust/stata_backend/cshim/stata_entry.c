@@ -3773,6 +3773,13 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
     uint32_t target;
     int status;
 
+    /* Filled only for the variance sources that carry them and read again
+     * under the same conditions; zeroed here so that no path reads them
+     * unset (MSVC C4701). */
+    memset(&noise, 0, sizeof(noise));
+    memset(&repeat, 0, sizeof(repeat));
+    memset(&leading, 0, sizeof(leading));
+
     if ((base_argc != 10 && base_argc != 11) ||
         vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
         vckss_parse_component_reference(argv[2], &reference) != 0 ||
