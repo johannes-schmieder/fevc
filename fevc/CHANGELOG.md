@@ -33,8 +33,10 @@ No unreleased changes.
   with controls. Requests without controls give bitwise the same native
   results. In a development check repeating, with the same outcome draws,
   the designs on which the earlier treatment was found short, the coverage
-  of the variance of the sum goes from 0.904-0.920 to 0.938-0.956 (17,000
-  fits over 19 designs with controls, none failed). Not covered: the
+  of the variance of the sum goes from 0.904-0.920 to 0.938-0.956 (26,000
+  development fits with controls, none failed). A registered confirmation
+  of the plain command with controls in every one of 20 new designs passed
+  (40,000 fits; lowest coverage 0.923, mean 0.960). Not covered: the
   joint estimate's additional term in the control index (with an index as
   large as the effects, the covariance under match deletion covers 0.918;
   under `nuisance(fixedoffset)` 0.948-0.962), error variances that move

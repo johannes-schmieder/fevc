@@ -376,6 +376,32 @@ of the samples (`dev5_posting`, three designs with 400 firms).
 
 These are development checks, not confirmations.
 
+*Confirmation.* A registered confirmation (`conf3_controls`, manifest
+sha256 `fcb4ffa0...93e4`, frozen before any draw) ran the plain default
+command on the release-candidate source (`f3938986`) with its qualified
+macOS arm64 plugin: the twenty design shapes, the replications and the
+tolerances of `conf2`, new design and run seeds, and controls in every
+design, in a fixed rotation of four kinds (one control correlated with
+both effects; that control with a second one trending with the year; one
+unrelated to the effects; one loaded on the worker effect). A control
+loaded on the firm effect appears only where the two blocks of firms do
+not differ; that assignment rule was fixed from the development checks
+above, before any confirmation draw. Verdict PASS: 40,000 fits, none
+failed, none returned point estimates; over the 160 cases (design,
+deletion mode, component) the lowest coverage of the reported interval is
+0.923 and the mean 0.960; the variance of the sum covers 0.940 to 0.954;
+without a bottleneck the reported interval is at most 1.3% longer than
+the normal one and `e(V)` is posted in 88% to 98% of the samples. The
+lowest cases are the worker and firm variances (0.923 and 0.926) in a
+design whose blocks differ, with the control loaded on the worker effect,
+where their standard errors are 8% and 7% short. Not covered by design: a
+control index as large as the effects, error variances that move with a
+control inside a cell, and a control loaded on the firm effect where the
+blocks differ. The release source differs from `f3938986` by the removal
+of the other variance models and two fixes outside the default's
+computation; the default's results are bitwise the same (see the
+compatibility note in `docs/default_interval/README.md`).
+
 Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
 addition to the bits of the leave-out residual pass; variance-source code 4
 and the diagnostic export

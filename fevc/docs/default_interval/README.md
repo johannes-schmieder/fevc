@@ -93,6 +93,15 @@ with the single control loaded on the firm effect under the default (500 fits): 
 shortfall comes with the firm-loaded control and is smaller under the fixed offset, as for the joint estimate's
 additional term.
 
+**conf3_controls** (registered confirmation with controls; package commit f3938986, the release-candidate
+source then, with its qualified macOS arm64 plugin, sha256 `95f67941...a7b0e6`; manifest sha256
+`fcb4ffa0...93e4`). The twenty design shapes, the 1,000 replications per design and deletion mode and the
+tolerances of conf2; new design seeds (121-140) and run seed; every design with controls, kinds and assignment
+rule in `make_conf3_spec.py` (copied here; the rule was fixed after dev3-dev7 and before any confirmation
+draw). Verdict **PASS**: 40,000 fits, no failed fit, no fallback, inventory clean, recorded choice reproduced in
+every replication; lowest coverage 0.923 (worker variance, `kwrk_J400_b1000_g3_movers`, match deletion), mean
+0.9602.
+
 ## What is not here
 
 - Raw task outputs (`out/`), Stata logs (`logs/`), the exported design CSVs (`designs/`) and the large

@@ -1,0 +1,654 @@
+{
+ "run": "conf3_controls",
+ "purpose": "registered confirmation of the default as a user runs it with control variables: the plain fevc command (joint nuisance, rule share > 0.10) after the first-order term for estimated control coefficients, on the release-candidate source and its qualified macOS arm64 plugin. The twenty design shapes, the replications and the tolerances are those of conf2; the design seeds and the run seed are new. Every design carries controls (kinds and assignment rule in make_conf3_spec.py): one control correlated with both effects, that control with a second one, one control unrelated to the effects, one control loaded on the worker effect; controls loaded on the firm effect only in designs without a block gap. Not covered by design: a control index as large as the effects, error variances that move with a control inside a cell, a control loaded on the firm effect where the blocks differ.",
+ "run_seed": 53,
+ "pkgroot": "<scratch>/pkgmc/pkg-f3938986/fevc",
+ "source_commit": "f39389861d7887f5f73a5771c9223cc732f828d7",
+ "deletions": [
+  "match",
+  "observation"
+ ],
+ "reps_per_task": 50,
+ "tasks_per_cell": 20,
+ "threads": 1,
+ "options": "none",
+ "expect_model": "repeat_measurement",
+ "expect_threshold": 0.1,
+ "tolerances": {
+  "min_success_rate": 0.99,
+  "min_coverage": 0.92,
+  "min_mean_coverage": 0.94,
+  "max_length_ratio_none": 1.1,
+  "min_posted_none": 0.5
+ },
+ "cells": [
+  {
+   "group": "none",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": null,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kadv_J100_bnone_profile",
+   "design_seed": 121,
+   "control": {}
+  },
+  {
+   "group": "none",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": null,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "name": "ktwo_J400_bnone_movers",
+   "design_seed": 122,
+   "control": {
+    "second": true
+   }
+  },
+  {
+   "group": "none",
+   "nJ": 200,
+   "nW": 12000,
+   "n_bridge": null,
+   "gap": 0.0,
+   "variance": "flat",
+   "errors": "skew",
+   "name": "kben_J200_bnone_flat_skew",
+   "design_seed": 123,
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   }
+  },
+  {
+   "group": "none",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": null,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "skew",
+   "name": "kwrk_J400_bnone_profile_skew",
+   "design_seed": 124,
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   }
+  },
+  {
+   "group": "weak",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 1000,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kadv_J100_b1000_g0_profile",
+   "design_seed": 125,
+   "control": {}
+  },
+  {
+   "group": "weak",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": 1000,
+   "gap": 3.0,
+   "variance": "movers",
+   "errors": "normal",
+   "name": "kwrk_J400_b1000_g3_movers",
+   "design_seed": 126,
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   }
+  },
+  {
+   "group": "weak",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": 300,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kben_J400_b300_g0_profile",
+   "design_seed": 127,
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   }
+  },
+  {
+   "group": "middle",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 300,
+   "gap": 0.0,
+   "variance": "flat",
+   "errors": "skew",
+   "name": "kwrk_J100_b300_g0_flat_skew",
+   "design_seed": 128,
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   }
+  },
+  {
+   "group": "weak",
+   "nJ": 200,
+   "nW": 12000,
+   "n_bridge": 500,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kadv_J200_b500_g0_profile",
+   "design_seed": 129,
+   "control": {}
+  },
+  {
+   "group": "middle",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": 100,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "ktwo_J400_b100_g0_profile",
+   "design_seed": 130,
+   "control": {
+    "second": true
+   }
+  },
+  {
+   "group": "middle",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kben_J100_b100_g0_profile",
+   "design_seed": 131,
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   }
+  },
+  {
+   "group": "middle",
+   "nJ": 200,
+   "nW": 12000,
+   "n_bridge": 150,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "name": "kwrk_J200_b150_g0_movers",
+   "design_seed": 132,
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   }
+  },
+  {
+   "group": "middle",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "gap": 0.0,
+   "variance": "bridge",
+   "errors": "normal",
+   "name": "kadv_J100_b100_g0_bridge",
+   "design_seed": 133,
+   "control": {}
+  },
+  {
+   "group": "strong",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": 30,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "ktwo_J400_b30_g0_profile",
+   "design_seed": 134,
+   "control": {
+    "second": true
+   }
+  },
+  {
+   "group": "strong",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "name": "kben_J100_b30_g0_movers",
+   "design_seed": 135,
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   }
+  },
+  {
+   "group": "strong",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "gap": 3.0,
+   "variance": "flat",
+   "errors": "skew",
+   "name": "kwrk_J100_b30_g3_flat_skew",
+   "design_seed": 136,
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   }
+  },
+  {
+   "group": "strong",
+   "nJ": 200,
+   "nW": 12000,
+   "n_bridge": 50,
+   "gap": 0.0,
+   "variance": "bridge",
+   "errors": "normal",
+   "name": "kadv_J200_b50_g0_bridge",
+   "design_seed": 137,
+   "control": {}
+  },
+  {
+   "group": "signal",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 300,
+   "gap": 3.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kben_J100_b300_g3_profile",
+   "design_seed": 138,
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   }
+  },
+  {
+   "group": "signal",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 1000,
+   "gap": 3.0,
+   "variance": "movers",
+   "errors": "normal",
+   "name": "kben_J100_b1000_g3_movers",
+   "design_seed": 139,
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   }
+  },
+  {
+   "group": "signal",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": 300,
+   "gap": 3.0,
+   "variance": "profile",
+   "errors": "normal",
+   "name": "kwrk_J400_b300_g3_profile",
+   "design_seed": 140,
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   }
+  }
+ ],
+ "schema": "PKGMC-MANIFEST-V1",
+ "hashes": {
+  "plugin": "95f67941b6ae256bb0592e963bf18a51747469cf0515e837a943b1a652b7a0e6",
+  "task_do": "450eb72e8306abf156f49beddbc16d958f218f18ec4106559d7d7271557883bc",
+  "driver": "1b7fb97f54b5019b09325f23b832c91ad9a91c271dfff22c08b987edcc170331",
+  "aggregate": "87259015bd0db00b1cdf55c68b6dfaaf6729a6946de9a77985cac13ade3fc7df",
+  "confirm": "07cc70530976fe6869a9dd98467dc4db31e4eb50f9bf477bf9014c5a1517f87d",
+  "design_code": {
+   "designs.py": "08cf47fafb018c816322d140864328206f657a7b7846d25fb23e4ccc6d039798"
+  },
+  "ado": {
+   "fevc.ado": "9afcf8a45af0c1d230ef7bb84606841aea06435f73b0d8a69c277f76c126db3f",
+   "fevc_residual_se.mata": "206f36d9cfaba30506db752f0608c4a728906da7b44cbf8421bd3a9196caba53",
+   "fevc__residual_se_post.ado": "9d7dbbc21bbb70665798b437aa6701fb252382452c79e9f9c34c3ceffd80733c",
+   "fevc__component_model_route.ado": "2d6d184881ad024c67d7abd63ef71281dc0cd3e6775f80780d87506c25a391a7"
+  }
+ },
+ "designs": {
+  "kadv_J100_bnone_profile": {
+   "sha256": "61686db5da3a78dd1f869fa04a5a6c1d04931c124d58edd8d992970173f26344",
+   "person_years": 47918,
+   "workers": 11997,
+   "firms": 99,
+   "bridge_workers": 0,
+   "collapsed_rows": 40499,
+   "mover_rows": 6422,
+   "control_realised": {
+    "corr_x_effects": 0.5509521983888623,
+    "within_match_share": 0.45730957619083495,
+    "index_sd": 0.0912033566856041,
+    "effects_sd": 0.35151318621050925,
+    "controls": 1
+   }
+  },
+  "ktwo_J400_bnone_movers": {
+   "sha256": "4cca7c69b5a47a8e14d50f3d335f58a1d044f965444fc38bebeac3dc9cef2086",
+   "person_years": 47691,
+   "workers": 11917,
+   "firms": 380,
+   "bridge_workers": 0,
+   "collapsed_rows": 39858,
+   "mover_rows": 6856,
+   "control_realised": {
+    "corr_x_effects": 0.5458758667312664,
+    "within_match_share": 0.46068727373671525,
+    "index_sd": 0.16294898810332611,
+    "effects_sd": 0.3489648312192832,
+    "controls": 2
+   }
+  },
+  "kben_J200_bnone_flat_skew": {
+   "sha256": "2182d3b64eb220b4f62712e0e920f0489e4fd93e23dfe59b2bfc336bfda830f0",
+   "person_years": 47692,
+   "workers": 11964,
+   "firms": 194,
+   "bridge_workers": 0,
+   "collapsed_rows": 40062,
+   "mover_rows": 6634,
+   "control_realised": {
+    "corr_x_effects": 0.0024326617494979897,
+    "within_match_share": 0.6735286188258867,
+    "index_sd": 0.07445959739866709,
+    "effects_sd": 0.3441204946479697,
+    "controls": 1
+   }
+  },
+  "kwrk_J400_bnone_profile_skew": {
+   "sha256": "13706b0b169f361d659383c6658ce47ff8c3139d583d61eab05c6f6d46abb2f9",
+   "person_years": 47722,
+   "workers": 11896,
+   "firms": 373,
+   "bridge_workers": 0,
+   "collapsed_rows": 40164,
+   "mover_rows": 6550,
+   "control_realised": {
+    "corr_x_effects": 0.5130672954518156,
+    "within_match_share": 0.48954535705991137,
+    "index_sd": 0.14178611490732917,
+    "effects_sd": 0.33855173763448754,
+    "controls": 1
+   }
+  },
+  "kadv_J100_b1000_g0_profile": {
+   "sha256": "ba9c5f4da6dda290e26d88198f2c6507d5077419a82aa0395c4b86280f7efd78",
+   "person_years": 48660,
+   "workers": 11991,
+   "firms": 99,
+   "bridge_workers": 1000,
+   "collapsed_rows": 39430,
+   "mover_rows": 8277,
+   "control_realised": {
+    "corr_x_effects": 0.5554004822757797,
+    "within_match_share": 0.4466624932161682,
+    "index_sd": 0.09148785429153682,
+    "effects_sd": 0.35337201805825186,
+    "controls": 1
+   }
+  },
+  "kwrk_J400_b1000_g3_movers": {
+   "sha256": "4f53df4118662ad44ab435f072d02da899246024450d79ba7d41614a54b35c67",
+   "person_years": 48343,
+   "workers": 11967,
+   "firms": 389,
+   "bridge_workers": 1000,
+   "collapsed_rows": 39148,
+   "mover_rows": 8370,
+   "control_realised": {
+    "corr_x_effects": 0.9001829205499522,
+    "within_match_share": 0.1057594338844735,
+    "index_sd": 0.2991477335295705,
+    "effects_sd": 2.2313323363267568,
+    "controls": 1
+   }
+  },
+  "kben_J400_b300_g0_profile": {
+   "sha256": "d0c1e1a5925c514e25eda497689aeb16c9e25b039c5705423b606998a3be065b",
+   "person_years": 47935,
+   "workers": 11946,
+   "firms": 377,
+   "bridge_workers": 300,
+   "collapsed_rows": 39946,
+   "mover_rows": 7046,
+   "control_realised": {
+    "corr_x_effects": -0.0009670606364818969,
+    "within_match_share": 0.6700280364489423,
+    "index_sd": 0.0746472467989633,
+    "effects_sd": 0.3476869416921897,
+    "controls": 1
+   }
+  },
+  "kwrk_J100_b300_g0_flat_skew": {
+   "sha256": "8742ebd08e5024885a6782dc0e93642fad5706c22a2f1db090e07b0dbf4d9dec",
+   "person_years": 47962,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 300,
+   "collapsed_rows": 40039,
+   "mover_rows": 6978,
+   "control_realised": {
+    "corr_x_effects": 0.515382474039646,
+    "within_match_share": 0.4785796859891162,
+    "index_sd": 0.1426152671005549,
+    "effects_sd": 0.3530355939590748,
+    "controls": 1
+   }
+  },
+  "kadv_J200_b500_g0_profile": {
+   "sha256": "ab889103285c74201804fdc9be75eb7716adf38218de4cce493e8ecda31385d3",
+   "person_years": 48124,
+   "workers": 11998,
+   "firms": 199,
+   "bridge_workers": 500,
+   "collapsed_rows": 39777,
+   "mover_rows": 7440,
+   "control_realised": {
+    "corr_x_effects": 0.5363868569451394,
+    "within_match_share": 0.4652366329490737,
+    "index_sd": 0.08974432351852918,
+    "effects_sd": 0.34350120203298207,
+    "controls": 1
+   }
+  },
+  "ktwo_J400_b100_g0_profile": {
+   "sha256": "b2a439fa1eab24782c3485e99f3b8d5c107361ea2b912943d3d3d020726341f5",
+   "person_years": 47531,
+   "workers": 11926,
+   "firms": 372,
+   "bridge_workers": 99,
+   "collapsed_rows": 39725,
+   "mover_rows": 6899,
+   "control_realised": {
+    "corr_x_effects": 0.5324016850895785,
+    "within_match_share": 0.4661503211412493,
+    "index_sd": 0.16244044388071238,
+    "effects_sd": 0.34516317836904864,
+    "controls": 2
+   }
+  },
+  "kben_J100_b100_g0_profile": {
+   "sha256": "36e7205b150350e030138cfc09cfd00e9c24f9929de12c69df06fb44e84bded2",
+   "person_years": 48309,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40371,
+   "mover_rows": 6820,
+   "control_realised": {
+    "corr_x_effects": -0.0012471669186429038,
+    "within_match_share": 0.6762550676509388,
+    "index_sd": 0.07524793560088093,
+    "effects_sd": 0.338700728281601,
+    "controls": 1
+   }
+  },
+  "kwrk_J200_b150_g0_movers": {
+   "sha256": "47b2d5ba029e711c3983a05fb353579f4ac8fd22b1001f045f4be9d62399d27c",
+   "person_years": 47910,
+   "workers": 11989,
+   "firms": 197,
+   "bridge_workers": 150,
+   "collapsed_rows": 40169,
+   "mover_rows": 6802,
+   "control_realised": {
+    "corr_x_effects": 0.5121476076893331,
+    "within_match_share": 0.4869148917429228,
+    "index_sd": 0.14154074740220204,
+    "effects_sd": 0.34403859123910296,
+    "controls": 1
+   }
+  },
+  "kadv_J100_b100_g0_bridge": {
+   "sha256": "901b61652cf0a26803f3d7ce796bf947a8557e4506b82787188726ff515e4aaa",
+   "person_years": 48101,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40463,
+   "mover_rows": 6629,
+   "control_realised": {
+    "corr_x_effects": 0.5232304963618362,
+    "within_match_share": 0.4802471840407839,
+    "index_sd": 0.08902033332507224,
+    "effects_sd": 0.3374052934979128,
+    "controls": 1
+   }
+  },
+  "ktwo_J400_b30_g0_profile": {
+   "sha256": "bd52b6a0de4da8b1fec7997bc14f98fb2d3181fac78e3ba888594305683fab68",
+   "person_years": 47506,
+   "workers": 11920,
+   "firms": 374,
+   "bridge_workers": 30,
+   "collapsed_rows": 39598,
+   "mover_rows": 6861,
+   "control_realised": {
+    "corr_x_effects": 0.529785826440013,
+    "within_match_share": 0.4662229914180594,
+    "index_sd": 0.1630838315909747,
+    "effects_sd": 0.3419154132135825,
+    "controls": 2
+   }
+  },
+  "kben_J100_b30_g0_movers": {
+   "sha256": "9aff7102beb58cda8b4be86d8972fc56ffead4ff9613d72e33c6dab9bf0f3a9c",
+   "person_years": 47959,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 30,
+   "collapsed_rows": 40382,
+   "mover_rows": 6645,
+   "control_realised": {
+    "corr_x_effects": 0.004340631198076025,
+    "within_match_share": 0.6786033267180316,
+    "index_sd": 0.07438458828840898,
+    "effects_sd": 0.3439925505485842,
+    "controls": 1
+   }
+  },
+  "kwrk_J100_b30_g3_flat_skew": {
+   "sha256": "ec78a3a2eb650cbfb5df493181d189827094aee5613c06e668c75e4c33cf1f47",
+   "person_years": 47842,
+   "workers": 11998,
+   "firms": 99,
+   "bridge_workers": 30,
+   "collapsed_rows": 40487,
+   "mover_rows": 6363,
+   "control_realised": {
+    "corr_x_effects": 0.9099913873282992,
+    "within_match_share": 0.10698504042191023,
+    "index_sd": 0.3020873561056833,
+    "effects_sd": 2.250357132295641,
+    "controls": 1
+   }
+  },
+  "kadv_J200_b50_g0_bridge": {
+   "sha256": "cdbec047eab1eb8e70b8fdf95868c6d4ca6ec5af7cd5422ae2227f912cb5b93c",
+   "person_years": 48088,
+   "workers": 11989,
+   "firms": 198,
+   "bridge_workers": 50,
+   "collapsed_rows": 40560,
+   "mover_rows": 6619,
+   "control_realised": {
+    "corr_x_effects": 0.5546814904888266,
+    "within_match_share": 0.4526494980607686,
+    "index_sd": 0.0911752228162757,
+    "effects_sd": 0.3542692980355996,
+    "controls": 1
+   }
+  },
+  "kben_J100_b300_g3_profile": {
+   "sha256": "f941e4936f7e70735ed35a3f05684816fac2298371afe64571818a3443d73f92",
+   "person_years": 47763,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 300,
+   "collapsed_rows": 40163,
+   "mover_rows": 6799,
+   "control_realised": {
+    "corr_x_effects": -0.00020090130142954795,
+    "within_match_share": 0.6700507933380677,
+    "index_sd": 0.0752879655513441,
+    "effects_sd": 2.2521373448434208,
+    "controls": 1
+   }
+  },
+  "kben_J100_b1000_g3_movers": {
+   "sha256": "45d87cc1ef99d2bb622fdbdf73f7ea569376df5502ac6dad5af3e8e8719d9c27",
+   "person_years": 48694,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 1000,
+   "collapsed_rows": 39536,
+   "mover_rows": 8200,
+   "control_realised": {
+    "corr_x_effects": 0.00421378890385338,
+    "within_match_share": 0.6638473003472622,
+    "index_sd": 0.07479826085155931,
+    "effects_sd": 2.2484315836602295,
+    "controls": 1
+   }
+  },
+  "kwrk_J400_b300_g3_profile": {
+   "sha256": "b725cd582a73bbd11c5ee6573e6cda7383fc07374fada65d930c32d433dae84e",
+   "person_years": 47912,
+   "workers": 11926,
+   "firms": 382,
+   "bridge_workers": 298,
+   "collapsed_rows": 39893,
+   "mover_rows": 7173,
+   "control_realised": {
+    "corr_x_effects": 0.9073197704635891,
+    "within_match_share": 0.10489721334609642,
+    "index_sd": 0.3024448393016411,
+    "effects_sd": 2.2557007811772647,
+    "controls": 1
+   }
+  }
+ },
+ "tasks": 800
+}
