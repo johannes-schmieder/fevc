@@ -25,6 +25,9 @@ pub enum ProbeDomain {
     Target,
     ComponentInference,
     ComponentInferenceCritical,
+    /// The extra standard normals of the control term of repeat-measurement
+    /// standard errors, kept apart so that the unit draws do not change.
+    ComponentInferenceControl,
     ComponentVarianceFold,
     ObservationResidualMoments,
     Diagnostic,
@@ -40,6 +43,7 @@ impl ProbeDomain {
             Self::Target => 0x0054_4152_4745_5401,
             Self::ComponentInference => 0x434f_4d50_494e_4601,
             Self::ComponentInferenceCritical => 0x434f_4d50_5143_5201,
+            Self::ComponentInferenceControl => 0x434f_4d50_4354_4c01,
             Self::ComponentVarianceFold => 0x434f_4d50_5646_4c01,
             Self::ObservationResidualMoments => 0x4f42_5352_4d4f_4d01,
             Self::Diagnostic => 0x4449_4147_4e4f_5354,

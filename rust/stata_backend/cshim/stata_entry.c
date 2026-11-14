@@ -3855,10 +3855,11 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         (units.nuisance_uncertainty_omitted != (uint32_t)(units.deletion_mode == VCKSS_DELETION_MATCH) &&
             !(base->variance_source == VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL &&
               units.nuisance_uncertainty_omitted == 0u) &&
-            /* Repeat-measurement standard errors hold the offset fixed on
-             * observation units as well. */
+            /* Repeat-measurement standard errors omit nothing with controls
+             * and report the absent offset as held fixed without them, on
+             * either unit; the diagnostic check below pins which. */
             !(base->variance_source == VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT &&
-              units.nuisance_uncertainty_omitted == 1u)) ||
+              units.nuisance_uncertainty_omitted <= 1u)) ||
         !isfinite(units.effective_match_count) || !isfinite(units.largest_match_mass_share) ||
         !isfinite(units.largest_match_leverage) || !isfinite(units.smallest_maker_denominator) ||
         (units.deletion_mode == VCKSS_DELETION_MATCH &&
@@ -4072,8 +4073,8 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
         }
         if (receipt5.variance_fit == 4u) {
             /* Repeat-measurement standard errors share the pseudo-noise pass:
-             * no Gram matrix, no cross-validation, the same solve accounting.
-             * The offset is held fixed, so no control term and no truncation. */
+             * no Gram matrix, no cross-validation, the same solve accounting
+             * (the control term adds no solve) and no truncation. */
             if (q1_present || receipt5.gram_probes != 0u ||
                 !isfinite(receipt5.positivity_floor) || receipt5.positivity_floor <= 0.0 ||
                 receipt5.floored_predictions >= units.independent_units) {
@@ -4113,7 +4114,10 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
                         !isfinite(target->point_estimate) || !isfinite(target->leading_score) ||
                         !isfinite(target->leading_variance_leave_out) ||
                         !isfinite(target->leading_variance_fitted) ||
-                        target->leading_variance_fitted <= 0.0 ||
+                        /* With controls the fitted variance of the score has
+                         * cross terms of either sign; the engine reports a
+                         * non-positive leading variance as a status. */
+                        (noise.controls == 0u && target->leading_variance_fitted <= 0.0) ||
                         target->leading_variance < target->leading_variance_fitted ||
                         !isfinite(target->remainder_estimate) ||
                         !isfinite(target->leading_remainder_covariance) ||
@@ -4141,7 +4145,9 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
                 noise.offset_pass_solves % 2u != 0u ||
                 receipt.solver_columns !=
                     (uint64_t)base->probes + 3u + noise.offset_pass_solves + leading_solves ||
-                noise.controls != 0u || noise.signal_truncation != 0.0 ||
+                /* The control term enters exactly when there are controls. */
+                units.nuisance_uncertainty_omitted != (uint32_t)(noise.controls == 0u) ||
+                noise.signal_truncation != 0.0 ||
                 noise.working_floored != receipt5.floored_predictions ||
                 noise.working_floor != receipt5.positivity_floor ||
                 repeat.struct_size != sizeof(repeat) || repeat.schema_version != 1u ||

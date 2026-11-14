@@ -9738,7 +9738,7 @@ program define _fevc_residual_se_mata
     capture mata: vckss_rse__api_level()
     local runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rse__api_level() == 1 &            ///
-        vckss_rse__build_id() == "vckss-residual-se-api5" &       ///
+        vckss_rse__build_id() == "vckss-residual-se-api6" &       ///
         vckss_rse__loaded() == 1)
     if _rc & `runtime_loaded' {
         c_local inference_status "STALE_INFERENCE_RUNTIME"
@@ -9754,7 +9754,7 @@ program define _fevc_residual_se_mata
         }
         capture quietly do `"`r(fn)'"'
         capture mata: assert(vckss_rse__api_level() == 1 &        ///
-            vckss_rse__build_id() == "vckss-residual-se-api5" &   ///
+            vckss_rse__build_id() == "vckss-residual-se-api6" &   ///
             vckss_rse__loaded() == 1)
         if _rc {
             c_local inference_status "INVALID_INFERENCE_RUNTIME"
@@ -9820,7 +9820,8 @@ program define _fevc_residual_se_mata
         if "$VCKSS_SE_ANY_Q1"=="1" local inference_joint_available 0
     }
     // Observation units carry no fixed offset to omit, as on the native
-    // route; repeat-measurement standard errors hold it fixed on any unit.
+    // route. The repeat-measurement model reports its own flag: zero when
+    // controls entered with their first-order term.
     if "`deletion'" == "observation" & "$VCKSS_SE_MODEL" != "repeat_measurement" {
         local inference_nuisance_omitted 0
     }

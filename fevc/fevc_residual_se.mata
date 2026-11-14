@@ -19,7 +19,7 @@ real scalar vckss_rse__api_level()
 
 string scalar vckss_rse__build_id()
 {
-    return("vckss-residual-se-api5")
+    return("vckss-residual-se-api6")
 }
 
 // Subtract the mass-weighted mean of every column in unit space. For one row
@@ -349,6 +349,96 @@ struct vckss_rse_leading {
     real rowvector lambda, second, residual, steps, converged
     real rowvector score, leave_out
     real matrix noise_trace
+    // Control term (empty without controls): unit aggregates, precision,
+    // W'W, leave-out products and residuals.
+    real matrix collapsed, residualized, within, precision, omega
+    real colvector product, leave_out_residual
+}
+
+// With estimated controls the noise of the control-adjusted unit outcome has
+// covariance S = Pi' V Pi + Zc Lambda W'W Lambda Zc', Pi = I - Zt Lambda Zc'
+// (the cross-covariance of unit errors and within-unit scores is left to the
+// linear part). A draw with that covariance from the draw `noise' with
+// covariance V: noise - Zc Lambda (Zt' noise + W' xi), xi standard normal
+// for the units with a nonzero row of W (`active'), drawn after `noise'.
+real matrix vckss_rse__control_draw(
+    real matrix noise,
+    real matrix collapsed,
+    real matrix residualized,
+    real matrix within,
+    real matrix precision,
+    real colvector active)
+{
+    real matrix shift
+
+    shift = quadcross(residualized,noise)
+    if (rows(active) > 0) {
+        shift = shift+quadcross(within[active,.],
+            rnormal(rows(active),cols(noise),0,1))
+    }
+    return(noise-collapsed*(precision*shift))
+}
+
+// The bilinear form x'Sy of the estimated S for the matching columns of
+// `left' and `right' (kernel images of such draws): sum_a v_a (Pi x)_a
+// (Pi y)_a + (Lambda Zc' x)' W'W (Lambda Zc' y), one value per column.
+real rowvector vckss_rse__control_form(
+    real matrix left,
+    real matrix right,
+    real colvector variance,
+    real matrix collapsed,
+    real matrix residualized,
+    real matrix precision,
+    real matrix omega)
+{
+    real matrix left_load, right_load
+
+    left_load = precision*quadcross(collapsed,left)
+    right_load = precision*quadcross(collapsed,right)
+    return(quadcolsum(variance:*(left-residualized*left_load):*
+        (right-residualized*right_load))+
+        quadcolsum(left_load:*(omega*right_load)))
+}
+
+// High-rank linear part of the three targets with the first-order control
+// term: the starred influences g* = g + Zt c/2 (c = `load' =
+// -2 Lambda Zc' g), their cross term with the within-unit loads W c through
+// the leave-out residual, and the loads' square.
+real matrix vckss_rse__control_linear(
+    real matrix influence,
+    real colvector variance,
+    real colvector leave_out_residual,
+    real matrix residualized,
+    real matrix within,
+    real matrix load)
+{
+    real matrix starred, within_load, cross_part
+
+    starred = influence+0.5:*residualized*load
+    within_load = within*load
+    cross_part = quadcross(starred,leave_out_residual,within_load)
+    return(4:*quadcross(starred,variance,starred)+
+        2:*(cross_part+cross_part')+quadcross(within_load,within_load))
+}
+
+// The inputs of the control term for the q = 1 pieces.
+void vckss_rse__lead_controls(
+    struct vckss_rse_leading scalar lead,
+    real matrix collapsed,
+    real matrix residualized,
+    real matrix within,
+    real matrix precision,
+    real matrix omega,
+    real colvector product,
+    real colvector leave_out_residual)
+{
+    lead.collapsed = collapsed
+    lead.residualized = residualized
+    lead.within = within
+    lead.precision = precision
+    lead.omega = omega
+    lead.product = product
+    lead.leave_out_residual = leave_out_residual
 }
 
 // Remainder ratios, leading scores and their leave-out variances, once the
@@ -402,7 +492,8 @@ real scalar vckss_rse__pair(
 
 // The 4 x 28 table. `influence' is the n x 3 realized influence of the
 // targets, `diagonal' the n x 3 target diagonals, `quadratic' the 3 x 3
-// pseudo-noise estimate of tr(K_t V K_s V). Returns J(0,0,.) when a
+// pseudo-noise estimate of tr(K_t V K_s V) (with controls tr(K_t S K_s S)).
+// Returns J(0,0,.) when a
 // decomposition does not reproduce its direct remainder.
 real matrix vckss_rse__lead_finish(
     struct vckss_rse_leading scalar lead,
@@ -421,8 +512,10 @@ real matrix vckss_rse__lead_finish(
 {
     real matrix table, full_influence, full_diagonal, covariance
     real rowvector interval, weight
-    real colvector w, remainder
+    real colvector w, remainder, load, starred, within_score
+    real colvector starred_remainder, within_remainder
     real scalar t, lambda, point, direct, fitted, leading, linear, covar
+    real scalar share, extra
     real scalar trace_mean, mcse, pair, remainder_variance, correlation
     real scalar determinant, status, curvature, critical, recentred, total
     real scalar simulations
@@ -442,9 +535,6 @@ real matrix vckss_rse__lead_finish(
         if (abs(direct-recentred) > identity_tolerance*
             max((1,abs(point),abs(direct),abs(recentred)))) return(J(0,0,.))
         fitted = quadcross(w:^2,variance)
-        leading = max((fitted,lead.leave_out[t]))
-        linear = 4*quadcross(remainder:^2,variance)
-        covar = 2*quadcross(w:*remainder,variance)
         trace_mean = lead.noise_trace[1,t]/draws
         mcse = draws > 1 ? sqrt(max((0,lead.noise_trace[2,t]/draws-trace_mean^2))/(draws-1)) : 0
         // A stayer's diagonal is nonzero for the worker variance and for the
@@ -452,6 +542,40 @@ real matrix vckss_rse__lead_finish(
         pair = vckss_rse__pair(y,unit_set,unit_mover,
             (full_diagonal[.,t]-lambda:*w:^2):*maker_inverse,
             ((t == 1 | t == 4) ? full_diagonal[.,t] : J(rows(y),1,0))-lambda:*w:^2)
+        if (cols(lead.collapsed) > 0) {
+            // First-order term of the estimated control coefficients: the
+            // score's weights and the remainder's influence projected by
+            // Pi = I - Zt Lambda Zc', their loads on the within-unit
+            // products, and the cross terms with the leave-out residual.
+            // The decomposition above keeps the weights w^2.
+            load = -lead.precision*quadcross(lead.collapsed,w)
+            starred = w+lead.residualized*load
+            within_score = lead.within*load
+            load = -2:*lead.precision*quadcross(lead.collapsed,remainder)
+            starred_remainder = remainder+0.5:*lead.residualized*load
+            within_remainder = lead.within*load
+            extra = 2*quadcross(lead.leave_out_residual,starred:*within_score)+
+                quadcross(within_score,within_score)
+            fitted = quadcross(starred:^2,variance)+extra
+            leading = max((fitted,quadcross(starred:^2,lead.product)+extra))
+            linear = 4*quadcross(starred_remainder:^2,variance)+
+                4*quadcross(lead.leave_out_residual,
+                    starred_remainder:*within_remainder)+
+                quadcross(within_remainder,within_remainder)
+            covar = 2*quadcross(starred:*starred_remainder,variance)+
+                quadcross(lead.leave_out_residual,starred:*within_remainder+
+                    2:*starred_remainder:*within_score)+
+                quadcross(within_score,within_remainder)
+        }
+        else {
+            leading = max((fitted,lead.leave_out[t]))
+            linear = 4*quadcross(remainder:^2,variance)
+            covar = 2*quadcross(w:*remainder,variance)
+        }
+        // Share of the rank-one part in the trace: with controls both belong
+        // to the covariance of the control-adjusted noise, as natively.
+        share = fitted
+        // With controls the trace is the bilinear form of S (lead_trace).
         remainder_variance = linear-2*trace_mean+pair
         correlation = covar/sqrt(leading)/sqrt(remainder_variance)
         determinant = (1-abs(correlation))*(1+abs(correlation))
@@ -477,7 +601,7 @@ real matrix vckss_rse__lead_finish(
         // The conditional operator binds more loosely than the comma.
         table[t,.] = (status,lead.converged[t],lead.steps[t],
             (status == 0 ? simulations : 0),lambda,lead.second[t],
-            lead.residual[t],(total > 0 ? (lambda*fitted)^2/total : .),
+            lead.residual[t],(total > 0 ? (lambda*share)^2/total : .),
             max(w:^2),point,lead.score[t],lead.leave_out[t],fitted,leading,
             recentred,abs(direct-recentred),covar,remainder_variance,linear,
             2*trace_mean,2*mcse,pair,determinant,curvature,critical,interval[1],
@@ -664,7 +788,8 @@ real matrix vckss_rse__lead_images(
     return(image)
 }
 
-// Add the draws' contributions sum_a v_a (K_r zeta)_a^2 of the four targets.
+// Add the draws' contributions sum_a v_a (K_r zeta)_a^2 of the four targets;
+// with controls the bilinear form of S in place of V.
 void vckss_rse__lead_trace(
     struct vckss_rse_leading scalar lead,
     real matrix image,
@@ -672,10 +797,16 @@ void vckss_rse__lead_trace(
     real scalar width)
 {
     real rowvector value
+    real matrix block
     real scalar t
 
     for (t=1; t<=4; t++) {
-        value = quadcross(variance,image[|1,(t-1)*width+1\rows(image),t*width|]:^2)
+        block = image[|1,(t-1)*width+1\rows(image),t*width|]
+        if (cols(lead.collapsed) > 0) {
+            value = vckss_rse__control_form(block,block,variance,
+                lead.collapsed,lead.residualized,lead.precision,lead.omega)
+        }
+        else value = quadcross(variance,block:^2)
         lead.noise_trace[1,t] = lead.noise_trace[1,t]+sum(value)
         lead.noise_trace[2,t] = lead.noise_trace[2,t]+sum(value:^2)
     }
@@ -737,8 +868,10 @@ void vckss_residual_se__stata(
     real colvector unit_worker, worker_effect, firm_effect
     real colvector unit_set, unit_mover, unit_firm
     real matrix pair, lead_image, lead_table
+    real matrix omega
+    real colvector active
     struct vckss_rse_leading scalar lead
-    real scalar leading
+    real scalar leading, control_term
     real scalar n, parameters, worker_levels, firm_levels, control_count
     real scalar centered, j, k, z, point_identity, begin, finish, batch
     real scalar pairs, width, effective, truncation, repeat
@@ -827,6 +960,7 @@ void vckss_residual_se__stata(
             working_y,frequency,deletion_id,stayer,0)
         within = vckss_rse__aggregate(controls,working_y,frequency,
             deletion_id,stayer,1)
+        omega = quadcross(within,within)
     }
 
     units = vckss_inf__units(design,working_y,residual,frequency,
@@ -917,11 +1051,20 @@ void vckss_residual_se__stata(
             within*load
     }
 
+    // Repeat-measurement standard errors include the first-order term of the
+    // estimated control coefficients; without controls the path is unchanged.
+    control_term = repeat & control_count > 0
+    if (control_term) active = selectindex(rowsum(within:!=0):>0)
+
     // Leading directions and the realized influence of every remainder.
     leading = repeat & st_global("VCKSS_SE_LEADING") != ""
     if (leading) {
         vckss_rse__lead_exact(lead,design,inverse,targets)
         vckss_rse__lead_prepare(lead,y,product,ratio,maker_inverse)
+        if (control_term) {
+            vckss_rse__lead_controls(lead,collapsed,collapsed_residualized,
+                within,precision,omega,product,residual:*maker_inverse)
+        }
         lead.influence = J(n,4,.)
         for (j=1; j<=4; j++) {
             lead.influence[.,j] = vckss_rse__kernel(y,design,inverse,
@@ -942,6 +1085,12 @@ void vckss_residual_se__stata(
         finish = min((draws,begin+batch-1))
         width = finish-begin+1
         noise = sqrt(variance):*rnormal(n,width,0,1)
+        // With controls the draw has the covariance of the adjusted outcome,
+        // and is centred after the adjustment, as the outcome is.
+        if (control_term) {
+            noise = vckss_rse__control_draw(noise,collapsed,
+                collapsed_residualized,within,precision,active)
+        }
         if (centered) noise = vckss_rse__center(noise,root)
         fitted = inverse*quadcross(design,noise)
         pseudo_residual = (noise-design*fitted):^2:*maker_inverse
@@ -967,9 +1116,18 @@ void vckss_residual_se__stata(
         }
         for (j=1; j<=3; j++) {
             for (k=1; k<=3; k++) {
-                quadratic[j,k] = quadratic[j,k]+sum(variance:*
-                    image[|1,(j-1)*width+1\n,j*width|]:*
-                    image[|1,(k-1)*width+1\n,k*width|])
+                // With controls the trace is the bilinear form of S.
+                if (control_term) {
+                    quadratic[j,k] = quadratic[j,k]+sum(vckss_rse__control_form(
+                        image[|1,(j-1)*width+1\n,j*width|],
+                        image[|1,(k-1)*width+1\n,k*width|],variance,collapsed,
+                        collapsed_residualized,precision,omega))
+                }
+                else {
+                    quadratic[j,k] = quadratic[j,k]+sum(variance:*
+                        image[|1,(j-1)*width+1\n,j*width|]:*
+                        image[|1,(k-1)*width+1\n,k*width|])
+                }
                 calibration[j,k] = calibration[j,k]+sum(pseudo_residual:*
                     image[|1,(j-1)*width+1\n,j*width|]:*
                     image[|1,(k-1)*width+1\n,k*width|])
@@ -981,8 +1139,15 @@ void vckss_residual_se__stata(
             total_image = (total_image,total_image[.,1]+total_image[.,2]+
                 2:*total_image[.,3])
             if (cols(previous) > 0) {
-                fourth = fourth+
-                    diagonal(quadcross(previous,variance,total_image)):^2
+                if (control_term) {
+                    fourth = fourth+vckss_rse__control_form(previous,
+                        total_image,variance,collapsed,collapsed_residualized,
+                        precision,omega)':^2
+                }
+                else {
+                    fourth = fourth+
+                        diagonal(quadcross(previous,variance,total_image)):^2
+                }
                 pairs = pairs+1
             }
             previous = total_image
@@ -994,7 +1159,12 @@ void vckss_residual_se__stata(
         // The high-rank form with the unit variances, plus the pair term of
         // the repeat-measurement sets. Nothing is truncated: a nonpositive
         // diagonal is reported as such below.
-        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic+pair
+        if (control_term) {
+            signal = vckss_rse__control_linear(influence,variance,
+                residual:*maker_inverse,collapsed_residualized,within,load)-
+                4:*quadratic+pair
+        }
+        else signal = 4:*quadcross(influence,variance,influence)-4:*quadratic+pair
         signal = (signal+signal'):/2
         truncation = 0
         V_primitive = signal+2:*quadratic
@@ -1064,9 +1234,8 @@ void vckss_residual_se__stata(
     st_matrix(variance_diagnostics_name,(info[1],.,.,.,info[2],info[3],n,info[4]))
     st_matrix(spectrum_name,spectrum)
     st_local("inference_joint_available",min(diagonal(V)) > 0 ? "1" : "0")
-    // Repeat-measurement standard errors hold the estimated offset fixed.
-    st_local("inference_nuisance_omitted",
-        (control_count > 0 & !repeat) ? "0" : "1")
+    // Both models include the first-order term of estimated controls.
+    st_local("inference_nuisance_omitted",control_count > 0 ? "0" : "1")
     st_local("inference_repeat_shape",
         repeat ? invtokens(strofreal(shape,"%21.0g")) : "")
     st_local(status_local,"CONVERGED")
@@ -1255,11 +1424,13 @@ void vckss_residual_se_jla__stata(
     real matrix full, pseudo_residual, target_diagonal, outcome_fit
     real matrix control_fit, kernel_residual, moments, probe, square
     real matrix complement, effects
+    real matrix omega
+    real colvector active
     real rowvector info, shape
     real colvector worker_effect, firm_effect
     real scalar n, workers, firms, control_count, centered, j, k, z
     real scalar begin, finish, batch, pairs, width, effective, truncation
-    real scalar repeat
+    real scalar repeat, control_term
     real scalar movers, total, g, row, copy, out, clipped, unit_mass
     string scalar kernel_status
 
@@ -1342,6 +1513,7 @@ void vckss_residual_se_jla__stata(
             working_y,frequency,deletion_id,stayer,0)
         within = vckss_rse__aggregate(controls,working_y,frequency,
             deletion_id,stayer,1)
+        omega = quadcross(within,within)
     }
 
     // Deletion units in the order of vckss_rse__aggregate(): mover units by
@@ -1482,6 +1654,10 @@ void vckss_residual_se_jla__stata(
             lead.mode[.,j] = vckss_rse__unit_predict(units,root,lead_vector)
         }
         vckss_rse__lead_prepare(lead,y,product,ratio,maker_inverse)
+        if (control_count > 0) {
+            vckss_rse__lead_controls(lead,collapsed,collapsed_residualized,
+                within,precision,omega,product,residual:*maker_inverse)
+        }
         lead.influence = vckss_rse__lead_images(lead,y,base,units,root,share,
             tolerance,maxiter,lead_status)
         if (lead_status != "CONVERGED") return
@@ -1494,6 +1670,10 @@ void vckss_residual_se_jla__stata(
         score = (2:*influence+collapsed_residualized*load):*scaled_residual+
             within*load
     }
+    // Repeat-measurement standard errors include the first-order term of the
+    // estimated control coefficients; without controls the path is unchanged.
+    control_term = repeat & control_count > 0
+    if (control_term) active = selectindex(rowsum(within:!=0):>0)
 
     quadratic = calibration = J(3,3,0)
     fourth = J(4,1,0)
@@ -1504,6 +1684,12 @@ void vckss_residual_se_jla__stata(
         finish = min((draws,begin+batch-1))
         width = finish-begin+1
         noise = sqrt(variance):*rnormal(n,width,0,1)
+        // With controls the draw has the covariance of the adjusted outcome,
+        // and is centred after the adjustment, as the outcome is.
+        if (control_term) {
+            noise = vckss_rse__control_draw(noise,collapsed,
+                collapsed_residualized,within,precision,active)
+        }
         if (centered) noise = vckss_rse__center(noise,root)
         image = vckss_rse__solve_kernel(noise,base,units,root,share,ratio,
             tolerance,maxiter,kernel_residual,kernel_status)
@@ -1519,9 +1705,18 @@ void vckss_residual_se_jla__stata(
         pseudo_residual = kernel_residual:^2:*maker_inverse
         for (j=1; j<=3; j++) {
             for (k=1; k<=3; k++) {
-                quadratic[j,k] = quadratic[j,k]+sum(variance:*
-                    image[|1,(j-1)*width+1\n,j*width|]:*
-                    image[|1,(k-1)*width+1\n,k*width|])
+                // With controls the trace is the bilinear form of S.
+                if (control_term) {
+                    quadratic[j,k] = quadratic[j,k]+sum(vckss_rse__control_form(
+                        image[|1,(j-1)*width+1\n,j*width|],
+                        image[|1,(k-1)*width+1\n,k*width|],variance,collapsed,
+                        collapsed_residualized,precision,omega))
+                }
+                else {
+                    quadratic[j,k] = quadratic[j,k]+sum(variance:*
+                        image[|1,(j-1)*width+1\n,j*width|]:*
+                        image[|1,(k-1)*width+1\n,k*width|])
+                }
                 calibration[j,k] = calibration[j,k]+sum(pseudo_residual:*
                     image[|1,(j-1)*width+1\n,j*width|]:*
                     image[|1,(k-1)*width+1\n,k*width|])
@@ -1532,8 +1727,15 @@ void vckss_residual_se_jla__stata(
             total_image = (total_image,total_image[.,1]+total_image[.,2]+
                 2:*total_image[.,3])
             if (cols(previous) > 0) {
-                fourth = fourth+
-                    diagonal(quadcross(previous,variance,total_image)):^2
+                if (control_term) {
+                    fourth = fourth+vckss_rse__control_form(previous,
+                        total_image,variance,collapsed,collapsed_residualized,
+                        precision,omega)':^2
+                }
+                else {
+                    fourth = fourth+
+                        diagonal(quadcross(previous,variance,total_image)):^2
+                }
                 pairs = pairs+1
             }
             previous = total_image
@@ -1545,7 +1747,12 @@ void vckss_residual_se_jla__stata(
         // The high-rank form with the unit variances, plus the pair term of
         // the repeat-measurement sets. Nothing is truncated: a nonpositive
         // diagonal is reported as such below.
-        signal = 4:*quadcross(influence,variance,influence)-4:*quadratic+pair
+        if (control_term) {
+            signal = vckss_rse__control_linear(influence,variance,
+                residual:*maker_inverse,collapsed_residualized,within,load)-
+                4:*quadratic+pair
+        }
+        else signal = 4:*quadcross(influence,variance,influence)-4:*quadratic+pair
         signal = (signal+signal'):/2
         truncation = 0
         V_primitive = signal+2:*quadratic
@@ -1616,9 +1823,8 @@ void vckss_residual_se_jla__stata(
     st_matrix(variance_diagnostics_name,(info[1],.,.,.,info[2],info[3],n,info[4]))
     st_matrix(spectrum_name,spectrum)
     st_local("inference_joint_available",min(diagonal(V)) > 0 ? "1" : "0")
-    // Repeat-measurement standard errors hold the estimated offset fixed.
-    st_local("inference_nuisance_omitted",
-        (control_count > 0 & !repeat) ? "0" : "1")
+    // Both models include the first-order term of estimated controls.
+    st_local("inference_nuisance_omitted",control_count > 0 ? "0" : "1")
     st_local("inference_repeat_shape",
         repeat ? invtokens(strofreal(shape,"%21.0g")) : "")
     st_local(status_local,"CONVERGED")

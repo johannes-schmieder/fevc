@@ -463,7 +463,8 @@ program define _fevc_display_residual_se
         di as txt "sample variance of their outcomes; the remaining units of movers use a fitted"
         di as txt "model (leverage, match size, estimated effects)."
         di as txt "Assumes independent deletion units. The standard error is as good as that"
-        di as txt "model for movers; estimated control coefficients are treated as known."
+        di as txt "model for movers." cond(e(inference_nuisance_omitted)==0, ///
+            " Estimated controls enter to first order.","")
     }
     else {
         di as txt "Assumes independent deletion units and similar error variances among units"

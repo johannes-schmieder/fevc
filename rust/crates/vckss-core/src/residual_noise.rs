@@ -31,8 +31,9 @@ const SQUARE: usize = PRIMITIVE_TARGETS * PRIMITIVE_TARGETS;
 
 mod repeat;
 pub use repeat::{
-    finish_repeat_covariance, finish_repeat_q1_target, fit_repeat_variance, RepeatInputs,
-    RepeatSets, RepeatVariance, PROFILE_CAP, PROFILE_TERMS, SCALE_FLOOR_SHARE,
+    finish_repeat_covariance, finish_repeat_q1_target, fit_repeat_variance, RepeatControl,
+    RepeatControlImage, RepeatControlTerms, RepeatInputs, RepeatQ1Control, RepeatSets,
+    RepeatVariance, PROFILE_CAP, PROFILE_TERMS, SCALE_FLOOR_SHARE,
 };
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -331,6 +332,7 @@ pub struct NoiseAccumulator {
     pair_square: [StableAccumulator; REPORTED_TARGETS],
     pairs: u32,
     previous: Option<[Vec<f64>; PRIMITIVE_TARGETS]>,
+    previous_coefficient: Option<[Vec<f64>; PRIMITIVE_TARGETS]>,
 }
 
 impl NoiseAccumulator {
@@ -344,10 +346,58 @@ impl NoiseAccumulator {
         kernel: [Vec<f64>; PRIMITIVE_TARGETS],
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
+        self.push_with(variance, weight, pseudo_residual, kernel, None, interrupt)
+    }
+
+    /// The same for the bilinear form of the control term:
+    /// `sum_a v_a x_a y_a + c_x' omega c_y`, with `kernel[t]` the projected
+    /// image `Pi K_t zeta` and `coefficient[t]` its `Lambda Z' K_t zeta`. The
+    /// trace, its standard error and the consecutive-draw products of the
+    /// effective rank all take this form; the residual statistic, which the
+    /// repeat-measurement covariance does not use, takes the projected images.
+    pub fn push_control(
+        &mut self,
+        variance: &[f64],
+        weight: &[f64],
+        pseudo_residual: &[f64],
+        kernel: [Vec<f64>; PRIMITIVE_TARGETS],
+        coefficient: [Vec<f64>; PRIMITIVE_TARGETS],
+        omega: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let q = coefficient[0].len();
+        if omega.len() != q * q || coefficient.iter().any(|value| value.len() != q) {
+            return Err(invalid(
+                "pseudo-noise control coefficients are inconsistent",
+            ));
+        }
+        self.push_with(
+            variance,
+            weight,
+            pseudo_residual,
+            kernel,
+            Some((coefficient, omega)),
+            interrupt,
+        )
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn push_with(
+        &mut self,
+        variance: &[f64],
+        weight: &[f64],
+        pseudo_residual: &[f64],
+        kernel: [Vec<f64>; PRIMITIVE_TARGETS],
+        control: Option<([Vec<f64>; PRIMITIVE_TARGETS], &[f64])>,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         let rows = variance.len();
         if weight.len() != rows
             || pseudo_residual.len() != rows
             || kernel.iter().any(|value| value.len() != rows)
+            // One accumulator takes one form for all of its draws.
+            || (self.previous.is_some()
+                && control.is_some() != self.previous_coefficient.is_some())
         {
             return Err(invalid("pseudo-noise vectors have inconsistent lengths"));
         }
@@ -367,6 +417,30 @@ impl NoiseAccumulator {
                     for right in 0..PRIMITIVE_TARGETS {
                         pair[left * PRIMITIVE_TARGETS + right]
                             .add(variance[row] * previous[left][row] * kernel[right][row]);
+                    }
+                }
+            }
+        }
+        if let Some((coefficient, omega)) = &control {
+            let q = coefficient[0].len();
+            let form = |left: &[f64], right: &[f64]| {
+                let mut value = StableAccumulator::default();
+                for a in 0..q {
+                    for b in 0..q {
+                        value.add(left[a] * omega[a * q + b] * right[b]);
+                    }
+                }
+                value.finish()
+            };
+            for left in 0..PRIMITIVE_TARGETS {
+                for right in left..PRIMITIVE_TARGETS {
+                    trace[left * PRIMITIVE_TARGETS + right]
+                        .add(form(&coefficient[left], &coefficient[right]));
+                }
+                if let Some(previous) = &self.previous_coefficient {
+                    for right in 0..PRIMITIVE_TARGETS {
+                        pair[left * PRIMITIVE_TARGETS + right]
+                            .add(form(&previous[left], &coefficient[right]));
                     }
                 }
             }
@@ -409,6 +483,9 @@ impl NoiseAccumulator {
             self.pairs += 1;
         }
         self.previous = Some(kernel);
+        if let Some((coefficient, _)) = control {
+            self.previous_coefficient = Some(coefficient);
+        }
         self.draws = self
             .draws
             .checked_add(1)
@@ -717,6 +794,8 @@ pub struct RepeatDiagnostic {
     pub stayer_pair_term: f64,
     /// Present when the leading directions were requested.
     pub leading: Option<RepeatLeading>,
+    /// Linear block of the first-order control term; present with controls.
+    pub control_terms: Option<RepeatControlTerms>,
 }
 
 /// Leading direction of every reported target and the `q = 1` decomposition
@@ -771,8 +850,10 @@ impl Diagnostic {
 
     /// Diagnostic of a repeat-measurement pass. The working terms are the
     /// movers' scale and profile; no calibration statistic is formed.
+    /// `controls` counts the controls whose estimation enters the covariance.
     pub fn repeat(
         fit: &RepeatVariance,
+        controls: usize,
         moments: &NoiseMoments,
         covariance: &ResidualCovariance,
     ) -> Result<Self> {
@@ -781,7 +862,7 @@ impl Diagnostic {
             working_terms: [fit.scale_terms, fit.profile_terms],
             working_floor: fit.floor,
             working_floored: fit.floored,
-            controls: 0,
+            controls,
             offset_pass_solves: 0,
             effective_rank: moments.effective_rank,
             signal_truncation: 0.0,
@@ -802,6 +883,7 @@ impl Diagnostic {
                 stayer_floored: fit.stayer_floored,
                 stayer_pair_term: fit.adjustment[0],
                 leading: None,
+                control_terms: None,
             }),
         })
     }

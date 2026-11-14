@@ -2769,12 +2769,31 @@ fn run_generic_jla_with_execution_interrupt(
     };
     // The fixed-offset match route drops the controls from its operator, so
     // the standard error needs their estimation as an explicit first-order
-    // term. Its unit aggregates use the geometry released just below.
+    // term. Its unit aggregates use the geometry released just below, whose
+    // residualized controls the rank preparation already holds: no solve.
     let residual_control_adjustment = match component_inference {
-        // Repeat-measurement standard errors hold the estimated offset fixed.
+        // Repeat-measurement standard errors on observation units use the
+        // offset geometry as well; every row is a unit there.
+        Some(prepared)
+            if prepared.repeat_measurement
+                && prepared.inference_unit == ComponentInferenceUnit::Observation
+                && controls > 0 =>
+        {
+            Some(residual_noise_attachment::control_adjustment(
+                problem,
+                None,
+                rows,
+                &canonical.columns,
+                &geometry,
+                &weights,
+                &row_order,
+                offset_y.as_deref().unwrap_or(&working_y),
+                options,
+                interrupt,
+            )?)
+        }
         Some(prepared)
             if prepared.leave_out_residual
-                && !prepared.repeat_measurement
                 && prepared.inference_unit == ComponentInferenceUnit::Match
                 && controls > 0 =>
         {
@@ -2791,7 +2810,7 @@ fn run_generic_jla_with_execution_interrupt(
                 });
             Some(residual_noise_attachment::control_adjustment(
                 problem,
-                plan,
+                Some(plan),
                 mover_units,
                 &canonical.columns,
                 &geometry,
@@ -2973,7 +2992,7 @@ fn run_generic_jla_with_execution_interrupt(
                     addresses,
                     structured_fold_entity.as_deref(),
                     None,
-                    None,
+                    residual_control_adjustment.as_ref(),
                     row_correction,
                     memory.component_inference,
                     counter_plan,

@@ -24,8 +24,8 @@
 //! `fevc/docs/standard_errors/`.
 
 use super::{
-    invalid, nonfinite, positive_part, solve_reduced, NoiseMoments, ResidualCovariance,
-    StableAccumulator, MAXIMUM_WORKING_TERMS, SQUARE, UNITS_PER_WORKING_TERM,
+    invalid, nonfinite, positive_part, solve_reduced, ControlAdjustment, NoiseMoments,
+    ResidualCovariance, StableAccumulator, MAXIMUM_WORKING_TERMS, SQUARE, UNITS_PER_WORKING_TERM,
 };
 use crate::component_inference::{
     ComponentQ1Status, ComponentQ1TargetResult, PRIMITIVE_TARGETS, REPORTED_TARGETS,
@@ -182,6 +182,321 @@ impl RepeatVariance {
     }
 }
 
+/// First-order term of the estimated control coefficients.
+///
+/// The repeat-measurement variances belong to the outcome net of the fitted
+/// control index. Its coefficients are estimated, so its noise is not the
+/// unit errors alone: with `Pi = I - Z~ Lambda Z'` it is `Pi' eps` minus
+/// `Z Lambda` times the within-unit scores of the controls. A target
+/// `y' K y` then moves with the coefficients through `-2 Z' K y`, a leading
+/// score `d'y` through `-Z' d`. For any unit-space influence `h`,
+/// `u = Lambda Z' h` gives the starred influence `Pi h = h - Z~ u`, which
+/// carries the unit errors, and the within-unit part `W c` with the load
+/// `c = -2 u` for a target and `c = -u` for a score; the two meet through the
+/// leave-out residual `e / M`. The quadratic term uses pseudo-noise with the
+/// covariance of that noise: every draw is transformed before any kernel, and
+/// the images enter the bilinear form
+/// `sum_a v_a (Pi x)_a (Pi y)_a + (Lambda Z' x)' W'W (Lambda Z' y)`.
+#[derive(Clone, Debug)]
+pub struct RepeatControl<'a> {
+    adjustment: &'a ControlAdjustment,
+    rows: usize,
+    /// Leave-out residual `e_a / M_aa` of every unit.
+    leave_out: Vec<f64>,
+    /// `W' W` over the units, row-major.
+    omega: Vec<f64>,
+    /// Units with a nonzero within-unit product: the only ones whose extra
+    /// standard normal enters a draw.
+    within_units: Vec<usize>,
+}
+
+/// One pseudo-noise image in the bilinear form: `Pi x` and `Lambda Z' x`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RepeatControlImage {
+    pub projected: Vec<f64>,
+    pub coefficient: Vec<f64>,
+}
+
+impl<'a> RepeatControl<'a> {
+    pub fn new(
+        adjustment: &'a ControlAdjustment,
+        residual: &[f64],
+        maker_inverse: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        let rows = residual.len();
+        let q = adjustment.controls;
+        if rows == 0
+            || q == 0
+            || maker_inverse.len() != rows
+            || adjustment.collapsed.len() != q * rows
+            || adjustment.residualized.len() != q * rows
+            || adjustment.within.len() != q * rows
+            || adjustment.precision.len() != q * q
+        {
+            return Err(invalid(
+                "repeat-measurement control inputs have inconsistent dimensions",
+            ));
+        }
+        let mut leave_out = Vec::with_capacity(rows);
+        let mut within_units = Vec::new();
+        for row in 0..rows {
+            checkpoint_chunk(interrupt, row, "repeat_measurement_control")?;
+            leave_out.push(residual[row] * maker_inverse[row]);
+            if (0..q).any(|control| adjustment.within[control * rows + row] != 0.0) {
+                within_units.push(row);
+            }
+        }
+        let mut omega = vec![0.0; q * q];
+        for left in 0..q {
+            for right in left..q {
+                let mut value = StableAccumulator::default();
+                for (position, &row) in within_units.iter().enumerate() {
+                    checkpoint_chunk(interrupt, position, "repeat_measurement_control")?;
+                    value.add(
+                        adjustment.within[left * rows + row]
+                            * adjustment.within[right * rows + row],
+                    );
+                }
+                omega[left * q + right] = value.finish();
+                omega[right * q + left] = omega[left * q + right];
+            }
+        }
+        if leave_out
+            .iter()
+            .chain(&omega)
+            .chain(&adjustment.precision)
+            .chain(&adjustment.collapsed)
+            .chain(&adjustment.residualized)
+            .any(|value| !value.is_finite())
+        {
+            return Err(nonfinite("a repeat-measurement control input is nonfinite"));
+        }
+        Ok(Self {
+            adjustment,
+            rows,
+            leave_out,
+            omega,
+            within_units,
+        })
+    }
+
+    #[must_use]
+    pub const fn controls(&self) -> usize {
+        self.adjustment.controls
+    }
+
+    /// Units whose extra standard normal enters a draw, in increasing order.
+    /// Under observation deletion there are none.
+    #[must_use]
+    pub fn within_units(&self) -> &[usize] {
+        &self.within_units
+    }
+
+    /// `W'W`, row-major.
+    #[must_use]
+    pub fn omega(&self) -> &[f64] {
+        &self.omega
+    }
+
+    /// `Lambda Z' h`.
+    fn coefficient(&self, h: &[f64]) -> Vec<f64> {
+        let (q, rows) = (self.adjustment.controls, self.rows);
+        let slope = (0..q)
+            .map(|control| {
+                let mut value = StableAccumulator::default();
+                for row in 0..rows {
+                    value.add(self.adjustment.collapsed[control * rows + row] * h[row]);
+                }
+                value.finish()
+            })
+            .collect::<Vec<_>>();
+        self.precision_times(&slope)
+    }
+
+    fn precision_times(&self, slope: &[f64]) -> Vec<f64> {
+        let q = self.adjustment.controls;
+        (0..q)
+            .map(|left| {
+                let mut value = StableAccumulator::default();
+                for right in 0..q {
+                    value.add(self.adjustment.precision[left * q + right] * slope[right]);
+                }
+                value.finish()
+            })
+            .collect()
+    }
+
+    /// `h - Z~ u`.
+    fn star(&self, h: &[f64], coefficient: &[f64]) -> Vec<f64> {
+        let rows = self.rows;
+        (0..rows)
+            .map(|row| {
+                let mut value = h[row];
+                for (control, &weight) in coefficient.iter().enumerate() {
+                    value -= self.adjustment.residualized[control * rows + row] * weight;
+                }
+                value
+            })
+            .collect()
+    }
+
+    /// `W (factor u)`.
+    fn within(&self, coefficient: &[f64], factor: f64) -> Vec<f64> {
+        let rows = self.rows;
+        (0..rows)
+            .map(|row| {
+                let mut value = 0.0;
+                for (control, &weight) in coefficient.iter().enumerate() {
+                    value += self.adjustment.within[control * rows + row] * factor * weight;
+                }
+                value
+            })
+            .collect()
+    }
+
+    /// `left' W'W right`.
+    #[must_use]
+    pub fn quadratic(&self, left: &[f64], right: &[f64]) -> f64 {
+        let q = self.adjustment.controls;
+        let mut value = StableAccumulator::default();
+        for a in 0..q {
+            for b in 0..q {
+                value.add(left[a] * self.omega[a * q + b] * right[b]);
+            }
+        }
+        value.finish()
+    }
+
+    /// Starred influence and within-unit part of a target's influence.
+    fn target_parts(&self, influence: &[f64]) -> (Vec<f64>, Vec<f64>) {
+        let coefficient = self.coefficient(influence);
+        (
+            self.star(influence, &coefficient),
+            self.within(&coefficient, -2.0),
+        )
+    }
+
+    /// Transform a pseudo-noise draw `zeta ~ N(0, V)` into one with the
+    /// covariance of the control-adjusted noise:
+    /// `zeta - Z Lambda (Z~' zeta + W' xi)`, where `xi[i]` is the standard
+    /// normal of unit `within_units()[i]`.
+    pub fn transform_draw(&self, draw: &mut [f64], xi: &[f64]) -> Result<()> {
+        let (q, rows) = (self.adjustment.controls, self.rows);
+        if draw.len() != rows || xi.len() != self.within_units.len() {
+            return Err(invalid("a pseudo-noise control draw has the wrong length"));
+        }
+        let slope = (0..q)
+            .map(|control| {
+                let mut value = StableAccumulator::default();
+                for row in 0..rows {
+                    value.add(self.adjustment.residualized[control * rows + row] * draw[row]);
+                }
+                for (position, &row) in self.within_units.iter().enumerate() {
+                    value.add(self.adjustment.within[control * rows + row] * xi[position]);
+                }
+                value.finish()
+            })
+            .collect::<Vec<_>>();
+        let coefficient = self.precision_times(&slope);
+        for row in 0..rows {
+            let mut value = draw[row];
+            for (control, &weight) in coefficient.iter().enumerate() {
+                value -= self.adjustment.collapsed[control * rows + row] * weight;
+            }
+            if !value.is_finite() {
+                return Err(nonfinite("a transformed pseudo-noise draw is nonfinite"));
+            }
+            draw[row] = value;
+        }
+        Ok(())
+    }
+
+    /// `Pi x` and `Lambda Z' x` of one pseudo-noise image.
+    pub fn image(&self, image: &[f64]) -> Result<RepeatControlImage> {
+        if image.len() != self.rows {
+            return Err(invalid("a pseudo-noise image has the wrong length"));
+        }
+        let coefficient = self.coefficient(image);
+        Ok(RepeatControlImage {
+            projected: self.star(image, &coefficient),
+            coefficient,
+        })
+    }
+
+    /// The bilinear form of one image with itself:
+    /// `sum_a v_a (Pi x)_a^2 + (Lambda Z' x)' W'W (Lambda Z' x)`.
+    pub fn image_square(&self, variance: &[f64], image: &[f64]) -> Result<f64> {
+        if variance.len() != self.rows {
+            return Err(invalid("a pseudo-noise variance has the wrong length"));
+        }
+        let parts = self.image(image)?;
+        let mut value = StableAccumulator::default();
+        for row in 0..self.rows {
+            value.add(variance[row] * parts.projected[row] * parts.projected[row]);
+        }
+        let value = value.finish() + self.quadratic(&parts.coefficient, &parts.coefficient);
+        if !value.is_finite() {
+            return Err(nonfinite("a pseudo-noise control statistic is nonfinite"));
+        }
+        Ok(value)
+    }
+
+    /// Fitted and leave-out variance of the leading score `d'y(g)`, with the
+    /// starred direction and its within-unit part.
+    fn score_parts(
+        &self,
+        mode: &[f64],
+        variance: &[f64],
+        proxy: &[f64],
+    ) -> (f64, f64, Vec<f64>, Vec<f64>) {
+        let coefficient = self.coefficient(mode);
+        let star = self.star(mode, &coefficient);
+        let within = self.within(&coefficient, -1.0);
+        let mut fitted = StableAccumulator::default();
+        let mut leave_out = StableAccumulator::default();
+        for row in 0..self.rows {
+            let shared =
+                2.0 * self.leave_out[row] * star[row] * within[row] + within[row] * within[row];
+            fitted.add(variance[row] * star[row] * star[row] + shared);
+            leave_out.add(proxy[row] * star[row] * star[row] + shared);
+        }
+        (fitted.finish(), leave_out.finish(), star, within)
+    }
+
+    /// Fitted variance of the leading score, as `finish_repeat_q1_target`
+    /// forms it.
+    pub fn score_fitted_variance(
+        &self,
+        mode: &[f64],
+        variance: &[f64],
+        proxy: &[f64],
+    ) -> Result<f64> {
+        if mode.len() != self.rows || variance.len() != self.rows || proxy.len() != self.rows {
+            return Err(invalid("leading-score inputs have the wrong length"));
+        }
+        Ok(self.score_parts(mode, variance, proxy).0)
+    }
+}
+
+/// The linear block of the control term in the high-rank covariance,
+/// row-major: the starred influences, their cross term with the within-unit
+/// parts, and the within-unit term.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RepeatControlTerms {
+    pub linear_unit: [f64; SQUARE],
+    pub linear_cross: [f64; SQUARE],
+    pub linear_within: [f64; SQUARE],
+}
+
+/// What the `q = 1` pieces of one target need for the control term.
+#[derive(Clone, Copy, Debug)]
+pub struct RepeatQ1Control<'a> {
+    pub control: &'a RepeatControl<'a>,
+    /// Leave-out products `y_a e_a / M_aa`.
+    pub proxy: &'a [f64],
+}
+
 /// The `q = 1` decomposition of one target with repeat-measurement variances.
 ///
 /// `mode` is the direction split off, `influence` the realized influence of
@@ -193,7 +508,13 @@ impl RepeatVariance {
 /// negative. The remainder's variance is the high-rank form with its own pair
 /// term. Nothing is truncated: a nonpositive remainder variance or a singular
 /// pair is a status of the target.
-#[allow(clippy::too_many_arguments)]
+///
+/// With `control`, the score's variances, the covariance and the remainder's
+/// linear part carry the first-order term of the estimated control
+/// coefficients, and `remainder_trace` is the bilinear form of the remainder
+/// images of the transformed draws. The decomposition itself, including the
+/// leave-out correction of the leading square, is the same.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub fn finish_repeat_q1_target(
     point_estimate: f64,
     leading_score: f64,
@@ -208,9 +529,13 @@ pub fn finish_repeat_q1_target(
     remainder_trace_mcse: f64,
     remainder_pair_term: f64,
     psd_tolerance: f64,
+    control: Option<RepeatQ1Control<'_>>,
 ) -> Result<ComponentQ1TargetResult> {
     if mode.len() != variance.len()
         || influence.len() != variance.len()
+        || control.is_some_and(|control| {
+            control.control.rows != variance.len() || control.proxy.len() != variance.len()
+        })
         || [
             point_estimate,
             leading_score,
@@ -231,22 +556,65 @@ pub fn finish_repeat_q1_target(
     {
         return Err(invalid("repeat-measurement q=1 inputs are invalid"));
     }
-    let mut fitted = StableAccumulator::default();
-    let mut linear = StableAccumulator::default();
-    let mut cross = StableAccumulator::default();
-    let mut largest = 0.0_f64;
-    for row in 0..variance.len() {
-        fitted.add(mode[row] * mode[row] * variance[row]);
-        let contribution = 4.0 * influence[row] * influence[row] * variance[row];
-        linear.add(contribution);
-        largest = largest.max(contribution);
-        cross.add(2.0 * mode[row] * variance[row] * influence[row]);
-    }
-    let leading_variance = fitted.finish().max(leading_variance_leave_out);
-    let linear = linear.finish();
     let remainder_trace_variance = 2.0 * remainder_trace;
-    let remainder_variance = linear - remainder_trace_variance + remainder_pair_term;
-    let covariance = cross.finish();
+    let (leading_variance, linear, largest, remainder_variance, covariance) = match control {
+        None => {
+            let mut fitted = StableAccumulator::default();
+            let mut linear = StableAccumulator::default();
+            let mut cross = StableAccumulator::default();
+            let mut largest = 0.0_f64;
+            for row in 0..variance.len() {
+                fitted.add(mode[row] * mode[row] * variance[row]);
+                let contribution = 4.0 * influence[row] * influence[row] * variance[row];
+                linear.add(contribution);
+                largest = largest.max(contribution);
+                cross.add(2.0 * mode[row] * variance[row] * influence[row]);
+            }
+            let leading_variance = fitted.finish().max(leading_variance_leave_out);
+            let linear = linear.finish();
+            let remainder_variance = linear - remainder_trace_variance + remainder_pair_term;
+            (
+                leading_variance,
+                linear,
+                largest,
+                remainder_variance,
+                cross.finish(),
+            )
+        }
+        Some(control) => {
+            let parts = control.control;
+            let (fitted, leave_out, score_star, score_within) =
+                parts.score_parts(mode, variance, control.proxy);
+            let (star, within) = parts.target_parts(influence);
+            let mut linear = StableAccumulator::default();
+            let mut cross = StableAccumulator::default();
+            let mut largest = 0.0_f64;
+            for row in 0..variance.len() {
+                let residual = parts.leave_out[row];
+                let contribution = 4.0 * variance[row] * star[row] * star[row]
+                    + 4.0 * residual * star[row] * within[row]
+                    + within[row] * within[row];
+                linear.add(contribution);
+                largest = largest.max(contribution);
+                cross.add(
+                    2.0 * variance[row] * score_star[row] * star[row]
+                        + residual
+                            * (score_star[row] * within[row] + 2.0 * star[row] * score_within[row])
+                        + score_within[row] * within[row],
+                );
+            }
+            let linear = linear.finish();
+            // `remainder_trace` is the bilinear form of the remainder images.
+            let remainder_variance = linear - remainder_trace_variance + remainder_pair_term;
+            (
+                fitted.max(leave_out),
+                linear,
+                largest,
+                remainder_variance,
+                cross.finish(),
+            )
+        }
+    };
     let correlation = covariance / leading_variance.sqrt() / remainder_variance.sqrt();
     let standardized_determinant = (1.0 - correlation.abs()) * (1.0 + correlation.abs());
     let status = if leading_variance <= 0.0 || remainder_variance <= 0.0 {
@@ -716,13 +1084,25 @@ pub fn fit_repeat_variance(
 /// returned as computed: nothing is projected or truncated, so a diagonal
 /// entry can be nonpositive in a small sample and is then reported as such.
 /// `signal` holds the implied estimate of `4 (K_t mu)' V (K_s mu)`.
+///
+/// With `control`, the signal is the linear term of the starred influences,
+/// their within-unit parts and the cross term between the two, and the trace
+/// in `moments` is the bilinear form of the images of the transformed draws,
+/// `tr(K_t S K_s S)` for the covariance `S` of the control-adjusted noise.
+/// The linear pieces are returned beside the covariance.
 pub fn finish_repeat_covariance(
     influence: &[Vec<f64>; PRIMITIVE_TARGETS],
     variance: &[f64],
     adjustment: &[f64; SQUARE],
     moments: &NoiseMoments,
+    control: Option<&RepeatControl<'_>>,
     interrupt: &mut dyn InterruptCheck,
-) -> Result<ResidualCovariance> {
+) -> Result<(ResidualCovariance, Option<RepeatControlTerms>)> {
+    if let Some(control) = control {
+        return finish_repeat_control_covariance(
+            influence, variance, adjustment, moments, control, interrupt,
+        );
+    }
     let rows = variance.len();
     if influence.iter().any(|value| value.len() != rows)
         || variance
@@ -785,17 +1165,136 @@ pub fn finish_repeat_covariance(
             influence_concentration[target] = largest[target] / value;
         }
     }
-    Ok(ResidualCovariance {
-        primitive,
-        model_primitive: primitive,
-        signal,
-        trace_term,
-        trace_mcse,
-        signal_truncation: 0.0,
-        smallest_signal_eigenvalue: smallest,
-        largest_signal_eigenvalue: largest_eigenvalue,
-        influence_concentration,
-    })
+    Ok((
+        ResidualCovariance {
+            primitive,
+            model_primitive: primitive,
+            signal,
+            trace_term,
+            trace_mcse,
+            signal_truncation: 0.0,
+            smallest_signal_eigenvalue: smallest,
+            largest_signal_eigenvalue: largest_eigenvalue,
+            influence_concentration,
+        },
+        None,
+    ))
+}
+
+fn finish_repeat_control_covariance(
+    influence: &[Vec<f64>; PRIMITIVE_TARGETS],
+    variance: &[f64],
+    adjustment: &[f64; SQUARE],
+    moments: &NoiseMoments,
+    control: &RepeatControl<'_>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(ResidualCovariance, Option<RepeatControlTerms>)> {
+    let rows = variance.len();
+    if influence.iter().any(|value| value.len() != rows)
+        || control.rows != rows
+        || variance
+            .iter()
+            .any(|value| !value.is_finite() || *value <= 0.0)
+        || adjustment.iter().any(|value| !value.is_finite())
+    {
+        return Err(invalid("repeat-measurement covariance inputs are invalid"));
+    }
+    let parts: [(Vec<f64>, Vec<f64>); PRIMITIVE_TARGETS] =
+        core::array::from_fn(|target| control.target_parts(&influence[target]));
+    let mut unit = [StableAccumulator::default(); SQUARE];
+    let mut cross = [StableAccumulator::default(); SQUARE];
+    let mut inside = [StableAccumulator::default(); SQUARE];
+    let mut total = [StableAccumulator::default(); REPORTED_TARGETS];
+    let mut largest = [0.0_f64; REPORTED_TARGETS];
+    for row in 0..rows {
+        checkpoint_chunk(interrupt, row, "repeat_measurement_signal")?;
+        let residual = control.leave_out[row];
+        for left in 0..PRIMITIVE_TARGETS {
+            for right in left..PRIMITIVE_TARGETS {
+                let index = left * PRIMITIVE_TARGETS + right;
+                let (star_left, within_left) = (parts[left].0[row], parts[left].1[row]);
+                let (star_right, within_right) = (parts[right].0[row], parts[right].1[row]);
+                unit[index].add(4.0 * variance[row] * star_left * star_right);
+                cross[index]
+                    .add(2.0 * residual * (star_left * within_right + star_right * within_left));
+                inside[index].add(within_left * within_right);
+            }
+        }
+        for target in 0..REPORTED_TARGETS {
+            let (star, within) = if target < PRIMITIVE_TARGETS {
+                (parts[target].0[row], parts[target].1[row])
+            } else {
+                (
+                    parts[0].0[row] + parts[1].0[row] + 2.0 * parts[2].0[row],
+                    parts[0].1[row] + parts[1].1[row] + 2.0 * parts[2].1[row],
+                )
+            };
+            let value = 4.0 * variance[row] * star * star
+                + 4.0 * residual * star * within
+                + within * within;
+            total[target].add(value);
+            largest[target] = largest[target].max(value);
+        }
+    }
+    let mut signal = [0.0; SQUARE];
+    let mut trace_term = [0.0; SQUARE];
+    let mut trace_mcse = [0.0; SQUARE];
+    let mut primitive = [0.0; SQUARE];
+    let mut terms = RepeatControlTerms {
+        linear_unit: [0.0; SQUARE],
+        linear_cross: [0.0; SQUARE],
+        linear_within: [0.0; SQUARE],
+    };
+    for left in 0..PRIMITIVE_TARGETS {
+        for right in left..PRIMITIVE_TARGETS {
+            let index = left * PRIMITIVE_TARGETS + right;
+            let mirror = right * PRIMITIVE_TARGETS + left;
+            let pieces = [
+                unit[index].finish(),
+                cross[index].finish(),
+                inside[index].finish(),
+            ];
+            let value =
+                pieces[0] + pieces[1] + pieces[2] - 4.0 * moments.trace[index] + adjustment[index];
+            if !value.is_finite() {
+                return Err(nonfinite("the component signal covariance is nonfinite"));
+            }
+            for position in [index, mirror] {
+                signal[position] = value;
+                trace_term[position] = 2.0 * moments.trace[index];
+                trace_mcse[position] = 2.0 * moments.trace_mcse[index];
+                primitive[position] = value + trace_term[position];
+                terms.linear_unit[position] = pieces[0];
+                terms.linear_cross[position] = pieces[1];
+                terms.linear_within[position] = pieces[2];
+            }
+        }
+    }
+    let (_, smallest, largest_eigenvalue) = positive_part(&signal)?;
+    let mut influence_concentration = [0.0; REPORTED_TARGETS];
+    for target in 0..REPORTED_TARGETS {
+        let value = total[target].finish();
+        if !value.is_finite() {
+            return Err(nonfinite("a component influence total is nonfinite"));
+        }
+        if value > 0.0 {
+            influence_concentration[target] = largest[target] / value;
+        }
+    }
+    Ok((
+        ResidualCovariance {
+            primitive,
+            model_primitive: primitive,
+            signal,
+            trace_term,
+            trace_mcse,
+            signal_truncation: 0.0,
+            smallest_signal_eigenvalue: smallest,
+            largest_signal_eigenvalue: largest_eigenvalue,
+            influence_concentration,
+        },
+        Some(terms),
+    ))
 }
 
 #[cfg(test)]

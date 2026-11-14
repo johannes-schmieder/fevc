@@ -967,6 +967,7 @@ fn gaussian_semantic_subdraws_and_prefixes_are_fixed() {
         ProbeDomain::Target,
         ProbeDomain::ComponentInference,
         ProbeDomain::ComponentInferenceCritical,
+        ProbeDomain::ComponentInferenceControl,
         ProbeDomain::ComponentVarianceFold,
         ProbeDomain::ObservationResidualMoments,
         ProbeDomain::Diagnostic,

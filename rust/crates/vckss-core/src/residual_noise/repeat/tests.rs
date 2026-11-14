@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::interrupt::NeverInterrupt;
+use crate::residual_noise::NoiseAccumulator;
 
 fn splitmix(state: &mut u64) -> f64 {
     *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
@@ -386,14 +387,16 @@ fn covariance_is_the_high_rank_form_plus_the_pair_term_without_truncation() {
     };
     let mut adjustment = [0.0; SQUARE];
     adjustment[0] = 0.25;
-    let covariance = finish_repeat_covariance(
+    let (covariance, terms) = finish_repeat_covariance(
         &influence,
         &variance,
         &adjustment,
         &moments,
+        None,
         &mut NeverInterrupt,
     )
     .unwrap();
+    assert!(terms.is_none());
     for left in 0..3 {
         for right in 0..3 {
             let index = left * 3 + right;
@@ -653,7 +656,7 @@ fn q1_target_uses_the_larger_leading_variance_and_the_remainder_pair_term() {
         let remainder = point - eigenvalue * (score * score - leave_out);
         let result = finish_repeat_q1_target(
             point, score, leave_out, remainder, 1.0e-12, eigenvalue, &mode, &influence, &variance,
-            0.3, 0.01, 0.2, 1.0e-8,
+            0.3, 0.01, 0.2, 1.0e-8, None,
         )
         .unwrap();
         let leading = fitted.max(leave_out);
@@ -685,6 +688,7 @@ fn q1_target_uses_the_larger_leading_variance_and_the_remainder_pair_term() {
         0.01,
         0.0,
         1.0e-8,
+        None,
     )
     .unwrap();
     assert_eq!(result.status, ComponentQ1Status::NonpositiveVariance);
@@ -692,8 +696,395 @@ fn q1_target_uses_the_larger_leading_variance_and_the_remainder_pair_term() {
     // A decomposition that does not reproduce the direct remainder is refused.
     let error = finish_repeat_q1_target(
         point, score, fitted, 0.0, 1.0e-12, eigenvalue, &mode, &influence, &variance, 0.3, 0.01,
-        0.2, 1.0e-8,
+        0.2, 1.0e-8, None,
     )
     .unwrap_err();
     assert_eq!(error.code, ErrorCode::TargetIdentityFailed);
+}
+
+/// Four units and two controls with nonzero within-unit products on three of
+/// them, written as dense matrices: `Zc`, `Zt` and `W` are n x k row-major.
+struct ControlFixture {
+    adjustment: ControlAdjustment,
+    zc: [[f64; 2]; 4],
+    zt: [[f64; 2]; 4],
+    w: [[f64; 2]; 4],
+    lam: [[f64; 2]; 2],
+    residual: [f64; 4],
+    maker: [f64; 4],
+}
+
+fn control_fixture() -> ControlFixture {
+    let zc = [[1.0, -0.5], [0.3, 2.0], [-1.2, 0.4], [0.7, 0.1]];
+    let zt = [[0.4, -0.2], [-0.1, 0.9], [-0.6, 0.3], [0.3, -1.0]];
+    let w = [[0.25, -0.1], [0.0, 0.0], [-0.3, 0.6], [0.15, 0.2]];
+    let lam = [[0.8, -0.15], [-0.15, 0.5]];
+    let control_major = |m: &[[f64; 2]; 4]| -> Vec<f64> {
+        (0..2).flat_map(|j| (0..4).map(move |a| m[a][j])).collect()
+    };
+    ControlFixture {
+        adjustment: ControlAdjustment {
+            controls: 2,
+            collapsed: control_major(&zc),
+            residualized: control_major(&zt),
+            within: control_major(&w),
+            precision: vec![lam[0][0], lam[0][1], lam[1][0], lam[1][1]],
+        },
+        zc,
+        zt,
+        w,
+        lam,
+        residual: [0.5, -1.0, 0.2, 0.8],
+        maker: [1.25, 1.5, 2.0, 1.1],
+    }
+}
+
+impl ControlFixture {
+    /// The dense projection `Pi = I - Zt Lam Zc'`.
+    fn pi(&self) -> [[f64; 4]; 4] {
+        let mut pi = [[0.0; 4]; 4];
+        for a in 0..4 {
+            for b in 0..4 {
+                let mut value = f64::from(a == b);
+                for j in 0..2 {
+                    for l in 0..2 {
+                        value -= self.zt[a][j] * self.lam[j][l] * self.zc[b][l];
+                    }
+                }
+                pi[a][b] = value;
+            }
+        }
+        pi
+    }
+
+    /// `Lam Zc' h`.
+    fn coefficient(&self, h: &[f64]) -> [f64; 2] {
+        let slope: [f64; 2] = core::array::from_fn(|j| (0..4).map(|a| self.zc[a][j] * h[a]).sum());
+        core::array::from_fn(|j| (0..2).map(|l| self.lam[j][l] * slope[l]).sum())
+    }
+
+    fn apply(&self, matrix: &[[f64; 4]; 4], h: &[f64]) -> Vec<f64> {
+        (0..4)
+            .map(|a| (0..4).map(|b| matrix[a][b] * h[b]).sum())
+            .collect()
+    }
+
+    fn within(&self, load: &[f64; 2]) -> Vec<f64> {
+        (0..4)
+            .map(|a| self.w[a][0] * load[0] + self.w[a][1] * load[1])
+            .collect()
+    }
+
+    fn omega(&self, left: &[f64; 2], right: &[f64; 2]) -> f64 {
+        let mut value = 0.0;
+        for j in 0..2 {
+            for l in 0..2 {
+                let entry: f64 = (0..4).map(|a| self.w[a][j] * self.w[a][l]).sum();
+                value += left[j] * entry * right[l];
+            }
+        }
+        value
+    }
+}
+
+#[test]
+fn transformed_draws_carry_the_covariance_of_the_adjusted_noise() {
+    let fixture = control_fixture();
+    let control = RepeatControl::new(
+        &fixture.adjustment,
+        &fixture.residual,
+        &fixture.maker,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    // Unit 1 has no within-unit product and needs no extra normal.
+    assert_eq!(control.within_units(), &[0, 2, 3]);
+    let pi = fixture.pi();
+    // The map is linear: zeta -> Pi' zeta, xi -> -Zc Lam W' xi.
+    for unit in 0..4 {
+        let mut draw = vec![0.0; 4];
+        draw[unit] = 1.0;
+        control.transform_draw(&mut draw, &[0.0; 3]).unwrap();
+        for row in 0..4 {
+            assert!((draw[row] - pi[unit][row]).abs() <= 1.0e-15, "{unit} {row}");
+        }
+    }
+    for (position, &unit) in [0_usize, 2, 3].iter().enumerate() {
+        let mut draw = vec![0.0; 4];
+        let mut xi = [0.0; 3];
+        xi[position] = 1.0;
+        control.transform_draw(&mut draw, &xi).unwrap();
+        let load: [f64; 2] =
+            core::array::from_fn(|j| (0..2).map(|l| fixture.lam[j][l] * fixture.w[unit][l]).sum());
+        for row in 0..4 {
+            let expected = -(0..2).map(|j| fixture.zc[row][j] * load[j]).sum::<f64>();
+            assert!((draw[row] - expected).abs() <= 1.0e-15);
+        }
+    }
+    assert!(control.transform_draw(&mut [0.0; 4], &[0.0; 2]).is_err());
+}
+
+#[test]
+fn control_term_enters_the_high_rank_covariance() {
+    let fixture = control_fixture();
+    let control = RepeatControl::new(
+        &fixture.adjustment,
+        &fixture.residual,
+        &fixture.maker,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    assert_eq!(control.controls(), 2);
+    let influence = [
+        vec![1.0, -2.0, 0.5, 0.3],
+        vec![0.5, 0.25, -1.0, 0.8],
+        vec![-1.0, 0.0, 2.0, -0.4],
+    ];
+    let variance = [2.0, 0.5, 1.5, 0.9];
+    // Three pseudo-noise images per draw, two draws.
+    let images = [
+        [
+            vec![0.3, -0.2, 0.9, 0.1],
+            vec![-0.5, 0.4, 0.2, 0.6],
+            vec![0.7, 0.1, -0.3, -0.2],
+        ],
+        [
+            vec![-0.1, 0.8, 0.4, -0.6],
+            vec![0.2, -0.3, 0.5, 0.9],
+            vec![0.6, 0.6, -0.1, 0.3],
+        ],
+    ];
+    let mut accumulator = NoiseAccumulator::default();
+    for draw in &images {
+        let mut projected = core::array::from_fn(|_| Vec::new());
+        let mut coefficient = core::array::from_fn(|_| Vec::new());
+        for target in 0..3 {
+            let image = control.image(&draw[target]).unwrap();
+            projected[target] = image.projected;
+            coefficient[target] = image.coefficient;
+        }
+        accumulator
+            .push_control(
+                &variance,
+                &[1.0; 4],
+                &[0.0; 4],
+                projected,
+                coefficient,
+                control.omega(),
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+    }
+    let moments = accumulator.finish().unwrap();
+    assert_eq!(moments.draws, 2);
+    // The bilinear form sum_a v_a (Pi x)_a (Pi y)_a + (Lam Zc' x)' W'W (Lam Zc' y).
+    let pi = fixture.pi();
+    let form = |x: &[f64], y: &[f64]| {
+        let (px, py) = (fixture.apply(&pi, x), fixture.apply(&pi, y));
+        (0..4).map(|a| variance[a] * px[a] * py[a]).sum::<f64>()
+            + fixture.omega(&fixture.coefficient(x), &fixture.coefficient(y))
+    };
+    for left in 0..3 {
+        for right in 0..3 {
+            let expected = images
+                .iter()
+                .map(|draw| form(&draw[left], &draw[right]))
+                .sum::<f64>()
+                / 2.0;
+            assert!((moments.trace[left * 3 + right] - expected).abs() <= 1.0e-14);
+        }
+    }
+    // The consecutive-draw product of the effective rank takes the same form.
+    let pair = form(&images[0][0], &images[1][0]);
+    let rank = moments.trace[0] * moments.trace[0] / (pair * pair);
+    assert!((moments.effective_rank[0] - rank.max(1.0)).abs() <= 1.0e-12 * rank);
+    for draw in &images {
+        assert!(
+            (control.image_square(&variance, &draw[1]).unwrap() - form(&draw[1], &draw[1])).abs()
+                <= 1.0e-14
+        );
+    }
+
+    let mut adjustment = [0.0; SQUARE];
+    adjustment[0] = 0.25;
+    let (covariance, terms) = finish_repeat_covariance(
+        &influence,
+        &variance,
+        &adjustment,
+        &moments,
+        Some(&control),
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    let terms = terms.expect("control terms");
+    // Cov[L_s, L_t] = sum 4 m*_s m*_t v + 2 m*_s e~ w'c_t + 2 m*_t e~ w'c_s
+    // + c_s' w w' c_t, with m* = Pi g and c = -2 Lam Zc' g.
+    let lo: Vec<f64> = (0..4)
+        .map(|a| fixture.residual[a] * fixture.maker[a])
+        .collect();
+    let star: Vec<Vec<f64>> = influence.iter().map(|g| fixture.apply(&pi, g)).collect();
+    let load: Vec<[f64; 2]> = influence
+        .iter()
+        .map(|g| fixture.coefficient(g).map(|value| -2.0 * value))
+        .collect();
+    let within: Vec<Vec<f64>> = load.iter().map(|c| fixture.within(c)).collect();
+    for left in 0..3 {
+        for right in 0..3 {
+            let index = left * 3 + right;
+            let unit: f64 = (0..4)
+                .map(|a| 4.0 * star[left][a] * star[right][a] * variance[a])
+                .sum();
+            let cross: f64 = (0..4)
+                .map(|a| {
+                    2.0 * star[left][a] * lo[a] * within[right][a]
+                        + 2.0 * star[right][a] * lo[a] * within[left][a]
+                })
+                .sum();
+            let inside: f64 = (0..4).map(|a| within[left][a] * within[right][a]).sum();
+            assert!((terms.linear_unit[index] - unit).abs() <= 1.0e-13);
+            assert!((terms.linear_cross[index] - cross).abs() <= 1.0e-13);
+            assert!((terms.linear_within[index] - inside).abs() <= 1.0e-13);
+            let signal = unit + cross + inside - 4.0 * moments.trace[index] + adjustment[index];
+            assert!((covariance.signal[index] - signal).abs() <= 1.0e-13);
+            assert!(
+                (covariance.primitive[index] - signal - 2.0 * moments.trace[index]).abs()
+                    <= 1.0e-13
+            );
+            assert_eq!(covariance.trace_term[index], 2.0 * moments.trace[index]);
+        }
+    }
+    // The within-unit part matters here.
+    assert!(within[0].iter().any(|value| value.abs() > 0.1));
+    assert_eq!(covariance.model_primitive, covariance.primitive);
+    // A large quadratic form drives a diagonal negative: reported, not
+    // repaired and not an error.
+    let mut large = moments.clone();
+    large.trace[4] = 50.0;
+    let (negative, _) = finish_repeat_covariance(
+        &influence,
+        &variance,
+        &adjustment,
+        &large,
+        Some(&control),
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    assert!(negative.primitive[4] < 0.0);
+    assert_eq!(negative.signal_truncation, 0.0);
+    assert!(
+        (negative.primitive[4]
+            - (terms.linear_unit[4] + terms.linear_cross[4] + terms.linear_within[4] - 100.0))
+            .abs()
+            <= 1.0e-12
+    );
+    // One accumulator does not mix the two forms.
+    let mut mixed = NoiseAccumulator::default();
+    mixed
+        .push(
+            &variance,
+            &[1.0; 4],
+            &[0.0; 4],
+            images[0].clone(),
+            &mut NeverInterrupt,
+        )
+        .unwrap();
+    assert!(mixed
+        .push_control(
+            &variance,
+            &[1.0; 4],
+            &[0.0; 4],
+            images[1].clone(),
+            core::array::from_fn(|_| vec![0.0; 2]),
+            control.omega(),
+            &mut NeverInterrupt,
+        )
+        .is_err());
+}
+
+#[test]
+fn control_term_enters_the_q1_pieces() {
+    let fixture = control_fixture();
+    let control = RepeatControl::new(
+        &fixture.adjustment,
+        &fixture.residual,
+        &fixture.maker,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    let mode = [0.6, 0.0, 0.8, 0.0];
+    let influence = [0.5, -1.0, 0.25, 0.4];
+    let variance = [2.0, 0.5, 1.0, 1.5];
+    let proxy = [1.5, 0.2, 0.9, 1.1];
+    let (eigenvalue, score, point) = (0.4_f64, 1.5_f64, 3.0_f64);
+    let pi = fixture.pi();
+    let lo: Vec<f64> = (0..4)
+        .map(|a| fixture.residual[a] * fixture.maker[a])
+        .collect();
+    let ds = fixture.apply(&pi, &mode);
+    let cb = fixture.coefficient(&mode).map(|value| -value);
+    let wb = fixture.within(&cb);
+    let rs = fixture.apply(&pi, &influence);
+    let cr = fixture.coefficient(&influence).map(|value| -2.0 * value);
+    let wr = fixture.within(&cr);
+    let sum = |f: &dyn Fn(usize) -> f64| (0..4).map(f).sum::<f64>();
+    let fitted =
+        sum(&|a| variance[a] * ds[a] * ds[a] + 2.0 * lo[a] * ds[a] * wb[a] + wb[a] * wb[a]);
+    let leave_out_score =
+        sum(&|a| proxy[a] * ds[a] * ds[a] + 2.0 * lo[a] * ds[a] * wb[a] + wb[a] * wb[a]);
+    let cross = sum(&|a| {
+        2.0 * variance[a] * ds[a] * rs[a]
+            + lo[a] * (ds[a] * wr[a] + 2.0 * rs[a] * wb[a])
+            + wb[a] * wr[a]
+    });
+    let linear =
+        sum(&|a| 4.0 * variance[a] * rs[a] * rs[a] + 4.0 * lo[a] * rs[a] * wr[a] + wr[a] * wr[a]);
+    assert!(wb.iter().chain(&wr).any(|value| value.abs() > 0.05));
+    // The identity's leave-out correction of the leading square stays d^2 s.
+    let identity: f64 = sum(&|a| mode[a] * mode[a] * proxy[a]);
+    // `rtrace` stands for the bilinear form of the remainder images.
+    let (rtrace, pair) = (0.03, 0.02);
+    let remainder = point - eigenvalue * (score * score - identity);
+    let result = finish_repeat_q1_target(
+        point,
+        score,
+        identity,
+        remainder,
+        1.0e-12,
+        eigenvalue,
+        &mode,
+        &influence,
+        &variance,
+        rtrace,
+        0.01,
+        pair,
+        1.0e-8,
+        Some(RepeatQ1Control {
+            control: &control,
+            proxy: &proxy,
+        }),
+    )
+    .unwrap();
+    let remainder_variance = linear - 2.0 * rtrace + pair;
+    assert!(
+        (control
+            .score_fitted_variance(&mode, &variance, &proxy)
+            .unwrap()
+            - fitted)
+            .abs()
+            <= 1.0e-14
+    );
+    assert!((result.leading_variance - fitted.max(leave_out_score)).abs() <= 1.0e-14);
+    assert_eq!(result.leading_variance_correction, identity);
+    assert!((result.leading_remainder_covariance - cross).abs() <= 1.0e-14);
+    assert!((result.remainder_influence_variance - linear).abs() <= 1.0e-14);
+    assert_eq!(result.remainder_trace_variance, 2.0 * rtrace);
+    assert!((result.remainder_variance - remainder_variance).abs() <= 1.0e-14);
+    assert!((result.remainder_estimate - remainder).abs() <= 1.0e-14);
+    // Without the control the same inputs give a different covariance.
+    let plain = finish_repeat_q1_target(
+        point, score, identity, remainder, 1.0e-12, eigenvalue, &mode, &influence, &variance,
+        rtrace, 0.01, pair, 1.0e-8, None,
+    )
+    .unwrap();
+    assert!((plain.leading_remainder_covariance - cross).abs() > 1.0e-3);
 }

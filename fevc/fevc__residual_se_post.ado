@@ -179,8 +179,15 @@ program define _fevc_repeat_se_post, eclass
     ereturn local inference_capability = cond("`route'"=="rust", ///
         "repeat-measurement standard errors; generic JLA; fixed-offset unit geometry, match or observation deletion", ///
         "repeat-measurement standard errors; Mata exact kernels or linear solves; fixed-offset unit geometry, match or observation deletion")
-    ereturn local inference_offset_warning                        ///
-        "estimated control coefficients are treated as known"
+    // The flag is 0 exactly when controls entered with their first-order term.
+    if e(inference_nuisance_omitted)==0 {
+        ereturn local inference_method                            ///
+            "`e(inference_method)'; estimation of the control coefficients included to first order"
+        ereturn local inference_offset_warning                    ///
+            "control-coefficient estimation enters as a first-order term"
+    }
+    else ereturn local inference_offset_warning                   ///
+        "no controls: no nuisance offset is estimated"
     // Shape of the variances: from the native receipt (columns 65-78) or
     // from the Mata runtime.
     tempname shape native

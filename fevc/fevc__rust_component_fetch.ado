@@ -112,7 +112,9 @@ program define fevc__rust_component_fetch, rclass
         `units'[1,3]==`expectedunits' & `units'[1,3]>0 &            ///
         (`units'[1,4]==("`deletion'"=="match") |                   ///
             (`modelcode'==3 & `units'[1,4]==0) |                    ///
-            (`modelcode'==4 & `units'[1,4]==1))
+            (`modelcode'==4 & `units'[1,4]==1 & !`residual_present') | ///
+            (`modelcode'==4 & `residual_present' &                  ///
+                `units'[1,4]==(`residual_diagnostic'[1,2]==0)))
     if "`deletion'"=="match" local ok = `ok' &                     ///
         `units'[1,5]>=1 & `units'[1,5]<=`expectedunits'*(1+1e-12) &  ///
         `units'[1,6]>0 & `units'[1,6]<=1 &                         ///

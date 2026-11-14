@@ -17,9 +17,10 @@ struct DenseUnits {
     y: Vec<f64>,
     maker: Vec<f64>,
     kernel: [Vec<f64>; 3],
-    collapsed: [Vec<f64>; 2],
-    residualized: [Vec<f64>; 2],
-    within: [Vec<f64>; 2],
+    /// Control-major unit aggregates of the `k` controls.
+    collapsed: Vec<Vec<f64>>,
+    residualized: Vec<Vec<f64>>,
+    within: Vec<Vec<f64>>,
     precision: Vec<f64>,
     /// Worker of every unit and the dense least-squares effects of its
     /// worker and firm (last firm grounded at zero).
@@ -52,37 +53,40 @@ fn dense_units(
         }
     }
     let fe_inverse = dense_inverse(&dense_multiply(&xtw, p, stored, &raw_x, p), p);
-    let partial: [Vec<f64>; 2] = core::array::from_fn(|j| {
-        let beta = dense_multiply(
-            &fe_inverse,
-            p,
-            p,
-            &dense_multiply(&xtw, p, stored, &problem.controls[j], 1),
-            1,
-        );
-        let fitted = dense_multiply(&raw_x, stored, p, &beta, 1);
-        (0..stored)
-            .map(|row| problem.controls[j][row] - fitted[row])
-            .collect()
-    });
-    let mut information = vec![0.0; 4];
-    for left in 0..2 {
-        for right in 0..2 {
-            information[left * 2 + right] = (0..stored)
+    let k = problem.controls.len();
+    let partial: Vec<Vec<f64>> = (0..k)
+        .map(|j| {
+            let beta = dense_multiply(
+                &fe_inverse,
+                p,
+                p,
+                &dense_multiply(&xtw, p, stored, &problem.controls[j], 1),
+                1,
+            );
+            let fitted = dense_multiply(&raw_x, stored, p, &beta, 1);
+            (0..stored)
+                .map(|row| problem.controls[j][row] - fitted[row])
+                .collect()
+        })
+        .collect();
+    let mut information = vec![0.0; k * k];
+    for left in 0..k {
+        for right in 0..k {
+            information[left * k + right] = (0..stored)
                 .map(|row| weight[row] * partial[left][row] * partial[right][row])
                 .sum();
         }
     }
-    let precision = dense_inverse(&information, 2);
+    let precision = dense_inverse(&information, k);
 
     let rows = inference.independent_units as usize;
     let movers = hybrid.plan.mover_deletion_units;
     let mut x = vec![0.0; rows * p];
     let mut y = vec![0.0; rows];
     let mut mass = vec![0.0_f64; rows];
-    let mut collapsed: [Vec<f64>; 2] = core::array::from_fn(|_| vec![0.0; rows]);
-    let mut residualized: [Vec<f64>; 2] = core::array::from_fn(|_| vec![0.0; rows]);
-    let mut within: [Vec<f64>; 2] = core::array::from_fn(|_| vec![0.0; rows]);
+    let mut collapsed = vec![vec![0.0; rows]; k];
+    let mut residualized = vec![vec![0.0; rows]; k];
+    let mut within = vec![vec![0.0; rows]; k];
     let mut outcome_sum = vec![0.0; movers];
     let mut worker = vec![0_u32; rows];
     let mut firm = vec![0_u32; rows];
@@ -95,7 +99,7 @@ fn dense_units(
                 x[next * p..(next + 1) * p].copy_from_slice(&raw_x[row * p..(row + 1) * p]);
                 y[next] = working[row] - center;
                 mass[next] = 1.0;
-                for j in 0..2 {
+                for j in 0..k {
                     collapsed[j][next] = problem.controls[j][row];
                     residualized[j][next] = partial[j][row];
                 }
@@ -109,7 +113,7 @@ fn dense_units(
             outcome_sum[group] += weight[row] * working[row];
             y[group] += weight[row] * (working[row] - center);
             x[group * p..(group + 1) * p].copy_from_slice(&raw_x[row * p..(row + 1) * p]);
-            for j in 0..2 {
+            for j in 0..k {
                 collapsed[j][group] += weight[row] * problem.controls[j][row];
                 residualized[j][group] += weight[row] * partial[j][row];
             }
@@ -119,7 +123,7 @@ fn dense_units(
     for row in 0..stored {
         if !hybrid.plan.stayer_rows[row] {
             let group = problem.row_deletion[row] as usize;
-            for j in 0..2 {
+            for j in 0..k {
                 within[j][group] += weight[row]
                     * (problem.controls[j][row] - collapsed[j][group] / mass[group])
                     * (working[row] - outcome_sum[group] / mass[group]);
@@ -132,7 +136,7 @@ fn dense_units(
         for value in &mut x[group * p..(group + 1) * p] {
             *value *= root;
         }
-        for j in 0..2 {
+        for j in 0..k {
             collapsed[j][group] /= root;
             residualized[j][group] /= root;
         }
@@ -901,6 +905,64 @@ fn leaveout_residual_attachment_has_exact_memory_boundary() {
     assert!(attachment[1] > attachment[0], "{attachment:?}");
 }
 
+/// Covariance of the noise of the control-adjusted outcome on the units,
+/// `S = Pi' V Pi + Zc Lam W'W Lam Zc'` with `Pi = I - Zt Lam Zc'`, from
+/// control-major aggregates; `V = diag(variance)` without controls.
+fn dense_noise_covariance(
+    variance: &[f64],
+    collapsed: &[Vec<f64>],
+    residualized: &[Vec<f64>],
+    within: &[Vec<f64>],
+    precision: &[f64],
+) -> Vec<f64> {
+    let n = variance.len();
+    let k = collapsed.len();
+    let column_major =
+        |columns: &[Vec<f64>]| -> Vec<f64> { (0..n * k).map(|i| columns[i % k][i / k]).collect() };
+    let (zc, zt, w) = (
+        column_major(collapsed),
+        column_major(residualized),
+        column_major(within),
+    );
+    // Pi = I - Zt Lam Zc'.
+    let lam_zc = dense_multiply(precision, k, k, &dense_transpose(&zc, n, k), n);
+    let mut pi = dense_multiply(&zt, n, k, &lam_zc, n);
+    for value in &mut pi {
+        *value = -*value;
+    }
+    for a in 0..n {
+        pi[a * n + a] += 1.0;
+    }
+    let mut v_pi = pi.clone();
+    for a in 0..n {
+        for b in 0..n {
+            v_pi[a * n + b] *= variance[a];
+        }
+    }
+    let mut output = dense_multiply(&dense_transpose(&pi, n, n), n, n, &v_pi, n);
+    if k > 0 {
+        let omega = dense_multiply(&dense_transpose(&w, n, k), k, n, &w, k);
+        let middle = dense_multiply(
+            &dense_multiply(precision, k, k, &omega, k),
+            k,
+            k,
+            precision,
+            k,
+        );
+        let low = dense_multiply(
+            &dense_multiply(&zc, n, k, &middle, k),
+            n,
+            k,
+            &dense_transpose(&zc, n, k),
+            n,
+        );
+        for (value, extra) in output.iter_mut().zip(&low) {
+            *value += extra;
+        }
+    }
+    output
+}
+
 /// Midranks on (-1, 1), written out independently of the production helper.
 fn dense_ranks(values: &[f64]) -> Vec<f64> {
     let n = values.len();
@@ -1093,7 +1155,22 @@ fn assert_observation_repeat(
     attached: &vckss_core::component_inference::ComponentInferenceResult,
     tolerance: f64,
 ) {
+    assert_observation_repeat_with(problem, outcome, &[], attached, tolerance);
+}
+
+/// The same with the first-order term of the estimated coefficients of
+/// `controls`, `outcome` being the outcome net of their fitted index. Every
+/// observation is a unit, so the within-unit products vanish and the term
+/// acts through the starred influences `Pi g = g - Zt Lam Z' g`.
+fn assert_observation_repeat_with(
+    problem: &CompressedProblem,
+    outcome: &[f64],
+    controls: &[Vec<f64>],
+    attached: &vckss_core::component_inference::ComponentInferenceResult,
+    tolerance: f64,
+) {
     let n = outcome.len();
+    let k = controls.len();
     let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
     let shape = diagnostic
         .repeat
@@ -1102,11 +1179,55 @@ fn assert_observation_repeat(
     assert_eq!(attached.inference_unit, ComponentInferenceUnit::Observation);
     assert_eq!(attached.independent_units as usize, n);
     assert_eq!(attached.psd_cleanup, 0.0);
-    assert_eq!(diagnostic.controls, 0);
+    assert_eq!(diagnostic.controls, k);
+    assert_eq!(attached.nuisance_uncertainty_conditioned_away, k == 0);
+    assert_eq!(shape.control_terms.is_some(), k > 0);
+    // No within-unit product, so no extra normal: the unit draws alone.
+    if shape.leading.is_none() {
+        assert_eq!(
+            attached.counter_atoms,
+            n as u64 * u64::from(diagnostic.draws)
+        );
+        assert_eq!(attached.counter_words, 2 * attached.counter_atoms);
+    }
 
     let (x, p) = super::component_centering::design(problem, false);
     let xt = dense_transpose(&x, n, p);
     let inverse = dense_inverse(&dense_multiply(&xt, p, n, &x, p), p);
+    // Controls residualized on the two-way effects, and their precision.
+    let projection_fe = dense_multiply(&dense_multiply(&x, n, p, &inverse, p), n, p, &xt, n);
+    let residualized: Vec<Vec<f64>> = controls
+        .iter()
+        .map(|z| {
+            let fitted = dense_multiply(&projection_fe, n, n, z, 1);
+            (0..n).map(|a| z[a] - fitted[a]).collect()
+        })
+        .collect();
+    let mut information = vec![0.0; k * k];
+    for j in 0..k {
+        for l in 0..k {
+            information[j * k + l] = (0..n)
+                .map(|a| residualized[j][a] * residualized[l][a])
+                .sum();
+        }
+    }
+    let precision = if k > 0 {
+        dense_inverse(&information, k)
+    } else {
+        Vec::new()
+    };
+    // Pi h = h - Zt Lam Z' h.
+    let starred = |h: &[f64]| -> Vec<f64> {
+        let slope: Vec<f64> = (0..k)
+            .map(|j| (0..n).map(|a| controls[j][a] * h[a]).sum())
+            .collect();
+        let u: Vec<f64> = (0..k)
+            .map(|j| (0..k).map(|l| precision[j * k + l] * slope[l]).sum())
+            .collect();
+        (0..n)
+            .map(|a| h[a] - (0..k).map(|j| residualized[j][a] * u[j]).sum::<f64>())
+            .collect()
+    };
     let bread = dense_multiply(&x, n, p, &inverse, p);
     let bread_t = dense_transpose(&bread, n, p);
     let projection = dense_multiply(&bread, n, p, &xt, n);
@@ -1177,6 +1298,7 @@ fn assert_observation_repeat(
     });
     let influence: [Vec<f64>; 3] =
         core::array::from_fn(|t| dense_multiply(&kernel[t], n, n, outcome, 1));
+    let star: Vec<Vec<f64>> = influence.iter().map(|g| starred(g)).collect();
     for target in 0..3 {
         let largest = influence[target]
             .iter()
@@ -1271,16 +1393,25 @@ fn assert_observation_repeat(
         .abs()
         .max(attached.trace_term[4].abs())
         .max(attached.primitive_covariance[0].abs());
+    // tr(C_s S C_t S) with the covariance S of the control-adjusted noise;
+    // every observation is a unit, so W = 0 and S = Pi' V Pi.
+    let noise_covariance = dense_noise_covariance(
+        &variance,
+        controls,
+        &residualized,
+        &vec![vec![0.0; n]; k],
+        &precision,
+    );
+    let product: Vec<Vec<f64>> = (0..3)
+        .map(|t| dense_multiply(&kernel[t], n, n, &noise_covariance, n))
+        .collect();
     for left in 0..3 {
         for right in 0..3 {
             let index = left * 3 + right;
             let mut trace = 0.0;
             for u in 0..n {
                 for v in 0..n {
-                    trace += kernel[left][u * n + v]
-                        * variance[v]
-                        * kernel[right][v * n + u]
-                        * variance[u];
+                    trace += product[left][u * n + v] * product[right][v * n + u];
                 }
             }
             assert!(
@@ -1290,12 +1421,30 @@ fn assert_observation_repeat(
                 attached.trace_term[index],
                 2.0 * trace
             );
-            let leading = (0..n)
-                .map(|u| 4.0 * variance[u] * influence[left][u] * influence[right][u])
-                .sum::<f64>();
-            // With the engine's own draws for the trace, the rest is exact;
-            // the pair term of the sets of movers reaches every entry.
-            let expected = leading - attached.trace_term[index] + adjustment[index];
+            // With the engine's own draws for the noise means, the rest is
+            // exact; the pair term of the sets of movers reaches every entry.
+            let expected = match shape.control_terms.as_ref() {
+                None => {
+                    let leading = (0..n)
+                        .map(|u| 4.0 * variance[u] * influence[left][u] * influence[right][u])
+                        .sum::<f64>();
+                    leading - attached.trace_term[index] + adjustment[index]
+                }
+                Some(terms) => {
+                    let unit = (0..n)
+                        .map(|u| 4.0 * variance[u] * star[left][u] * star[right][u])
+                        .sum::<f64>();
+                    assert!(
+                        (terms.linear_unit[index] - unit).abs() <= 100.0 * tolerance * scale_value,
+                        "unit {index}: {} versus {unit}",
+                        terms.linear_unit[index]
+                    );
+                    // No unit holds two observations: no within-unit part.
+                    assert_eq!(terms.linear_cross[index], 0.0);
+                    assert_eq!(terms.linear_within[index], 0.0);
+                    unit - attached.trace_term[index] + adjustment[index]
+                }
+            };
             assert!(
                 (attached.primitive_covariance[index] - expected).abs()
                     <= 100.0 * tolerance * scale_value,
@@ -1325,6 +1474,7 @@ fn assert_observation_repeat(
         }
     };
     let mut steps = 0;
+    let mut score_change = 0.0_f64;
     for target in 0..4 {
         let spectrum = &leading.spectrum[target];
         let q1 = &leading.q1[target];
@@ -1368,10 +1518,19 @@ fn assert_observation_repeat(
         let loose = 2.0e-4;
         assert!((q1.leading_score - score).abs() <= loose * score.abs().max(1.0e-3));
         let leave_out: f64 = (0..n).map(|a| mode[a] * mode[a] * proxy[a]).sum();
-        let fitted: f64 = (0..n).map(|a| mode[a] * mode[a] * variance[a]).sum();
+        let plain_fitted: f64 = (0..n).map(|a| mode[a] * mode[a] * variance[a]).sum();
+        // The score's variances use the starred direction Pi d; the
+        // identity's leave-out correction keeps the weights d^2.
+        let mode_star = starred(&mode);
+        let fitted: f64 = (0..n)
+            .map(|a| mode_star[a] * mode_star[a] * variance[a])
+            .sum();
+        let leave_out_score: f64 = (0..n).map(|a| mode_star[a] * mode_star[a] * proxy[a]).sum();
+        let leading_variance = fitted.max(leave_out_score);
         assert!((q1.leading_variance_correction - leave_out).abs() <= loose * fitted);
         assert!((leading.leading_variance_fitted[target] - fitted).abs() <= loose * fitted);
-        assert!((q1.leading_variance - fitted.max(leave_out)).abs() <= loose * fitted);
+        assert!((q1.leading_variance - leading_variance).abs() <= loose * fitted);
+        score_change = score_change.max((fitted - plain_fitted).abs() / fitted);
         // Remainder kernel K_t - lambda H K1 H with K1 = w w' - (D1 M + M D1)/2.
         let diagonal = combine(&attached.target_diagonal, target);
         let mut k1 = vec![0.0; n * n];
@@ -1399,20 +1558,23 @@ fn assert_observation_repeat(
         assert!((q1.point_estimate - point).abs() <= loose * scale);
         assert!((q1.remainder_estimate - recentred).abs() <= loose * scale);
         assert!(q1.remainder_identity_error <= 1.0e-7);
+        let influence_star = starred(&influence_r);
         let linear: f64 = (0..n)
-            .map(|a| 4.0 * variance[a] * influence_r[a] * influence_r[a])
+            .map(|a| 4.0 * variance[a] * influence_star[a] * influence_star[a])
             .sum();
         assert!((q1.remainder_influence_variance - linear).abs() <= loose * linear);
         let cross: f64 = (0..n)
-            .map(|a| 2.0 * mode[a] * variance[a] * influence_r[a])
+            .map(|a| 2.0 * mode_star[a] * variance[a] * influence_star[a])
             .sum();
         assert!(
             (q1.leading_remainder_covariance - cross).abs() <= loose * (fitted * linear).sqrt()
         );
+        // tr(C_r S C_r S), with the same S as the high-rank trace.
+        let remainder_product = dense_multiply(&remainder, n, n, &noise_covariance, n);
         let mut trace = 0.0;
         for u in 0..n {
             for v in 0..n {
-                trace += remainder[u * n + v] * variance[v] * remainder[v * n + u] * variance[u];
+                trace += remainder_product[u * n + v] * remainder_product[v * n + u];
             }
         }
         assert!(
@@ -1465,8 +1627,8 @@ fn assert_observation_repeat(
         let remainder_variance = linear - q1.remainder_trace_variance + pair;
         assert!((q1.remainder_variance - remainder_variance).abs() <= loose * linear);
         if q1.status == vckss_core::component_inference::ComponentQ1Status::Computed {
-            let correlation = cross / (fitted.max(leave_out) * remainder_variance).sqrt();
-            let curvature = 2.0 * dense_lambda.abs() * fitted.max(leave_out)
+            let correlation = cross / (leading_variance * remainder_variance).sqrt();
+            let curvature = 2.0 * dense_lambda.abs() * leading_variance
                 / (remainder_variance * (1.0 - correlation * correlation)).sqrt();
             assert!((q1.curvature - curvature).abs() <= 10.0 * loose * curvature);
             // The interval contains the estimate, and its critical value is
@@ -1478,6 +1640,9 @@ fn assert_observation_repeat(
         }
     }
     assert_eq!(leading.direction_solves, steps);
+    // The control term moves the score's fitted variance of some target.
+    println!("largest relative change of the fitted score variance: {score_change:e}");
+    assert_eq!(score_change > 1.0e-6, k > 0, "{score_change}");
     assert_eq!(
         attached.solve_receipts.len(),
         3 + 4 * diagnostic.draws as usize
@@ -1499,51 +1664,101 @@ fn repeat_measurement_on_observation_units_matches_dense_expectations() {
 }
 
 // With jointly estimated controls the rows of one cell differ in their
-// regressors. The standard error holds the estimated control index fixed: it
-// is the one of the model without controls for the outcome net of that index,
-// formed beside the joint point estimate by the offset pass. The reference
-// uses the dense control coefficients and the run the solver's, so the two
-// agree to the solver's accuracy, far inside what a wrong geometry would give.
+// regressors. The repeat-measurement variances are those of the outcome net
+// of the fitted control index, formed beside the joint point estimate by the
+// offset pass, and the estimation of the control coefficients enters to first
+// order. The reference uses the dense control coefficients and the run the
+// solver's, so the two agree to the solver's accuracy, far inside what a
+// wrong geometry would give. One and two controls, with and without the
+// leading directions.
 #[test]
-fn repeat_measurement_on_observation_units_holds_joint_controls_fixed() {
-    let (worker, firm, outcome, controls) = observation_repeat_columns();
-    let problem = observation_repeat_problem(worker, firm, outcome, controls);
-    let n = problem.outcome.len();
-    assert_eq!(problem.controls.len(), 2);
-    let (x, p) = super::component_centering::design(&problem, true);
-    let xt = dense_transpose(&x, n, p);
-    let beta = dense_multiply(
-        &dense_inverse(&dense_multiply(&xt, p, n, &x, p), p),
-        p,
-        p,
-        &dense_multiply(&xt, p, n, &problem.outcome, 1),
-        1,
-    );
-    let net: Vec<f64> = (0..n)
-        .map(|row| {
-            problem.outcome[row]
-                - (0..2)
-                    .map(|j| problem.controls[j][row] * beta[p - 2 + j])
-                    .sum::<f64>()
-        })
-        .collect();
-    let result = run_observation_repeat(&problem);
-    let attached = result.component_inference.expect("standard errors");
-    let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
-    let probes = 200;
-    assert_eq!(diagnostic.offset_pass_solves, 2 * probes);
-    assert_eq!(
-        attached.solve_receipts.len(),
-        3 + 4 * DRAWS as usize + 2 * probes
-    );
-    assert_observation_repeat(&problem, &net, &attached, 1.0e-5);
-    // The control index matters: against the raw outcome the same checks fail.
-    let raw = std::panic::catch_unwind(|| {
-        assert_observation_repeat(&problem, &problem.outcome, &attached, 1.0e-5);
-    });
-    assert!(raw.is_err());
+fn repeat_measurement_on_observation_units_include_joint_controls() {
+    for (controls, leading) in [(2, false), (2, true), (1, true)] {
+        let (worker, firm, outcome, mut columns) = observation_repeat_columns();
+        columns.truncate(controls);
+        let problem = observation_repeat_problem(worker, firm, outcome, columns);
+        let n = problem.outcome.len();
+        let k = problem.controls.len();
+        assert_eq!(k, controls);
+        let (x, p) = super::component_centering::design(&problem, true);
+        let xt = dense_transpose(&x, n, p);
+        let beta = dense_multiply(
+            &dense_inverse(&dense_multiply(&xt, p, n, &x, p), p),
+            p,
+            p,
+            &dense_multiply(&xt, p, n, &problem.outcome, 1),
+            1,
+        );
+        let net: Vec<f64> = (0..n)
+            .map(|row| {
+                problem.outcome[row]
+                    - (0..k)
+                        .map(|j| problem.controls[j][row] * beta[p - k + j])
+                        .sum::<f64>()
+            })
+            .collect();
+        let result = run_observation_repeat_with(&problem, leading);
+        let attached = result.component_inference.expect("standard errors");
+        let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
+        let probes = 200;
+        assert_eq!(diagnostic.offset_pass_solves, 2 * probes);
+        let leading_solves = diagnostic
+            .repeat
+            .as_ref()
+            .and_then(|shape| shape.leading.as_ref())
+            .map_or(0, |value| {
+                (value.direction_solves + value.influence_solves + value.kernel_solves) as usize
+            });
+        // The control term adds no solve.
+        assert_eq!(
+            attached.solve_receipts.len(),
+            3 + 4 * DRAWS as usize + 2 * probes + leading_solves
+        );
+        assert_observation_repeat_with(&problem, &net, &problem.controls, &attached, 1.0e-5);
+        // The control term matters: without it the same checks fail.
+        let raw = std::panic::catch_unwind(|| {
+            assert_observation_repeat_with(&problem, &net, &[], &attached, 1.0e-5);
+        });
+        assert!(raw.is_err());
+    }
 }
 
+/// The pooled fixture with its first `controls` controls: thirty-two stayers
+/// of four observations and sixty-four mover matches of two stored rows with
+/// frequencies one to three, whose controls vary inside the match.
+fn pooled_repeat_fixture(controls: usize) -> vckss_core::stayer_hybrid::PreparedExactStayerHybrid {
+    let mut mover = super::grouped_component_inference_fixture(8);
+    mover.controls.truncate(controls);
+    let mut stayers = vckss_core::stayer_hybrid::StayerAugmentationInput {
+        firm: Vec::new(),
+        worker: Vec::new(),
+        outcome: Vec::new(),
+        frequency: Vec::new(),
+        target_weight: Vec::new(),
+        controls: vec![Vec::new(), Vec::new()],
+    };
+    for worker in 0..32_u64 {
+        for time in 0..4_u64 {
+            stayers.worker.push(worker + 1);
+            stayers.firm.push(worker % 8 + 1);
+            stayers.frequency.push(1 + time % 2);
+            stayers.target_weight.push(1.0);
+            stayers
+                .outcome
+                .push(0.17 * worker as f64 + (time as f64 - 1.5) * 0.4);
+            stayers.controls[0].push(time as f64 * 0.23 + (worker % 3) as f64);
+            stayers.controls[1].push(((worker * 7 + time * 3) % 11) as f64 / 7.0);
+        }
+    }
+    stayers.controls.truncate(controls);
+    vckss_core::stayer_hybrid::prepare_exact_stayer_hybrid(&mover, stayers)
+        .expect("hybrid preparation")
+}
+
+/// Repeat-measurement standard errors under match deletion against a dense
+/// reconstruction: the variances, the pair term, the control aggregates with
+/// the linear block of the control term (unit, cross and within parts), and
+/// the assembled covariance with the engine's own pseudo-noise means.
 #[test]
 fn repeat_measurement_standard_errors_match_dense_expectations() {
     let hybrid = super::pooled_component::fixture(false);
@@ -1562,18 +1777,42 @@ fn repeat_measurement_standard_errors_match_dense_expectations() {
     let attached = result
         .component_inference
         .expect("attached standard errors");
+    assert_match_repeat(&hybrid, &attached, 0);
+    // One control, and the joint nuisance mode with its offset pass.
+    let one = pooled_repeat_fixture(1);
+    let attached = run_repeat(&one, ModelSolverRoute::Diagonal, NuisanceMode::FixedOffset)
+        .component_inference
+        .expect("one control");
+    assert_match_repeat(&one, &attached, 0);
+    let probes = options(DeletionMode::Match, NuisanceMode::Joint).probes as usize;
+    let attached = run_repeat(&hybrid, ModelSolverRoute::Diagonal, NuisanceMode::Joint)
+        .component_inference
+        .expect("joint nuisance");
+    assert_match_repeat(&hybrid, &attached, 2 * probes);
+}
+
+fn assert_match_repeat(
+    hybrid: &vckss_core::stayer_hybrid::PreparedExactStayerHybrid,
+    attached: &vckss_core::component_inference::ComponentInferenceResult,
+    offset_solves: usize,
+) {
+    let k = hybrid.problem.controls.len();
     let diagnostic = attached.residual_noise.as_ref().expect("diagnostic");
     let shape = diagnostic
         .repeat
         .as_ref()
         .expect("repeat-measurement shape");
-    assert_eq!(attached.solve_receipts.len(), 3 + 4 * DRAWS as usize);
-    assert_eq!((diagnostic.draws, diagnostic.controls), (DRAWS, 0));
-    // The offset is held fixed: no control term, and the result says so.
-    assert!(attached.nuisance_uncertainty_conditioned_away);
+    assert_eq!(diagnostic.offset_pass_solves, offset_solves);
+    assert_eq!(
+        attached.solve_receipts.len(),
+        3 + 4 * DRAWS as usize + offset_solves
+    );
+    assert_eq!((diagnostic.draws, diagnostic.controls), (DRAWS, k));
+    // The control coefficients' estimation enters, and the result says so.
+    assert_eq!(attached.nuisance_uncertainty_conditioned_away, k == 0);
     assert_eq!(attached.psd_cleanup, 0.0);
 
-    let dense = dense_units(&hybrid, &attached);
+    let dense = dense_units(hybrid, attached);
     let (rows, movers) = (dense.rows, dense.movers);
     let residual = dense_multiply(&dense.maker, rows, rows, &dense.y, 1);
     let influence: [Vec<f64>; 3] =
@@ -1676,7 +1915,75 @@ fn repeat_measurement_standard_errors_match_dense_expectations() {
         shape.stayer_pair_term
     );
 
-    // The trace term against its closed form, and the assembled covariance.
+    // The control term: loads c_t = -2 Lam Zc' g_t, starred influences
+    // g_t - Zt Lam Zc' g_t and within parts W c_t from the dense aggregates,
+    // and the leave-out residual e / M.
+    let lo: Vec<f64> = (0..rows)
+        .map(|a| residual[a] * attached.maker_inverse[a])
+        .collect();
+    let coefficient = |h: &[f64]| -> Vec<f64> {
+        let slope: Vec<f64> = (0..k)
+            .map(|j| (0..rows).map(|a| dense.collapsed[j][a] * h[a]).sum())
+            .collect();
+        (0..k)
+            .map(|j| (0..k).map(|l| dense.precision[j * k + l] * slope[l]).sum())
+            .collect()
+    };
+    let star: Vec<Vec<f64>> = influence
+        .iter()
+        .map(|g| {
+            let u = coefficient(g);
+            (0..rows)
+                .map(|a| g[a] - (0..k).map(|j| dense.residualized[j][a] * u[j]).sum::<f64>())
+                .collect()
+        })
+        .collect();
+    let within: Vec<Vec<f64>> = influence
+        .iter()
+        .map(|g| {
+            let u = coefficient(g);
+            (0..rows)
+                .map(|a| {
+                    (0..k)
+                        .map(|j| -2.0 * dense.within[j][a] * u[j])
+                        .sum::<f64>()
+                })
+                .collect()
+        })
+        .collect();
+    if k > 0 {
+        // Collapsed mover matches carry within-unit products; stayers' single
+        // observations do not.
+        for j in 0..k {
+            assert!(dense.within[j][..movers]
+                .iter()
+                .any(|value| value.abs() > 1.0e-3));
+            assert!(dense.within[j][movers..].iter().all(|&value| value == 0.0));
+        }
+    }
+    // One Gaussian atom of two words per unit and draw, and one more for
+    // every unit with a within-unit product.
+    let within_units = (0..rows)
+        .filter(|&a| (0..k).any(|j| dense.within[j][a] != 0.0))
+        .count() as u64;
+    assert_eq!(within_units > 0, k > 0);
+    let draws = u64::from(DRAWS);
+    assert_eq!(attached.counter_atoms, (rows as u64 + within_units) * draws);
+    assert_eq!(attached.counter_words, 2 * attached.counter_atoms);
+
+    // The trace term against its closed form tr(C_s S C_t S), with S the
+    // covariance of the control-adjusted noise, Pi' V Pi + Zc Lam W'W Lam Zc',
+    // and the assembled covariance.
+    let noise_covariance = dense_noise_covariance(
+        &variance,
+        &dense.collapsed,
+        &dense.residualized,
+        &dense.within,
+        &dense.precision,
+    );
+    let product: Vec<Vec<f64>> = (0..3)
+        .map(|t| dense_multiply(&dense.kernel[t], rows, rows, &noise_covariance, rows))
+        .collect();
     let scale_value = attached.trace_term[0]
         .abs()
         .max(attached.trace_term[4].abs())
@@ -1687,10 +1994,7 @@ fn repeat_measurement_standard_errors_match_dense_expectations() {
             let mut trace = 0.0;
             for u in 0..rows {
                 for v in 0..rows {
-                    trace += dense.kernel[left][u * rows + v]
-                        * variance[v]
-                        * dense.kernel[right][v * rows + u]
-                        * variance[u];
+                    trace += product[left][u * rows + v] * product[right][v * rows + u];
                 }
             }
             assert!(
@@ -1700,12 +2004,54 @@ fn repeat_measurement_standard_errors_match_dense_expectations() {
                 attached.trace_term[index],
                 2.0 * trace
             );
-            let leading = (0..rows)
-                .map(|u| 4.0 * variance[u] * influence[left][u] * influence[right][u])
-                .sum::<f64>();
             let adjustment = if index == 0 { pair_term } else { 0.0 };
-            // With the engine's own draws for the trace, the rest is exact.
-            let expected = leading - attached.trace_term[index] + adjustment;
+            // With the engine's own draws for the noise means, the rest is
+            // exact.
+            let expected = match shape.control_terms.as_ref() {
+                None => {
+                    assert_eq!(k, 0);
+                    let leading = (0..rows)
+                        .map(|u| 4.0 * variance[u] * influence[left][u] * influence[right][u])
+                        .sum::<f64>();
+                    leading - attached.trace_term[index] + adjustment
+                }
+                Some(terms) => {
+                    let unit = (0..rows)
+                        .map(|a| 4.0 * variance[a] * star[left][a] * star[right][a])
+                        .sum::<f64>();
+                    let cross = (0..rows)
+                        .map(|a| {
+                            2.0 * lo[a]
+                                * (star[left][a] * within[right][a]
+                                    + star[right][a] * within[left][a])
+                        })
+                        .sum::<f64>();
+                    let inside = (0..rows)
+                        .map(|a| within[left][a] * within[right][a])
+                        .sum::<f64>();
+                    for (name, engine, dense_value) in [
+                        ("unit", terms.linear_unit[index], unit),
+                        ("cross", terms.linear_cross[index], cross),
+                        ("within", terms.linear_within[index], inside),
+                    ] {
+                        assert!(
+                            (engine - dense_value).abs() <= 1e-7 * scale_value,
+                            "{name} {index}: {engine} versus {dense_value}"
+                        );
+                    }
+                    // Both parts that only collapsed matches carry are
+                    // exercised: they are not negligible beside the change
+                    // of the unit part.
+                    let plain = (0..rows)
+                        .map(|a| 4.0 * variance[a] * influence[left][a] * influence[right][a])
+                        .sum::<f64>();
+                    if left == right {
+                        assert!(inside > 1e-3 * (unit - plain).abs(), "within {index}");
+                        assert!(cross.abs() > 1e-6 * scale_value, "cross {index}");
+                    }
+                    unit + cross + inside + adjustment - attached.trace_term[index]
+                }
+            };
             assert!(
                 (attached.primitive_covariance[index] - expected).abs() <= 1e-7 * scale_value,
                 "covariance {index}: {} versus {expected}",
@@ -1766,4 +2112,222 @@ fn repeat_measurement_leading_directions_match_dense_expectations() {
         .is_some_and(|shape| shape.leading.is_none()));
     assert!(attached.q1.is_none());
     assert_observation_repeat(&problem, &problem.outcome, &attached, 2.0e-9);
+}
+
+// The control term's aggregates and work vectors enlarge the attachment's
+// own forecast on observation units too, and the forecast stays the exact
+// admission boundary.
+#[test]
+fn repeat_measurement_control_term_has_exact_memory_boundary() {
+    let (worker, firm, outcome, controls) = observation_repeat_columns();
+    let mut attachment = [0_u64; 2];
+    for (slot, columns) in [Vec::new(), controls].into_iter().enumerate() {
+        let k = columns.len() as u64;
+        let problem =
+            observation_repeat_problem(worker.clone(), firm.clone(), outcome.clone(), columns);
+        let prepared = prepare_repeat_measurement_with_interrupt(
+            &problem,
+            ComponentInferenceUnit::Observation,
+            ComponentInferenceOptions {
+                probes: 4 * DRAWS,
+                ..ComponentInferenceOptions::default()
+            },
+            StructuredVarianceOptions::default(),
+            &mut NeverInterrupt,
+        )
+        .expect("repeat-measurement preparation");
+        let mut estimator = options(DeletionMode::Observation, NuisanceMode::Joint);
+        estimator.probes = 200;
+        estimator.centering = Centering::Mean;
+        let run = |estimator| {
+            run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+                &problem,
+                routed_options(estimator, ModelSolverRoute::Diagonal),
+                None,
+                Some(&prepared),
+                None,
+                &mut NeverInterrupt,
+            )
+        };
+        estimator.memory_limit_bytes = u64::MAX;
+        let baseline = run(estimator).expect("unlimited run");
+        let memory = baseline.receipt.execution.memory;
+        let peak = baseline.receipt.peak_forecast_bytes;
+        assert_eq!(memory.peak_bytes, peak);
+        attachment[slot] = memory.component_inference_peak_bytes;
+        estimator.memory_limit_bytes = peak;
+        run(estimator).expect("the exact forecast is accepted");
+        estimator.memory_limit_bytes = peak - 1;
+        let error = run(estimator).expect_err("one byte below the forecast is rejected");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        if k > 0 {
+            // At least the three aggregates and the eight work vectors.
+            let units = problem.outcome.len() as u64;
+            assert!(attachment[1] >= attachment[0] + units * (3 * k + 8) * 8);
+        }
+    }
+}
+
+/// Bit patterns captured before the control term was added (source
+/// 29ace86c, aarch64-apple-darwin, Rust 1.85.1): the observation fixture
+/// without controls with its leading directions (primitive covariance, the
+/// four-target covariance, and ten q = 1 values per target), then the
+/// mover-only match fixture without controls (primitive covariance).
+const NO_CONTROL_BITS: [u64; 74] = [
+    0x3f40375e827dde43,
+    0xbf101afbaba65de2,
+    0x3f1458406be9b45d,
+    0xbf101afbaba65de2,
+    0x3f39b869580de0c7,
+    0xbf283e0bcc3c83a0,
+    0x3f1458406be9b45d,
+    0xbf283e0bcc3c83a0,
+    0x3f26e09979bdacd2,
+    0x3f40375e827dde43,
+    0xbf101afbaba65de2,
+    0x3f1458406be9b45d,
+    0x3f434a0f28037f9e,
+    0xbf101afbaba65de2,
+    0x3f39b869580de0c7,
+    0xbf283e0bcc3c83a0,
+    0xbf04630af8c1d290,
+    0x3f1458406be9b45d,
+    0xbf283e0bcc3c83a0,
+    0x3f26e09979bdacd2,
+    0x3f2faf475d33b032,
+    0x3f434a0f28037f9e,
+    0xbf04630af8c1d290,
+    0x3f2faf475d33b032,
+    0x3f50edc113889d47,
+    0x3fc8c7336a8d93e8,
+    0x3fc8c7336a8d93e8,
+    0xbf65b9776f9a84b1,
+    0x3f43b5585f3a2012,
+    0x3f45c699590d4849,
+    0x3f12c778392ab76c,
+    0x3fd2a05c87cd8671,
+    0x3fdcecd74d036629,
+    0x3fe1f517e8630ddf,
+    0x3fb2ab571a965555,
+    0x3fc5ba89b412c8df,
+    0x3fc5ba89b412c8df,
+    0x3f4cd106649b907a,
+    0x3f302bc4d1500745,
+    0x3f309b7efc1dc734,
+    0x3edc9f4d78d0180d,
+    0x3fd8f364400cc2dd,
+    0x3fb9e125d7f29821,
+    0x3fc93d41618ec9c9,
+    0x3fb6600ed88f24c6,
+    0x3fc9780d747d2ca8,
+    0x3fc9780d747d2ca8,
+    0xbf51ec8d486bbdaf,
+    0x3f126162d775e7d9,
+    0x3f1314bbb2a69e2c,
+    0x3ec66e588b74b98f,
+    0x3fe3ecf24c1e80c9,
+    0xbfa1f2b66699d84a,
+    0x3fa27785f5a1c888,
+    0x3fb562935be2d9c0,
+    0x3fc9780d747d2ca8,
+    0x3fc9780d747d2ca8,
+    0xbf71c20146ae67fc,
+    0x3f52a579cafc2cab,
+    0x3f53b136cafca469,
+    0x3f135b2fb7833676,
+    0x3fb59981d49e91a4,
+    0x3fe32aec7739bffa,
+    0x3fe7513b011d903f,
+    0x3fb562935be2d9c0,
+    0x3f6d182babe9158f,
+    0x3ef03bb6755938fa,
+    0x3f220fed195d31ea,
+    0x3ef03bb6755938fa,
+    0x3f593be917126586,
+    0x3f22e5f5bf0db1e4,
+    0x3f220fed195d31ea,
+    0x3f22e5f5bf0db1e4,
+    0x3efc3a5710aff8d5,
+];
+
+// Without controls the control term takes no part: the covariance and the
+// leading export are bit for bit what they were before it existed. The bits
+// were captured on one platform; elsewhere the transcendental functions of
+// the pseudo-noise may round differently, so the comparison runs there only.
+#[test]
+fn without_controls_the_repeat_measurement_results_are_unchanged() {
+    let problem = observation_repeat_fixture();
+    let attached = run_observation_repeat_with(&problem, true)
+        .component_inference
+        .expect("standard errors");
+    let shape = attached
+        .residual_noise
+        .as_ref()
+        .and_then(|value| value.repeat.as_ref())
+        .expect("repeat-measurement shape");
+    assert!(shape.control_terms.is_none());
+    let leading = shape.leading.as_ref().expect("leading directions");
+    let mut bits: Vec<u64> = attached
+        .primitive_covariance
+        .iter()
+        .chain(&attached.covariance)
+        .map(|value| value.to_bits())
+        .collect();
+    for target in 0..4 {
+        let q = &leading.q1[target];
+        for value in [
+            q.leading_variance,
+            q.leading_variance_correction,
+            q.leading_remainder_covariance,
+            q.remainder_variance,
+            q.remainder_influence_variance,
+            q.remainder_trace_variance,
+            q.curvature,
+            q.confidence_lower,
+            q.confidence_upper,
+            leading.leading_variance_fitted[target],
+        ] {
+            bits.push(value.to_bits());
+        }
+    }
+    let mover = fixture(false);
+    let prepared = prepare_repeat_measurement_with_interrupt(
+        &mover,
+        ComponentInferenceUnit::Match,
+        ComponentInferenceOptions {
+            probes: 4 * DRAWS,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )
+    .expect("repeat-measurement preparation");
+    let matched = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &mover,
+        routed_options(
+            GenericJlaOptions {
+                centering: Centering::Mean,
+                ..options(DeletionMode::Match, NuisanceMode::FixedOffset)
+            },
+            ModelSolverRoute::Diagonal,
+        ),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("mover-only run")
+    .component_inference
+    .expect("standard errors");
+    assert!(matched.nuisance_uncertainty_conditioned_away);
+    bits.extend(
+        matched
+            .primitive_covariance
+            .iter()
+            .map(|value| value.to_bits()),
+    );
+    assert_eq!(bits.len(), NO_CONTROL_BITS.len());
+    if cfg!(all(target_arch = "aarch64", target_os = "macos")) {
+        assert_eq!(bits, NO_CONTROL_BITS);
+    }
 }

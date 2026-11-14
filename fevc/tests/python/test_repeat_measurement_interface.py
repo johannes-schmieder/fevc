@@ -62,7 +62,14 @@ def test_the_variant_is_a_flag_on_the_residual_pass():
     assert "if prepared.repeat_measurement {" in attachment
     assert "finish_repeat_covariance(" in attachment
     engine = read("rust/crates/vckss-core/src/generic_jla.rs")
-    assert "&& !prepared.repeat_measurement" in engine
+    # With controls the model receives the unit aggregates of the controls on both
+    # deletion modes: the first-order term for their estimation needs them.
+    assert "ControlAdjustment" in attachment and "RepeatControl" in attachment
+    flat = " ".join(engine.split())
+    assert (
+        "if prepared.repeat_measurement && prepared.inference_unit == "
+        "ComponentInferenceUnit::Observation && controls > 0 =>"
+    ) in flat
     # Observation units get the fixed-offset pass under joint nuisance, and a
     # stayer's observations are rows like any other.
     offset = engine[engine.index("fn offset_pass_requested(") :]
@@ -126,7 +133,12 @@ def test_stata_front_end_admits_the_model_explicitly_for_both_deletion_modes():
     assert "program define _fevc_repeat_se_post, eclass" in post
     assert 'ereturn local inference_variance_fit "repeat_measurement"' in post
     assert 'ereturn local status "FEVC_REPEAT_MEASUREMENT_SE"' in post
-    assert "estimated control coefficients are treated as known" in post
+    # With controls, their estimation enters to first order and the text says so.
+    assert "estimation of the control coefficients included to first order" in post
+    assert "estimated control coefficients are treated as known" not in post
+    mata = read("fevc/fevc_residual_se.mata")
+    for helper in ("vckss_rse__control_draw", "vckss_rse__control_form", "vckss_rse__control_linear"):
+        assert f"{helper}(" in mata
     display = read("fevc/fevc__display.ado")
     assert "repeat-measurement" in display
     assert "The standard error is as good as that" in display

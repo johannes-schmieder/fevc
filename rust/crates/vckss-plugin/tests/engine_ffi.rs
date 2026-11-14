@@ -4656,6 +4656,101 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
     }
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);
 
+    // With a control the estimation of its coefficient enters to first order:
+    // the shared diagnostic counts it, nothing is reported as omitted, and the
+    // solve count is the one without controls.
+    {
+        use vckss_plugin::ffi_engine::{
+            vckss_rust_engine_component_inference_unit_receipt_v1,
+            VckssComponentInferenceUnitReceiptV1,
+        };
+        let control: Vec<f64> = (0..columns.worker.len())
+            .map(|row| ((row * 7) % 5) as f64 / 3.0 + 0.05 * row as f64)
+            .collect();
+        let generation = prepare_with_controls(&columns, &[control], VCKSS_DELETION_MATCH);
+        assert_eq!(
+            vckss_rust_engine_augment_match_component_inference_interrupt_v4(
+                generation,
+                &augmentation,
+                512
+            ),
+            0,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+        let capability = planned_capability_request(
+            VCKSS_ALGORITHM_JLA,
+            VCKSS_ENGINE_GENERIC,
+            VCKSS_ROUTE_DIAGONAL_PCG,
+            VCKSS_DELETION_MATCH,
+            VCKSS_NUISANCE_FIXED_OFFSET,
+            1,
+            VCKSS_BATCH_MODE_EXPLICIT,
+            VCKSS_BATCH_MODE_EXPLICIT,
+        );
+        let mut solve = planned_solve_request(capability, 16, 16);
+        solve.v3.v2.v1.seed = 8_675_309;
+        solve.v3.v2.v1.probes = 200;
+        assert_eq!(
+            vckss_rust_engine_solve_v4(generation, &solve),
+            0,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+        assert_eq!(
+            vckss_rust_engine_component_inference_result_v5(
+                generation,
+                primitive.as_mut_ptr(),
+                9,
+                covariance.as_mut_ptr(),
+                16,
+                mcse.as_mut_ptr(),
+                9,
+                spectrum.as_mut_ptr(),
+                60,
+                ptr::null_mut(),
+                0,
+                summaries.as_mut_ptr(),
+                24,
+                folds.as_mut_ptr(),
+                150,
+                cv.as_mut_ptr(),
+                490,
+                targets.as_mut_ptr(),
+                8,
+                &mut receipt,
+                288,
+            ),
+            0,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+        assert_eq!(receipt.variance_fit, 4);
+        assert_eq!(receipt.v4.solver_columns, 35);
+        assert!(primitive.iter().all(|x| x.is_finite()));
+        assert!(covariance
+            .iter()
+            .zip(&plain)
+            .any(|(value, plain)| value.to_bits() != plain.to_bits()));
+        let mut shared = VckssLeaveoutResidualDiagnosticV1::default();
+        assert_eq!(
+            vckss_rust_engine_leaveout_residual_diagnostic_v1(generation, &mut shared, 368),
+            0
+        );
+        assert_eq!(
+            (shared.draws, shared.controls, shared.offset_pass_solves),
+            (8, 1, 0)
+        );
+        assert_eq!(shared.signal_truncation, 0.0);
+        let mut units = VckssComponentInferenceUnitReceiptV1::default();
+        assert_eq!(
+            vckss_rust_engine_component_inference_unit_receipt_v1(generation, &mut units, 64),
+            0
+        );
+        assert_eq!(units.nuisance_uncertainty_omitted, 0);
+        assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+    }
+
     // A leave-out residual generation has no repeat-measurement shape.
     let generation = run(VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL);
     assert_eq!(

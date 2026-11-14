@@ -10,7 +10,7 @@ use crate::component_inference::residual_noise_result;
 use crate::residual_noise::{
     center_units, finish_covariance, finish_repeat_covariance, finish_repeat_q1_target,
     fit_repeat_variance, fit_working_variance, ControlAdjustment, Diagnostic, NoiseAccumulator,
-    RepeatInputs, RepeatLeading, RepeatVariance,
+    RepeatControl, RepeatInputs, RepeatLeading, RepeatQ1Control, RepeatVariance,
 };
 
 /// Leading directions of the four reported targets and what the `q = 1`
@@ -26,7 +26,8 @@ struct LeadingState {
     leading_leave_out: [f64; REPORTED_TARGETS],
     direct_remainder: [f64; REPORTED_TARGETS],
     identity_tolerance: [f64; REPORTED_TARGETS],
-    /// Sum and sum of squares over draws of `sum_a v_a (K_r zeta)_a^2`.
+    /// Sum and sum of squares over draws of `sum_a v_a (K_r zeta)_a^2`, or
+    /// with controls of the bilinear form of the remainder image.
     trace: [(f64, f64); REPORTED_TARGETS],
     direction_solves: u32,
     kernel_solves: u32,
@@ -41,6 +42,33 @@ fn reported_diagonal(target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS], target: us
             target_diagonal[0][row] + target_diagonal[1][row] + 2.0 * target_diagonal[2][row]
         })
         .collect()
+}
+
+/// Standard normals of the listed units for one pseudo-noise draw, from the
+/// control stream: the unit's own address, a domain of their own, and the
+/// Box-Muller construction of the unit draws.
+fn control_normals(
+    rng: CounterRng,
+    probe: u64,
+    addresses: &ComponentInferenceAddresses,
+    units: &[usize],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
+    let domain = crate::rng::ProbeDomain::ComponentInferenceControl;
+    let mut output = Vec::new();
+    reserve_exact(&mut output, units.len(), "control-term standard normals")?;
+    for (position, &unit) in units.iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "repeat_measurement_control_normals")?;
+        let first_word = addresses.subdraw[unit]
+            .checked_mul(2)
+            .ok_or_else(|| resource("control-term word index overflow"))?;
+        let first = rng.word(domain, probe, addresses.entity[unit], first_word);
+        let second = rng.word(domain, probe, addresses.entity[unit], first_word + 1);
+        let u1 = (((first >> 11) as f64) + 0.5) * (1.0 / 9_007_199_254_740_992.0);
+        let u2 = (((second >> 11) as f64) + 0.5) * (1.0 / 9_007_199_254_740_992.0);
+        output.push((-2.0 * u1.ln()).sqrt() * (core::f64::consts::TAU * u2).cos());
+    }
+    Ok(output)
 }
 
 /// Right-hand sides of the remainder kernels of one unit-space vector:
@@ -78,10 +106,12 @@ fn remainder_rhs(
 ///
 /// `plan` lists the stored rows of every inferential unit. Mover units weight
 /// a stored row by its frequency; a physical stayer copy has weight one.
+/// Without a plan every stored row of unit frequency is a unit, and its
+/// within-unit products vanish.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn control_adjustment(
     problem: &CompressedProblem,
-    plan: &MatchPlan,
+    plan: Option<&MatchPlan>,
     mover_units: usize,
     controls: &[Vec<f64>],
     geometry: &ControlGeometry,
@@ -93,12 +123,13 @@ pub(super) fn control_adjustment(
 ) -> Result<ControlAdjustment> {
     let q = controls.len();
     let rows = problem.outcome.len();
-    let units = plan.rows.len();
+    let units = plan.map_or(rows, |plan| plan.rows.len());
     if q == 0
         || geometry.controls != q
         || geometry.residualized.len() != checked_matrix_length(rows, q, "residualized controls")?
         || working_y.len() != rows
         || mover_units > units
+        || (plan.is_none() && problem.frequency.iter().any(|&value| value != 1))
     {
         return Err(BackendError::invariant(
             "residual_noise_control",
@@ -133,23 +164,26 @@ pub(super) fn control_adjustment(
                 1.0
             }
         };
-        let mass = plan.physical_count[unit] as f64;
+        let (unit_rows, mass) = match plan {
+            Some(plan) => (plan.rows[unit].as_slice(), plan.physical_count[unit] as f64),
+            None => (core::slice::from_ref(&unit), 1.0),
+        };
         let mut outcome = StableAccumulator::default();
-        for &row in &plan.rows[unit] {
+        for &row in unit_rows {
             outcome.add(weight(row) * working_y[row]);
         }
         let outcome_mean = outcome.finish() / mass;
         for control in 0..q {
             let mut raw = StableAccumulator::default();
             let mut partial = StableAccumulator::default();
-            for &row in &plan.rows[unit] {
+            for &row in unit_rows {
                 raw.add(weight(row) * controls[control][row]);
                 partial.add(weight(row) * geometry.residualized[control * rows + row]);
             }
             let raw = raw.finish();
             let control_mean = raw / mass;
             let mut product = StableAccumulator::default();
-            for &row in &plan.rows[unit] {
+            for &row in unit_rows {
                 product.add(
                     weight(row)
                         * (controls[control][row] - control_mean)
@@ -264,6 +298,28 @@ pub(super) fn peak_bytes(
                 checked_product(&[controls, controls, 4, 8], "control information")?,
             ])?;
         }
+    } else if prepared.repeat_measurement && controls > 0 {
+        // The same aggregates with one unit per observation.
+        retained = checked_sum(&[
+            retained,
+            checked_product(&[units, controls, 3, 8], "unit control aggregates")?,
+            checked_product(&[controls, controls, 4, 8], "control information")?,
+        ])?;
+    }
+    if prepared.repeat_measurement && controls > 0 {
+        // The control term of repeat-measurement standard errors: the
+        // leave-out residuals, three starred influences with their
+        // within-unit parts, one projected image at a time, `W'W`, and the
+        // coefficient vectors of one draw.
+        retained = checked_sum(&[
+            retained,
+            checked_product(&[units, 8, 8], "repeat-measurement control term")?,
+            checked_product(
+                &[controls, controls, 8],
+                "repeat-measurement control moments",
+            )?,
+            checked_product(&[controls, 8, 8], "repeat-measurement control coefficients")?,
+        ])?;
     }
     if prepared.repeat_measurement {
         // Unit cells and mobility, the two effects, unit mass, the set
@@ -514,9 +570,10 @@ pub(super) fn run(
     // Either source ends in one positive variance per unit for the
     // pseudo-noise; they differ in how it is formed and assembled.
     let (fit, repeat) = if prepared.repeat_measurement {
-        if control.is_some() || !controls.is_empty() {
+        if !controls.is_empty() {
             // Units of one cell are repeat measurements only when the
-            // controls are not part of the unit geometry.
+            // controls are not part of the unit geometry; their estimation
+            // enters through the first-order control term instead.
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
                 "residual_noise_attachment",
@@ -641,6 +698,17 @@ pub(super) fn run(
         (None, Some(repeat)) => &repeat.variance,
         (None, None) => unreachable!("one variance source is always formed"),
     };
+    // Repeat-measurement standard errors with controls: the first-order term
+    // of their estimated coefficients, from the unit aggregates.
+    let repeat_control = match (&repeat, control) {
+        (Some(_), Some(control)) => Some(RepeatControl::new(
+            control,
+            residual,
+            maker_inverse,
+            interrupt,
+        )?),
+        _ => None,
+    };
 
     let mut solve_receipts = Vec::new();
     let draws = crate::component_inference::residual_noise_draws(prepared.options.probes)?;
@@ -748,7 +816,10 @@ pub(super) fn run(
     } else {
         None
     };
-    drop(proxy);
+    // The control term's leave-out score variance needs the products again.
+    if repeat_control.is_none() {
+        proxy = Vec::new();
+    }
 
     let rng = CounterRng::new(prepared.options.seed);
     let mut accumulator = NoiseAccumulator::default();
@@ -773,6 +844,19 @@ pub(super) fn run(
                 outcome,
                 interrupt,
             )?;
+            // With controls the draw takes the covariance of the noise of the
+            // control-adjusted outcome, before centering and any kernel. The
+            // unit draws above are those of a request without controls.
+            if let Some(control) = repeat_control.as_ref() {
+                let xi = control_normals(
+                    rng,
+                    (first + local) as u64,
+                    addresses,
+                    control.within_units(),
+                    interrupt,
+                )?;
+                control.transform_draw(outcome, &xi)?;
+            }
             // The reported estimate centers the outcome at its retained mean,
             // so pure noise must pass through the same centering.
             if centered {
@@ -924,11 +1008,16 @@ pub(super) fn run(
                     if centered {
                         center_units(&mut remainder, match_mass, interrupt)?;
                     }
-                    let mut value = StableAccumulator::default();
-                    for row in 0..rows {
-                        value.add(variance[row] * remainder[row] * remainder[row]);
-                    }
-                    let value = value.finish();
+                    let value = match repeat_control.as_ref() {
+                        Some(control) => control.image_square(variance, &remainder)?,
+                        None => {
+                            let mut value = StableAccumulator::default();
+                            for row in 0..rows {
+                                value.add(variance[row] * remainder[row] * remainder[row]);
+                            }
+                            value.finish()
+                        }
+                    };
                     state.trace[target].0 += value;
                     state.trace[target].1 += value * value;
                     state.kernel_solves += 1;
@@ -939,7 +1028,36 @@ pub(super) fn run(
                     ));
                 }
             }
-            accumulator.push(variance, maker_inverse, &pseudo_residual, kernel, interrupt)?;
+            match repeat_control.as_ref() {
+                Some(control) => {
+                    let mut projected = core::array::from_fn(|_| Vec::new());
+                    let mut coefficient = core::array::from_fn(|_| Vec::new());
+                    for target in 0..PRIMITIVE_TARGETS {
+                        let image = control.image(&kernel[target])?;
+                        projected[target] = image.projected;
+                        coefficient[target] = image.coefficient;
+                    }
+                    drop(kernel);
+                    accumulator.push_control(
+                        variance,
+                        maker_inverse,
+                        &pseudo_residual,
+                        projected,
+                        coefficient,
+                        control.omega(),
+                        interrupt,
+                    )?;
+                }
+                None => {
+                    accumulator.push(
+                        variance,
+                        maker_inverse,
+                        &pseudo_residual,
+                        kernel,
+                        interrupt,
+                    )?;
+                }
+            }
         }
     }
     crate::progress::advance(crate::progress::INFERENCE, draws, draws);
@@ -964,14 +1082,23 @@ pub(super) fn run(
             (covariance, diagnostic)
         }
         (None, Some(repeat)) => {
-            let covariance = finish_repeat_covariance(
+            let (covariance, control_terms) = finish_repeat_covariance(
                 &influence,
                 variance,
                 &repeat.adjustment,
                 &moments,
+                repeat_control.as_ref(),
                 interrupt,
             )?;
-            let mut diagnostic = Diagnostic::repeat(repeat, &moments, &covariance)?;
+            let mut diagnostic = Diagnostic::repeat(
+                repeat,
+                repeat_control.as_ref().map_or(0, RepeatControl::controls),
+                &moments,
+                &covariance,
+            )?;
+            if let Some(shape) = diagnostic.repeat.as_mut() {
+                shape.control_terms = control_terms;
+            }
             if let (Some(state), Some(shape)) = (leading.take(), diagnostic.repeat.as_mut()) {
                 shape.leading = Some(finish_leading(
                     prepared,
@@ -981,6 +1108,9 @@ pub(super) fn run(
                     maker_inverse,
                     target_diagonal,
                     &moments,
+                    repeat_control
+                        .as_ref()
+                        .map(|control| (control, proxy.as_slice())),
                     interrupt,
                 )?);
             }
@@ -1012,13 +1142,39 @@ pub(super) fn run(
     result.target_diagonal = target_diagonal.clone();
     result.influence = influence;
     result.point_correction_identity_error = identity_error;
-    result.counter_atoms = counter_plan.logical_atoms;
-    result.counter_words = counter_plan.unique_words;
+    // The control term draws one more standard normal, two words, per draw
+    // for every unit with a within-unit product; which units these are is
+    // known only from the data, so they join the planned unit draws here.
+    let (control_atoms, control_words) = match repeat_control.as_ref() {
+        Some(control) => {
+            let atoms = u64::try_from(control.within_units().len())
+                .ok()
+                .and_then(|units| units.checked_mul(draws as u64))
+                .ok_or_else(|| resource("control-term Counter atom count overflow"))?;
+            let words = atoms
+                .checked_mul(2)
+                .ok_or_else(|| resource("control-term Counter word count overflow"))?;
+            (atoms, words)
+        }
+        None => (0, 0),
+    };
+    result.counter_atoms = counter_plan
+        .logical_atoms
+        .checked_add(control_atoms)
+        .ok_or_else(|| resource("component-inference Counter atom count overflow"))?;
+    result.counter_words = counter_plan
+        .unique_words
+        .checked_add(control_words)
+        .ok_or_else(|| resource("component-inference Counter word count overflow"))?;
     result.inference_unit = prepared.inference_unit;
-    // The control term accounts for the estimated offset to first order;
-    // repeat-measurement standard errors hold the offset fixed on any unit.
-    result.nuisance_uncertainty_conditioned_away = prepared.repeat_measurement
-        || (prepared.inference_unit == ComponentInferenceUnit::Match && control.is_none());
+    // The control term accounts for the estimated offset to first order.
+    // Without controls there is no offset, and repeat-measurement standard
+    // errors report it as held fixed on any unit, as before.
+    result.nuisance_uncertainty_conditioned_away = if prepared.repeat_measurement {
+        repeat_control.is_none()
+    } else {
+        prepared.inference_unit == ComponentInferenceUnit::Match && control.is_none()
+    };
     result.mixed_units = prepared
         .mixed_units
         .map(|(movers, stayers)| (movers as u64, stayers as u64));
@@ -1199,6 +1355,7 @@ fn finish_leading(
     maker_inverse: &[f64],
     target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
     moments: &crate::residual_noise::NoiseMoments,
+    control: Option<(&RepeatControl<'_>, &[f64])>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<RepeatLeading> {
     let draws = f64::from(moments.draws);
@@ -1238,6 +1395,7 @@ fn finish_leading(
             mcse,
             pair,
             prepared.options.psd_tolerance,
+            control.map(|(control, proxy)| RepeatQ1Control { control, proxy }),
         )
         .map_err(|mut error| {
             error.message = format!("q1 target {target}: {}", error.message);
@@ -1258,6 +1416,14 @@ fn finish_leading(
             largest = largest.max(found.mode[row] * found.mode[row]);
         }
         let fitted = fitted.finish();
+        // With controls the score's fitted variance and the trace both belong
+        // to the covariance of the control-adjusted noise.
+        let fitted = match control {
+            Some((control, proxy)) => {
+                control.score_fitted_variance(&found.mode, variance, proxy)?
+            }
+            None => fitted,
+        };
         leading_variance_fitted[target] = fitted;
         // tr(K V K V) of the target, from the primitive traces.
         let trace = if target < PRIMITIVE_TARGETS {

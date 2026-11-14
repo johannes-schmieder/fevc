@@ -13,6 +13,23 @@ set varabbrev off
 args pkgroot
 if `"`pkgroot'"'=="" local pkgroot `"`c(pwd)'/fevc"'
 adopath ++ `"`pkgroot'"'
+* 1 when the native engine carries the first-order term of estimated control
+* coefficients (0 for a plugin built before it): the native control checks.
+local native_control_term 1
+
+* Comparisons against expected numbers are true relative differences:
+* reldif() divides by one plus the reference, which is far too loose for
+* standard errors, traces and eigenvalues well below one. Tolerances for
+* simulated quantities are about three times the largest deviation observed
+* over five seeds; deterministic quantities agree to rounding.
+program define _rm_close
+    args value expected tolerance
+    assert abs(`value'/`expected'-1)<`tolerance'
+end
+program define _rm_far
+    args value expected distance
+    assert abs(`value'/`expected'-1)>`distance'
+end
 
 * 200 movers with three jobs of two observations (ex2), and 150 stayers with
 * four observations each at firms of the movers' network.
@@ -25,23 +42,47 @@ quietly replace firm_id = 1+mod(worker_id,61) if _n>`N'
 quietly replace log_wage = sin(worker_id*1.7)+0.01*firm_id+ ///
     (0.2+0.3*mod(worker_id,3))*cos(_n*2.3+worker_id) if _n>`N'
 generate double x1 = sin(_n*.37)+.2*firm_id/61
+* A well-identified control whose estimation moves the standard errors of the
+* worker variance and of the sum by a third or more: half the worker's mean
+* outcome and a wave in the row index (the rows in this order).
+capture drop x2 wbar2 rowid
+generate long rowid = _n
+egen double wbar2 = mean(log_wage), by(worker_id)
+assert rowid==_n
+generate double x2 = 0.5*wbar2 + 1.0*sin(rowid*1.3)
 
 * Independent dense calculation: estimates, pair term, standard errors.
 matrix expected_b = (2.193981373967747, 1.014791107858934, -.2004904720705475)
 scalar expected_pair = 1.478986773550021e-06
 matrix expected_se = (.2595212617894884, .2433340968591373, ///
     .1263905520856996, .2676009330004356)
+* With a control, an independent dense calculation of the first-order term
+* of its estimated coefficient (exact traces): ctl_ with x1, ctl2_ with x2;
+* _old is what treating the coefficient as known gives. x1 moves standard
+* errors by less than one per cent, so only x2 can tell the two apart.
+matrix ctl_match_se = (0.2588614707212713, 0.24333718869610568, ///
+    0.12638942397002775, 0.26734842312617657)
+matrix ctl2_match_se = (0.32929725869457038, 0.24289970069440414, ///
+    0.12858357369924972, 0.35839171643359002)
+matrix ctl2_match_se_old = (0.2499999017611641, 0.24297619621603864, ///
+    0.12728594530959025, 0.25644927787519051)
 
+* controls: 1 when the request has controls and their first-order term.
 program define _rm_check
-    args draws sets
+    args draws sets controls
+    if "`controls'"=="" local controls 0
     assert "`e(inference)'"=="highrank"
     assert "`e(inference_model)'"=="repeat_measurement"
     assert "`e(inference_variance_fit)'"=="repeat_measurement"
     assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
     assert e(inference_draws)==`draws'
     assert e(inference_repeat_sets)==`sets'
-    * The estimated offset is held fixed, with or without controls.
-    assert e(inference_nuisance_omitted)==1
+    * Estimated control coefficients enter to first order, as in the
+    * leave-out residual model; without controls nothing is omitted.
+    assert e(inference_nuisance_omitted)==!`controls'
+    assert (strpos("`e(inference_method)'","included to first order")>0)==`controls'
+    assert strpos("`e(inference_offset_warning)'","first-order term")>0 | !`controls'
+    assert strpos("`e(inference_offset_warning)'","no controls")>0 | `controls'
     assert strpos("`e(inference_variance_warning)'","model for movers")>0
     confirm matrix e(V)
     tempname V Vt b ci shape
@@ -69,12 +110,36 @@ program define _rm_check
 end
 
 * Leading directions and the interval reported for every component, against
-* the independent dense calculation in the lead_* matrices. design: tolerance
-* of the eigenvalue and of the largest squared weight; value: of what the
-* outcome and the unit variances determine; simulated: of what also rests on
-* the pseudo-noise trace.
+* the independent dense calculation in the lead_* matrices. tolerance: a 1 x 7
+* matrix of true relative tolerances for (1) the eigenvalue, (2) the largest
+* squared weight, (3) what the outcome and the unit variances determine
+* (|b1|, the variances of the score, the remainder and its linear part),
+* (4) the covariance of score and remainder, in units of the product of
+* their standard deviations (it can be near zero), (5) the pair term, (6) the
+* simulated trace and the remainder variance, (7) the curvature, the bounds
+* (in widths of the interval) and the variance share. prefix: of the
+* expected matrices, lead_ by default; another prefix marks a request with
+* controls, whose expected matrices also hold the identity's leave-out
+* variance (leaveout_identity, column 12) apart from the control-inclusive
+* one, and the leading variance.
+* The eigenvalue share of the leading direction (column 8) against the one
+* of the exact route; its trace is simulated on every route. Largest
+* deviation on the fixtures: linear solves 1.9%, native 3.5%.
+program define _rm_share_check
+    args expected tolerance
+    tempname lead
+    matrix `lead' = e(inference_leading)
+    forvalues j = 1/3 {
+        _rm_close `lead'[`j',8] `expected'[`j',8] `tolerance'
+    }
+end
+
 program define _rm_leading_check
-    args request q1_components design value simulated
+    args request q1_components tolerance prefix
+    local p = cond("`prefix'"=="","lead_","`prefix'")
+    forvalues i = 1/7 {
+        local tol`i' = `tolerance'[1,`i']
+    }
     assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_Q1"
     assert "`e(inference)'"=="highrank"
     assert "`e(inference_leading_request)'"=="`request'"
@@ -94,7 +159,7 @@ program define _rm_leading_check
     assert rowsof(`table')==4 & colsof(`table')==16
     forvalues j = 1/4 {
         assert `lead'[`j',1]==0 & `lead'[`j',2]==1
-        assert reldif(`lead'[`j',5],lead_lambda[1,`j'])<`design'
+        _rm_close `lead'[`j',5] `p'lambda[1,`j'] `tol1'
         assert abs(`lead'[`j',6])<=abs(`lead'[`j',5])*(1+1e-9)
         assert `lead'[`j',16]<1e-6
         assert reldif(`table'[`j',1],`b'[1,`j'])<1e-12
@@ -109,24 +174,59 @@ program define _rm_leading_check
         assert `table'[`j',8]==`table'[`j',`low'] & `table'[`j',9]==`table'[`j',`low'+1]
         assert inrange(`lead'[`j',25],1.95,2.5)
     }
+    * The direction of the sum is not unique: beyond its eigenvalue only the
+    * three components are compared.
     forvalues j = 1/3 {
-        assert reldif(`lead'[`j',9],lead_maxw2[1,`j'])<max(`design',1e-7)*10
-        assert reldif(abs(`lead'[`j',11]),lead_b1[1,`j'])<`value'
-        assert reldif(`lead'[`j',12],lead_leaveout[1,`j'])<`value'
-        assert reldif(`lead'[`j',13],lead_fitted[1,`j'])<`value'
-        assert reldif(`lead'[`j',14],max(`lead'[`j',12],`lead'[`j',13]))<1e-12
-        assert reldif(`lead'[`j',15],lead_theta_r[1,`j'])<`value'
-        assert reldif(`lead'[`j',19],lead_linear[1,`j'])<`value'
-        assert reldif(abs(`lead'[`j',17]),lead_cross[1,`j'])<`value'
-        assert reldif(`lead'[`j',22],lead_pair[1,`j'])<max(`value',1e-6)
-        assert reldif(`lead'[`j',20],lead_trace[1,`j'])<`simulated'
-        assert reldif(`lead'[`j',18],lead_rr[1,`j'])<`simulated'
-        assert reldif(`lead'[`j',24],lead_kappa[1,`j'])<`simulated'
-        local width = lead_ub[1,`j']-lead_lb[1,`j']
-        assert abs(`table'[`j',5]-lead_lb[1,`j'])<`simulated'*`width'
-        assert abs(`table'[`j',6]-lead_ub[1,`j'])<`simulated'*`width'
-        assert reldif(`table'[`j',10],lead_share[1,`j'])<2*`simulated'
+        _rm_close `lead'[`j',9] `p'maxw2[1,`j'] `tol2'
+        _rm_close abs(`lead'[`j',11]) `p'b1[1,`j'] `tol3'
+        _rm_close `lead'[`j',13] `p'fitted[1,`j'] `tol3'
+        if "`prefix'"=="" {
+            _rm_close `lead'[`j',12] `p'leaveout[1,`j'] `tol3'
+            assert reldif(`lead'[`j',14],max(`lead'[`j',12],`lead'[`j',13]))<1e-12
+        }
+        else {
+            _rm_close `lead'[`j',12] `p'leaveout_identity[1,`j'] `tol3'
+            _rm_close `lead'[`j',14] `p'leading[1,`j'] `tol3'
+        }
+        _rm_close `lead'[`j',15] `p'theta_r[1,`j'] `tol3'
+        _rm_close `lead'[`j',19] `p'linear[1,`j'] `tol3'
+        * The sign of a direction is arbitrary.
+        assert abs(abs(`lead'[`j',17])-abs(`p'cross[1,`j']))< ///
+            `tol4'*sqrt(`p'fitted[1,`j']*`p'rr[1,`j'])
+        _rm_close `lead'[`j',22] `p'pair[1,`j'] `tol5'
+        _rm_close `lead'[`j',20] `p'trace[1,`j'] `tol6'
+        _rm_close `lead'[`j',18] `p'rr[1,`j'] `tol6'
+        _rm_close `lead'[`j',24] `p'kappa[1,`j'] `tol7'
+        * With controls the posted estimate keeps them in the operator, and
+        * the expected interval is that of the pass's fixed-offset estimate.
+        local width = `p'ub[1,`j']-`p'lb[1,`j']
+        local lb = cond("`prefix'"=="",`table'[`j',5],`lead'[`j',26])
+        local ub = cond("`prefix'"=="",`table'[`j',6],`lead'[`j',27])
+        assert abs(`lb'-`p'lb[1,`j'])<`tol7'*`width'
+        assert abs(`ub'-`p'ub[1,`j'])<`tol7'*`width'
+        _rm_close `table'[`j',10] `p'share[1,`j'] `tol7'
     }
+end
+
+* Whether the display of a command shows a text: expected (1 or 0), the
+* text, the command.
+program define _rm_display
+    gettoken expected 0 : 0
+    gettoken text 0 : 0
+    tempfile out
+    tempname fh
+    quietly log using `"`out'"', text replace name(_rm_display)
+    `0'
+    quietly log close _rm_display
+    local found 0
+    file open `fh' using `"`out'"', read text
+    file read `fh' line
+    while r(eof)==0 {
+        if strpos(`"`macval(line)'"',`"`text'"') local found 1
+        file read `fh' line
+    }
+    file close `fh'
+    assert `found'==`expected'
 end
 
 * --- point estimates are not touched -----------------------------------------
@@ -134,7 +234,7 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) inference(none) nodisplay
 matrix point = e(kss)
 forvalues j = 1/3 {
-    assert reldif(point[1,`j'],expected_b[1,`j'])<1e-10
+    _rm_close point[1,`j'] expected_b[1,`j'] 1e-12
 }
 
 * --- exact kernels: the independent calculation ------------------------------
@@ -144,15 +244,16 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
 _rm_check 512 150
 assert mreldif(point,e(kss))<1e-12
 assert e(inference_independent_units)==1200
-assert reldif(e(inference_pair_term),expected_pair)<1e-8
+_rm_close e(inference_pair_term) expected_pair 1e-12
 matrix shape = e(inference_repeat)
 * Every match has two observations here, so the two mass terms of the scale
 * are spanned by the intercept: three active scale terms, six profile terms.
 assert shape[1,1]==3 & shape[1,2]==6 & shape[1,6]==600 & shape[1,7]==0
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
-    * 512 draws: the simulated trace term is within a fraction of a per cent.
-    assert reldif(ci[`j',2],expected_se[1,`j'])<0.01
+    * 512 draws: the simulated trace term moves standard errors by at most
+    * 0.4 per cent over five seeds.
+    _rm_close ci[`j',2] expected_se[1,`j'] 0.0125
 }
 * More draws move only the simulated part.
 matrix b512 = e(b)
@@ -163,7 +264,8 @@ _rm_check 64 150
 assert mreldif(b512,e(b))<1e-12
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
-    assert reldif(ci[`j',2],expected_se[1,`j'])<0.05
+    * At most 1.1 per cent over five seeds.
+    _rm_close ci[`j',2] expected_se[1,`j'] 0.035
 }
 
 * --- linear solves and projected leverages -----------------------------------
@@ -173,18 +275,65 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
 _rm_check 64 150
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
-    * Projection noise in leverages and target diagonals on top of the draws.
-    assert reldif(ci[`j',2],expected_se[1,`j'])<0.15
+    * Projection noise in leverages and target diagonals on top of the
+    * draws: at most 3.4 per cent over five seeds.
+    _rm_close ci[`j',2] expected_se[1,`j'] 0.1
 }
 
 * --- controls, the mover-only population, centering --------------------------
+* The expected numbers include the first-order term of the estimated control
+* coefficient. With x1 it moves standard errors by less than one per cent.
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) inference(highrank) inferencemodel(repeat_measurement) nodisplay
-_rm_check 8 150
+    algorithm(exact) inference(highrank) inferencemodel(repeat_measurement) ///
+    inferencedraws(512) nodisplay
+_rm_check 512 150 1
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    _rm_close ci[`j',2] ctl_match_se[1,`j'] 0.0125
+}
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) nuisance(fixedoffset) inference(highrank) ///
     inferencemodel(repeat_measurement) nodisplay
-_rm_check 8 150
+_rm_check 8 150 1
+* With x2 it raises the standard errors of the worker variance and of the sum
+* by 32 and 40 per cent; within-unit products and their cross term with the
+* leave-out residual enter because the stayers' units have several
+* observations. 512 draws: within 0.3 per cent over five seeds, while
+* treating the coefficient as known is excluded.
+quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) inference(highrank) inferencemodel(repeat_measurement) ///
+    inferencedraws(512) nodisplay
+_rm_check 512 150 1
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    _rm_close ci[`j',2] ctl2_match_se[1,`j'] 0.0125
+}
+foreach j in 1 4 {
+    _rm_far ctl2_match_se_old[1,`j'] ctl2_match_se[1,`j'] 0.0125
+    _rm_far ci[`j',2] ctl2_match_se_old[1,`j'] 0.0125
+}
+* Linear solves and projected leverages, 64 draws: within 2.9 per cent over
+* five seeds, the known coefficient still excluded.
+quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(jla) probes(800) inference(highrank) ///
+    inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+_rm_check 64 150 1
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    _rm_close ci[`j',2] ctl2_match_se[1,`j'] 0.1
+}
+foreach j in 1 4 {
+    _rm_far ctl2_match_se_old[1,`j'] ctl2_match_se[1,`j'] 0.1
+    _rm_far ci[`j',2] ctl2_match_se_old[1,`j'] 0.1
+}
+* The display says that the term is included, and nothing about controls
+* without them.
+_rm_display 1 "Estimated controls enter to first order." fevc log_wage x2, ///
+    worker(worker_id) firm(firm_id) backend(mata) algorithm(exact) ///
+    inference(highrank) inferencemodel(repeat_measurement)
+_rm_display 0 "first order" fevc log_wage, worker(worker_id) firm(firm_id) ///
+    backend(mata) algorithm(exact) inference(highrank) ///
+    inferencemodel(repeat_measurement)
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) stayers(movers) inference(highrank) ///
     inferencemodel(repeat_measurement) nodisplay
@@ -211,15 +360,30 @@ if `native' {
     assert "`e(backend_selected)'"=="rust"
     assert colsof(e(component_inference_receipt))==78
     assert e(inference_independent_units)==1200
-    * Projected target diagonals: the pair term agrees to projection noise.
-    assert reldif(e(inference_pair_term),expected_pair)<0.2
+    * Projected target diagonals: the pair term agrees to projection noise
+    * (0.8 per cent over five seeds), standard errors to 4.1 per cent.
+    _rm_close e(inference_pair_term) expected_pair 0.025
     matrix ci = e(component_inference)
     forvalues j = 1/4 {
-        assert reldif(ci[`j',2],expected_se[1,`j'])<0.15
+        _rm_close ci[`j',2] expected_se[1,`j'] 0.12
     }
     quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(rust) ///
         inference(highrank) inferencemodel(repeat_measurement) nodisplay
-    _rm_check 8 150
+    _rm_check 8 150 `native_control_term'
+    if `native_control_term' {
+        * As without controls: 3.8 per cent over five seeds.
+        quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(rust) ///
+            probes(800) inference(highrank) inferencemodel(repeat_measurement) ///
+            inferencedraws(64) nodisplay
+        _rm_check 64 150 1
+        matrix ci = e(component_inference)
+        forvalues j = 1/4 {
+            _rm_close ci[`j',2] ctl2_match_se[1,`j'] 0.12
+        }
+        foreach j in 1 4 {
+            _rm_far ci[`j',2] ctl2_match_se_old[1,`j'] 0.12
+        }
+    }
     * inference(auto) alone is this model with the automatic interval.
     quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
         inference(auto) nodisplay
@@ -248,21 +412,33 @@ quietly drop if worker_id<=200 & mod(worker_id,3)==0 & seq==2
 quietly expand 2 if worker_id<=200 & mod(worker_id,3)==1 & seq==1, generate(extra)
 quietly replace log_wage = log_wage+0.1*cos(worker_id) if extra==1
 drop seq extra
+* x2 again on this panel, from its own outcome, in this order of the rows.
+capture drop x2 wbar2 rowid
+generate long rowid = _n
+egen double wbar2 = mean(log_wage), by(worker_id)
+assert rowid==_n
+generate double x2 = 0.5*wbar2 + 1.0*sin(rowid*1.3)
 assert _N==1801
-* Independent dense calculation on this panel; with x1 the estimated control
-* index of the full regression is held fixed.
+* Independent dense calculation on this panel; with x1 and x2 the first-order
+* term of the estimated control coefficient (ctl_ and ctl2_), and what
+* treating it as known gives (_old). Every unit is one observation, so only
+* the projection of the influences and of the draws carries the term.
 matrix observation_b = (2.154005266392971, 1.171084753616503, -.2944140523794802)
 scalar observation_pair = 1.434113200955210e-04
 matrix observation_se = (.2661415525311538, .2647469861814654, ///
     .1714761737879706, .2121325734000382)
-matrix observation_se_x1 = (.2660014404422780, .2644807941651816, ///
-    .1712614183010554, .2121175684510716)
+matrix ctl_obs_se = (0.26516337401303758, 0.26378308298667968, ///
+    0.17046407246971429, 0.21113007349620666)
+matrix ctl2_obs_se = (0.33485270819677193, 0.26508977680739748, ///
+    0.17300039288024369, 0.32432675925384258)
+matrix ctl2_obs_se_old = (0.26327930247483966, 0.26508776581736709, ///
+    0.17171029402904928, 0.20905462370690128)
 
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) deletion(observation) inference(none) nodisplay
 matrix observation_point = e(kss)
 forvalues j = 1/3 {
-    assert reldif(observation_point[1,`j'],observation_b[1,`j'])<1e-10
+    _rm_close observation_point[1,`j'] observation_b[1,`j'] 1e-12
 }
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) deletion(observation) inference(highrank) ///
@@ -270,14 +446,15 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
 _rm_check 512 684
 assert mreldif(observation_point,e(kss))<1e-12
 assert e(inference_independent_units)==1801
-assert reldif(e(inference_pair_term),observation_pair)<1e-8
+_rm_close e(inference_pair_term) observation_pair 1e-12
 matrix shape = e(inference_repeat)
 * Unit mass is one throughout, so the two mass terms of the scale are
 * spanned by the intercept; 1,735 observations lie in the 684 sets.
 assert shape[1,1]==3 & shape[1,2]==6 & shape[1,6]==1735 & shape[1,7]==0
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
-    assert reldif(ci[`j',2],observation_se[1,`j'])<0.01
+    * At most 0.4 per cent over five seeds.
+    _rm_close ci[`j',2] observation_se[1,`j'] 0.0125
 }
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(jla) probes(800) deletion(observation) inference(highrank) ///
@@ -285,17 +462,46 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
 _rm_check 64 684
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
-    assert reldif(ci[`j',2],observation_se[1,`j'])<0.15
+    * At most one per cent over five seeds.
+    _rm_close ci[`j',2] observation_se[1,`j'] 0.03
 }
 * Jointly estimated controls: the point estimate keeps them in the model,
-* the standard error holds their estimated index fixed.
+* the standard error adds the first-order term of their estimation to the
+* fixed-offset geometry. 512 draws: within 0.4 per cent over five seeds;
+* with x2 treating the coefficient as known misses the worker variance and
+* the sum by 21 and 36 per cent.
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) deletion(observation) inference(highrank) ///
     inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
-_rm_check 512 684
+_rm_check 512 684 1
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
-    assert reldif(ci[`j',2],observation_se_x1[1,`j'])<0.01
+    _rm_close ci[`j',2] ctl_obs_se[1,`j'] 0.0125
+}
+quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) deletion(observation) inference(highrank) ///
+    inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
+_rm_check 512 684 1
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    _rm_close ci[`j',2] ctl2_obs_se[1,`j'] 0.0125
+}
+foreach j in 1 4 {
+    _rm_far ctl2_obs_se_old[1,`j'] ctl2_obs_se[1,`j'] 0.0125
+    _rm_far ci[`j',2] ctl2_obs_se_old[1,`j'] 0.0125
+}
+* Linear solves: within 0.9 per cent over five seeds.
+quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(jla) probes(800) deletion(observation) inference(highrank) ///
+    inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+_rm_check 64 684 1
+matrix ci = e(component_inference)
+forvalues j = 1/4 {
+    _rm_close ci[`j',2] ctl2_obs_se[1,`j'] 0.03
+}
+foreach j in 1 4 {
+    _rm_far ctl2_obs_se_old[1,`j'] ctl2_obs_se[1,`j'] 0.03
+    _rm_far ci[`j',2] ctl2_obs_se_old[1,`j'] 0.03
 }
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) deletion(observation) stayers(movers) ///
@@ -308,19 +514,36 @@ if `native' {
     _rm_check 64 684
     assert "`e(backend_selected)'"=="rust"
     assert e(inference_independent_units)==1801
-    assert reldif(e(inference_pair_term),observation_pair)<0.2
+    * Pair term within 6.3 per cent, standard errors within 0.8 per cent
+    * over five seeds.
+    _rm_close e(inference_pair_term) observation_pair 0.19
     matrix ci = e(component_inference)
     forvalues j = 1/4 {
-        assert reldif(ci[`j',2],observation_se[1,`j'])<0.15
+        _rm_close ci[`j',2] observation_se[1,`j'] 0.025
     }
     quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(rust) ///
         probes(800) deletion(observation) inference(highrank) ///
         inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
-    _rm_check 64 684
+    _rm_check 64 684 `native_control_term'
     assert "`e(backend_selected)'"=="rust"
+    * x1 moves these standard errors by less than half a per cent.
     matrix ci = e(component_inference)
     forvalues j = 1/4 {
-        assert reldif(ci[`j',2],observation_se_x1[1,`j'])<0.15
+        _rm_close ci[`j',2] ctl_obs_se[1,`j'] 0.035
+    }
+    if `native_control_term' {
+        * x1 within 1.0, x2 within 0.8 per cent over five seeds.
+        quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(rust) ///
+            probes(800) deletion(observation) inference(highrank) ///
+            inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+        _rm_check 64 684 1
+        matrix ci = e(component_inference)
+        forvalues j = 1/4 {
+            _rm_close ci[`j',2] ctl2_obs_se[1,`j'] 0.03
+        }
+        foreach j in 1 4 {
+            _rm_far ci[`j',2] ctl2_obs_se_old[1,`j'] 0.03
+        }
     }
 }
 
@@ -350,29 +573,103 @@ matrix lead_lb = (1.653285199845768, .6769868869404063, -.7498829119067346)
 matrix lead_ub = (2.760783074426984, 1.799920016872941, 4.992164588497078e-03)
 matrix lead_share = (.2037353921059615, .2768883086940278, .4444660757414823)
 
+* Tolerances by route (see _rm_leading_check), about three times the largest
+* deviation over five seeds; on the exact route all but the simulated pieces
+* agree to rounding. Largest deviations, exact: trace 1.5%, remainder
+* variance 1.0%, curvature 0.5%, bounds 0.3% of the width, share 0.8%;
+* linear solves: eigenvalue 8e-7, squared weight 3e-4, outcome pieces 1.3%,
+* covariance 0.005, pair term 20%, trace 3.6%, interval pieces 2.4%;
+* native: eigenvalue 8e-7, squared weight 3e-4, outcome pieces 2.2%,
+* covariance 6e-4, pair term 7.7%, trace 6.2%, interval pieces 1.8%.
+matrix tol_exact = (5e-12, 1e-12, 1e-12, 1e-12, 1e-12, 0.045, 0.025)
+matrix tol_jla = (2.5e-6, 1e-3, 0.04, 0.016, 0.6, 0.11, 0.075)
+matrix tol_native = (2.5e-6, 1e-3, 0.07, 0.002, 0.25, 0.19, 0.055)
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) deletion(observation) inference(auto) ///
     inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
-_rm_leading_check auto 3 1e-9 1e-7 0.03
+_rm_leading_check auto 3 tol_exact
 assert e(inference_leading_steps)==0
 assert mreldif(observation_point,e(kss))<1e-12
 * inference(q1) reports the q = 1 interval for the sum as well.
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) deletion(observation) inference(q1) ///
     inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
-_rm_leading_check q1 4 1e-9 1e-7 0.03
+_rm_leading_check q1 4 tol_exact
 * Linear solves: the search stops at a relative residual of 1e-3, and the
 * leverages and target diagonals are projected.
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(jla) probes(800) deletion(observation) inference(auto) ///
     inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
-_rm_leading_check auto 3 1e-5 0.15 0.2
+_rm_leading_check auto 3 tol_jla
 assert inrange(e(inference_leading_steps),8,160)
+* With x1 and x2: the same calculation with the first-order term in the
+* leading variance (fitted and leave-out, projected weights), the covariance
+* with the remainder, and the remainder's variance; the decomposition and
+* its leave-out variance (leaveout_identity) do not change.
+matrix ctl_obs_lead_lambda = (0.0027647475190998925, 0.0027647475190999038, ///
+    -0.0023405405354283595, 0.00055524708495298554)
+matrix ctl_obs_lead_maxw2 = (0.033172250754948833, 0.0469145957558798, 0.037398859446903604)
+matrix ctl_obs_lead_b1 = (7.5443432023618779, 8.1698780728456022, 8.0740638060823198)
+matrix ctl_obs_lead_leaveout_identity = (8.6092370534917251, 9.395477430838346, 9.2686356452803196)
+matrix ctl_obs_lead_fitted = (8.9609804867890155, 10.243944907304856, 9.8465430073528619)
+matrix ctl_obs_lead_leading = (8.9609804867890155, 10.243944907304856, 9.8465430073528619)
+matrix ctl_obs_lead_theta_r = (2.0207375931172011, 1.0098969159359408, -0.16124373885896645)
+matrix ctl_obs_lead_cross = (0.037438228694466717, -0.024836596652986653, -0.030872257197418231)
+matrix ctl_obs_lead_linear = (0.086653131782526358, 0.069675424188866908, 0.022505144518818312)
+matrix ctl_obs_lead_trace = (0.035147454978355613, 0.022422241443367429, 0.0093779205452576148)
+matrix ctl_obs_lead_pair = (0.00012069422757634819, 3.2823937850109978e-05, 9.583661044409271e-06)
+matrix ctl_obs_lead_rr = (0.051626371031747095, 0.047286006683349591, 0.013136807634605107)
+matrix ctl_obs_lead_kappa = (0.21840576643451731, 0.26065321802267083, 0.40363697144929783)
+matrix ctl_obs_lead_lb = (1.6555603503614518, 0.6762359017412205, -0.74579810998255236)
+matrix ctl_obs_lead_ub = (2.7591335989264136, 1.7953403411309983, 0.0051856440832022399)
+matrix ctl_obs_lead_share = (0.20433093765962521, 0.27739637154380481, 0.44749857199057935)
+matrix ctl2_obs_lead_lambda = (0.0027647475190998925, 0.0027647475190999038, ///
+    -0.0023405405354283595, 0.00055524708495298554)
+matrix ctl2_obs_lead_maxw2 = (0.033172250754948833, 0.0469145957558798, 0.037398859446903604)
+matrix ctl2_obs_lead_b1 = (7.5941389079783903, 8.2338702745553878, 8.1325287346348194)
+matrix ctl2_obs_lead_leaveout_identity = (8.6093962328047233, 9.4041156575434268, 9.2726340624675299)
+matrix ctl2_obs_lead_fitted = (9.017793843195081, 10.311260569857339, 9.911906512631095)
+matrix ctl2_obs_lead_leading = (9.017793843195081, 10.311260569857339, 9.911906512631095)
+matrix ctl2_obs_lead_theta_r = (1.9342683821177755, 1.0108240705832325, -0.1668342958548428)
+matrix ctl2_obs_lead_cross = (-0.019150292035662594, -0.023942841533376648, -0.034671195935566598)
+matrix ctl2_obs_lead_linear = (0.13273416911429556, 0.069944175644603798, 0.022764097760245367)
+matrix ctl2_obs_lead_trace = (0.034797604635880483, 0.02238396759148038, 0.0093667953280096323)
+matrix ctl2_obs_lead_pair = (0.00012069209733364341, 3.3080830586851259e-05, 9.6897671264887019e-06)
+matrix ctl2_obs_lead_rr = (0.098057256575748722, 0.047593288883710269, 0.013406992199362224)
+matrix ctl2_obs_lead_kappa = (0.15927073466729716, 0.26150390704753301, 0.40254172172406377)
+matrix ctl2_obs_lead_lb = (1.4237832419219936, 0.67765632556825306, -0.75964688701239136)
+matrix ctl2_obs_lead_ub = (2.7914078900877124, 1.802683063696024, 0.0018382957509354703)
+matrix ctl2_obs_lead_share = (0.13072700954483191, 0.28103173008402527, 0.44399646551344862)
+foreach control in x1 x2 {
+    local p = cond("`control'"=="x1","ctl_obs_lead_","ctl2_obs_lead_")
+    quietly fevc log_wage `control', worker(worker_id) firm(firm_id) backend(mata) ///
+        algorithm(exact) deletion(observation) inference(auto) ///
+        inferencemodel(repeat_measurement) inferencedraws(512) nodisplay
+    _rm_leading_check auto 3 tol_exact `p'
+    assert e(inference_nuisance_omitted)==0
+    * The share of the leading direction in the trace: with controls both
+    * belong to the control-adjusted noise, on every route alike.
+    matrix share_`control' = e(inference_leading)
+    quietly fevc log_wage `control', worker(worker_id) firm(firm_id) backend(mata) ///
+        algorithm(jla) probes(800) deletion(observation) inference(auto) ///
+        inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+    _rm_leading_check auto 3 tol_jla `p'
+    _rm_share_check share_`control' 0.10
+}
+if `native' & `native_control_term' {
+    * As without controls (the largest deviations are the same).
+    quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(rust) ///
+        probes(800) deletion(observation) inference(auto) ///
+        inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
+    _rm_leading_check auto 3 tol_native ctl2_obs_lead_
+    assert e(inference_nuisance_omitted)==0
+    _rm_share_check share_x2 0.10
+}
 if `native' {
     quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
         probes(800) deletion(observation) inference(auto) ///
         inferencemodel(repeat_measurement) inferencedraws(64) nodisplay
-    _rm_leading_check auto 3 1e-5 0.15 0.2
+    _rm_leading_check auto 3 tol_native
     assert "`e(backend_selected)'"=="rust"
     assert inrange(e(inference_leading_steps),8,160)
     * The offset pass and the leading directions are counted apart.
