@@ -79,7 +79,7 @@ program define _rm_leading_check
     assert "`e(inference)'"=="highrank"
     assert "`e(inference_leading_request)'"=="`request'"
     assert e(inference_q1_components)==`q1_components'
-    assert e(inference_share_threshold)==.05
+    assert e(inference_share_threshold)==.1
     assert e(inference_leading_unresolved)==0
     * A q = 1 interval for any component withholds the joint covariance.
     capture confirm matrix e(V)
@@ -220,11 +220,12 @@ if `native' {
     quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(rust) ///
         inference(highrank) inferencemodel(repeat_measurement) nodisplay
     _rm_check 8 150
-    * The default on the same backend is still the leave-out residual method.
+    * inference(auto) alone is this model with the automatic interval.
     quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
         inference(auto) nodisplay
-    assert "`e(inference_variance_fit)'"=="leaveout_residual"
-    assert "`e(backend_selected)'"=="rust"
+    assert "`e(inference_variance_fit)'"=="repeat_measurement"
+    assert "`e(backend_selected)'"=="rust" & e(inference_auto)==1
+    confirm matrix e(inference_intervals)
 }
 else {
     * A plugin without the capability refuses a strict native request.
@@ -401,7 +402,7 @@ foreach route in "backend(mata) algorithm(exact)" "backend(mata) algorithm(jla) 
     forvalues j = 1/4 {
         assert lead[`j',2]==1 & lead[`j',16]<1e-6
         assert table[`j',8]<table[`j',1] & table[`j',1]<table[`j',9]
-        assert (table[`j',7]==1)==(table[`j',10]>.05) | `j'==4
+        assert (table[`j',7]==1)==(table[`j',10]>.1) | `j'==4
     }
     capture confirm matrix e(V)
     assert (_rc==0)==(e(inference_q1_components)==0)
@@ -455,12 +456,118 @@ capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     inference(auto) inferencemodel(structured_common) nodisplay
 assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_MODEL_WITHOUT_INFERENCE"
 
-* --- the default is unchanged ------------------------------------------------
+* --- the default ---------------------------------------------------------------
+* inference(auto) without a model is the repeat-measurement model with one
+* interval per component: the same numbers as the explicit request.
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) inference(auto) inferencemodel(repeat_measurement) nodisplay
+matrix explicit = e(inference_intervals)
+local explicit_status "`e(status)'"
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) inference(auto) nodisplay
+assert "`e(inference_model)'"=="repeat_measurement"
+assert "`e(inference_variance_fit)'"=="repeat_measurement"
+assert e(inference_auto)==1 & "`e(inference_auto_reason)'"==""
+assert "`e(inference_leading_request)'"=="auto" & "`e(status)'"=="`explicit_status'"
+matrix default = e(inference_intervals)
+forvalues i = 1/4 {
+    forvalues j = 1/16 {
+        assert default[`i',`j']==explicit[`i',`j'] | ///
+            (missing(default[`i',`j']) & missing(explicit[`i',`j']))
+    }
+}
+* It carries the options the pass accepts.
+foreach options in "deletion(observation)" "stayers(movers)" ///
+    "nuisance(fixedoffset)" "centering(corrected)" "centering(none)" {
+    quietly fevc log_wage x1, worker(worker_id) firm(firm_id) `options' ///
+        inference(auto) nodisplay
+    if "`e(backend_selected)'"=="mata" | `native' {
+        assert "`e(inference_model)'"=="repeat_measurement"
+        confirm matrix e(inference_intervals)
+        matrix table = e(inference_intervals)
+        forvalues j = 1/4 {
+            assert inlist(table[`j',7],0,1) & table[`j',8]<table[`j',9]
+        }
+    }
+    else assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""
+}
+* Frequency weights stand for repeated observations: the compressed data give
+* the numbers of the expanded data (exact kernels; the q = 1 limits to the
+* accuracy of their simulated critical value), under both deletion modes.
+preserve
+generate long row = _n
+generate int frequency = 1+(mod(row,5)==0)
+generate double target_mass = 1+mod(worker_id,3)
+bysort worker_id firm_id (row): generate int spell = 1+(_n>1 & mod(worker_id,4)==0)
+egen long match_id = group(worker_id firm_id spell)
+sort row
+foreach deletion in match observation {
+    quietly fevc log_wage [fw=frequency], worker(worker_id) firm(firm_id) ///
+        backend(mata) algorithm(exact) deletion(`deletion') inference(auto) nodisplay
+    assert "`e(inference_model)'"=="repeat_measurement"
+    matrix compressed = e(inference_intervals)
+    tempfile weighted
+    quietly save `weighted'
+    quietly expand frequency
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) ///
+        backend(mata) algorithm(exact) deletion(`deletion') inference(auto) nodisplay
+    matrix expanded = e(inference_intervals)
+    use `weighted', clear
+    forvalues i = 1/4 {
+        forvalues j = 1/9 {
+            assert reldif(compressed[`i',`j'],expanded[`i',`j'])<1e-5 | ///
+                (missing(compressed[`i',`j']) & missing(expanded[`i',`j']))
+        }
+    }
+}
+* Deletion IDs (two spells of a worker at one firm declared independent) and
+* target weights: the default carries them, and the two backends, which share
+* no code for the pass, agree to projection and simulation noise.
+foreach options in "deletionid(match_id)" "targetweight(target_mass)" {
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+        algorithm(exact) `options' inference(auto) inferencedraws(64) nodisplay
+    assert "`e(inference_model)'"=="repeat_measurement"
+    matrix exact = e(inference_intervals)
+    forvalues j = 1/4 {
+        assert inlist(exact[`j',7],0,1) & exact[`j',8]<exact[`j',9]
+    }
+    if `native' {
+        quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+            probes(800) `options' inference(auto) inferencedraws(64) nodisplay
+        assert "`e(inference_model)'"=="repeat_measurement"
+        matrix native = e(inference_intervals)
+        forvalues j = 1/4 {
+            assert abs(native[`j',1]-exact[`j',1])<0.25*exact[`j',2]
+            assert reldif(native[`j',2],exact[`j',2])<0.15
+        }
+    }
+}
+if `native' {
+    * Natively, observation deletion needs unit frequencies: the default then
+    * returns point estimates and says why.
+    quietly fevc log_wage [fw=frequency], worker(worker_id) firm(firm_id) ///
+        backend(rust) deletion(observation) inference(auto) nodisplay
+    capture confirm matrix e(inference_intervals)
+    assert _rc
+    assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""
+}
+restore
+* A request the pass cannot carry returns point estimates and says why.
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) project(x1) projecteffect(firm) inference(auto) nodisplay
+capture confirm matrix e(V)
+assert _rc
+capture confirm matrix e(inference_intervals)
+assert _rc
+assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""
+* The earlier model remains available by name.
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) inference(auto) inferencemodel(leaveout_residual) nodisplay
 assert "`e(inference_variance_fit)'"=="leaveout_residual"
 assert "`e(status)'"=="FEVC_LEAVEOUT_RESIDUAL_SE"
 capture confirm matrix e(inference_repeat)
+assert _rc
+capture confirm matrix e(inference_intervals)
 assert _rc
 
 display "PASS test_repeat_measurement_se.do"

@@ -45,9 +45,11 @@ program define fevc__component_model_route, rclass
         di as error "inferencedraws() must be an integer in [2,4096]"
         exit 198
     }
-    // inference(auto), the default, asks for leave-out residual standard
-    // errors whenever this request can carry them and otherwise for point
-    // estimates only. It never changes the backend, algorithm, or solver
+    // inference(auto), the default, asks for repeat-measurement standard
+    // errors with one interval per component (normal or q = 1, chosen from the
+    // leading direction) whenever this request can carry them and otherwise
+    // for point estimates only. inferencemodel(leaveout_residual) keeps the
+    // earlier model. It never changes the backend, algorithm, or solver
     // route the user selected. On the native backend the attachment does
     // select the resolved automatic executor in place of the point-only
     // full-CMG one, and the generic engine for a mover-only request without
@@ -58,10 +60,11 @@ program define fevc__component_model_route, rclass
     local residual_model = lower(strtrim(`"`inferencemodel'"'))
     if `se_auto' & !inlist("`residual_model'","","leaveout_residual","repeat_measurement") {
         quietly _fevc_component_route_failure "INFERENCE_MODEL_WITHOUT_INFERENCE" ///
-            "inference(auto) selects inferencemodel(leaveout_residual) or carries inferencemodel(repeat_measurement); other models need inference(highrank) or inference(q1)."
+            "inference(auto) selects inferencemodel(repeat_measurement) or carries inferencemodel(leaveout_residual); other models need inference(highrank) or inference(q1)."
         exit 198
     }
     local model_typed = ("`residual_model'" != "")
+    if `se_auto' & !`model_typed' local residual_model repeat_measurement
     // Repeat-measurement standard errors find the leading direction of every
     // component unless inference(highrank) asks for the normal interval
     // alone. inference(auto) then reports, component by component, the
@@ -129,7 +132,7 @@ program define fevc__component_model_route, rclass
 
     local supplied = (strtrim(`"`inferencemodel'"')!="")
     if `se_auto' local supplied = `model_typed'
-    // inference(auto) has already selected leaveout_residual; only a request
+    // inference(auto) has already selected its model; only a request
     // without it falls back to the exact target-specific model.
     if !`supplied' & !`se_auto' local inferencemodel target_lowess
     local inferencemodel = lower(strtrim(`"`inferencemodel'"'))

@@ -32,11 +32,14 @@ Preserve:
   weighting, nuisance, and accounting meanings;
 - worker variance, firm variance, worker--firm covariance, and variance of
   their sum as the four corrected targets;
-- leave-out residual standard errors with the point estimates by default
-  (`inference(auto)`, owner decision of 2026-11-10): never rerouting the
-  selected backend, algorithm or solver, never costing the point estimate,
-  and with `inference(none)` as the opt-out. Every other econometric
-  covariance is posted only for an explicit capability-gated request;
+- standard errors with the point estimates by default (`inference(auto)`,
+  owner decisions of 2026-11-10 and 2026-11-13): repeat-measurement
+  standard errors with one interval per component, normal or `q = 1`, and
+  `e(V)` only when every component is normal; never rerouting the selected
+  backend, algorithm or solver, never costing the point estimate, and with
+  `inference(none)` as the opt-out. `inferencemodel(leaveout_residual)`
+  keeps the earlier default. Every other econometric covariance is posted
+  only for an explicit capability-gated request;
 - match deletion as the default, `deletionid()` independent of coefficient
   cells, and the KSS Matlab-compatible combined mover/eligible-stayer target by
   default, with `stayers(movers)` as the explicit mover-only opt-out;

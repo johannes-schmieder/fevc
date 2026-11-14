@@ -222,12 +222,12 @@ covariance and sorting may be negative. Shares need not lie between 0 and
 {pstd}
 With controls, this total concerns the two fixed effects; it is not a
 bias-corrected decomposition of the controls or the full model's R-squared.
-By default the command also reports
-{help fevc##se:leave-out residual standard errors} and normal confidence
-intervals for the four components and posts their covariance as {cmd:e(V)}.
-They rest on an assumption about the error variances that the point
-estimates do not need; read {help fevc##se:what they assume} before
-reporting them. {cmd:inference(none)} gives point estimates only.
+By default the command also reports a
+{help fevc##se:confidence interval for each of the four components}, with a
+standard error where the estimate is close to normal, and posts their
+covariance as {cmd:e(V)} when all four are. They rest on assumptions that
+the point estimates do not need; read {help fevc##se:what they assume}
+before reporting them. {cmd:inference(none)} gives point estimates only.
 
 {marker centering}
 {title:Outcome centering}
@@ -360,22 +360,23 @@ controls are not silently dropped. See the
 
 {marker se}{...}
 {pstd}
-{bf:Standard errors (the default).} {cmd:fevc} reports a standard error and
-a normal confidence interval for each of the four components and posts their
-covariance as {cmd:e(V)}, so {cmd:lincom} and {cmd:test} work. The default,
-{cmd:inference(auto)}, computes them whenever the request can carry them and
-otherwise returns point estimates with a one-line reason; it never changes
-the backend, algorithm or solver route you selected, and if the calculation
-that carries them stops, the command runs once more without them so that the
-point estimates are always returned. {cmd:inference(none)} turns them off.
-{cmd:inference(highrank) inferencemodel(leaveout_residual)} requests the same
-standard errors strictly: the command stops if they cannot be computed.
+{bf:Standard errors and intervals (the default).} {cmd:fevc} reports a
+confidence interval for each of the four components and, where an estimate
+is close to normal, its standard error. The default, {cmd:inference(auto)},
+computes repeat-measurement standard errors and decides, component by
+component, between the normal interval and the q = 1 interval described
+below. When every component receives a normal interval, the covariance of
+the components is posted as {cmd:e(V)}, so {cmd:lincom} and {cmd:test}
+work. The default does this whenever the request can carry it and otherwise
+returns point estimates with a one-line reason; it never changes the
+backend, algorithm or solver route you selected, and if the calculation that
+carries the standard errors stops, the command runs once more without them
+so that the point estimates are always returned. {cmd:inference(none)}
+turns them off. {cmd:inference(auto) inferencemodel(repeat_measurement)}
+requests the same strictly: the command stops if they cannot be computed.
 
 {pstd}
-{bf:Repeat-measurement standard errors.}
-{cmd:inference(highrank) inferencemodel(repeat_measurement)} requests a
-different variance method on the same units and with the same linear solves.
-Deletion units that share a worker and a firm are independent repeat
+{it:The variances.} Deletion units that share a worker and a firm are independent repeat
 measurements of one mean, so their error variance is estimated by their own
 sample variance, with no model linking them to other workers. Under
 {cmd:deletion(match)} these are the observations of a stayer, and a mover's
@@ -386,94 +387,73 @@ match size times a quadratic in the standardised estimated worker and firm
 effects, both fitted to leave-out variance products. The covariance is the
 KSS high-rank form with these variances plus a closed-form term for the
 pairs of units of one repeat-measurement set; it is reported as computed,
-without truncation. The method is available under both deletion modes. It
-treats estimated control coefficients as known and is only as good as the
-fitted model for the units without repeat measurements.
+without truncation.
 
 {pstd}
-{it:One interval per component.} With {cmd:inference(auto)} or
-{cmd:inference(q1)} the method also finds, for every component, the
-direction of the worker-firm network along which the estimate is most
-sensitive (the eigenvector of largest absolute eigenvalue), and what the
-estimate looks like along it. When no direction matters much, the estimate
-is close to normal and its interval is the estimate plus or minus 1.96
-standard errors. When one direction carries much of the sampling variance,
-as with a bottleneck between two parts of the network, the estimate is not
-close to normal; the interval is then the q = 1 interval of Kline, Saggio
-and S{c o/}lvsten (2020, Section 6), which need not be symmetric, and the
-component has no standard error. {cmd:inference(auto)} reports the q = 1
-interval for a component when its leading direction carries more than 5% of
-the estimated sampling variance or when the variance estimate is not
-positive, and the normal interval otherwise; the variance of the sum always
-keeps the normal interval. {cmd:inference(q1)} reports the q = 1 interval
-for every component that has one, and {cmd:inference(highrank)} computes no
-direction and reports normal intervals only. {cmd:e(V)} is posted only when
-every component has a normal interval; the display says which interval each
-component received and why. The directions cost a few dozen linear solves on
-top of the standard errors.
+{it:One interval per component.} For every component the command also
+finds the direction of the worker-firm network along which the estimate is
+most sensitive (the eigenvector of largest absolute eigenvalue), and what
+the estimate looks like along it. When no direction matters much, the
+estimate is close to normal and its interval is the estimate plus or minus
+1.96 standard errors. When one direction carries much of the sampling
+variance, as with a bottleneck between two parts of the network, the
+estimate is not close to normal; the interval is then the q = 1 interval of
+Kline, Saggio and S{c o/}lvsten (2020, Section 6), which need not be
+symmetric, and the component has no standard error. A component receives
+the q = 1 interval when its leading direction carries more than 10% of the
+estimated sampling variance or when the variance estimate is not positive,
+and the normal interval otherwise; the variance of the sum always keeps the
+normal interval. {cmd:e(V)} is posted only when every component has a
+normal interval; the display says which interval each component received
+and why, and {cmd:e(inference_intervals)} holds both intervals of every
+component. {cmd:inference(q1)} reports the q = 1 interval for every
+component that has one, and {cmd:inference(highrank)} computes no
+direction and reports normal intervals only.
 
 {pstd}
-{it:Cost.} On the native backend they add three linear solves plus four per
-draw, 35 with the default {cmd:inferencedraws(8)}, against roughly 600 to 800
-for the point estimates. With controls under the default
-{cmd:nuisance(joint)} they add one further pass of two solves per probe
-(400 by default), because the standard errors use a fixed-offset version of
-the units; {cmd:nuisance(fixedoffset)} avoids that pass. On the Mata backend
-with {cmd:algorithm(jla)} they are computed in a separate stage that costs
-about as much as the point estimates.
+{it:Cost.} On the native backend the default adds about 90 linear solves
+to the roughly 600 to 800 of the point estimates: three plus four per draw
+for the standard errors (35 with the default {cmd:inferencedraws(8)}) and
+a few dozen for the directions and the q = 1 pieces. With controls under the
+default {cmd:nuisance(joint)} it adds one further pass of two solves per
+probe (400 by default), because the standard errors use a fixed-offset
+version of the units; {cmd:nuisance(fixedoffset)} avoids that pass. On the
+Mata backend with {cmd:algorithm(jla)} they are computed in a separate
+stage that costs about as much as the point estimates.
 
 {pstd}
-{it:What it does.} The KSS estimate is a quadratic form in the outcome. Its
-sampling variance has a leading part that is linear in the errors and a
-smaller part that is quadratic in them. The leading part is estimated from
-squared regression residuals, each divided by its residual-maker diagonal
-(the HC2 form). The quadratic part, and the pure-noise amount that squaring
-noisy estimates adds to the leading part, are found by passing simulated
-noise through exactly the calculation applied to the data. A small working
-model of the error variances (ranks of leverage and unit size, by movers and
-stayers) is used only to generate that noise. With controls, the units are
-formed after subtracting the fitted control index, and a first-order term
-adds the uncertainty in the estimated control coefficients; the same standard
-error serves {cmd:nuisance(joint)} and {cmd:nuisance(fixedoffset)}, whose
-point estimates agree to first order. See the technical supplement
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/standard_errors/standard_errors.tex":docs/standard_errors}.
-
-{pstd}
-{it:What it assumes.} These standard errors need more than the point
-estimates do:
+{it:What it assumes.} The intervals need more than the point estimates do:
 
 {phang2}1. Deletion units are independent. Under match deletion each stayer
-observation is its own unit, as in the point correction for stayers.{p_end}
-{phang2}2. Error variances are similar among units that share a worker or a
-firm, or their differences are unrelated to the squared influence of those
-units. {bf:The standard errors are not robust to arbitrary}
-{bf:heteroskedasticity.} With the high leverage of worker-firm data a
-squared residual averages the variances of linked units, so this cannot be
-avoided without the leave-two-out sample splitting of KSS, which {cmd:fevc}
-does not implement.{p_end}
-{phang2}3. For the normal interval, no single direction and no single unit
-dominates a component.{p_end}
+observation is its own unit, as in the point correction for stayers. The
+sample variance of a repeat-measurement set needs nothing else.{p_end}
+{phang2}2. For units without repeat measurements (a mover's collapsed
+match; under observation deletion a mover's match of one observation) the
+error variance follows the fitted model. {bf:The intervals are as good as}
+{bf:that model}; they are not robust to arbitrary heteroskedasticity among
+those units.{p_end}
+{phang2}3. At most one direction of the network dominates a component, and
+no single deletion unit dominates that direction. Two or more dominant
+directions are not covered by either interval.{p_end}
+{phang2}4. Estimated control coefficients are treated as known.{p_end}
 
 {pstd}
-Heavy-tailed errors make these standard errors too large rather than too
-small. Under {cmd:centering(corrected)} they describe the mean-centred
-estimate and treat the small corrected-centering increment as fixed. The
-numerical MCSE remains a separate, computational quantity.
+The choice between the two intervals is made from the data.
+The rule and its threshold come from development simulations through the command itself; they have not been confirmed in a registered run.
+There is no theoretical result for a data-dependent choice between the two
+intervals. Under {cmd:centering(corrected)} the intervals describe the
+mean-centred estimate and treat the small corrected-centering increment as
+fixed. The numerical MCSE remains a separate, computational quantity.
 
 {pstd}
-{it:Diagnostics.} {cmd:e(inference_effective_rank)} reports, for each
-component, the effective rank of the squared kernel estimated from the
-draws, with the implied lower and upper bounds on the share of the leading
-direction. Values in the hundreds or more indicate a diffuse component. A
-value near one means a few directions carry the component, as when two
-groups of firms are joined by a handful of movers; normal intervals then
-under-cover whatever variance estimate is used, the display warns, and
-{cmd:inference(q1)} is the method designed for that case.
-{cmd:e(inference_max_influence_share)} is the largest share of the squared
-first-order influence held by one unit. {cmd:e(inference_psd_cleanup)}
-records any truncation of the leading part to a positive semidefinite
-matrix, and {cmd:e(variance_floor_share)} the share of units at the working
-variance floor.
+{it:Diagnostics.} {cmd:e(inference_intervals)} holds, for each component,
+the estimate, the standard error, both intervals and the one reported, the
+share of the estimated sampling variance carried by the leading direction,
+the curvature of the estimate along it, and the largest squared weight of
+one deletion unit in the direction. The display warns when that weight
+exceeds 0.1, when a search for a direction did not settle, and when a
+component calls for an interval that could not be formed.
+{cmd:e(inference_leading)} holds the pieces of the decomposition.
 
 {pstd}
 {it:Where it is available.} Both deletion modes, {cmd:deletionid()},
@@ -500,9 +480,60 @@ failure that can come from the standard errors is followed by one more run
 without them; option, variable and sample errors are reported once.
 
 {pstd}
-The evidence for this method is a simulation study and dense-oracle tests
-described in the supplement; it is development evidence, not a coverage
-guarantee.
+{bf:Leave-out residual standard errors.}
+{cmd:inferencemodel(leaveout_residual)}, with {cmd:inference(auto)} or
+strictly with {cmd:inference(highrank)}, requests the standard errors that
+were the default before: a standard error and a normal interval for each of
+the four components, with {cmd:e(V)}, and no q = 1 alternative. They are
+available wherever the default is.
+
+{pstd}
+{it:What it does.} The KSS estimate is a quadratic form in the outcome. Its
+sampling variance has a leading part that is linear in the errors and a
+smaller part that is quadratic in them. The leading part is estimated from
+squared regression residuals, each divided by its residual-maker diagonal
+(the HC2 form). The quadratic part, and the pure-noise amount that squaring
+noisy estimates adds to the leading part, are found by passing simulated
+noise through exactly the calculation applied to the data. A small working
+model of the error variances (ranks of leverage and unit size, by movers and
+stayers) is used only to generate that noise. With controls, the units are
+formed after subtracting the fitted control index, and a first-order term
+adds the uncertainty in the estimated control coefficients; the same standard
+error serves {cmd:nuisance(joint)} and {cmd:nuisance(fixedoffset)}, whose
+point estimates agree to first order. See the technical supplement
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/standard_errors/standard_errors.tex":docs/standard_errors}.
+
+{pstd}
+They assume independent deletion units, as above, and that error variances
+are similar among units that share a worker or a firm, or that their
+differences are unrelated to the squared influence of those units.
+{bf:They are not robust to arbitrary heteroskedasticity.} With the high
+leverage of worker-firm data a squared residual averages the variances of
+linked units, so this cannot be avoided without the leave-two-out sample
+splitting of KSS, which {cmd:fevc} does not implement. The normal interval
+also needs that no single direction and no single unit dominates a
+component. Heavy-tailed errors make these standard errors too large rather
+than too small.
+
+{pstd}
+{it:Diagnostics.} {cmd:e(inference_effective_rank)} reports, for each
+component, the effective rank of the squared kernel estimated from the
+draws, with the implied lower and upper bounds on the share of the leading
+direction. Values in the hundreds or more indicate a diffuse component. A
+value near one means a few directions carry the component, as when two
+groups of firms are joined by a handful of movers; normal intervals then
+under-cover whatever variance estimate is used, the display warns, and
+{cmd:inference(q1)} is the method designed for that case.
+{cmd:e(inference_max_influence_share)} is the largest share of the squared
+first-order influence held by one unit. {cmd:e(inference_psd_cleanup)}
+records any truncation of the leading part to a positive semidefinite
+matrix, and {cmd:e(variance_floor_share)} the share of units at the working
+variance floor.
+
+{pstd}
+The evidence for the leave-out residual method is a simulation study and
+dense-oracle tests described in the supplement; it is development evidence,
+not a coverage guarantee.
 
 {pstd}
 {bf:Other inference methods.}
@@ -511,8 +542,8 @@ normal-approximation (Gaussian) intervals for the four components. They
 require that no single direction in the data dominate a component and that
 individual observations have limited influence. {cmd:inference(q1)} allows
 one dominant, weakly identified direction with a diffuse remainder; it does
-not cover several such directions (multi-mode weakness). There is no
-automatic choice between them, and successful computation does not
+not cover several such directions (multi-mode weakness). For these methods
+there is no automatic choice between them, and successful computation does not
 establish valid coverage. Both rely on a model for the error variances and
 on assumptions beyond those needed for point estimates. Under the default
 {cmd:centering(mean)}, the observed mean is treated as fixed, which requires

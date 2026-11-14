@@ -120,6 +120,8 @@ def test_stata_front_end_admits_the_model_explicitly_for_both_deletion_modes():
         in route
     )
     assert '"repeat_measurement","leaveout_residual")' in route
+    # Without a model inference(auto), the default, selects this one.
+    assert "if `se_auto' & !`model_typed' local residual_model repeat_measurement" in route
     post = read("fevc/fevc__residual_se_post.ado")
     assert "program define _fevc_repeat_se_post, eclass" in post
     assert 'ereturn local inference_variance_fit "repeat_measurement"' in post
@@ -160,7 +162,7 @@ def test_leading_directions_travel_through_their_own_export_and_one_stata_helper
     # package file list does not change.
     assert "program define _fevc_se_regime_decide" in post
     assert "program define _fevc_se_regime_post, eclass" in post
-    assert "local share_threshold .05" in post
+    assert "local share_threshold .1" in post
     assert 'if "`1\'"=="regime_decide" {' in post
     fetch = read("fevc/fevc__rust_component_fetch.ado")
     assert "fevc__residual_se_post regime_decide `computed' `posted' `level'" in fetch

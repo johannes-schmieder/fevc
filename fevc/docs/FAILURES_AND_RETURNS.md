@@ -395,8 +395,8 @@ The explicitly selected Rust structured modes use
 `FEVC_STRUCTURED_Q0_INFERENCE` and `FEVC_STRUCTURED_Q1_INFERENCE`. The FEVC
 prefix is intentional: these are pragmatic structured-variance extensions,
 not the paper's unrestricted-heteroskedastic KSS variance-product estimator.
-Repeat-measurement standard errors
-(`inference(highrank) inferencemodel(repeat_measurement)`) post
+Repeat-measurement standard errors (the default, `inference(auto)`, and
+`inferencemodel(repeat_measurement)` by name) post
 `FEVC_REPEAT_MEASUREMENT_SE`, or `FEVC_REPEAT_MEASUREMENT_SE_PARTIAL` when a
 component variance is withheld, with `e(inference_variance_fit)` equal to
 `repeat_measurement`, the returns of the leave-out residual pass listed next,
@@ -409,7 +409,7 @@ profile coefficients), with `e(inference_repeat_sets)` and
 more deletion units: an eligible stayer under match deletion, and under
 observation deletion also every match of a mover with two or more
 observations.
-With `inference(auto)` or `inference(q1)` the same model also posts
+With `inference(auto)`, the default, or `inference(q1)` the model also posts
 `e(inference_intervals)` (one row per target: estimate, high-rank standard
 error, normal bounds, `q = 1` bounds, regime (0 normal, 1 `q = 1`, missing
 when neither exists), the reported bounds, the share of the estimated
@@ -424,14 +424,16 @@ with the 28 values of the leading direction and its decomposition), with
 interval; `e(V)` is then not posted, `e(inference_joint_posted)` is zero and
 the native joint status is 3. `e(inference)` remains `highrank`, the pass
 that was run, and `e(component_inference)` keeps the normal table.
-Leave-out residual standard errors post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
+Leave-out residual standard errors (`inferencemodel(leaveout_residual)`)
+post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
 `FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL` when a component variance is withheld,
 with `e(inference_variance_fit)` equal to `leaveout_residual`,
 `e(inference_draws)`, `e(inference_effective_rank)`,
 `e(inference_max_influence_share)`, `e(inference_low_rank_warning)` and the
-assumption text in `e(inference_variance_warning)`. Under the default
-`inference(auto)`, `e(inference_auto)` is 1 and `e(inference_auto_reason)` is
-empty when they were computed and otherwise states why the request returned
+assumption text in `e(inference_variance_warning)`. Under
+`inference(auto)`, with either model, `e(inference_auto)` is 1 and
+`e(inference_auto_reason)` is empty when the standard errors were computed
+and otherwise states why the request returned
 point estimates only; that outcome is not a failure and keeps the
 point-estimate status. If the run that carried them stops, the command runs
 once more without them and the reason names the status of the stopped run.

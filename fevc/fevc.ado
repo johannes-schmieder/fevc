@@ -3,8 +3,9 @@
 *! Implements the Kline-Saggio-Solvsten estimator with a source-only Mata
 *! backend and an optional Rust backend. This file validates requests,
 *! prepares the sample, dispatches computation, and posts checked results.
-*! Leave-out residual standard errors accompany the point estimates by
-*! default (inference(auto)); inference(none) gives point estimates only.
+*! Repeat-measurement standard errors and one interval per component (normal
+*! or q = 1) accompany the point estimates by default (inference(auto));
+*! inference(none) gives point estimates only.
 *! Projection and the other inference methods require explicit requests.
 
 program define fevc, eclass

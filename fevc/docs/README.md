@@ -50,8 +50,9 @@ status are in [native provenance](../../native/README.md).
   implementation, independent algebra, bounded sampling assessment, companion
   technical note and exact-source platform qualification.
 - [Standard errors: technical supplement](standard_errors/standard_errors.tex): the
-  leave-out residual method behind `inferencemodel(leaveout_residual)` and
-  `inference(auto)`, its assumptions, diagnostics, simulation evidence and
+  leave-out residual method behind `inferencemodel(leaveout_residual)` (the
+  default until the repeat-measurement model of [INFERENCE.md](INFERENCE.md)
+  replaced it), its assumptions, diagnostics, simulation evidence and
   implementation status. LaTeX source; build with `latexmk -pdf`.
 - [Automatic standard errors: proposal](AUTOMATIC_INFERENCE_PROPOSAL.md): diagnosis of the
   earlier inference routes, the design choice and the first prototype evidence. The

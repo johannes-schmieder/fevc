@@ -13,7 +13,8 @@ with the fixed-mean/increment conventions in [CENTERING.md](CENTERING.md).
 
 ## Leave-out residual standard errors
 
-`inferencemodel(leaveout_residual)` and `inference(auto)` use a different
+`inferencemodel(leaveout_residual)`, the default before the
+repeat-measurement model of the next section, uses a different
 construction from the methods described below: squared residuals carry the
 leading term of the KSS variance formula, and simulated noise passed through
 the estimator supplies the quadratic term and a calibration. They assume
@@ -25,9 +26,11 @@ document concerns the earlier exact and structured methods.
 
 ## Repeat-measurement standard errors
 
-`inference(highrank) inferencemodel(repeat_measurement)` is an explicit
-request; `inference(auto)` never selects it. It runs the same pass as the
-leave-out residual method on the deletion units (under match deletion the
+This model, with one interval per component, is the default:
+`inference(auto)` without `inferencemodel()` selects it, and
+`inferencemodel(repeat_measurement)` requests it by name with
+`inference(auto)`, `inference(highrank)` or `inference(q1)`. It runs the
+same pass as the leave-out residual method on the deletion units (under match deletion the
 collapsed mover matches and one unit per physical stayer observation; under
 observation deletion every physical observation), with three influence
 solves and four solves per pseudo-noise draw, and differs in the variances
@@ -118,17 +121,57 @@ draws where the pass alone takes 35.
 The reported interval is chosen component by component, by one rule on every
 route (`fevc__residual_se_post.ado`). With `inference(auto)` a component
 receives the `q = 1` interval when its leading direction carries more than
-five per cent of the estimated sampling variance,
+ten per cent of the estimated sampling variance,
 `(4 lambda^2 max(b^2 - V[b], 0) V[b] + 2 lambda^2 V[b]^2) / V-hat`, or when
 the high-rank variance estimate is not positive, and the normal interval
 otherwise; the variance of the sum, whose nonzero eigenvalues are all equal,
 keeps the normal interval. With `inference(q1)` every target receives the
 `q = 1` interval when it exists. A `q = 1` component has no standard error,
-and `e(V)` is posted only when every component has a normal interval. The
-threshold is a development choice from simulations with stored draws; it has
-not been confirmed in a registered run. Neither KSS nor the technical note
-has a result for a data-dependent choice between the two intervals, and the
-case of two or more dominant directions is not covered.
+and `e(V)` is posted only when every component has a normal interval.
+Neither KSS nor the technical note has a result for a data-dependent choice
+between the two intervals, and the case of two or more dominant directions
+is not covered. The share is a ratio of two estimates and can exceed one;
+the display then says "over 100%".
+
+#### Development of the rule
+
+The statistic and the threshold were chosen on simulations through the
+command itself (Stata with a plugin built from the source, package
+defaults: 200 probes, eight draws): 16 two-block designs of about 48,000
+person-years, from no bottleneck to 30 bridging workers, with error
+variances that follow or violate the fitted model and normal or skewed
+errors, under match and observation deletion, 1,000 replications each
+(32,000 fits, none failed). Their realised regimes, computed without
+outcomes, span a true curvature of 0.007 to 8.6 and a true share of the
+leading direction of 0.001 to 1. Over the 96 cases (design, deletion mode,
+component):
+
+| interval reported | lowest coverage | cases below 0.935 | `q = 1` used without a bottleneck | `e(V)` posted without a bottleneck |
+|---|---|---|---|---|
+| always normal | 0.770 | 27 | 0% | 100% |
+| always `q = 1` | 0.940 | 0 | 100% | 0% |
+| share above 5% | 0.940 | 0 | 9.8% | 76% |
+| share above 10% (the rule) | 0.937 | 0 | 4.3% | 89% |
+| share above 20% | 0.935 | 0 | 1.7% | 95% |
+| share above 50% | 0.935 | 0 | 0.3% | 99% |
+| curvature above 0.3 | 0.919 | 4 | 6.6% | 83% |
+| squared part of the share above 5% | 0.919 | 10 | 5.6% | 86% |
+
+The nominal level is 0.95 and the Monte Carlo standard error of one
+coverage is 0.007. Rules that look only at the curvature, or only at the
+part of the share that is quadratic in the noise, miss designs in which the
+leading direction is mostly signal: the estimate is then close to normal,
+but its variance rests on the few units that carry the direction, and the
+normal interval covers 0.92 to 0.93. On earlier stored draws of the
+prototype (27 designs) the lowest coverage falls from 0.939 at 5% and 0.937
+at 10% to 0.933 at 20% and 0.924 at 50%. Ten per cent keeps the protection
+of the lower threshold and halves the `q = 1` intervals reported where
+there is no bottleneck. The variance of the sum, always reported with the
+normal interval, covers 0.941 to 0.969. On three panels of the Veneto data
+(2.3 to 5.2 million person-years, both deletion modes) every component
+receives the normal interval under this rule (shares 0.03% to 8.1%), and
+the default costs 24% to 31% more time than the point estimates alone.
+These are development results: the rule was chosen on them.
 
 Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
 addition to the bits of the leave-out residual pass; variance-source code 4

@@ -1,6 +1,7 @@
-* Leave-out residual standard errors: the default request and its routes.
-* Written without access to Stata; it has not been executed. Every fevc call
-* names inference() so that FEVC_DEFAULT_INFERENCE cannot change its meaning.
+* Leave-out residual standard errors under inference(auto) and their routes.
+* The model is named in every request: inference(auto) alone selects the
+* repeat-measurement model. Every fevc call names inference() so that
+* FEVC_DEFAULT_INFERENCE cannot change its meaning.
 version 18.0
 clear all
 set more off
@@ -69,12 +70,12 @@ matrix point = e(kss)
 capture confirm scalar e(inference_auto)
 assert _rc
 
-* --- the default request, without and with controls --------------------------
+* --- the automatic request, without and with controls ------------------------
 foreach controls in "" "x1 x2" {
     local q : word count `controls'
     quietly fevc log_wage `controls', worker(worker_id) firm(firm_id) inference(none) nodisplay
     matrix point = e(kss)
-    quietly fevc log_wage `controls', worker(worker_id) firm(firm_id) inference(auto) nodisplay
+    quietly fevc log_wage `controls', worker(worker_id) firm(firm_id) inference(auto) inferencemodel(leaveout_residual) nodisplay
     * Standard errors do not change the estimator. On the native backend
     * they select another executor (and, for a mover-only request without
     * controls, the generic engine), so agreement is to solver tolerance.
@@ -116,41 +117,41 @@ foreach controls in "" "x1 x2" {
 foreach options in "deletion(observation)" "stayers(movers)"                 ///
     "nuisance(fixedoffset)" "centering(corrected)" "centering(none)" {
     quietly fevc log_wage x1, worker(worker_id) firm(firm_id) `options' ///
-        inference(auto) nodisplay
+        inference(auto) inferencemodel(leaveout_residual) nodisplay
     if "`e(backend_selected)'"=="mata" | `native' _se_check 1
 }
 
 * --- the Mata runtime: linear solves and exact kernels ------------------------
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
-    inference(auto) nodisplay
+    inference(auto) inferencemodel(leaveout_residual) nodisplay
 _se_check 1
 assert "`e(backend_selected)'"=="mata"
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) inference(auto) nodisplay
+    algorithm(exact) inference(auto) inferencemodel(leaveout_residual) nodisplay
 _se_check 1
 * More draws change only the simulated part of the variance; the estimates
 * themselves are untouched.
 matrix exact_b = e(b)
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) inference(auto) inferencedraws(64) nodisplay
+    algorithm(exact) inference(auto) inferencemodel(leaveout_residual) inferencedraws(64) nodisplay
 _se_check 1 64
 assert mreldif(exact_b,e(b))<1e-12
 * Without controls the exact unit kernel must reproduce the posted estimate;
 * a mismatch stops the command with TARGET_IDENTITY_FAILED.
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) inference(auto) nodisplay
+    algorithm(exact) inference(auto) inferencemodel(leaveout_residual) nodisplay
 _se_check 0
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) nuisance(fixedoffset) inference(auto) nodisplay
+    algorithm(exact) nuisance(fixedoffset) inference(auto) inferencemodel(leaveout_residual) nodisplay
 _se_check 1
 
 * --- explicit strict request and its limits ----------------------------------
 capture quietly fevc log_wage, worker(worker_id) firm(firm_id) ///
     inference(q1) inferencemodel(leaveout_residual) nodisplay
 assert _rc==498 & "`e(withholding_status)'"=="LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED"
-* project() does not carry them: the default returns point estimates.
+* project() does not carry them: the request returns point estimates.
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) project(x1) projecteffect(firm) inference(auto) nodisplay
+    algorithm(exact) project(x1) projecteffect(firm) inference(auto) inferencemodel(leaveout_residual) nodisplay
 capture confirm matrix e(V)
 assert _rc
 assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""

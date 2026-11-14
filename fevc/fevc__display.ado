@@ -390,8 +390,13 @@ program define _fevc_display_interval_notes
         if `table'[`row',7]==0 & `table'[`row',16]!=0 & !missing(`share') & ///
             `share'>e(inference_share_threshold) local unavailable 1
         if !missing(`share') local largest = max(`largest',`share')
+        // The share is a ratio of two estimates: it can exceed one, and it
+        // does not exist when the variance estimate is not positive.
         local text : display %4.1f 100*`share'
-        local shares "`shares'`=cond(`row'>1,", ","")'`=strtrim("`text'")'%"
+        local text = strtrim("`text'")+"%"
+        if missing(`share') local text "none"
+        else if `share'>1 local text "over 100%"
+        local shares "`shares'`=cond(`row'>1,", ","")'`text'"
         if `table'[`row',7]==1 & `table'[`row',14]>.1 local weighty 1
         if missing(`table'[`row',7]) local none 1
     }

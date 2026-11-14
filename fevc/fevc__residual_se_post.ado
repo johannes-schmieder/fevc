@@ -248,7 +248,7 @@ end
 program define _fevc_se_regime_decide
     version 18.0
     args V b level
-    local share_threshold .05
+    local share_threshold .1
     global VCKSS_SE_ANY_Q1 0
     capture matrix drop __fevc_se_intervals
     capture confirm matrix __fevc_se_leading

@@ -2,8 +2,19 @@
 
 ## Unreleased
 
-- Add repeat-measurement standard errors as an explicit request,
-  `inference(highrank) inferencemodel(repeat_measurement)`, under match and
+- Make repeat-measurement standard errors with one interval per component
+  the default. `inference(auto)` without `inferencemodel()` now selects
+  `inferencemodel(repeat_measurement)`: every component is reported with the
+  normal interval or, when its leading direction carries more than ten per
+  cent of the estimated sampling variance or its variance estimate is not
+  positive, with the `q = 1` interval; `e(V)` is posted when all components
+  are normal, and the display explains the choice.
+  `inferencemodel(leaveout_residual)` keeps the earlier default. The rule
+  was developed on simulations through the command (16 designs, both
+  deletion modes, 32,000 fits; `docs/INFERENCE.md`); on three Veneto panels
+  the default adds 24% to 31% to the time of the point estimates.
+- Add repeat-measurement standard errors,
+  `inferencemodel(repeat_measurement)`, under match and
   observation deletion: deletion units that share a worker-firm cell (a
   stayer's observations; under observation deletion also a mover's match of
   two or more observations) receive the sample variance of their outcomes;
@@ -14,21 +25,18 @@
   of units of one cell, reported without truncation. Under observation
   deletion with jointly estimated controls the native route adds an offset
   pass so that the control index is held fixed.
-  Estimated control coefficients are treated as known. The default
-  (`inference(auto)` without a model, `leaveout_residual`) is unchanged.
-- With `inference(auto)` or `inference(q1)` and
-  `inferencemodel(repeat_measurement)` the pass also finds the leading
+  Estimated control coefficients are treated as known.
+- With `inference(auto)` or `inference(q1)` the pass also finds the leading
   direction of every component (a Lanczos iteration, a few dozen linear
   solves) and the `q = 1` decomposition along it, and reports one interval
   per component: the normal interval, or the Andrews-Mikusheva interval of
-  KSS when the direction carries more than five per cent of the estimated
+  KSS when the direction carries more than ten per cent of the estimated
   sampling variance or the variance estimate is not positive
   (`inference(q1)`: wherever it exists). A `q = 1` component has no standard
   error, `e(V)` is posted only when every component is normal, and the
   display explains which interval each component received. New returns:
   `e(inference_intervals)`, `e(inference_leading)` and their scalars; new
-  status `FEVC_REPEAT_MEASUREMENT_Q1`. The five per cent threshold is a
-  development choice, not yet confirmed in a registered run.
+  status `FEVC_REPEAT_MEASUREMENT_Q1`.
 - The new model is a variant of the leave-out residual pass: same units,
   solves, routes and memory accounting. Native capability bit 19 and
   variance-source code 4 are additive, with a new diagnostic export
@@ -45,8 +53,9 @@
   stopped with `INFERENCE_DELETION_UNSUPPORTED` for match deletion, so a
   plain `fevc y, worker() firm()` failed unless
   `FEVC_DEFAULT_INFERENCE=none` was set.
-- Report leave-out residual standard errors, normal intervals and `e(V)` for
-  the four components by default (`inference(auto)`). `inference(none)` gives
+- Add leave-out residual standard errors, normal intervals and `e(V)` for
+  the four components (`inferencemodel(leaveout_residual)`; the default
+  until the repeat-measurement model replaced it). `inference(none)` gives
   point estimates only; `inference(highrank) inferencemodel(leaveout_residual)`
   requests them strictly; `inferencedraws(#)` sets the pseudo-noise draws.
 - The default never changes the selected backend, algorithm or solver route,
@@ -58,9 +67,10 @@
   cost of the point estimates.
 - A mover-only request without controls runs on the generic engine when
   standard errors are attached.
-- The standard errors assume similar error variances among units sharing a
-  worker or firm and are not robust to arbitrary heteroskedasticity. The
-  display states this and reports an effective-rank diagnostic.
+- The leave-out residual standard errors assume similar error variances
+  among units sharing a worker or firm and are not robust to arbitrary
+  heteroskedasticity. The display states this and reports an effective-rank
+  diagnostic.
 - Not covered: `project()` in the same call, observation deletion with a
   fixed offset or (native) frequency weights, `algorithm(auto)`, and native
   `algorithm(exact)`. These return point estimates with a reason.
