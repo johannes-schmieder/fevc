@@ -400,7 +400,9 @@ Repeat-measurement standard errors (the default, `inference(auto)`, and
 `FEVC_REPEAT_MEASUREMENT_SE`, or `FEVC_REPEAT_MEASUREMENT_SE_PARTIAL` when a
 component variance is withheld, with `e(inference_variance_fit)` equal to
 `repeat_measurement`, the returns of the leave-out residual pass listed next,
-`e(inference_nuisance_omitted)` equal to one, and the shape of the variances
+`e(inference_nuisance_omitted)` equal to zero when the model has controls
+(their estimation enters the standard errors to first order) and to one
+when it has none, and the shape of the variances
 in `e(inference_repeat)` (one row: scale terms, profile terms, scale floor,
 units at the scale floor, repeat-measurement sets, their units, their units
 at the variance floor, the worker-variance entry of the pair term, six

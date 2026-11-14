@@ -436,12 +436,15 @@ those units.{p_end}
 {phang2}3. At most one direction of the network dominates a component, and
 no single deletion unit dominates that direction. Two or more dominant
 directions are not covered by either interval.{p_end}
-{phang2}4. Estimated control coefficients are treated as known. With a
-control that is strongly correlated with the worker and firm effects the
-standard errors are then too small, that of the total most of all (9% to
-16% in the example of the inference guide; coverage 0.90 to 0.92).
-{cmd:inferencemodel(leaveout_residual)} carries a term for the control
-coefficients.{p_end}
+{phang2}4. With controls, the standard errors are those of the estimate
+formed after subtracting the fitted control index, and the estimation of
+the control coefficients enters to first order. This needs coefficients
+that the data identify well and error variances that do not move with a
+control inside a worker-firm cell. Under the default {cmd:nuisance(joint)}
+the point estimate re-estimates the coefficients in every leave-out fit; a
+term that this adds is not covered, and it matters when the control index
+is as large as the worker and firm effects (the inference guide gives the
+formulas and the simulations).{p_end}
 {phang2}5. The errors are not negligible next to the outcome's explained
 variation. Where they are, the fitted model can lack a positive scale; the
 default then returns point estimates and says so.{p_end}
@@ -513,8 +516,9 @@ model of the error variances (ranks of leverage and unit size, by movers and
 stayers) is used only to generate that noise. With controls, the units are
 formed after subtracting the fitted control index, and a first-order term
 adds the uncertainty in the estimated control coefficients; the same standard
-error serves {cmd:nuisance(joint)} and {cmd:nuisance(fixedoffset)}, whose
-point estimates agree to first order. See the technical supplement
+error serves {cmd:nuisance(joint)} and {cmd:nuisance(fixedoffset)}. It is
+the standard error of the fixed-offset estimate; the joint estimate differs
+from it by a term that involves the control index and is not covered. See the technical supplement
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/standard_errors/standard_errors.tex":docs/standard_errors}.
 
 {pstd}

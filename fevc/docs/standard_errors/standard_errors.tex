@@ -301,9 +301,12 @@ row $(1,1,2)$ to the identity; it has rank three by construction, and
 \fevc{} offers two treatments of controls. With \texttt{nuisance(joint)},
 the default, controls stay in the regression and are re-estimated in every
 leave-out fit. With \texttt{nuisance(fixedoffset)}, $\hat\gamma$ is estimated
-once and held fixed. The two point estimates agree to first order: in the
-simulations they differ by 2 to 11\% of one standard deviation. One standard
-error therefore serves both, computed on the rows of \eqref{eq:collapse}.
+once and held fixed. In the simulations the two point estimates differ by 2
+to 11\% of one standard deviation, and one standard error serves both,
+computed on the rows of \eqref{eq:collapse}. It is the standard error of the
+fixed-offset estimate. The two estimates are not equivalent to first order
+in general (see the end of this note), and the part of the joint estimate's
+variance that comes from the difference is not covered.
 
 What that calculation must add is the uncertainty in $\hat\gamma$. Let
 $\tilde z_i$ be the controls after removing the two-way effects,
@@ -904,8 +907,16 @@ $\lambda_1^4\le\sum_j\lambda_j^4\le\lambda_1^2\sum_j\lambda_j^2$.
 \paragraph{Joint and fixed-offset estimates.} Both use the same two-way
 coefficients, because the joint fit of the effects equals their fit to
 $y-Z\hat\gamma$. They differ in the leave-out correction, where the joint
-version also lets $\gamma$ move; that difference is of order $k/n$ relative
-to the correction for $k$ controls. Projecting the full design gives
+version also lets $\gamma$ move and multiplies its residual with the outcome
+rather than the adjusted outcome. Writing $M$, $D=\diag(B_{ii}/M_{ii})$ for
+the residual maker and the correction weights of the model without controls,
+$M^{\mathrm f}$, $D^{\mathrm f}$ for those of the full model, and $\mu$ for
+the mean of the adjusted outcome, the mean influences of the two estimates
+differ by $-\tfrac12M^{\mathrm f}\{(D^{\mathrm f}-D)\mu+D^{\mathrm f}Z\gamma\}$.
+The second term involves the control index $Z\gamma$ and need not vanish to
+first order (it does when $D^{\mathrm f}$ is a multiple of the identity); an
+earlier version of this note called the difference of order $k/n$, which is
+not right in general. Projecting the full design gives
 $P_{[D,Z]}=P_D+\tilde Z\Lambda\tilde Z'$, so $\hat\gamma-\gamma=
 \Lambda\tilde Z'\varepsilon$, and a first-order expansion of the fixed-offset
 estimate in $\gamma$ gives \eqref{eq:score}. Within a unit,

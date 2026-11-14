@@ -61,20 +61,78 @@ and in how the covariance is assembled:
   mover's set contributes to every entry. Nothing is truncated or
   projected: a nonpositive variance is reported as a withheld target.
 
-With true variances for the units outside sets the estimate is exactly
-unbiased when the errors of every set are normal with one variance per set,
-whatever those variances are. With the fitted model it is as good as that model; estimated effects
-enter the profile, estimated control coefficients are treated as known
-(`e(inference_nuisance_omitted)` is one), and the observed mean is handled
-as in the leave-out residual pass. Under observation deletion with jointly
-estimated controls the rows of one cell differ in their regressors; the
-standard error is then the one of the model without controls for the
-outcome net of the estimated control index, which the native route forms in
-an offset pass of two solves per point-estimate probe beside the joint
-point estimate. Observation deletion needs joint nuisance and, natively,
-unit frequencies. Derivation, assumptions, simulation evidence and limits
-are in a technical note maintained with the companion paper, not in this
-repository.
+With true variances for the units outside sets and no controls the estimate
+is exactly unbiased when the errors of every set are normal with one
+variance per set, whatever those variances are. With the fitted model it is
+as good as that model; estimated effects enter the profile, and the
+observed mean is handled as in the leave-out residual pass. Observation
+deletion needs joint nuisance and, natively, unit frequencies. The
+derivation is in a technical note maintained with the companion paper; the
+simulation harness is `fevc/tools/default_interval/` and its evidence
+`fevc/docs/default_interval/`.
+
+#### Controls
+
+With controls the standard errors are those of the fixed-offset estimate:
+the estimate of the model without controls for the outcome net of the
+fitted control index, with the estimation of the control coefficients
+included to first order (`e(inference_nuisance_omitted)` is zero; without
+controls nothing is estimated and it is one). Under observation deletion
+with jointly estimated controls the rows of one cell differ in their
+regressors, which is why the units are those of the model without
+controls; the native route forms them in an offset pass of two solves per
+point-estimate probe beside the joint point estimate.
+
+Write `X` for the controls collapsed to deletion units as the outcome is,
+`Xt` for their residual on the worker and firm effects, `L` for the inverse
+cross-product of the residualised controls over physical observations, and
+`w_a` for the within-unit product of unit `a`: the sum over its
+observations of the controls' deviation from the unit's mean times the
+residual (zero for a unit of one observation, hence zero under observation
+deletion). The error of the adjusted outcome of unit `a` is
+`eps_a - x_a' L (Xt' eps + sum_b w_b)`. With `S` the covariance matrix of
+these errors, `C` the kernel of the estimate and `m` its mean influence,
+the variance of the estimate under normal errors is exactly
+`4 m' S m + 2 tr(C S C S)`. The pass estimates it without a further linear
+solve:
+
+- every influence `g = K_t z` becomes `g* = g - Xt L X' g`, with the load
+  `c = -2 L X' g` on the within-unit products, and the linear part is
+  `4 sum_a v_a g*_a^2 + 4 sum_a r_a g*_a (w_a' c) + sum_a (w_a' c)^2`,
+  where `r_a` is the leave-out residual of unit `a`;
+- the pseudo-noise is transformed as the data are,
+  `zeta - X L (Xt' zeta + sum_a w_a xi_a)` with one further standard normal
+  `xi_a` per unit and draw, and the trace is taken in the bilinear form of
+  that covariance: `sum_a v_a u*_a^2 + (L X' u)' (sum_a w_a w_a') (L X' u)`
+  for a kernel image `u` with `u* = u - Xt L X' u`;
+- the pieces of the `q = 1` interval (the variance of the leading score, the
+  covariance with the remainder and the remainder's variance) use the same
+  projection and loads.
+
+Without controls every formula is the one above and the native results are
+bitwise unchanged. What the term does not cover:
+
+1. It is the variance of the fixed-offset estimate. Under the default
+   `nuisance(joint)` the point estimate re-estimates the control
+   coefficients in every leave-out fit; the two estimates differ by a term
+   that involves the control index and is not part of the standard error.
+2. A repeat-measurement set receives one sample variance. With controls the
+   weights of its units differ, so the set needs one error variance, or
+   variances that are unrelated to the squared weights inside the set. An
+   error variance that moves with a control inside a worker-firm cell
+   violates this.
+3. The covariance between a unit's error and its own within-unit product
+   enters the linear part but not the covariance of the pseudo-noise. It is
+   zero when the errors of a unit have one variance and are uncorrelated;
+   otherwise what is left out is of lower order unless one direction
+   dominates the component, and then the `q = 1` interval treats that
+   direction on its own.
+4. Exactness needs normal errors and known variances; the estimate uses
+   residuals, sample variances and the fitted model in their place.
+5. When the data identify a control coefficient poorly, the noise of the
+   estimated sensitivity to it can dominate and the variance estimate of a
+   component can come out non-positive. The component is then reported
+   without a normal interval (withheld, or with its `q = 1` interval).
 
 ### Leading directions and the interval of every component
 
