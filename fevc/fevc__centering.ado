@@ -6,7 +6,10 @@ program define fevc__centering, eclass
     gettoken action 0 : 0
     macro shift
     if "`action'"=="request" {
-        args centering inference project inferencemodel
+        // Repeat-measurement standard errors, the only component inference,
+        // describe the mean-centred estimate under centering(corrected) and
+        // treat the corrected increment as fixed. Block projections do not.
+        args centering project
         local centering = lower(strtrim("`centering'"))
         if "`centering'"=="" local centering mean
         if !inlist("`centering'","none","mean","corrected") {
@@ -14,15 +17,6 @@ program define fevc__centering, eclass
             exit 198
         }
         global VCKSS_CENTERING `centering'
-        // Leave-out residual standard errors describe the mean-centred
-        // estimate and treat the corrected increment as fixed. inference(auto)
-        // resolves to that model or to no inference.
-        if "`centering'"=="corrected" & !inlist(lower(strtrim("`inference'")),"","none","auto") & ///
-            !inlist(lower(strtrim("`inferencemodel'")),"leaveout_residual","repeat_measurement") {
-            global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
-            di as error "inference() supports centering(none) or centering(mean)"
-            exit 498
-        }
         if "`centering'"=="corrected" & "`project'"!="" {
             global VCKSS_CENTER_ERROR "CENTERING_INFERENCE_UNSUPPORTED"
             di as error "project() supports centering(none) or centering(mean)"

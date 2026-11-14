@@ -163,19 +163,27 @@ forvalues row = 1/24 {
 generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 fevc y c1 c2, worker(worker) firm(firm) ///
     deletion(observation) centering(none) inference(highrank) ///
-    inferencesimulations(100) inferenceseed(42) inferencebins(16) nodisplay
-assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
+    inferenceseed(42) nodisplay
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
+assert "`e(inference_model)'" == "repeat_measurement"
 assert rowsof(e(V)) == 4
 assert "`e(inference_centering)'" == "uncentered"
 assert e(inference_mean_omitted) == 0
+// Pseudo-noise is centred as the estimate is, so the observed mean is not
+// held fixed under the default centering either.
 fevc y c1 c2, worker(worker) firm(firm) ///
-    deletion(observation) inference(highrank) ///
-    inferencesimulations(100) inferenceseed(42) inferencebins(16) nodisplay
-assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
+    deletion(observation) inference(highrank) inferenceseed(42) nodisplay
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
 assert "`e(centering)'" == "mean"
-assert "`e(inference_centering)'" == "fixed observed mean"
-assert e(inference_mean_omitted) == 1
-assert strpos("`e(inference_reference_guarantee)'", "mean-estimation") > 0
+assert "`e(inference_centering)'" == "mean-centred estimate; pseudo-noise centred identically"
+assert e(inference_mean_omitted) == 0
+// The variance models and options removed in fevc 0.6.0 stop with a message.
+capture noisily fevc y c1 c2, worker(worker) firm(firm) ///
+    deletion(observation) inference(highrank) inferencesimulations(100) nodisplay
+assert _rc == 198 & "`e(withholding_status)'" == "INFERENCE_OPTION_REMOVED"
+capture noisily fevc y c1 c2, worker(worker) firm(firm) ///
+    inferencemodel(structured_common) nodisplay
+assert _rc == 198 & "`e(withholding_status)'" == "INFERENCE_MODEL_REMOVED"
 
 // The normal installed path must load and execute the supported CMG backend,
 // not merely place its source files on disk.

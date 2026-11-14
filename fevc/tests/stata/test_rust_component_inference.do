@@ -1,3 +1,8 @@
+// Native observation-deletion component inference: repeat-measurement
+// standard errors on the explicit generic Counter-V1 tuple, their batch
+// invariance, the leading directions of inference(q1), the exact Mata route
+// on a small design, and the requests that stop before native work. The
+// removed variance models and their options stop with typed statuses.
 version 18.0
 clear all
 set more off
@@ -25,18 +30,19 @@ generate double outcome_leverage = 2 + .06*worker - .11*firm + .25*control + ///
 generate double outcome_null = 0
 generate byte copies = 2
 
+// The explicit generic tuple needs an explicit batch(): with an automatic
+// component batch the native receipt check refuses the residual pass.
 local common_options worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1)     ///
     preconditioner(diagonal) probes(160) tolerance(1e-11)            ///
-    centering(none) inference(highrank) inferencemodel(structured_common)            ///
-    inferencesimulations(100) inferenceseed(24681357) nodisplay
+    centering(none) inference(highrank) inferenceseed(24681357) nodisplay
 
 // The estimator is unchanged, but design-only probe ordering may change the
 // finite-probe realization relative to a point-only legacy ordering.
 quietly fevc outcome control, worker(worker) firm(firm)              ///
     deletion(observation) algorithm(jla) engine(generic)             ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)            ///
-    probes(160) batch(8) tolerance(1e-11) centering(none) nodisplay
+    probes(160) batch(8) tolerance(1e-11) centering(none) inference(none) nodisplay
 matrix baseline_results = e(results)
 matrix baseline_b = e(b)
 
@@ -45,7 +51,8 @@ matrix q0_b = e(b)
 matrix q0_V = e(V)
 matrix q0_Vp = e(V_primitive)
 matrix q0_spectrum = e(component_spectrum)
-matrix q0_fit = e(residual_moment_diagnostics)
+matrix q0_ci = e(component_inference)
+matrix q0_repeat = e(inference_repeat)
 matrix q0_results = e(results)
 
 forvalues target = 1/4 {
@@ -53,22 +60,27 @@ forvalues target = 1/4 {
     assert abs(baseline_b[1,`target']-q0_b[1,`target']) <= ///
         6*sqrt(baseline_results[4,`target']^2+q0_results[4,`target']^2)+1e-9
 }
-assert `"`e(status)'"' == "FEVC_STRUCTURED_Q0_INFERENCE"
-assert `"`e(inference_model)'"' == "structured_common"
+assert `"`e(status)'"' == "FEVC_REPEAT_MEASUREMENT_SE"
+assert `"`e(inference)'"' == "highrank"
+assert `"`e(inference_model)'"' == "repeat_measurement"
+assert `"`e(inference_variance_fit)'"' == "repeat_measurement"
 assert `"`e(result_family)'"' == "generic"
-assert `"`e(inference_support_status)'"' == "approximate_model_based"
+assert `"`e(inference_support_status)'"' == "fitted_model_for_movers"
+assert strpos(`"`e(inference_capability)'"',"repeat-measurement") > 0
 assert strpos(`"`e(inference_capability)'"',"observation deletion") > 0
 assert `"`e(inference_population)'"' == "both"
 assert `"`e(inference_deletion_requested)'"' == "observation"
 assert `"`e(inference_deletion_selected)'"' == "observation"
 assert e(inference_independent_units)==300
+// The native route keeps the control in the operator and adds the
+// first-order term of its estimation.
 assert e(inference_nuisance_omitted)==0
 assert e(component_unit_receipt)[1,"deletion"]==2
 assert e(component_unit_receipt)[1,"effective_matches"]==0
 assert `"`e(inference_population_requested)'"' == "both"
 assert `"`e(inference_population_selected)'"' == "both"
-assert `"`e(inference_model_requested)'"' == "structured_common"
-assert `"`e(inference_model_selected)'"' == "structured_common"
+assert `"`e(inference_model_requested)'"' == "repeat_measurement"
+assert `"`e(inference_model_selected)'"' == "repeat_measurement"
 assert `"`e(inference_backend_requested)'"' == "rust"
 assert `"`e(inference_backend_selected)'"' == "rust"
 assert `"`e(inference_solver_requested)'"' == "diagonal"
@@ -88,31 +100,48 @@ assert `"`e(deletion)'"' == "observation"
 assert `"`e(stayers)'"' == "both"
 assert `"`e(nuisance)'"' == "joint"
 assert `"`e(inference_reference_requested)'"' == "q0"
-assert `"`e(inference_reference_selected)'"' == "q0 diffuse"
-assert `"`e(inference_reference)'"' == ///
-    "q=0 Gaussian approximation with reported spectrum"
-assert strpos(`"`e(inference_kss_scope)'"',"not unrestricted") > 0
-assert strpos(`"`e(inference_q_condition)'"',"diffuse") > 0
+assert `"`e(inference_reference_selected)'"' == "q0 normal"
+assert strpos(`"`e(inference_reference)'"',"normal approximation") > 0
+assert strpos(`"`e(inference_kss_scope)'"',"not the KSS") > 0
+assert strpos(`"`e(inference_q_condition)'"',"effective rank") > 0
 assert strpos(`"`e(inference_execution_scope)'"',"does not establish") > 0
-assert strpos(`"`e(inference_variance_warning)'"',"invalidate SEs") > 0
-assert strpos(`"`e(inference_variance_warning)'"',"point estimates") > 0
-assert strpos(`"`e(inference_reference_guarantee)'"',"strong identification") > 0
+assert strpos(`"`e(inference_variance_warning)'"',"fitted variance model for movers") > 0
+assert strpos(`"`e(inference_reference_guarantee)'"',"no dominant direction") > 0
 assert rowsof(q0_V) == 4 & colsof(q0_V) == 4
 assert rowsof(q0_Vp) == 3 & colsof(q0_Vp) == 3
 assert rowsof(q0_spectrum) == 4 & colsof(q0_spectrum) == 15
 assert q0_spectrum[1,"max_influence_share"] > 0
 assert q0_spectrum[1,"max_influence_share"] <= 1
-assert rowsof(q0_fit) == 1 & colsof(q0_fit) == 8
+// No Gram fit and no structured variance model.
 local returned_matrices : e(matrices)
-assert !strpos(" `returned_matrices' "," structured_variance_cv ")
-assert "`e(inference_variance_fit)'"=="residual_moments"
-assert e(inference_simulations) == 100
-assert e(inference_spectrum_probes) == 128
-assert e(inference_spectrum_iterations) == 512
-assert e(inference_solver_columns) == 2048+3+100+5*128+16*512+18
+foreach structured in residual_moment_diagnostics structured_variance_summary ///
+    structured_variance_folds structured_variance_cv {
+    assert !strpos(" `returned_matrices' "," `structured' ")
+}
+assert "`e(inference_gram_method)'"=="not applicable"
+// Every match has two observations: 150 repeat-measurement sets.
+assert rowsof(q0_repeat)==1 & colsof(q0_repeat)==14
+assert e(inference_repeat_sets)==150 & q0_repeat[1,"sets"]==150
+assert colsof(e(component_inference_receipt))==78
+assert e(component_inference_receipt)[1,"schema"]==5
+assert e(component_inference_receipt)[1,"model"]==4
+assert e(component_inference_receipt)[1,"reference"]==0
+assert e(component_inference_receipt)[1,"gram_probes"]==0
+// Four solves per pseudo-noise draw, three for the kernel image of the
+// outcome, and under joint nuisance with a control two per point probe for
+// the fixed-offset pass.
+assert e(inference_draws)==8 & e(inference_simulations)==4*8
+assert e(inference_spectrum_probes)==8 & e(inference_spectrum_iterations)==0
+assert e(inference_offset_pass_solves)==2*160
+assert e(inference_solver_columns)==4*8+3+2*160
 assert e(inference_solver_max_complete) <= e(inference_solver_tolerance)
-assert q0_spectrum[1,7] >= 0 & q0_spectrum[1,7] <= 1
-assert q0_spectrum[1,8] >= 0
+assert e(inference_joint_posted)==1
+// inference(highrank) computes no leading direction.
+capture confirm matrix e(inference_intervals)
+assert _rc
+forvalues target = 1/4 {
+    assert q0_ci[`target',2]>0 & reldif(q0_ci[`target',2],sqrt(q0_V[`target',`target']))<1e-12
+}
 
 matrix map = (1,0,0 \ 0,1,0 \ 0,0,1 \ 1,1,2)
 matrix q0_mapped = map*q0_Vp*map'
@@ -125,62 +154,68 @@ quietly fevc outcome control, `common_options' batch(16)
 assert mreldif(q0_results,e(results)) == 0
 assert mreldif(q0_V,e(V)) == 0
 assert mreldif(q0_spectrum,e(component_spectrum)) == 0
-assert mreldif(q0_fit,e(residual_moment_diagnostics)) == 0
+assert mreldif(q0_repeat,e(inference_repeat)) == 0
+// The model's name is a no-op alias of the one method.
+quietly fevc outcome control, `common_options' batch(8) inferencemodel(REPEAT_MEASUREMENT)
+assert mreldif(q0_results,e(results)) == 0
+assert mreldif(q0_V,e(V)) == 0
+assert mreldif(q0_ci,e(component_inference)) == 0
 
-// q=1 changes only the reference approximation. It exposes rather than
-// suppresses leading- and remainder-spectrum concentration diagnostics.
+// inference(q1): the same high-rank pass plus the leading direction of every
+// component, reported with the q = 1 interval wherever it exists.
 quietly fevc outcome_leverage control, worker(worker) firm(firm)    ///
     deletion(observation) algorithm(jla) engine(generic)            ///
     backend(rust) rng(counter_v1) preconditioner(diagonal) batch(8) ///
-    probes(160) tolerance(1e-11) centering(none) inference(q1)                      ///
-    inferencemodel(structured_leverage) inferencesimulations(100)   ///
+    probes(160) tolerance(1e-11) centering(none) inference(q1)      ///
     inferenceseed(97531)
-assert `"`e(status)'"' == "FEVC_STRUCTURED_Q1_INFERENCE"
-assert `"`e(inference_model)'"' == "structured_leverage"
+assert inlist(`"`e(status)'"',"FEVC_REPEAT_MEASUREMENT_Q1","FEVC_REPEAT_MEASUREMENT_SE")
+assert `"`e(inference_model)'"' == "repeat_measurement"
 assert `"`e(result_family)'"' == "generic"
-assert `"`e(inference_support_status)'"' == "approximate_model_based"
-assert `"`e(inference_reference_requested)'"' == "q1"
-assert `"`e(inference_reference_selected)'"' == "q1 one-mode"
-assert strpos(`"`e(inference_q_condition)'"',"one leading mode") > 0
-assert strpos(`"`e(inference_q_condition)'"',"diffuse") > 0
-assert strpos(`"`e(inference_reference_guarantee)'"',"at-least-nominal") > 0
-assert strpos(`"`e(inference_reference_guarantee)'"',"conservative") > 0
-assert rowsof(e(q1_inference)) == 4 & colsof(e(q1_inference)) == 17
-assert rowsof(e(component_q1_diagnostics)) == 4
-assert colsof(e(component_q1_diagnostics)) == 20
-assert rowsof(e(q1_status)) == 4 & colsof(e(q1_status)) == 1
-assert e(q1_computed_targets) == 4
-assert strpos(`"`e(inference_qualification)'"',"source-specific development evidence") > 0
+assert `"`e(inference_leading_request)'"' == "q1"
+assert strpos(`"`e(inference_regime_rule)'"',"inference(q1)") > 0
+assert e(inference_leading_unresolved)==0
+assert e(inference_leading_steps)>0
+matrix q1_table = e(inference_intervals)
+matrix q1_lead = e(inference_leading)
+assert rowsof(q1_table)==4 & colsof(q1_table)==16
+assert rowsof(q1_lead)==4 & colsof(q1_lead)==28
+local q1_components = 0
+forvalues target = 1/4 {
+    assert inlist(q1_table[`target',"regime"],0,1)
+    // Under inference(q1) a component that has the q = 1 interval reports it.
+    assert (q1_table[`target',"regime"]==1)==(q1_table[`target',"q1_status"]==0)
+    assert q1_table[`target',"lb"] < q1_table[`target',"estimate"]
+    assert q1_table[`target',"estimate"] < q1_table[`target',"ub"]
+    assert q1_lead[`target',"converged"]==1
+    assert q1_lead[`target',"eigen_share"]>=0 & q1_lead[`target',"eigen_share"]<=1
+    local q1_components = `q1_components'+(q1_table[`target',"regime"]==1)
+}
+assert e(inference_q1_components)==`q1_components'
 local returned_matrices : e(matrices)
-assert !strpos(" `returned_matrices' "," V ")
-assert e(component_q1_diagnostics)[1,"remainder_identity_error"] >= 0
-assert e(component_q1_diagnostics)[1,"recenter_var_b1"] < .
-assert colsof(e(component_inference_receipt)) == 38
-assert e(inference_critical_draws) == 4*100000
-assert e(component_inference_receipt)[1,"critical_simulations"] == 100000
-assert e(component_inference_receipt)[1,"maximum_remainder_identity_error"] >= 0
+assert (strpos(" `returned_matrices' "," V ")>0)==(`q1_components'==0)
+assert e(inference_joint_posted)==(`q1_components'==0)
+if `q1_components'>0 assert `"`e(status)'"' == "FEVC_REPEAT_MEASUREMENT_Q1"
+assert colsof(e(component_inference_receipt)) == 78
 assert e(component_inference_receipt)[1,"schema"] == 5
-assert e(component_inference_receipt)[1,"model"] == 2
-assert e(component_inference_receipt)[1,"reference"] == 1
+assert e(component_inference_receipt)[1,"model"] == 4
+assert e(component_inference_receipt)[1,"reference"] == 0
 assert e(component_augmentation_receipt)[1,"schema"] == 1
-assert e(component_augmentation_receipt)[1,"model"] == 2
-assert e(component_augmentation_receipt)[1,"reference"] == 1
-assert e(inference_solver_columns) == 2048+3+100+5*128+16*512+18+4
+// The search, four remainder influences and four remainder kernels per
+// draw come on top of the high-rank pass.
+assert e(inference_solver_columns) == 4*8+3+2*160+e(inference_leading_steps)+4+4*8
 matrix q1_spectrum = e(component_spectrum)
 forvalues target = 1/4 {
     assert q1_spectrum[`target',"leading_share"] >= 0
     assert q1_spectrum[`target',"leading_share"] <= 1
-    assert q1_spectrum[`target',"remainder_leading_share"] >= 0
-    assert q1_spectrum[`target',"remainder_leading_share"] <= 1
-    assert e(component_q1_diagnostics)[`target',"remainder_influence_share"] >= 0
-    assert e(component_q1_diagnostics)[`target',"remainder_influence_share"] <= 1
 }
 matrix q1_results_before_estat = e(results)
+matrix q1_table_before_estat = e(inference_intervals)
 estat diagnostics
 assert mreldif(q1_results_before_estat,e(results)) == 0
+assert mreldif(q1_table_before_estat,e(inference_intervals)) == 0
 
-// Omitting the structured model preserves the independent exact Mata
-// comparator and cannot route automatically to q=0 or q=1 Rust inference.
+// The exact Mata route on a small fixed design: the same model, computed
+// with exact kernels, and the removed options stop before any work.
 preserve
 keep in 1/24
 replace worker = floor((_n-1)/4)
@@ -198,39 +233,70 @@ forvalues row = 1/24 {
     quietly replace exact_noise = `value' in `row'
 }
 replace outcome = 1.5+.3*worker-.2*firm+.4*control-.15*exact_c2+exact_noise
-quietly fevc outcome control exact_c2, worker(worker) firm(firm)  ///
-    deletion(observation) algorithm(exact) backend(mata) rng(stata) ///
-    centering(none) inference(highrank) inferencesimulations(100) inferenceseed(86420) ///
-    inferencebins(16) targetweight(exact_target) nodisplay
-assert `"`e(status)'"' == "KSS_HIGHRANK_INFERENCE"
+local exact_options worker(worker) firm(firm) deletion(observation) ///
+    algorithm(exact) backend(mata) rng(stata) centering(none)        ///
+    inferenceseed(86420) targetweight(exact_target) nodisplay
+quietly fevc outcome control exact_c2, `exact_options' inference(highrank)
+assert `"`e(status)'"' == "FEVC_REPEAT_MEASUREMENT_SE"
 assert `"`e(backend_requested)'"' == "mata"
 assert `"`e(backend_selected)'"' == "mata"
-assert `"`e(inference_model)'"' == "target_lowess"
+assert `"`e(inference_model)'"' == "repeat_measurement"
+assert `"`e(inference_variance_fit)'"' == "repeat_measurement"
 assert e(inference_model_option_supplied) == 0
-capture matrix list e(component_spectrum)
-assert _rc != 0
+assert e(inference_independent_units) == 24
+confirm matrix e(V)
+foreach option in "inferencesimulations(100)" "inferencebins(16)" "inferencegramprobes(2048)" {
+    capture noisily fevc outcome control exact_c2, `exact_options' inference(highrank) `option'
+    assert _rc == 198
+    assert `"`e(withholding_status)'"' == "INFERENCE_OPTION_REMOVED"
+    local name = substr("`option'",1,strpos("`option'","(")-1)
+    assert `"`e(withholding_detail)'"' == ///
+        "`name'() applied only to the variance models removed in fevc 0.6.0"
+}
 restore
 
-// Every unsupported request fails closed before returning a substitute.
-capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(observation) centering(none) inference(highrank)                      ///
-    inferencemodel(structured_common) nodisplay
-assert _rc == 498
-assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
+// The removed variance models stop before any other check, whatever the
+// inference() request, and name the change.
+foreach model in leaveout_residual target_lowess structured_common Structured_Leverage {
+    foreach reference in highrank q1 none {
+        capture noisily fevc outcome control, worker(worker) firm(firm)     ///
+            deletion(observation) centering(none) inference(`reference')   ///
+            inferencemodel(`model') nodisplay
+        assert _rc == 198
+        assert `"`e(withholding_status)'"' == "INFERENCE_MODEL_REMOVED"
+        local name = lower("`model'")
+        assert `"`e(withholding_detail)'"' == ///
+            "inferencemodel(`name') was removed in fevc 0.6.0; fevc reports repeat-measurement standard errors by default (help fevc, Standard errors)"
+    }
+}
 
+// Every unsupported request fails closed before returning a substitute.
+// Natively, observation deletion needs unit frequencies.
 capture noisily fevc outcome control [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic) backend(rust)    ///
-    rng(counter_v1) preconditioner(diagonal) centering(none) inference(highrank)          ///
-    inferencemodel(structured_common) nodisplay
+    rng(counter_v1) preconditioner(diagonal) batch(8) centering(none)     ///
+    inference(highrank) nodisplay
 assert _rc == 498
-assert `"`e(withholding_status)'"' == "STRUCTURED_FREQUENCY_UNSUPPORTED"
+assert `"`e(withholding_status)'"' == "REPEAT_MEASUREMENT_TUPLE_REQUIRED"
 
+// Observation deletion with fixed nuisance offsets has no unit geometry.
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(match) algorithm(jla) engine(generic) backend(rust)    ///
-    rng(counter_v1) preconditioner(diagonal) centering(none) inference(highrank)     ///
-    inferencemodel(structured_common) nodisplay
+    deletion(observation) nuisance(fixedoffset) algorithm(jla) engine(generic) ///
+    backend(rust) rng(counter_v1) preconditioner(diagonal) batch(8)  ///
+    centering(none) inference(highrank) nodisplay
 assert _rc == 498
-assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
+assert `"`e(withholding_status)'"' == "REPEAT_MEASUREMENT_TUPLE_REQUIRED"
+
+// Match deletion of the same panel: every match of two observations is one
+// unit.
+quietly fevc outcome control, worker(worker) firm(firm)             ///
+    deletion(match) algorithm(jla) engine(generic) backend(rust)    ///
+    rng(counter_v1) preconditioner(diagonal) batch(8) probes(160)   ///
+    tolerance(1e-11) centering(none) inference(highrank) nodisplay
+assert `"`e(status)'"' == "FEVC_REPEAT_MEASUREMENT_SE"
+assert `"`e(inference_deletion_selected)'"' == "match"
+assert e(inference_independent_units)==150
+assert e(component_unit_receipt)[1,"deletion"]==1
 
 // Explicit both is the same population and inference as the default above.
 fevc outcome control, `common_options' stayers(both) batch(8)
@@ -239,28 +305,22 @@ assert "`e(inference_population)'"=="both"
 assert mreldif(q0_results,e(results))<1e-8
 assert mreldif(q0_V,e(V))<1e-8
 
-capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(observation) nuisance(fixedoffset) algorithm(jla) engine(generic) ///
-    backend(rust) rng(counter_v1) preconditioner(diagonal)          ///
-    centering(none) inference(highrank) inferencemodel(structured_common) nodisplay
-assert _rc == 498
-assert `"`e(withholding_status)'"' == "STRUCTURED_INFERENCE_TUPLE_REQUIRED"
-
 // A null outcome must be withheld atomically rather than regularized or
 // replaced by another estimator/reference family.
 capture noisily fevc outcome_null control, worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic) backend(rust) ///
-    rng(counter_v1) preconditioner(diagonal) centering(none) inference(q1)          ///
-    inferencemodel(structured_common) inferencesimulations(100)     ///
-    inferenceseed(13579) nodisplay
+    rng(counter_v1) preconditioner(diagonal) batch(8) centering(none) ///
+    inference(q1) inferenceseed(13579) nodisplay
 assert _rc == 498
 assert `"`e(status)'"' == "WITHHELD"
 assert strtrim(`"`e(withholding_status)'"') != ""
 capture matrix list e(component_spectrum)
 assert _rc != 0
+capture matrix list e(inference_intervals)
+assert _rc != 0
 
 capture noisily fevc outcome control, worker(worker) firm(firm)     ///
-    deletion(observation) centering(none) inference(highrank)                      ///
+    deletion(observation) centering(none) inference(highrank)       ///
     inferencemodel(unrestricted_kss) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "INVALID_INFERENCE_MODEL"

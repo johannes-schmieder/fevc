@@ -52,6 +52,14 @@ program define fevc_rust, rclass
             return scalar support_flags = 38
             return scalar deterministic_parallelism = 1
             return scalar execution_api = 3
+            // Component standard errors are admitted, so that only the
+            // component centering flag is stale.
+            if inlist("$VCKSS_ROUTING_PROXY_MODE", ///
+                "stale_component_missing","stale_component_zero") {
+                return scalar component_residual_api = 1
+                return scalar component_mixed_api = 1
+                return scalar component_repeat_api = 1
+            }
             exit 0
         }
         if "$VCKSS_ROUTING_PROXY_MODE"=="stale_deletion_units" {
@@ -686,7 +694,7 @@ foreach capability_mode in stale_component_missing stale_component_zero {
             deletion(observation) stayers(movers) algorithm(jla) ///
             backend(rust) rng(counter_v1) engine(generic) ///
             preconditioner(diagonal) batch(2) probes(4) ///
-            inference(`reference') inferencemodel(structured_common) nodisplay
+            inference(`reference') nodisplay
         assert _rc==498
         assert "`e(withholding_status)'"=="RUST_BACKEND_UNAVAILABLE"
         assert "$VCKSS_ROUTING_PREPARE_CALLED"=="0"

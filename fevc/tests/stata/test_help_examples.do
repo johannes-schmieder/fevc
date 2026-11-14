@@ -40,8 +40,12 @@ foreach example in exact_controls jla_controls weights_targets {
     assert `"`r(datasignature)'"' == `"`caller_signature'"'
 }
 
+// The example ends with inference(highrank), whose e(V) lincom uses; its
+// inference(q1) call runs first. Both are explicit requests, so the point-only
+// switch of the suite does not change them.
 fevc_run component_inference using fevc.sthlp
-assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
+assert "`e(inference_model)'" == "repeat_measurement"
 assert rowsof(e(V)) == 4 & colsof(e(V)) == 4
 assert rowsof(e(component_inference)) == 4
 quietly _datasignature

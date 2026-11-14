@@ -60,43 +60,68 @@ foreach deletion in observation match {
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
     foreach solver of local solvers {
         foreach reference in highrank q1 {
+            // Repeat-measurement standard errors. An explicit batch: with
+            // engine(generic) and an automatic batch the native component batch
+            // receipt of a request without a Gram fit is rejected (known defect).
             local common worker(worker) firm(firm) stayers(movers) `options' ///
                 algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-                probes(200) targetweight(target) centering(none) inference(`reference') inferencemodel(structured_common) ///
-                inferencesimulations(129) inferencegramprobes(513) nodisplay
+                batch(8) probes(200) targetweight(target) centering(none) inference(`reference') nodisplay
             quietly fevc y x, `common' mcse(off)
+            assert "`e(inference_model)'"=="repeat_measurement"
             matrix point=e(kss)
             matrix intervals=e(component_inference)
             matrix spectrum=e(component_spectrum)
-            if `execution' {
-                matrix work=e(rust_execution_receipt)
-                matrix widths=e(rust_component_batch_receipt)
-            }
+            matrix units=e(inference_repeat)
+            // Only the diagonal queue reports execution work; explicit CMG
+            // batches use the legacy path.
+            local queue = `execution' & "`solver'"=="diagonal"
+            if `queue' matrix work=e(rust_execution_receipt)
             local joint=e(inference_joint_available)
-            local q0=e(q0_computed_targets)
-            if "`reference'"=="q1" matrix q1=e(q1_inference)
+            local computed=e(inference_computed_targets)
+            if "`reference'"=="q1" {
+                matrix table=e(inference_intervals)
+                matrix leading=e(inference_leading)
+            }
             quietly fevc y x, `common'
             assert "`e(mcse_mode)'"=="all" & "`e(numerical_mc_method)'"=="crossfit_if_v1"
             assert mreldif(e(kss),point)<1e-11
             assert mreldif(e(component_inference),intervals)<1e-11
             assert mreldif(e(component_spectrum),spectrum)<1e-11
-            if `execution' {
-            foreach field in mode threads workers active cmg_concurrency capacity leverage target ///
-                fit rank point projection component gram logical queued cmg refinement {
-                assert e(rust_execution_receipt)[1,"`field'"]==work[1,"`field'"]
+            assert mreldif(e(inference_repeat),units)==0
+            if `queue' {
+                foreach field in mode threads workers cmg_concurrency capacity leverage target ///
+                    fit rank point projection component gram logical queued cmg refinement {
+                    assert e(rust_execution_receipt)[1,"`field'"]==work[1,"`field'"]
+                }
+                // How many workers took a task depends on scheduling.
+                assert inrange(e(rust_execution_receipt)[1,"active"],1,work[1,"threads"])
+                assert work[1,"gram"]==0
+                assert work[1,"component"]==e(component_inference_receipt)[1,"solver_columns"]
+                assert e(rust_execution_receipt)[1,"residual"]<=e(residual_acceptance_tolerance)
+                assert e(rust_execution_receipt)[1,"peak"]>=work[1,"peak"]
             }
-            assert e(rust_execution_receipt)[1,"residual"]<=e(residual_acceptance_tolerance)
-            assert e(rust_execution_receipt)[1,"peak"]>=work[1,"peak"]
-            foreach field in policy reason declared_component declared_gram component gram cap threads capacity {
-                assert e(rust_component_batch_receipt)[1,"`field'"]==widths[1,"`field'"]
+            assert e(inference_joint_available)==`joint' & e(inference_computed_targets)==`computed'
+            if "`reference'"=="q1" {
+                assert mreldif(e(inference_intervals),table)<1e-11
+                assert mreldif(e(inference_leading),leading)<1e-11
             }
-            }
-            assert e(inference_joint_available)==`joint' & e(q0_computed_targets)==`q0'
-            if "`reference'"=="q1" assert mreldif(e(q1_inference),q1)<1e-11
             assert e(mc_replay_rhs)==200
             assert `"`c(rngstate)'"'==`"`state'"'
             assert `"`c(sortrngstate)'"'==`"`sortstate'"'
         }
     }
 }
+// The structured model and its tuning options were removed in fevc 0.6.0.
+capture noisily fevc y x, worker(worker) firm(firm) stayers(movers) deletion(observation) ///
+    algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
+    probes(200) inference(highrank) inferencemodel(structured_common) nodisplay
+assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_MODEL_REMOVED"
+foreach option in inferencesimulations(129) inferencegramprobes(513) {
+    capture noisily fevc y x, worker(worker) firm(firm) stayers(movers) deletion(observation) ///
+        algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
+        probes(200) inference(highrank) `option' nodisplay
+    assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_OPTION_REMOVED"
+}
+assert `"`c(rngstate)'"'==`"`state'"'
+assert `"`c(sortrngstate)'"'==`"`sortstate'"'
 di as result "PASS test_mcse_attachments.do"

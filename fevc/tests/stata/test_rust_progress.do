@@ -32,6 +32,7 @@ program define _progress_read_log, rclass
     local pairs = 0
     local pending = 0
     local complete = 0
+    local components = 0
     local times = 0
     local previous = 0
     file read `stream' line
@@ -55,6 +56,7 @@ program define _progress_read_log, rclass
             if strpos(`"`line'"', "| Leverage: ") & strpos(`"`line'"', "| Target: ") local ++pairs
             if strpos(`"`line'"', "(pending)") local ++pending
             if strpos(`"`line'"', "| Complete") local ++complete
+            if strpos(`"`line'"', "| Component inference: ") local ++components
         }
         file read `stream' line
     }
@@ -68,6 +70,7 @@ program define _progress_read_log, rclass
     return scalar pairs = `pairs'
     return scalar pending = `pending'
     return scalar complete = `complete'
+    return scalar components = `components'
     return scalar times = `times'
     return scalar elapsed = `previous'
 end
@@ -196,8 +199,11 @@ quietly _progress_read_log `"`transcript'"'
 assert r(exclusions)==1
 restore
 
-// Native reporting preserves inference and its strict work gates; use the
-// established heterogeneous-target fixture.
+// Native reporting preserves repeat-measurement standard errors and their
+// strict work gates; use the established heterogeneous-target fixture. The
+// explicit generic diagonal route takes an explicit batch: with an automatic
+// batch the native component batch receipt of a request without a Gram fit
+// is rejected (known defect). The automatic executor needs none.
 preserve
 clear
 set obs 800
@@ -210,25 +216,52 @@ generate double target = (.75+mod((_n-1)*13,29)/31)*(1+.1*worker)^2*(1+.1*firm)^
 foreach deletion in observation match {
     local nuisance
     if "`deletion'"=="match" local nuisance nuisance(fixedoffset)
-    local common worker(worker) firm(firm) deletion(`deletion') `nuisance' rng(counter_v1) ///
-        stayers(movers) backend(rust) algorithm(jla) engine(generic) preconditioner(diagonal) ///
-        probes(200) targetweight(target) centering(none) inference(highrank) inferencemodel(structured_common) ///
-        inferencesimulations(129) inferencegramprobes(513)
-    quietly fevc y x, `common' nolog
-    matrix reference = e(kss)
-    matrix inference = e(component_inference)
-    local posted = e(inference_joint_posted)
-    if `posted' matrix covariance = e(V)
-    quietly log using `"`transcript'"', text replace name(progress_test)
-    fevc y x, `common'
-    quietly log close progress_test
-    quietly _progress_read_log `"`transcript'"'
-    assert r(times)>0 & r(pairs)>0 & r(complete)==1
-    assert mreldif(e(kss),reference)<1e-12
-    assert mreldif(e(component_inference),inference)<1e-12
-    assert e(inference_joint_posted)==`posted'
-    if `posted' assert mreldif(e(V),covariance)<1e-12
+    foreach route in generic automatic {
+        foreach reference in highrank q1 {
+            local solver
+            if "`route'"=="generic" local solver rng(counter_v1) algorithm(jla) ///
+                engine(generic) preconditioner(diagonal) batch(8)
+            local common worker(worker) firm(firm) deletion(`deletion') `nuisance' ///
+                stayers(movers) backend(rust) `solver' probes(200) targetweight(target) ///
+                centering(none) inference(`reference')
+            quietly fevc y x, `common' nolog
+            assert "`e(inference_model)'"=="repeat_measurement"
+            matrix reference = e(kss)
+            matrix inference = e(component_inference)
+            local posted = e(inference_joint_posted)
+            if `posted' matrix covariance = e(V)
+            if "`reference'"=="q1" matrix table = e(inference_intervals)
+            quietly log using `"`transcript'"', text replace name(progress_test)
+            fevc y x, `common'
+            quietly log close progress_test
+            quietly _progress_read_log `"`transcript'"'
+            assert r(times)>0 & r(pairs)>0 & r(complete)==1 & r(components)>0
+            assert mreldif(e(kss),reference)<1e-12
+            assert mreldif(e(component_inference),inference)<1e-12
+            assert e(inference_joint_posted)==`posted'
+            if `posted' assert mreldif(e(V),covariance)<1e-12
+            if "`reference'"=="q1" assert mreldif(e(inference_intervals),table)<1e-12
+            assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
+            capture confirm matrix e(rust_execution_receipt)
+            if !_rc {
+                assert e(rust_execution_receipt)[1,"gram"]==0
+                assert e(rust_execution_receipt)[1,"component"]== ///
+                    e(component_inference_receipt)[1,"solver_columns"]
+            }
+        }
+    }
 }
+// A removed variance model stops before any native work or report.
+quietly log using `"`transcript'"', text replace name(progress_test)
+capture noisily fevc y x, worker(worker) firm(firm) deletion(observation) ///
+    stayers(movers) backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///
+    preconditioner(diagonal) probes(200) inference(highrank) ///
+    inferencemodel(structured_common) inferencesimulations(129) inferencegramprobes(513)
+local removed_rc = _rc
+quietly log close progress_test
+assert `removed_rc'==198 & "`e(withholding_status)'"=="INFERENCE_MODEL_REMOVED"
+quietly _progress_read_log `"`transcript'"'
+assert r(times)==0 & r(messages)==0
 restore
 
 // Both log formats and Mata tolerate the new command options.

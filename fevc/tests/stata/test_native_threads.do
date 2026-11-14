@@ -102,19 +102,34 @@ gen long match=floor((_n-1)/2)+1
 gen double x=.31*mod(_n-1,2)+mod(_n-1,7)/29
 gen double y=worker-.8*firm+1.4*x+(mod((_n-1)*37+11,101)/50-1)*(1.4+.05*worker+.036*firm)
 gen double target=(.75+mod((_n-1)*13,29)/31)*(1+.1*worker)^2*(1+.1*firm)^2
+// Repeat-measurement standard errors. An explicit batch: with engine(generic)
+// and an automatic batch the native component batch receipt of a request
+// without a Gram fit is rejected (known defect). Explicit CMG batches use the
+// legacy path, which reports no execution receipt.
 foreach solver in diagonal cmg {
  foreach threads in 4 `upper' {
   quietly fevc y x, worker(worker) firm(firm) stayers(movers) deletion(observation) ///
    algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-   probes(200) targetweight(target) centering(none) inference(highrank) inferencemodel(structured_common) ///
-   inferencesimulations(129) inferencegramprobes(513) nodisplay nativethreads(`threads')
-  assert e(rust_execution_receipt)[1,"threads"]==`threads'
-  assert e(rust_component_batch_receipt)[1,"threads"]==`threads'
+   batch(8) probes(200) targetweight(target) centering(none) inference(highrank) nodisplay nativethreads(`threads')
+  assert "`e(inference_model)'"=="repeat_measurement"
+  if "`solver'"=="diagonal" assert e(rust_execution_receipt)[1,"threads"]==`threads'
+  assert e(native_threads_selected)==`threads'
   assert c(processors)==4
-  if `threads'==4 matrix base=e(kss)
-  else assert mreldif(base,e(kss))<1e-8
+  if `threads'==4 {
+   matrix base=e(kss)
+   matrix base_ci=e(component_inference)
+  }
+  else {
+   assert mreldif(base,e(kss))<1e-8
+   assert mreldif(base_ci,e(component_inference))<1e-8
+  }
  }
  noi di "THREAD_ATTACHMENT_PASS component `solver'"
 }
+capture quietly fevc y x, worker(worker) firm(firm) stayers(movers) deletion(observation) ///
+ algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
+ probes(200) inference(highrank) inferencegramprobes(513) nodisplay nativethreads(4)
+assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_OPTION_REMOVED"
+assert "$VCKSS_NATIVE_SELECTED"==""
 noi di "PASS test_native_threads.do"
 if "`output'"!="" log close

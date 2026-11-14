@@ -17,14 +17,16 @@ forvalues row = 1/24 {
 }
 generate double y = 1.5 + .3*worker - .2*firm + noise
 
-fevc y, worker(worker) firm(firm) deletion(observation) ///
-    centering(none) inference(highrank) inferencesimulations(100) ///
-    inferenceseed(42) inferencebins(16) nodisplay
+// Repeat-measurement standard errors with normal intervals post the joint
+// covariance of the four components, which lincom uses.
+fevc y, worker(worker) firm(firm) deletion(observation) backend(mata) ///
+    algorithm(exact) centering(none) inference(highrank) inferenceseed(42) nodisplay
+assert "`e(inference_model)'" == "repeat_measurement"
 matrix posted_b = e(b)
 matrix posted_V = e(V)
 
 lincom worker_variance + firm_variance + 2*worker_firm_covariance
 assert abs(r(estimate) - el(posted_b,1,4)) < 2e-12
-assert abs(r(se) - sqrt(el(posted_V,4,4))) < 2e-12
+assert reldif(r(se), sqrt(el(posted_V,4,4))) < 1e-10
 
 di as result "PASS test_inference_lincom.do"

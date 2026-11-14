@@ -304,12 +304,16 @@ if !`native_units' & `native_present' {
         quietly fevc_rust snapshot
         assert r(state)==0 & r(handle)==0 & r(last_released)==`prior_release'
     }
+    // Component standard errors need a later capability than deletion units:
+    // the route refuses such a plugin before preparation.
     capture noisily fevc y, worker(worker) firm(firm) deletionid(match) ///
         deletion(match) stayers(movers) nuisance(fixedoffset) algorithm(jla) engine(generic) ///
-        backend(rust) rng(counter_v1) preconditioner(diagonal) ///
-        centering(none) inference(highrank) inferencemodel(structured_common) nodisplay
+        backend(rust) rng(counter_v1) preconditioner(diagonal) batch(8) ///
+        centering(none) inference(highrank) nodisplay
     assert _rc==498
-    assert "`e(withholding_status)'"=="RUST_PARALLEL_DELETION_UNSUPPORTED"
+    assert "`e(withholding_status)'"=="REPEAT_MEASUREMENT_TUPLE_REQUIRED"
+    quietly fevc_rust snapshot
+    assert r(state)==0 & r(handle)==0
 }
 
 // A deletion block may not cross a coefficient cell, even outside the final

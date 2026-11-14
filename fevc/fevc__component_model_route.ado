@@ -3,23 +3,51 @@
 
 program define fevc__component_model_route, rclass
     version 18.0
+    // fevc 0.6.0 computes the standard errors of the components by one
+    // method, the repeat-measurement model. Requests for the variance models
+    // it replaced, and for their tuning options, stop before every other
+    // check with a message that names the change; fevc.ado runs this action
+    // first. The projection code still takes simulations and bins as
+    // positional constants, returned here.
+    if `"`1'"'=="removed" {
+        args action inferencemodel inferencesimulations inferencebins ///
+            inferencegramprobes
+        local model = lower(strtrim(`"`inferencemodel'"'))
+        if inlist(`"`model'"',"leaveout_residual","target_lowess",       ///
+            "structured_common","structured_leverage") {
+            local text "inferencemodel(`model') was removed in fevc 0.6.0; fevc reports repeat-measurement standard errors by default (help fevc, Standard errors)"
+            quietly _fevc_component_route_failure "INFERENCE_MODEL_REMOVED" "`text'"
+            di as error "`text'"
+            exit 198
+        }
+        if !inlist(`"`model'"',"","repeat_measurement") {
+            quietly _fevc_component_route_failure "INVALID_INFERENCE_MODEL" ///
+                "inferencemodel() accepts only repeat_measurement, the model fevc uses by default."
+            di as error "inferencemodel() accepts only repeat_measurement"
+            exit 198
+        }
+        foreach option in inferencesimulations inferencebins inferencegramprobes {
+            if strtrim(`"``option''"')!="" {
+                local text "`option'() applied only to the variance models removed in fevc 0.6.0"
+                quietly _fevc_component_route_failure "INFERENCE_OPTION_REMOVED" "`text'"
+                di as error "`text'"
+                exit 198
+            }
+        }
+        c_local inferencesimulations 1000
+        c_local inferencebins 1000
+        exit
+    }
     args inference inferencemodel project projecteffect projectweight ///
         inferencesimulations inferencebins inferenceseed backend rng  ///
         algorithm engine preconditioner batch stayers deletionid     ///
         targetweight deletion nuisance weighted inferencegramprobes ///
         inferencedraws
     if "`inferencedraws'"=="" local inferencedraws = 8
-
-    local gram_supplied = (strtrim(`"`inferencegramprobes'"') != "")
-    if `gram_supplied' {
-        capture confirm integer number `inferencegramprobes'
-        if _rc | !inrange(real(`"`inferencegramprobes'"'),512,2147483647) {
-            quietly _fevc_component_route_failure "INVALID_INFERENCE_TUNING" ///
-                "inferencegramprobes() must be an integer in [512,2147483647]."
-            exit 198
-        }
-    }
-    else local inferencegramprobes = 2048
+    // inferencemodel() is empty or repeat_measurement here, and
+    // inferencegramprobes() was not supplied (the removed action above). The
+    // Gram count is a positional constant of the projection code.
+    local inferencegramprobes = 2048
 
     // Standard errors are requested by default. inference(none) turns them
     // off; after a failed attempt the caller suppresses them for its retry.
@@ -48,38 +76,26 @@ program define fevc__component_model_route, rclass
     // inference(auto), the default, asks for repeat-measurement standard
     // errors with one interval per component (normal or q = 1, chosen from the
     // leading direction) whenever this request can carry them and otherwise
-    // for point estimates only. inferencemodel(leaveout_residual) keeps the
-    // earlier model. It never changes the backend, algorithm, or solver
-    // route the user selected. On the native backend the attachment does
+    // for point estimates only; inference(highrank) and inference(q1) ask
+    // for them strictly. None of them changes the backend, algorithm, or
+    // solver route the user selected. On the native backend the attachment does
     // select the resolved automatic executor in place of the point-only
     // full-CMG one, and the generic engine for a mover-only request without
     // controls; both compute the same estimates.
     local se_auto = ("`inference'"=="auto")
     local se_auto_reason ""
     local se_suppressed = (`se_auto' & "$VCKSS_SE_SUPPRESS"=="1")
-    local residual_model = lower(strtrim(`"`inferencemodel'"'))
-    if `se_auto' & !inlist("`residual_model'","","leaveout_residual","repeat_measurement") {
-        quietly _fevc_component_route_failure "INFERENCE_MODEL_WITHOUT_INFERENCE" ///
-            "inference(auto) selects inferencemodel(repeat_measurement) or carries inferencemodel(leaveout_residual); other models need inference(highrank) or inference(q1)."
-        exit 198
-    }
-    local model_typed = ("`residual_model'" != "")
-    if `se_auto' & !`model_typed' local residual_model repeat_measurement
-    // Repeat-measurement standard errors find the leading direction of every
-    // component unless inference(highrank) asks for the normal interval
-    // alone. inference(auto) then reports, component by component, the
-    // normal interval or the q = 1 interval; inference(q1) reports the q = 1
-    // interval wherever it exists. The pass itself is the high-rank one.
+    local supplied = (strtrim(`"`inferencemodel'"') != "")
+    // The leading direction of every component is found unless
+    // inference(highrank) asks for the normal interval alone. inference(auto)
+    // then reports, component by component, the normal interval or the q = 1
+    // interval; inference(q1) reports the q = 1 interval wherever it exists.
+    // The pass itself is the high-rank one.
     local se_leading ""
-    if "`residual_model'"=="repeat_measurement" & inlist("`inference'","auto","q1") {
+    if inlist("`inference'","auto","q1") {
         local se_leading `inference'
-    }
-    if `se_auto' {
-        local inferencemodel = cond("`residual_model'"=="repeat_measurement", ///
-            "repeat_measurement","leaveout_residual")
         local inference highrank
     }
-    if "`se_leading'"=="q1" local inference highrank
     local project_supplied = (strtrim(`"`project'"') != "")
     local projecteffect_supplied = (strtrim(`"`projecteffect'"') != "")
     local projectweight_supplied = (strtrim(`"`projectweight'"') != "")
@@ -107,13 +123,21 @@ program define fevc__component_model_route, rclass
         exit 198
     }
     local inference_requested = ("`inference'" != "none" | `project_supplied')
-    if "`inference'" != "none" & !`se_auto' & (`inferencesimulations' < 100 |  ///
-        `inferencebins' < 4 | `inferenceseed' < 1 |                ///
-        `inferenceseed' > 2147483629) {
+    if "`inference'" != "none" & !`se_auto' &                       ///
+        (`inferenceseed' < 1 | `inferenceseed' > 2147483629) {
         quietly _fevc_component_route_failure "INVALID_INFERENCE_TUNING"   ///
-            "Inference requires at least 100 simulations, at least four bins, and a seed in [1,2147483629]."
-        di as error "invalid inference simulations, bins, or seed"
+            "inferenceseed() must be an integer in [1,2147483629]."
+        di as error "inferenceseed() must be an integer in [1,2147483629]"
         exit 198
+    }
+    // Block projections are a separate estimand with their own covariance;
+    // the default leaves the components to point estimates beside them.
+    if "`inference'" != "none" & !`se_auto' & `project_supplied' {
+        quietly _fevc_component_route_failure "COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED" ///
+            "Standard errors of the components and project() cannot be combined in one call; run them in separate calls."
+        di as error "standard errors of the components and project() cannot be combined in one call;"
+        di as error "run them in separate calls"
+        exit 498
     }
 
     local backend_supplied = (strtrim(`"`backend'"') != "")
@@ -130,75 +154,22 @@ program define fevc__component_model_route, rclass
     if !`rng_supplied' local rng_requested auto
     else local rng_requested = lower(strtrim(`"`rng'"'))
 
-    local supplied = (strtrim(`"`inferencemodel'"')!="")
-    if `se_auto' local supplied = `model_typed'
-    // inference(auto) has already selected its model; only a request
-    // without it falls back to the exact target-specific model.
-    if !`supplied' & !`se_auto' local inferencemodel target_lowess
-    local inferencemodel = lower(strtrim(`"`inferencemodel'"'))
-    if !inlist("`inferencemodel'","target_lowess",               ///
-        "structured_common","structured_leverage","leaveout_residual", ///
-        "repeat_measurement") {
-        quietly _fevc_component_route_failure "INVALID_INFERENCE_MODEL"   ///
-            "inferencemodel() must be leaveout_residual, repeat_measurement, target_lowess, structured_common, or structured_leverage."
-        exit 198
-    }
     if `supplied' & "`inference'"=="none" {
         quietly _fevc_component_route_failure "INFERENCE_MODEL_WITHOUT_INFERENCE" ///
-            "inferencemodel() requires inference(highrank) or inference(q1)."
+            "inferencemodel() requires inference(auto), inference(highrank) or inference(q1)."
         exit 198
     }
-    local structured = "`inference'"!="none" &                  ///
-        inlist("`inferencemodel'","structured_common","structured_leverage")
+    // A request without component standard errors keeps the internal
+    // target_lowess sentinel of the exact projection runtime.
+    local inferencemodel = cond("`inference'"=="none","target_lowess","repeat_measurement")
     // Repeat-measurement standard errors are a variant of the leave-out
     // residual pass: same units, solves and routes. Units that share a
     // worker-firm cell receive the sample variance of their outcomes (an
     // eligible stayer's observations; under observation deletion also a
     // mover's match of two or more observations), the remaining units a
-    // two-step fitted model. They are an explicit request.
-    local repeat = "`inference'"!="none" & "`inferencemodel'"=="repeat_measurement"
-    local residual = "`inference'"!="none" &                     ///
-        inlist("`inferencemodel'","leaveout_residual","repeat_measurement")
-    if `residual' & "`inference'"=="q1" {
-        quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED" ///
-            "inferencemodel(leaveout_residual) uses the normal reference; specify inference(highrank) or inference(auto)."
-        exit 498
-    }
-    if `residual' & `gram_supplied' {
-        quietly _fevc_component_route_failure "INFERENCE_GRAM_TUPLE_REQUIRED" ///
-            "inferencegramprobes() does not apply to inferencemodel(`inferencemodel'); use inferencedraws()."
-        exit 498
-    }
-    if `structured' & `project_supplied' {
-        quietly _fevc_component_route_failure "COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED" ///
-            "Structured component inference and project() cannot share one prepared generation."
-        exit 498
-    }
-    if `structured' & lower(strtrim("`deletion'"))=="observation" & strtrim(`"`weighted'"')!="" {
-        quietly _fevc_component_route_failure "STRUCTURED_FREQUENCY_UNSUPPORTED" ///
-            "Structured component inference currently requires unweighted, unit-frequency observations."
-        di as error "structured component inference does not yet support frequency weights"
-        exit 498
-    }
-    local observation_tuple = lower(strtrim("`deletion'"))=="observation" & ///
-        inlist(lower(strtrim("`stayers'")),"","movers","both") & ///
-        inlist(lower(strtrim("`nuisance'")),"","joint")
-    local match_tuple = lower(strtrim("`deletion'"))=="match" &  ///
-        inlist(lower(strtrim("`stayers'")),"","movers","both") &                  ///
-        lower(strtrim("`nuisance'"))=="fixedoffset" &             ///
-        lower(strtrim("`engine'"))=="generic"
-    local exact_structured = `structured' & "`backend_requested'"=="mata" & ///
-        inlist("`rng_requested'","auto","stata") & `algorithm_supplied' & ///
-        lower(strtrim("`algorithm'"))=="exact" & ///
-        lower(strtrim("`deletion'"))=="match" & ///
-        lower(strtrim("`nuisance'"))=="fixedoffset"
-    local scalable = `structured' & !`project_supplied' &         ///
-        "`backend_requested'"=="rust" & "`rng_requested'"=="counter_v1" & ///
-        `algorithm_supplied' & lower(strtrim("`algorithm'"))=="jla" & ///
-        (`observation_tuple' | `match_tuple') &                   ///
-        `preconditioner_supplied' &                               ///
-        inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") & ///
-        inlist(lower(strtrim("`engine'")),"","auto","generic")
+    // two-step fitted model.
+    local repeat = "`inference'"!="none"
+    local residual = `repeat'
     // Leave-out residual standard errors. Units are the deletion units of
     // either deletion mode; controls enter through a fixed-offset geometry
     // under either nuisance mode. Observation deletion on the native route
@@ -266,63 +237,23 @@ program define fevc__component_model_route, rclass
             local residual = 0
             local inference_requested = `project_supplied'
         }
-        else if `repeat' {
+        else {
             quietly _fevc_component_route_failure "REPEAT_MEASUREMENT_TUPLE_REQUIRED" ///
-                "Repeat-measurement standard errors need Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)), no project(), and, for observation deletion, joint nuisance (natively also no frequency weights); `residual_reason'."
+                "Repeat-measurement standard errors need Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)) and, for observation deletion, joint nuisance (natively also no frequency weights); `residual_reason'."
             di as error "repeat-measurement standard errors are not available for this request"
             exit 498
         }
-        else {
-            quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_TUPLE_REQUIRED" ///
-                "Leave-out residual standard errors need Rust/Counter-V1 or Mata with algorithm(jla) (or Mata algorithm(exact)), no project(), and, for native observation deletion, joint nuisance without frequency weights; `residual_reason'."
-            di as error "leave-out residual standard errors are not available for this request"
-            exit 498
-        }
     }
+    // The request is a scalable component request on the native route and
+    // shares the exact mixed-unit posting on the Mata routes. One native
+    // probe is one pseudo-noise solve: a fit and three kernel images per
+    // draw. No Gram matrix is fitted.
+    local scalable = `residual'
+    local exact_structured = `residual'
     if `residual' {
-        // The request is a scalable component request on the native route
-        // and shares the exact mixed-unit posting on the Mata routes. One
-        // native probe is one pseudo-noise solve: a fit and three kernel
-        // images per draw. No Gram matrix is fitted.
-        local scalable = 1
-        local exact_structured = 1
         local inferencesimulations = 4*`inferencedraws'
         local inferencegramprobes = 0
         c_local inferencesimulations `inferencesimulations'
-    }
-    if `structured' & !(`scalable' | `exact_structured') {
-        quietly _fevc_component_route_failure "STRUCTURED_INFERENCE_TUPLE_REQUIRED" ///
-            "Structured inference requires explicit Rust/Counter-V1 JLA with diagonal or CMG, or explicit Mata/exact match deletion with fixedoffset nuisance. Match inference permits stayers(both) or stayers(movers)."
-        exit 498
-    }
-    if `gram_supplied' & !`scalable' {
-        quietly _fevc_component_route_failure "INFERENCE_GRAM_TUPLE_REQUIRED" ///
-            "inferencegramprobes() requires supported explicit structured Rust component inference."
-        exit 498
-    }
-    // The structured models are native-only and fail closed without the
-    // plugin. Leave-out residual standard errors checked their capability
-    // above and may run on the Mata runtime instead.
-    if `scalable' & !`residual' & `match_tuple' & lower(strtrim("`stayers'"))!="movers" {
-        capture quietly fevc__rust_public_call probe
-        local mixed_rc = _rc
-        if !`mixed_rc' local mixed_rc = (r(component_mixed_api)!=1)
-        if `mixed_rc' {
-            quietly _fevc_component_route_failure "MIXED_COMPONENT_NATIVE_REQUIRED" ///
-                "Pooled component inference requires the mixed-unit native capability; install the matching plugin."
-            exit 498
-        }
-    }
-    if `scalable' & !`residual' {
-        capture quietly fevc__rust_public_call componentversion
-        local interface_rc = _rc
-        if !`interface_rc' local interface_rc = (r(interface_version)!=4)
-        if `interface_rc' {
-            quietly _fevc_component_route_failure "COMPONENT_NATIVE_INTERFACE_REQUIRED" ///
-                "Structured inference requires the updated native component interface; reinstall the matching plugin."
-            di as error "structured inference requires the updated matching native plugin"
-            exit 498
-        }
     }
     // The display and e() report whether default standard errors were
     // attached and, if not, why. They must never cost the point estimate: the
@@ -332,7 +263,7 @@ program define fevc__component_model_route, rclass
     global VCKSS_SE_AUTO_REASON "`se_auto_reason'"
     global VCKSS_SE_ATTACHED = (`se_auto' & `residual')
     // Read by the Mata runtimes and the posting helper; empty unless this
-    // request carries one of the two residual-pass standard errors.
+    // request carries repeat-measurement standard errors.
     global VCKSS_SE_MODEL = cond(`residual',"`inferencemodel'","")
     // auto or q1 when the leading directions are computed; the search is
     // capped at this many linear solves per component.

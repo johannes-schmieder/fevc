@@ -120,15 +120,23 @@ def test_stata_front_end_admits_the_model_explicitly_for_both_deletion_modes():
     assert """("`residual_deletion'"=="observation" &                       ///""" in route
     assert "(`repeat' & r(component_repeat_api)!=1)" in route
     assert 'global VCKSS_SE_MODEL = cond(`residual\',"`inferencemodel\'","")' in route
-    # The default is unchanged: inference(auto) without a typed model selects
-    # leaveout_residual; with inferencemodel(repeat_measurement) it keeps it.
+    # Since fevc 0.6.0 it is the only model: inference(auto), the default,
+    # inference(highrank) and inference(q1) all select it, and
+    # inferencemodel(repeat_measurement) is a name for it. The removed models
+    # stop before every other check.
+    removed = route[route.index("""if `"`1'"'=="removed" {""") :]
+    removed = removed[: removed.index("\n        exit\n    }\n")]
+    assert '"INFERENCE_MODEL_REMOVED"' in removed and '"INFERENCE_OPTION_REMOVED"' in removed
+    assert 'inlist(`"`model\'"\',"","repeat_measurement")' in removed
     assert (
-        """if `se_auto' & !inlist("`residual_model'","","leaveout_residual","repeat_measurement") {"""
+        """local inferencemodel = cond("`inference'"=="none","target_lowess","repeat_measurement")"""
         in route
     )
-    assert '"repeat_measurement","leaveout_residual")' in route
-    # Without a model inference(auto), the default, selects this one.
-    assert "if `se_auto' & !`model_typed' local residual_model repeat_measurement" in route
+    assert 'local repeat = "`inference\'"!="none"' in route
+    command = read("fevc/fevc.ado")
+    assert command.index("fevc__component_model_route removed") < command.index(
+        "_vckss_centering request"
+    )
     post = read("fevc/fevc__residual_se_post.ado")
     assert "program define _fevc_repeat_se_post, eclass" in post
     assert 'ereturn local inference_variance_fit "repeat_measurement"' in post

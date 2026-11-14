@@ -346,9 +346,14 @@ def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None
     )
     manifest = (ROOT / "fevc.pkg").read_text(encoding="utf-8")
 
-    assert 'inlist("`inferencemodel\'","structured_common","structured_leverage")' in route
-    assert "STRUCTURED_INFERENCE_TUPLE_REQUIRED" in route
-    assert "STRUCTURED_FREQUENCY_UNSUPPORTED" in route
+    # fevc 0.6.0 removed the structured models from the public interface; a
+    # request for one stops before every other check. Their native and Mata
+    # machinery stays.
+    assert '"structured_common","structured_leverage") {' in route
+    assert "INFERENCE_MODEL_REMOVED" in route and "INFERENCE_OPTION_REMOVED" in route
+    for status in ("STRUCTURED_INFERENCE_TUPLE_REQUIRED", "STRUCTURED_FREQUENCY_UNSUPPORTED",
+                   "LEAVEOUT_RESIDUAL_TUPLE_REQUIRED", "LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED"):
+        assert status not in route
     assert "unrestricted_kss" not in route
     for field in (
         'ereturn local result_family "generic"',

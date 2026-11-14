@@ -33,6 +33,55 @@ capture confirm matrix e(inference_intervals)
 assert _rc
 global FEVC_DEFAULT_INFERENCE ""
 
+* The default's model is the only one: inference(highrank) and inference(q1)
+* without inferencemodel() give exactly the numbers of the request that names
+* it, element by element, whatever the switch says.
+program define _same_save
+    foreach name in b V kss results component_inference inference_intervals ///
+        inference_leading inference_repeat component_inference_receipt {
+        capture matrix drop same_`name'
+        // A missing e() matrix would otherwise be copied as one missing value.
+        capture confirm matrix e(`name')
+        if !_rc matrix same_`name' = e(`name')
+    }
+    global DI_SAME_STATUS "`e(status)'"
+end
+program define _same_check
+    assert "`e(status)'"=="$DI_SAME_STATUS" & "`e(inference_model)'"=="repeat_measurement"
+    tempname A
+    foreach name in b V kss results component_inference inference_intervals ///
+        inference_leading inference_repeat component_inference_receipt {
+        capture confirm matrix same_`name'
+        local saved = (_rc==0)
+        capture confirm matrix e(`name')
+        assert `saved'==(_rc==0)
+        if !`saved' continue
+        matrix `A' = e(`name')
+        assert rowsof(`A')==rowsof(same_`name') & colsof(`A')==colsof(same_`name')
+        forvalues i = 1/`=rowsof(`A')' {
+            forvalues j = 1/`=colsof(`A')' {
+                assert `A'[`i',`j']==same_`name'[`i',`j']
+            }
+        }
+    }
+end
+foreach backend in mata rust {
+    if "`backend'"=="rust" & !`native' continue
+    foreach inference in highrank q1 {
+        quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(`backend') ///
+            deletion(observation) inference(`inference') ///
+            inferencemodel(repeat_measurement) nodisplay
+        _same_save
+        quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(`backend') ///
+            deletion(observation) inference(`inference') nodisplay
+        _same_check
+        assert "`e(backend_selected)'"=="`backend'"
+        capture confirm scalar e(inference_auto)
+        assert _rc
+    }
+}
+macro drop DI_SAME_STATUS
+
 if lower(strtrim(`"`: environment FEVC_DEFAULT_INFERENCE'"'))=="none" {
     global FEVC_DEFAULT_INFERENCE "`caller_setting'"
     display "PASS test_default_inference.do default=switched_off native=`native'"
@@ -80,6 +129,8 @@ else assert "`e(status)'"=="KSS_POINT_ESTIMATES_ONLY"
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) inference(none) nodisplay
 assert "`e(status)'"=="KSS_POINT_ESTIMATES_ONLY"
 capture confirm matrix e(inference_intervals)
+assert _rc
+capture confirm scalar e(inference_auto)
 assert _rc
 
 global FEVC_DEFAULT_INFERENCE "`caller_setting'"

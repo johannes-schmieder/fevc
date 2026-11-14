@@ -349,14 +349,18 @@ controls are not silently dropped. See the
   {it:Option}{col 40}Description
   {hline 76}
     {cmd:inference(auto|none|highrank|q1)}{col 40}standard errors and intervals; default auto
-    {cmd:inferencemodel(}{it:mode}{cmd:)}{col 40}variance method; see below
-    {cmd:inferencedraws(}{it:#}{cmd:)}{col 40}pseudo-noise draws for leaveout_residual and repeat_measurement; default 8
+    {cmd:inferencemodel(repeat_measurement)}{col 40}the only variance model; may be omitted
+    {cmd:inferencedraws(}{it:#}{cmd:)}{col 40}pseudo-noise draws; default 8
     {cmd:level(}{it:#}{cmd:)}{col 40}confidence level; default 95
-    {cmd:inferencesimulations(}{it:#}{cmd:)}{col 40}variance simulations; default 1,000
-    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 40}variance-model probes; default 2,048
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 40}inference seed; default 8675309
-    {cmd:inferencebins(}{it:#}{cmd:)}{col 40}target_lowess bins; default 1,000
   {hline 76}
+
+{pstd}
+fevc 0.6.0 removed {cmd:inferencemodel(leaveout_residual)},
+{cmd:inferencemodel(target_lowess)}, {cmd:inferencemodel(structured_common)},
+{cmd:inferencemodel(structured_leverage)}, {cmd:inferencesimulations()},
+{cmd:inferencebins()} and {cmd:inferencegramprobes()}; a request for one of
+them stops with a message.
 
 {marker se}{...}
 {pstd}
@@ -871,21 +875,24 @@ default mean centering.
 {pstd}{stata fevc_run projection_inference using fevc.sthlp:Click to run}{p_end}
 
 {marker component_example}
-{dlgtab:Example 5: Component inference and lincom}
+{dlgtab:Example 5: Standard errors, intervals and lincom}
 
 {pstd}
 A small fixed dataset illustrates syntax; it is not evidence of interval
-coverage. This example uses observation deletion and exact inference.
-{cmd:lincom} requires an available joint component covariance {cmd:e(V)}.
+coverage. Both commands compute repeat-measurement standard errors, as the
+default does. {cmd:inference(q1)} reports the q = 1 interval for every
+component that has one; {cmd:inference(highrank)} reports normal intervals
+only and posts the joint component covariance {cmd:e(V)}, which {cmd:lincom}
+requires.
 
 {cmd}{...}
         preserve
 {* example_start - component_inference}{...}
         fevc, simulate_data(ex5) clear
         fevc log_wage productivity policy, ///
-            worker(worker_id) firm(firm_id) ///
-            deletion(observation) inference(highrank) ///
-            inferencesimulations(100) inferenceseed(42) inferencebins(16)
+            worker(worker_id) firm(firm_id) inference(q1)
+        fevc log_wage productivity policy, ///
+            worker(worker_id) firm(firm_id) inference(highrank)
         lincom worker_variance+firm_variance+2*worker_firm_covariance
 {* example_end}{...}
         restore

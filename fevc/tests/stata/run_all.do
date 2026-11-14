@@ -133,7 +133,6 @@ do `"`pkgroot'/tests/stata/test_scale_engine_reductions.do"'
 do `"`pkgroot'/tests/stata/test_scale_command.do"'
 
 if "`suite'" == "full" {
-    do `"`pkgroot'/tests/stata/test_leaveout_residual_se.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_control_panel.do"' `"`pkgroot'"' mata
     do `"`pkgroot'/tests/stata/test_control_akm.do"'
     do `"`pkgroot'/tests/stata/test_lockstep_pcg.do"'

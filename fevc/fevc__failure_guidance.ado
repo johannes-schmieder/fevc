@@ -24,8 +24,16 @@ program define fevc__failure_guidance, rclass
         local suggestion "Check the option spelling and documented range in help fevc; do not loosen numerical tolerances to force an estimate through."
     }
     else if "`failure_status'" == "INVALID_INFERENCE_TUNING" {
-        local reason "An inference precision, simulation or seed option is outside its supported range."
-        local suggestion "Use integer inferencegramprobes() from 512 through 2147483647 (default 2048) for structured Rust inference, and check the documented simulation and seed ranges."
+        local reason "An inference draw or seed option is outside its supported range."
+        local suggestion "Use an integer inferencedraws() from 2 through 4096 (default 8) and an integer inferenceseed() from 1 through 2147483629."
+    }
+    else if "`failure_status'" == "INFERENCE_MODEL_REMOVED" {
+        local reason "The requested variance model was removed in fevc 0.6.0; standard errors of the components come from the repeat-measurement model."
+        local suggestion "Omit inferencemodel(); the default inference(auto) reports repeat-measurement standard errors, and inference(highrank) or inference(q1) chooses the interval. See help fevc, Standard errors."
+    }
+    else if "`failure_status'" == "INFERENCE_OPTION_REMOVED" {
+        local reason "The option tuned only the variance models removed in fevc 0.6.0."
+        local suggestion "Omit inferencesimulations(), inferencebins() and inferencegramprobes(); the repeat-measurement model uses inferencedraws() and inferenceseed()."
     }
     else if "`failure_status'" == "INFERENCE_GRAM_TUPLE_REQUIRED" {
         local reason "Gram precision applies only to the supported structured Rust component-inference calculation."

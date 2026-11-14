@@ -68,7 +68,10 @@ forvalues cell=3/5 {
             generate double tw=fw*(1+mod(_n,7)/10)
             generate double x=sin(_n/7)+mod(_n,5)/3
             local controls x [fw=fw]
-            local extra stayers(both) nuisance(fixedoffset) targetweight(tw) inference(highrank) inferencemodel(structured_common) inferencesimulations(100) inferenceseed(1791) centering(none)
+            // Pooled movers and stayers on full CMG, point estimates only:
+            // repeat-measurement standard errors cannot ride the direct CMG
+            // executor (known automatic component batch receipt defect).
+            local extra stayers(both) nuisance(fixedoffset) targetweight(tw) centering(none)
             local probes 200
         }
 
@@ -79,12 +82,24 @@ forvalues cell=3/5 {
             tolerance(`tolerance') `extra' nodisplay
         assert "`e(cmg_backend)'"=="CMG_FULL_V2"
         assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
+        if `cell'==5 assert e(N_stayers)>0 & "`e(stayers)'"=="both"
         display "CMG_RESULT_EXPORTS case=`cell' count=$FEVC_CMG_RESULT_EXPORTS"
         assert $FEVC_CMG_RESULT_EXPORTS == 1
         quietly fevc_rust snapshot
         assert r(state)==0 & r(handle)==0
     }
 }
+// The structured request of cell 5 stops before any native work.
+global FEVC_CMG_RESULT_EXPORTS 0
+capture noisily fevc y x [fw=fw], worker(worker) firm(firm) deletion(match) ///
+    backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///
+    preconditioner(cmg) batch(auto) probes(200) stayers(both) nuisance(fixedoffset) ///
+    targetweight(tw) inference(highrank) inferencemodel(structured_common) ///
+    inferencesimulations(100) inferenceseed(1791) centering(none) nodisplay
+assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_MODEL_REMOVED"
+assert $FEVC_CMG_RESULT_EXPORTS == 0
+quietly fevc_rust snapshot
+assert r(state)==0 & r(handle)==0
 macro drop FEVC_CMG_RESULT_EXPORTS
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass

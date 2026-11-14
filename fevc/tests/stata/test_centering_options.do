@@ -19,16 +19,26 @@ assert _rc==198
 capture noisily fevc y, `common' centering(mean) inference(observation)
 assert _rc==198
 assert "`e(withholding_status)'"=="INVALID_INFERENCE"
-capture noisily fevc y, `common' inference(highrank) inferencebins(1)
+capture noisily fevc y, `common' inference(highrank) inferencedraws(1)
 assert _rc==198
 assert "`e(withholding_status)'"=="INVALID_INFERENCE_TUNING"
 assert "$VCKSS_INFERENCE_ERROR"==""
 assert "$VCKSS_INFERENCE_DETAIL"==""
+// inferencebins() tuned only a variance model removed in fevc 0.6.0.
+capture noisily fevc y, `common' inference(highrank) inferencebins(1)
+assert _rc==198
+assert "`e(withholding_status)'"=="INFERENCE_OPTION_REMOVED"
+assert "$VCKSS_INFERENCE_ERROR"==""
 capture noisily fevc y, `common' centering(corrected) project(x)
 assert _rc==498
-capture noisily fevc y, `common' centering(corrected) inference(highrank)
-assert _rc==498
-assert "`e(withholding_status)'"=="CENTERING_INFERENCE_UNSUPPORTED"
+// Repeat-measurement standard errors, the only component inference, describe
+// the mean-centred estimate and treat the corrected increment as fixed. On
+// this small panel a high-rank variance estimate is not positive, which the
+// q = 1 request reports per component.
+quietly fevc y, `common' centering(corrected) inference(q1)
+assert "`e(centering)'"=="corrected" & "`e(inference_model)'"=="repeat_measurement"
+assert "`e(inference_centering)'"=="standard error of the mean-centred estimate; corrected-centering increment treated as fixed"
+confirm matrix e(inference_intervals)
 capture noisily fevc y, `common' centering(corrected) project(x) inference(q1)
 assert _rc==498
 assert "`e(withholding_status)'"=="CENTERING_INFERENCE_UNSUPPORTED"

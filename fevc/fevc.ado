@@ -6,7 +6,7 @@
 *! Repeat-measurement standard errors and one interval per component (normal
 *! or q = 1) accompany the point estimates by default (inference(auto));
 *! inference(none) gives point estimates only.
-*! Projection and the other inference methods require explicit requests.
+*! Block projections require an explicit request.
 
 program define fevc, eclass
     version 18.0
@@ -4368,10 +4368,10 @@ program define _vckss_impl, eclass sortpreserve
         PHYSICAL_limit(integer 50000000)                         ///
         INFERence(string) Level(cilevel)                          ///
         INFERENCEMOdel(string)                                    ///
-        INFERENCESIMulations(integer 1000)                        ///
+        INFERENCESIMulations(string)                              ///
         INFERENCESeed(integer 8675309)                            ///
         INFERENCEGRAMProbes(string)                               ///
-        INFERENCEBins(integer 1000)                               ///
+        INFERENCEBins(string)                                     ///
         INFERENCEDraws(integer 8)                                 ///
         PROJECT(varlist numeric) PROJECTEffect(string)            ///
         PROJECTWeight(string) NODISPlay NOLOG VERBOSE                           ///
@@ -4383,7 +4383,9 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
-    _vckss_centering request `"`centering'"' `"`inference'"' `"`project'"' `"`inferencemodel'"'
+    fevc__component_model_route removed `"`inferencemodel'"'         ///
+        `"`inferencesimulations'"' `"`inferencebins'"' `"`inferencegramprobes'"'
+    _vckss_centering request `"`centering'"' `"`project'"'
     fevc__numerical request `"`mcse'"' `"`inference'"' `"`project'"' `"`numericalmcse'"'
     _fevc_native_threads `"`nativethreads'"'
     global VCKSS_REPORT_LEVEL 0
@@ -4433,8 +4435,8 @@ program define _vckss_impl, eclass sortpreserve
         }
         else {
             quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
-                "Rust component inference requires explicit inferencemodel(leaveout_residual|structured_common|structured_leverage), deletion(observation), algorithm(jla), rng(counter_v1), joint nuisance handling, mover-only data, and diagonal PCG or forced CMG."
-            di as error "backend(rust) component inference is outside the explicit structured tuple"
+                "Rust component inference requires the repeat-measurement tuple."
+            di as error "backend(rust) component inference is outside its tuple"
         }
         exit 498
     }
@@ -4447,8 +4449,8 @@ program define _vckss_impl, eclass sortpreserve
         }
         else {
             quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
-                "Counter-V1 component inference is available only for the explicit structured Rust tuple."
-            di as error "rng(counter_v1) component inference is outside the explicit structured tuple"
+                "Counter-V1 component inference requires the repeat-measurement tuple."
+            di as error "rng(counter_v1) component inference is outside its tuple"
         }
         exit 498
     }

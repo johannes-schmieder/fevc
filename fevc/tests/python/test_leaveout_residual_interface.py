@@ -119,12 +119,15 @@ def test_native_engine_selection_and_offset_pass_are_bound_to_the_flag():
     assert "diagnostic.offset_pass_solves = offset_receipts.len();" in engine
 
 
-def test_corrected_centering_is_admitted_only_for_this_model():
+def test_corrected_centering_is_admitted_for_component_inference_not_projection():
+    # Repeat-measurement standard errors, the only component inference since
+    # fevc 0.6.0, accept centering(corrected); block projections do not.
     centering = read("fevc/fevc__centering.ado")
-    assert (
-        """!inlist(lower(strtrim("`inferencemodel'")),"leaveout_residual","repeat_measurement")"""
-        in centering
-    )
+    request = centering[centering.index('if "`action\'"=="request" {') :]
+    request = request[: request.index('if "`action\'"=="tuning" {')]
+    assert "args centering project" in request
+    assert "inferencemodel" not in request
+    assert """if "`centering'"=="corrected" & "`project'"!="" {""" in request
     plugin = read("rust/crates/vckss-plugin/src/ffi_engine.rs")
     assert "fn centering_bound_component(" in plugin
 
@@ -183,7 +186,10 @@ def test_package_ships_the_new_files_and_help_documents_the_method():
     assert "heteroskedasticity.}" in help_text
     assert "{cmd:inference(none)} gives point estimates only." in help_text
     assert (PACKAGE / "docs/standard_errors/standard_errors.tex").is_file()
-    assert (PACKAGE / "tests/stata/test_leaveout_residual_se.do").is_file()
+    # inferencemodel(leaveout_residual) was removed from the public interface
+    # in fevc 0.6.0; the repeat-measurement regression covers the shared pass.
+    assert not (PACKAGE / "tests/stata/test_leaveout_residual_se.do").exists()
+    assert (PACKAGE / "tests/stata/test_repeat_measurement_se.do").is_file()
 
 
 def _program_code_characters(source, name):

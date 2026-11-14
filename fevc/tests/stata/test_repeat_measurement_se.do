@@ -102,6 +102,17 @@ program define _rm_check
     }
     local total = `V'[1,1]+`V'[2,2]+4*`V'[3,3]+2*`V'[1,2]+4*`V'[1,3]+4*`V'[2,3]
     assert reldif(`total',`V'[4,4])<1e-10
+    * That combination has zero variance by construction, so lincom gives it
+    * a standard error of zero up to rounding (missing if rounding goes
+    * negative).
+    quietly lincom worker_variance+firm_variance+2*worker_firm_covariance-total_variance
+    assert abs(r(estimate))<1e-10*max(1,abs(`b'[1,4]))
+    assert r(se)<1e-6*sqrt(`V'[4,4]) | missing(r(se))
+    tempname rank
+    matrix `rank' = e(inference_effective_rank)
+    assert rowsof(`rank')==4 & `rank'[1,1]>=1
+    assert e(inference_max_influence_share)>0 & e(inference_max_influence_share)<=1
+    assert e(inference_mean_omitted)==0
     * inference(highrank) computes no leading direction.
     capture confirm matrix e(inference_intervals)
     assert _rc
@@ -390,6 +401,16 @@ if `native' {
     assert "`e(inference_variance_fit)'"=="repeat_measurement"
     assert "`e(backend_selected)'"=="rust" & e(inference_auto)==1
     confirm matrix e(inference_intervals)
+    * Standard errors do not change the estimator. With controls on the
+    * native backend they select another executor, so agreement is to solver
+    * tolerance.
+    quietly fevc log_wage x1 x2, worker(worker_id) firm(firm_id) backend(rust) ///
+        inference(none) nodisplay
+    matrix native_point = e(kss)
+    quietly fevc log_wage x1 x2, worker(worker_id) firm(firm_id) backend(rust) ///
+        inference(highrank) nodisplay
+    _rm_check 8 150 `native_control_term'
+    assert mreldif(native_point,e(kss))<1e-5
 }
 else {
     * A plugin without the capability refuses a strict native request.
@@ -750,8 +771,92 @@ capture quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(mata) 
     inferencemodel(repeat_measurement) nodisplay
 assert _rc==498 & "`e(withholding_status)'"=="REPEAT_MEASUREMENT_TUPLE_REQUIRED"
 capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
-    inference(auto) inferencemodel(structured_common) nodisplay
+    inference(none) inferencemodel(repeat_measurement) nodisplay
 assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_MODEL_WITHOUT_INFERENCE"
+* fevc 0.6.0 removed the other variance models and their tuning options. A
+* request for one stops before any other check, whatever inference() says,
+* and names the change; a name the command never had is invalid.
+foreach model in leaveout_residual target_lowess structured_common Structured_Leverage {
+    local name = lower("`model'")
+    foreach inference in none auto highrank q1 {
+        capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+            centering(unknown) inference(`inference') inferencemodel(`model') nodisplay
+        assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_MODEL_REMOVED"
+        assert `"`e(withholding_detail)'"'=="inferencemodel(`name') was removed in fevc 0.6.0; fevc reports repeat-measurement standard errors by default (help fevc, Standard errors)"
+    }
+}
+capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    inference(highrank) inferencemodel(unrestricted_kss) nodisplay
+assert _rc==198 & "`e(withholding_status)'"=="INVALID_INFERENCE_MODEL"
+foreach option in inferencesimulations(1000) inferencebins(16) inferencegramprobes(2048) {
+    local name = substr("`option'",1,strpos("`option'","(")-1)
+    capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+        inference(highrank) `option' nodisplay
+    assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_OPTION_REMOVED"
+    assert `"`e(withholding_detail)'"'=="`name'() applied only to the variance models removed in fevc 0.6.0"
+}
+* Standard errors of the components and a block projection are separate
+* calls; the default leaves the components to point estimates instead (below).
+foreach inference in highrank q1 {
+    capture quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+        algorithm(exact) project(x1) projecteffect(firm) inference(`inference') nodisplay
+    assert _rc==498 & "`e(withholding_status)'"=="COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED"
+}
+
+* --- the one model ------------------------------------------------------------
+* inferencemodel(repeat_measurement) names the only model: inference(highrank)
+* and inference(q1) alone give exactly the same numbers, element by element.
+program define _rm_same_save
+    foreach name in b V V_primitive kss results decomposition component_inference ///
+        component_raw_covariance component_spectrum inference_intervals ///
+        inference_leading inference_repeat inference_effective_rank ///
+        inference_diagnostics q0_status component_inference_receipt ///
+        component_unit_receipt {
+        capture matrix drop same_`name'
+        // A missing e() matrix would otherwise be copied as one missing value.
+        capture confirm matrix e(`name')
+        if !_rc matrix same_`name' = e(`name')
+    }
+    global RM_SAME_STATUS "`e(status)'"
+end
+program define _rm_same_check
+    assert "`e(status)'"=="$RM_SAME_STATUS" & "`e(inference_model)'"=="repeat_measurement"
+    tempname A
+    foreach name in b V V_primitive kss results decomposition component_inference ///
+        component_raw_covariance component_spectrum inference_intervals ///
+        inference_leading inference_repeat inference_effective_rank ///
+        inference_diagnostics q0_status component_inference_receipt ///
+        component_unit_receipt {
+        capture confirm matrix same_`name'
+        local saved = (_rc==0)
+        capture confirm matrix e(`name')
+        assert `saved'==(_rc==0)
+        if !`saved' continue
+        matrix `A' = e(`name')
+        assert rowsof(`A')==rowsof(same_`name') & colsof(`A')==colsof(same_`name')
+        forvalues i = 1/`=rowsof(`A')' {
+            forvalues j = 1/`=colsof(`A')' {
+                assert `A'[`i',`j']==same_`name'[`i',`j']
+            }
+        }
+    }
+end
+foreach route in "backend(mata) algorithm(exact)" "backend(rust) probes(800)" {
+    if strpos("`route'","rust") & !`native' continue
+    foreach inference in highrank q1 {
+        quietly fevc log_wage x1, worker(worker_id) firm(firm_id) `route' ///
+            inference(`inference') inferencemodel(repeat_measurement) ///
+            inferencedraws(16) nodisplay
+        _rm_same_save
+        quietly fevc log_wage x1, worker(worker_id) firm(firm_id) `route' ///
+            inference(`inference') inferencedraws(16) nodisplay
+        _rm_same_check
+        assert "`e(status)'"==cond("`inference'"=="q1", ///
+            "FEVC_REPEAT_MEASUREMENT_Q1","FEVC_REPEAT_MEASUREMENT_SE")
+        assert "`e(inference_leading_request)'"==cond("`inference'"=="q1","q1","")
+    }
+}
+macro drop RM_SAME_STATUS
 
 * --- the default ---------------------------------------------------------------
 * inference(auto) without a model is the repeat-measurement model with one
@@ -857,14 +962,11 @@ assert _rc
 capture confirm matrix e(inference_intervals)
 assert _rc
 assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""
-* The earlier model remains available by name.
+* So does inference(none) with a projection; the projection is unchanged.
+matrix default_projection = e(projection_results)
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
-    algorithm(exact) inference(auto) inferencemodel(leaveout_residual) nodisplay
-assert "`e(inference_variance_fit)'"=="leaveout_residual"
-assert "`e(status)'"=="FEVC_LEAVEOUT_RESIDUAL_SE"
-capture confirm matrix e(inference_repeat)
-assert _rc
-capture confirm matrix e(inference_intervals)
-assert _rc
+    algorithm(exact) project(x1) projecteffect(firm) inference(none) nodisplay
+assert "`e(status)'"=="KSS_PROJECTION_INFERENCE"
+assert mreldif(default_projection,e(projection_results))==0
 
 display "PASS test_repeat_measurement_se.do"
