@@ -170,8 +170,112 @@ there is no bottleneck. The variance of the sum, always reported with the
 normal interval, covers 0.941 to 0.969. On three panels of the Veneto data
 (2.3 to 5.2 million person-years, both deletion modes) every component
 receives the normal interval under this rule (shares 0.03% to 8.1%), and
-the default costs 24% to 31% more time than the point estimates alone.
+the default costs 24% to 30% more time than the point estimates alone
+(the plain command of the final source, 16 threads).
 These are development results: the rule was chosen on them.
+
+#### Confirmation
+
+The rule was then fixed in the source and put to a registered confirmation
+of the plain default command, with no inference option: 20 two-block
+panels of about 48,000 person-years with design seeds not used before (four
+without a bottleneck, the others with 1,000 to 30 bridging workers; error
+variances that follow or violate the fitted model; normal and skewed
+errors), match and observation deletion, 1,000 replications each. Designs,
+seeds, replications and tolerances were written into a manifest before any
+outcome of these designs was drawn: in every design and mode at least
+99% of the replications with an interval for all four components; coverage
+of the reported interval at least 0.92 in every design, mode and component
+(a replication without an interval counts as not covered) and at least
+0.94 on average; without a bottleneck, a reported interval at most
+1.10 times as long as the normal one and `e(V)` posted in at least
+50% of the samples; a clean inventory of the outputs.
+
+The first run failed its registered verdict, on the inventory. In one of
+its 40,000 fits the standard-error pass stopped (see the limit below) and
+the default returned point estimates with the reason, as documented; the
+harness had no rule for such a fit and rejected its output as corrupt. That
+failure stands. For information only, with that fit counted as a
+replication without an interval, the run's other criteria read: at least
+99.4% of fits with intervals, lowest coverage 0.937 of 160 cases, mean
+0.960, length ratio at most 1.059, `e(V)` posted in at least 60% of the
+no-bottleneck samples of a design.
+
+The second run was registered with the package, the designs, the command,
+the replications and the tolerances unchanged, new random seeds, and a
+harness that counts such a fit as a replication without an interval.
+It met all of its tolerances.
+
+Of its 40,000 fits none failed and none fell back to point estimates; at
+most 6 of the 1,000 replications of a case had no interval. Coverage of the
+reported interval over the 160 cases: lowest 0.930 (the variance of the
+sum under match deletion in a design with 1,000 bridging workers), mean
+0.959; the variance of the sum, always normal, 0.930 to 0.967. Without a
+bottleneck the reported
+interval is at most 1.059 times as long as the normal one, the `q = 1`
+interval is used for 6.2% of the components and `e(V)` is posted in 89% of
+the samples. The same replications judged with the normal interval alone
+have a lowest coverage of 0.789. Lowest coverage by kind of design, for the
+worker variance, the firm variance and the covariance:
+
+| design | always normal | always `q = 1` | reported | reported, first run |
+|---|---|---|---|---|
+| no bottleneck | 0.938 | 0.940 | 0.940 | 0.944 |
+| weak bottleneck | 0.931 | 0.939 | 0.935 | 0.937 |
+| middle | 0.538 | 0.955 | 0.946 | 0.945 |
+| strong bottleneck | 0.469 | 0.964 | 0.964 | 0.961 |
+| direction mostly signal | 0.931 | 0.940 | 0.940 | 0.946 |
+
+This is simulation evidence for designs of this kind, with one bottleneck
+at most, independent errors and no control variables; it is not a coverage
+guarantee, and it does not cover two or more dominant directions. The
+harness, the manifests (runs `conf1` and `conf2`, sha256 `6aee3af8e5e6...` and
+`08427f94de4b...`) and the outputs are kept with the companion material, not in
+this repository.
+
+#### A limit: outcomes with very little noise
+
+The fitted model is scaled by the mean leave-out variance product of the
+units it is fitted on. A single product has a standard deviation
+proportional to the size of the outcome's mean part, so when that part
+dwarfs the errors the mean of a few thousand products can come out
+negative. The pass then stops with `JLA_CONSTRAINT_FAILED` and the default
+returns point estimates with that reason. In the simulations above this
+happened in one of 112,000 fits, under observation deletion in a design
+whose two blocks of firms differ by three log points (the variance of the
+outcome's mean part is 130 times the error variance; the model is fitted on
+2,836 matches of one observation). With variance ratios like those of wage
+data it is not expected.
+
+#### A limit: control variables correlated with the effects
+
+The intervals treat estimated control coefficients as known, and the
+simulations above have no controls. A development check (not a
+confirmation) adds one control under the default joint nuisance: four
+designs from no bottleneck to 30 bridging workers, both deletion modes, 500
+replications each (4,000 fits, none failed, none without standard errors).
+The control is made adverse: 0.4 times the worker effect plus 0.8 times the
+firm effect plus noise, with a coefficient of 0.3, so that its correlation
+with the sum of the two effects is 0.55. An error in the estimated
+coefficient then moves the estimated effects along the control, and the
+variance of their sum most of all:
+
+| component | standard error over spread of the estimates | coverage of the reported interval |
+|---|---|---|
+| worker variance | 0.90 to 1.06 | 0.924 to 0.986 |
+| firm variance | 0.86 to 1.06 | 0.944 to 0.986 |
+| covariance | 0.95 to 1.29 | 0.934 to 0.992 |
+| variance of the sum | 0.84 to 0.91 | 0.904 to 0.920 |
+
+The standard error of the sum is 9% to 16% too small in every one of the
+eight cases. That is roughly what the omitted first-order term, about
+`4 Cov(alpha + psi, x)^2 Var(beta-hat)`, amounts to in this design (a rough
+calculation, not a derived result); without controls the same ratio is 0.96
+to 1.05 and the interval covers 0.93 to 0.97. A
+control that is weakly related to the effects, or precisely estimated,
+costs correspondingly less. The leave-out residual model carries a
+first-order term for the control coefficients; this model does not yet,
+and `e(inference_nuisance_omitted)` is one to say so.
 
 Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
 addition to the bits of the leave-out residual pass; variance-source code 4

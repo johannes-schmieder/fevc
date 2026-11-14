@@ -376,8 +376,9 @@ turns them off. {cmd:inference(auto) inferencemodel(repeat_measurement)}
 requests the same strictly: the command stops if they cannot be computed.
 
 {pstd}
-{it:The variances.} Deletion units that share a worker and a firm are independent repeat
-measurements of one mean, so their error variance is estimated by their own
+{it:The variances.} Deletion units that share a worker and a firm are
+independent repeat measurements of one mean, so their error variance is
+estimated by their own
 sample variance, with no model linking them to other workers. Under
 {cmd:deletion(match)} these are the observations of a stayer, and a mover's
 collapsed match has no repeat measurement; under {cmd:deletion(observation)}
@@ -435,11 +436,24 @@ those units.{p_end}
 {phang2}3. At most one direction of the network dominates a component, and
 no single deletion unit dominates that direction. Two or more dominant
 directions are not covered by either interval.{p_end}
-{phang2}4. Estimated control coefficients are treated as known.{p_end}
+{phang2}4. Estimated control coefficients are treated as known. With a
+control that is strongly correlated with the worker and firm effects the
+standard errors are then too small, that of the total most of all (9% to
+16% in the example of the inference guide; coverage 0.90 to 0.92).
+{cmd:inferencemodel(leaveout_residual)} carries a term for the control
+coefficients.{p_end}
+{phang2}5. The errors are not negligible next to the outcome's explained
+variation. Where they are, the fitted model can lack a positive scale; the
+default then returns point estimates and says so.{p_end}
 
 {pstd}
 The choice between the two intervals is made from the data.
-The rule and its threshold come from development simulations through the command itself; they have not been confirmed in a registered run.
+The rule and its threshold were fixed after development simulations and
+then confirmed in a registered simulation through the command itself, at
+the second attempt; the first failed on the bookkeeping of one fit that
+returned point estimates (the inference guide gives designs, tolerances and
+both results). That is simulation evidence for designs with at most one
+bottleneck and without controls; it is not a coverage guarantee.
 There is no theoretical result for a data-dependent choice between the two
 intervals. Under {cmd:centering(corrected)} the intervals describe the
 mean-centred estimate and treat the small corrected-centering increment as

@@ -11,8 +11,15 @@
   are normal, and the display explains the choice.
   `inferencemodel(leaveout_residual)` keeps the earlier default. The rule
   was developed on simulations through the command (16 designs, both
-  deletion modes, 32,000 fits; `docs/INFERENCE.md`); on three Veneto panels
-  the default adds 24% to 31% to the time of the point estimates.
+  deletion modes, 32,000 fits) and then put to a registered confirmation on
+  20 new designs with tolerances fixed beforehand: the first run failed on
+  the bookkeeping of one fit that returned point estimates; the second, with
+  package, designs and tolerances unchanged, passed (40,000 fits; lowest
+  coverage 0.930, mean 0.959; `docs/INFERENCE.md`). On three Veneto panels
+  the default adds 24% to 30% to the time of the point estimates. Known
+  limit: control coefficients are treated as known; with a control strongly
+  correlated with the effects the standard error of the total is 9% to 16%
+  too small in a development check.
 - Add repeat-measurement standard errors,
   `inferencemodel(repeat_measurement)`, under match and
   observation deletion: deletion units that share a worker-firm cell (a

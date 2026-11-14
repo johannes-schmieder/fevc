@@ -454,3 +454,56 @@ Mata sources were written without access to Stata and are unexecuted; the
 registered Stata suites keep the point-only default through
 `FEVC_DEFAULT_INFERENCE=none`. See the
 [technical supplement](standard_errors/standard_errors.tex).
+
+## 2026-11-13: repeat-measurement standard errors and one interval per component by default
+
+The owner asked for "a single method for calculating standard errors so
+that the user doesn't really have to think about this": standard errors
+that are "either high rank or Q1", with "the diagnostics ... run
+automatically by the code to decide which one is appropriate", shown
+"together with the information for the user", cheap, and available for the
+exact estimate, for JLA and for the options a user chooses; centering with
+a fixed centering value and controls as a fixed offset are acceptable to
+him. On the plan proposed in reply he decided: "Q1 with interval and e(V)
+only for high rank makes sense. The stata output should explain that"; the
+leading direction is computed by default if it costs no more than about
+100% of the point estimate alone; and the method is extended to observation
+deletion.
+
+Accordingly `inference(auto)`, the default, selects
+`inferencemodel(repeat_measurement)`: error variances come from independent
+repeat measurements wherever they exist (the rule he set on 2026-11-12,
+with the more conservative model for the units without them), every
+component is reported with the normal interval or the `q = 1` interval of
+KSS Section 6, `e(V)` is posted only when all components are normal, and
+the display says which interval each component received and why.
+`inferencemodel(leaveout_residual)` keeps the default of 2026-11-10. The
+guarantees of that decision stand: the selected backend, algorithm and
+solver are never changed, and point estimates never depend on the standard
+errors.
+
+Not decided by the owner, and recorded for his review: the statistic of the
+rule (the share of the estimated sampling variance carried by the leading
+direction) and its threshold of ten per cent were chosen by the implementer
+from development simulations; twenty per cent posts `e(V)` more often where
+there is no bottleneck at a slightly lower worst-case coverage
+([INFERENCE.md](INFERENCE.md), development table). The first registered
+confirmation of the default as shipped failed its verdict on the inventory
+of the outputs (one fit of 40,000 returned point estimates and the harness had
+no rule for it); the second, with package, designs and tolerances
+unchanged, met all of its tolerances (lowest coverage 0.930, mean 0.959,
+40,000 fits, none failed, none returned point estimates). On three Veneto
+panels the default adds 24% to 30% to the time of the point estimates and
+reports normal intervals for every component. There is no theoretical
+result for the data-dependent choice between the two intervals, and two or
+more dominant directions are not covered. Control coefficients are treated
+as known, which the owner accepted ("treating the control variables as
+fixed offset"); a development check with a control strongly correlated
+with the effects shows what that costs: the standard error of the sum is 9%
+to 16% too small there and its interval covers 0.90 to 0.92
+([INFERENCE.md](INFERENCE.md)). There is no simulation on the Mata routes
+beyond the regression tests.
+
+The distributed plugins predate the method; until they are rebuilt the
+default reports point estimates and says why. Binaries, tag and release
+remain separate owner decisions.
