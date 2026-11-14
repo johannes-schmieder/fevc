@@ -204,12 +204,33 @@ def truth(P, blk, cell, seed, bridge=None):
     return alpha, psi, v
 
 
+_CONTROL_DEFAULTS = dict(alpha=0.4, psi=0.8, noise=0.25, coef=0.3, second=False, hetero=0.0)
+
+
+def _control_spec(ctrl, name):
+    """The options of an object-valued control, with defaults; anything else is rejected."""
+    bad = set(ctrl) - set(_CONTROL_DEFAULTS)
+    if bad:
+        raise ValueError(f"cell {name}: unknown control keys {sorted(bad)}")
+    spec = dict(_CONTROL_DEFAULTS, **ctrl)
+    for k, v in spec.items():
+        if k == 'second':
+            ok = isinstance(v, bool)
+        else:
+            ok = isinstance(v, (int, float)) and not isinstance(v, bool) and np.isfinite(v)
+        if not ok:
+            raise ValueError(f"cell {name}: control key {k!r} has the invalid value {v!r}")
+    return spec
+
+
 def write_design(cell, path):
     """Write the design CSV of a cell and return its description for the manifest.
 
     Columns: worker, firm, year, alpha, psi, sd (the person-year error standard deviation); with
     "control": true also x and xb, a control fixed with the design and its contribution to the
-    outcome.
+    outcome. "control" may instead be an object of options (alpha, psi, noise, coef, second,
+    hetero; see the README), which adds the description key control_realised, and with second
+    a further control x2 (xb is then the contribution of both).
     collapsed_rows counts the rows of the collapsed design (one per mover match, one per stayer
     person-year) and mover_rows the mover matches.
     """
@@ -218,17 +239,51 @@ def write_design(cell, path):
     cols = [P.w + 1, P.f + 1, P.year, alpha[P.w], psi[P.f], np.sqrt(v_py)]
     header = 'worker,firm,year,alpha,psi,sd'
     fmt = ['%d', '%d', '%d', '%.17g', '%.17g', '%.17g']
-    if cell.get('control'):
+    ctrl = cell.get('control')
+    spec = _control_spec(ctrl, cell['name']) if isinstance(ctrl, dict) else None
+    realised = None
+    if ctrl is not None and ctrl is not False and (spec is not None or ctrl):
+        spec = spec or _CONTROL_DEFAULTS
         # A control fixed with the design, correlated with both effects and varying within every
-        # worker and match; its contribution to the outcome (coefficient 0.3) travels as its own
-        # column. The estimand is unchanged.
-        x = (0.4 * alpha[P.w] + 0.8 * psi[P.f]
-             + 0.25 * np.random.default_rng([cell['design_seed'], 77]).standard_normal(P.n))
-        cols += [x, 0.3 * x]
+        # worker and match; its contribution to the outcome (default coefficient 0.3) travels as
+        # its own column. The estimand is unchanged.
+        e = np.random.default_rng([cell['design_seed'], 77]).standard_normal(P.n)
+        x = spec['alpha'] * alpha[P.w] + spec['psi'] * psi[P.f] + spec['noise'] * e
+        xb = spec['coef'] * x
+        cols += [x, xb]
         header += ',x,xb'
         fmt += ['%.17g', '%.17g']
+        if spec['second']:
+            # A second control that trends with the calendar year and is unrelated to the effects.
+            x2 = (0.3 * (P.year - P.year.mean())
+                  + 0.5 * np.random.default_rng([cell['design_seed'], 78]).standard_normal(P.n))
+            xb = xb + 0.2 * x2
+            cols[-1] = xb
+            cols.append(x2)
+            header += ',x2'
+            fmt.append('%.17g')
+        if spec['hetero']:
+            # The error variance moves with the control within every cell; its mean factor is one.
+            h = spec['hetero']
+            cols[5] = cols[5] * np.exp(h * e - h ** 2)
+        if isinstance(ctrl, dict):
+            eff = alpha[P.w] + psi[P.f]
+            mean_x = np.bincount(P.match, x) / np.bincount(P.match)
+            realised = dict(
+                corr_x_effects=float(np.corrcoef(x, eff)[0, 1]),
+                within_match_share=float(np.sum((x - mean_x[P.match]) ** 2)
+                                         / np.sum((x - x.mean()) ** 2)),
+                index_sd=float(np.std(xb)), effects_sd=float(np.std(eff)),
+                controls=2 if spec['second'] else 1)
+            if spec['hetero']:
+                vf = np.exp(2 * h * e - 2 * h ** 2)
+                realised.update(variance_factor_p10=float(np.percentile(vf, 10)),
+                                variance_factor_p90=float(np.percentile(vf, 90)))
     np.savetxt(path, np.column_stack(cols), delimiter=',', header=header, comments='', fmt=fmt)
     mover_rows = int((~P.stay_w[P.match_w]).sum())
-    return dict(person_years=int(P.n), workers=int(P.nW), firms=int(P.nJ),
+    info = dict(person_years=int(P.n), workers=int(P.nW), firms=int(P.nJ),
                 bridge_workers=int(bridge.sum()),
                 collapsed_rows=mover_rows + int(P.stay_w[P.w].sum()), mover_rows=mover_rows)
+    if realised is not None:
+        info['control_realised'] = realised
+    return info

@@ -47,6 +47,9 @@ local controls ""
 capture confirm numeric variable x xb
 if !_rc local controls "x"
 else generate double xb = 0
+* A second control, when the design has one, enters the model beside the first.
+capture confirm numeric variable x2
+if !_rc & "`controls'"=="x" local controls "x x2"
 local N = _N
 * True components: variances and covariance of the effects over person-years.
 quietly correlate alpha psi, covariance

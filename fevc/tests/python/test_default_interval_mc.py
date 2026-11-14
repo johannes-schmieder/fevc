@@ -480,3 +480,69 @@ def test_the_rule_is_recomputed_from_the_recorded_leading_variance(run):
         edit(d, name, drop_recorded)
     out = aggregate.main(d)                                               # older output: candidates
     assert len(out['package_rule_mismatches']) == 12                      # 2 cells x 2 modes x 3
+
+
+def read_design(tmp_path, name, **control):
+    path = tmp_path / f'{name}.csv'
+    info = designs.write_design(dict(SMALL, control=control), str(path))
+    return pd.read_csv(path, float_precision='round_trip'), info, path
+
+
+def test_an_object_control_with_defaults_is_the_same_design_as_true(tmp_path):
+    info_true = designs.write_design(dict(SMALL, control=True), str(tmp_path / 't.csv'))
+    _, info, path = read_design(tmp_path, 'o')
+    assert path.read_bytes() == (tmp_path / 't.csv').read_bytes()
+    assert 'control_realised' not in info_true
+    assert info['control_realised']['controls'] == 1
+
+
+def test_control_options_do_what_they_say(tmp_path):
+    base, binfo, _ = read_design(tmp_path, 'base')
+    off, info, _ = read_design(tmp_path, 'off', alpha=0, psi=0)
+    assert abs(info['control_realised']['corr_x_effects']) < 0.1
+    assert abs(base['x'] - off['x'] - (0.4 * base['alpha'] + 0.8 * base['psi'])).max() < 1e-12
+    _, qinfo, _ = read_design(tmp_path, 'quiet', noise=0)
+    assert qinfo['control_realised']['corr_x_effects'] > 0.9
+    assert (qinfo['control_realised']['within_match_share']
+            < binfo['control_realised']['within_match_share'])
+    coef, cinfo, _ = read_design(tmp_path, 'coef', coef=0.6)
+    assert np.allclose(coef['xb'], 0.6 * coef['x'], rtol=0, atol=1e-15)
+    assert np.isclose(cinfo['control_realised']['index_sd'],
+                      2 * binfo['control_realised']['index_sd'])
+    two, tinfo, _ = read_design(tmp_path, 'two', second=True)
+    assert list(two.columns) == ['worker', 'firm', 'year', 'alpha', 'psi', 'sd', 'x', 'xb', 'x2']
+    assert tinfo['control_realised']['controls'] == 2
+    assert np.allclose(two['xb'], 0.3 * two['x'] + 0.2 * two['x2'], rtol=0, atol=1e-14)
+    assert two['x'].equals(base['x'])
+    het, hinfo, _ = read_design(tmp_path, 'het', hetero=0.5)
+    e = (het['x'] - 0.4 * het['alpha'] - 0.8 * het['psi']) / 0.25
+    assert het['x'].equals(base['x'])
+    assert np.allclose(het['sd'], base['sd'] * np.exp(0.5 * e - 0.25), rtol=1e-12)
+    assert abs(np.mean(np.exp(2 * 0.5 * e - 2 * 0.25)) - 1) < 0.1
+    r = hinfo['control_realised']
+    assert 0 < r['variance_factor_p10'] < 1 < r['variance_factor_p90']
+    assert 'variance_factor_p10' not in binfo['control_realised']
+
+
+@pytest.mark.parametrize('control', [dict(bogus=1), dict(alpha='0.4'), dict(second=1),
+                                     dict(coef=True), dict(hetero=None), dict(noise=float('nan'))])
+def test_a_malformed_control_names_the_cell(tmp_path, control):
+    with pytest.raises(ValueError, match='cell s'):
+        designs.write_design(dict(SMALL, control=control), str(tmp_path / 'bad.csv'))
+
+
+def test_the_manifest_records_what_an_object_control_realises(tmp_path, monkeypatch):
+    monkeypatch.delenv('FEVC_STATA', raising=False)
+    spec = json.load(open(small_spec(tmp_path)))
+    spec['cells'] = [dict(SMALL, name='a', group='none', control={'second': True}),
+                     dict(SMALL, name='b', group='none', control=True)]
+    json.dump(spec, open(tmp_path / 'ctl.json', 'w'))
+    pkgmc.make(str(tmp_path / 'run'), str(tmp_path / 'ctl.json'))
+    man = json.load(open(tmp_path / 'run/manifest.json'))
+    assert man['designs']['a']['control_realised']['controls'] == 2
+    assert 'control_realised' not in man['designs']['b']
+
+
+def test_the_task_do_file_puts_a_second_control_in_the_model():
+    text = (TOOL / 'mc_task.do').read_text()
+    assert 'confirm numeric variable x2' in text and 'local controls "x x2"' in text

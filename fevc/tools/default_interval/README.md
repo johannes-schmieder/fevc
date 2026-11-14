@@ -14,7 +14,7 @@ Licensed Stata runs locally only. Nothing here is meant for a public CI runner.
 - `designs.py`: the panel generator (NumPy only). Two blocks of firms, workers who move within their
   block, `n_bridge` workers who move once across (the bottleneck; `null` for one block), six unbalanced
   years, pruned to the leave-one-match-out connected set; effects and person-year error variances of the
-  kinds `flat`, `profile`, `movers` and `bridge`; optional control (`"control": true`). It reproduces the
+  kinds `flat`, `profile`, `movers` and `bridge`; optional control (`"control": true`, or an object of options, see "Spec and manifest"). It reproduces the
   campaign designs bit for bit (the sha256 recorded in the manifests).
 - `pkgmc.py`: `make`, `run`, `check`.
 - `mc_task.do`: one Stata task (one design, one deletion mode, a block of replications).
@@ -49,7 +49,18 @@ must report). Optional: `purpose`, `expect_threshold` (the rule threshold every 
 a confirmation, `tolerances` with exactly `min_success_rate`, `min_coverage`, `min_mean_coverage`,
 `max_length_ratio_none` and `min_posted_none` (see `confirm.py`). A cell has `name`, `group` (`none`
 marks designs without a bottleneck), `nJ`, `nW`, `n_bridge`, `design_seed`, `gap`, `variance`, `errors`
-(`normal` or `skew`) and optionally `control` and `realised`. The regime a design realises (its true
+(`normal` or `skew`) and optionally `control` and `realised`. `control` is `true` (a control `x` loading 0.4 on
+the worker effect and 0.8 on the firm effect, plus noise of standard deviation 0.25, with coefficient 0.3) or
+an object with any of the optional numeric keys `alpha`, `psi`, `noise`, `coef` (those four quantities) and
+`hetero`, and the boolean `second`; other keys or types are rejected. `second` adds a control `x2` (a year
+trend plus noise, coefficient 0.2) that enters the model beside `x`. A nonzero `hetero` multiplies the
+person-year error standard deviation by `exp(hetero*e - hetero^2)`, with `e` the standard normal draw behind
+the noise of `x`, so the error variance moves with the control and its mean factor is one. The column `xb` is
+the contribution of all controls to the outcome. The object `{}` writes the same design as `true`. For an
+object, the manifest design record also carries `control_realised`: the correlation of `x` with the sum of
+the effects, the share of the variance of `x` within worker-firm matches, the standard deviations of `xb` and
+of the effects, the number of controls and, with `hetero`, the 10th and 90th percentiles of the variance
+factor. The regime a design realises (its true
 curvature and share) is not computed here; a spec cell may carry it as `realised`, which `make` copies
 into the manifest unchanged.
 
