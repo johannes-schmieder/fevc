@@ -107,15 +107,19 @@ def test_diagnostic_export_and_shim_reconciliation():
 def test_stata_front_end_admits_the_model_explicitly_for_both_deletion_modes():
     route = read("fevc/fevc__component_model_route.ado")
     assert '"repeat_measurement") {' in route
-    assert "REPEAT_MEASUREMENT_Q1_UNSUPPORTED" in route
+    assert "REPEAT_MEASUREMENT_Q1_UNSUPPORTED" not in route
     assert "REPEAT_MEASUREMENT_TUPLE_REQUIRED" in route
     assert "!`repeat' &" not in route
     assert """("`residual_deletion'"=="observation" &                       ///""" in route
     assert "(`repeat' & r(component_repeat_api)!=1)" in route
     assert 'global VCKSS_SE_MODEL = cond(`residual\',"`inferencemodel\'","")' in route
-    # The default is unchanged: inference(auto) selects leaveout_residual.
-    assert """if `se_auto' & !inlist("`residual_model'","","leaveout_residual") {""" in route
-    assert "local inferencemodel leaveout_residual" in route
+    # The default is unchanged: inference(auto) without a typed model selects
+    # leaveout_residual; with inferencemodel(repeat_measurement) it keeps it.
+    assert (
+        """if `se_auto' & !inlist("`residual_model'","","leaveout_residual","repeat_measurement") {"""
+        in route
+    )
+    assert '"repeat_measurement","leaveout_residual")' in route
     post = read("fevc/fevc__residual_se_post.ado")
     assert "program define _fevc_repeat_se_post, eclass" in post
     assert 'ereturn local inference_variance_fit "repeat_measurement"' in post
@@ -124,3 +128,49 @@ def test_stata_front_end_admits_the_model_explicitly_for_both_deletion_modes():
     display = read("fevc/fevc__display.ado")
     assert "repeat-measurement" in display
     assert "The standard error is as good as that" in display
+
+
+def test_leading_directions_travel_through_their_own_export_and_one_stata_helper():
+    core = read("rust/crates/vckss-core/src/generic_jla/leading_direction.rs")
+    assert "pub(super) fn leading_direction(" in core
+    assert "const BASIS: usize = 6;" in core and "const KEPT: usize = 3;" in core
+    attachment = read("rust/crates/vckss-core/src/generic_jla/residual_noise_attachment.rs")
+    # Requested by the q1 reference on the repeat-measurement source only.
+    assert "prepared.options.reference_distribution == ComponentReferenceDistribution::Q1" in attachment
+    assert "finish_repeat_q1_target(" in attachment
+    repeat = read("rust/crates/vckss-core/src/residual_noise/repeat.rs")
+    assert "pub fn remainder_pair_term(" in repeat
+    assert "let leading_variance = fitted.finish().max(leading_variance_leave_out);" in repeat
+    export = read("rust/crates/vckss-plugin/src/ffi_component_v5.rs")
+    assert "pub extern \"C\" fn vckss_rust_engine_repeat_measurement_leading_v1(" in export
+    assert "const _: [(); 872] = [(); size_of::<VckssRepeatMeasurementLeadingV1>()];" in export
+    header = read("rust/stata_backend/include/vckss_rust.h")
+    assert "} VckssRepeatMeasurementLeadingV1;" in header
+    assert "int32_t vckss_rust_engine_repeat_measurement_leading_v1(" in header
+    abi = read("rust/stata_backend/tests/abi_header_compat_test.c")
+    assert "sizeof(VckssRepeatMeasurementLeadingV1) == 872" in abi
+    shim = read("rust/stata_backend/cshim/stata_entry.c")
+    assert "__vckss_rl_present" in shim
+    assert "(uint64_t)base->probes + 3u + noise.offset_pass_solves + leading_solves" in shim
+    route = read("fevc/fevc__component_model_route.ado")
+    assert "global VCKSS_SE_LEADING = cond(" in route
+    assert "global VCKSS_SE_LEADING_CAP 40" in route
+    post = read("fevc/fevc__residual_se_post.ado")
+    # The decision and the posting live in the existing helper, so that the
+    # package file list does not change.
+    assert "program define _fevc_se_regime_decide" in post
+    assert "program define _fevc_se_regime_post, eclass" in post
+    assert "local share_threshold .05" in post
+    assert 'if "`1\'"=="regime_decide" {' in post
+    fetch = read("fevc/fevc__rust_component_fetch.ado")
+    assert "fevc__residual_se_post regime_decide `computed' `posted' `level'" in fetch
+    assert "matrix `receipt'[1,24] = 3" in fetch
+    command = read("fevc/fevc.ado")
+    assert "fevc__residual_se_post regime_decide `inference_V' `corrected' `level'" in command
+    mata = read("fevc/fevc_residual_se.mata")
+    assert "real colvector vckss_rse__lead_solve(" in mata
+    assert "real matrix vckss_rse__lead_finish(" in mata
+    assert 'st_matrix("__fevc_se_leading",lead_table)' in mata
+    display = read("fevc/fevc__display.ado")
+    assert "program define _fevc_display_intervals" in display
+    assert "e(V) is not posted: it is posted only when every component is normal." in display

@@ -69,11 +69,66 @@ standard error is then the one of the model without controls for the
 outcome net of the estimated control index, which the native route forms in
 an offset pass of two solves per point-estimate probe beside the joint
 point estimate. Observation deletion needs joint nuisance and, natively,
-unit frequencies. The method reports the normal interval
-only; `inference(q1)` with this model is rejected with
-`REPEAT_MEASUREMENT_Q1_UNSUPPORTED`. Derivation, assumptions, simulation
-evidence and limits are in a technical note maintained with the companion
-paper, not in this repository.
+unit frequencies. Derivation, assumptions, simulation evidence and limits
+are in a technical note maintained with the companion paper, not in this
+repository.
+
+### Leading directions and the interval of every component
+
+`inference(highrank)` with this model computes the covariance above and
+reports normal intervals. `inference(auto)` and `inference(q1)` with this
+model run the same pass and add, for each of the four reported targets, the
+leading direction and the `q = 1` decomposition along it:
+
+- the direction is the eigenvector `v` of `A_t v = lambda S v` of largest
+  absolute eigenvalue, with `S` the normal matrix of the unit design and
+  `w = X v` its unit-space weights of unit length. The native route and the
+  matrix-free Mata route find it by a thick-restart Lanczos iteration in the
+  `S` inner product (basis six, three Ritz vectors kept, one linear solve per
+  step, stopped at a relative residual of `1e-3` or after 40 solves), each
+  search started from the previous target's direction; the exact Mata route
+  uses a dense eigendecomposition. The start does not depend on the outcome;
+- with `b = w'y`, the estimate splits into
+  `lambda (b^2 - V-hat_lo[b]) + theta_r`, where `V-hat_lo[b]` is the
+  leave-out estimate `sum_a w_a^2 z_a e_{a,-a}` and `theta_r` the remainder,
+  a leave-out form with the target's kernel net of the direction (its
+  diagonal ratio becomes `(B_aa - lambda w_a^2)/(1 - P_aa)`, and the
+  rank-one part is subtracted). The decomposition is an identity, and the
+  pass checks it against the remainder computed directly;
+- the covariance of `(b, theta_r)` has the entries
+  `max(V-hat_lo[b], sum_a w_a^2 v_a)`, `2 sum_a w_a v_a m_a^r` and the
+  high-rank form of the remainder,
+  `4 sum_a v_a (m_a^r)^2 - 2 tr(K_r V K_r V)` plus the pair term of the sets
+  with the remainder's weights, where `v_a` are the unit variances above,
+  `m^r` is the remainder's realized influence and the trace uses the same
+  pseudo-noise draws. The leave-out variance of `b` is unbiased but rests on
+  the few units that carry the direction; taking the larger value keeps it
+  positive and, for moderate correlation, can only widen the interval;
+- the interval is the Andrews-Mikusheva interval of KSS (Section 6): the
+  range of `lambda b^2 + theta_r` over the ellipse of radius `z(kappa)`
+  around the estimates, with `kappa` the curvature
+  `2 |lambda| V[b] / (V[theta_r] (1 - rho^2))^(1/2)` and `z` its critical
+  value, simulated with 100,000 draws.
+
+One more linear solve per target gives the remainder's influence and one per
+target and draw its kernel, so the request adds the search, 4 and 4 per draw
+to the 3 and 4 per draw of the pass: about 90 solves with the default eight
+draws where the pass alone takes 35.
+
+The reported interval is chosen component by component, by one rule on every
+route (`fevc__residual_se_post.ado`). With `inference(auto)` a component
+receives the `q = 1` interval when its leading direction carries more than
+five per cent of the estimated sampling variance,
+`(4 lambda^2 max(b^2 - V[b], 0) V[b] + 2 lambda^2 V[b]^2) / V-hat`, or when
+the high-rank variance estimate is not positive, and the normal interval
+otherwise; the variance of the sum, whose nonzero eigenvalues are all equal,
+keeps the normal interval. With `inference(q1)` every target receives the
+`q = 1` interval when it exists. A `q = 1` component has no standard error,
+and `e(V)` is posted only when every component has a normal interval. The
+threshold is a development choice from simulations with stored draws; it has
+not been confirmed in a registered run. Neither KSS nor the technical note
+has a result for a data-dependent choice between the two intervals, and the
+case of two or more dominant directions is not covered.
 
 Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
 addition to the bits of the leave-out residual pass; variance-source code 4

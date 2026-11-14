@@ -9737,7 +9737,7 @@ program define _fevc_residual_se_mata
     capture mata: vckss_rse__api_level()
     local runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rse__api_level() == 1 &            ///
-        vckss_rse__build_id() == "vckss-residual-se-api4" &       ///
+        vckss_rse__build_id() == "vckss-residual-se-api5" &       ///
         vckss_rse__loaded() == 1)
     if _rc & `runtime_loaded' {
         c_local inference_status "STALE_INFERENCE_RUNTIME"
@@ -9753,7 +9753,7 @@ program define _fevc_residual_se_mata
         }
         capture quietly do `"`r(fn)'"'
         capture mata: assert(vckss_rse__api_level() == 1 &        ///
-            vckss_rse__build_id() == "vckss-residual-se-api4" &   ///
+            vckss_rse__build_id() == "vckss-residual-se-api5" &   ///
             vckss_rse__loaded() == 1)
         if _rc {
             c_local inference_status "INVALID_INFERENCE_RUNTIME"
@@ -9812,6 +9812,12 @@ program define _fevc_residual_se_mata
             "inference_status", "inference_message")
     }
     local mata_rc = _rc
+    // With leading directions the interval of every component is decided
+    // now; a q = 1 interval for any of them withholds the joint covariance.
+    if !`mata_rc' & "$VCKSS_SE_LEADING"!="" & "`inference_status'"=="CONVERGED" {
+        fevc__residual_se_post regime_decide `inference_V' `corrected' `level'
+        if "$VCKSS_SE_ANY_Q1"=="1" local inference_joint_available 0
+    }
     // Observation units carry no fixed offset to omit, as on the native
     // route; repeat-measurement standard errors hold it fixed on any unit.
     if "`deletion'" == "observation" & "$VCKSS_SE_MODEL" != "repeat_measurement" {

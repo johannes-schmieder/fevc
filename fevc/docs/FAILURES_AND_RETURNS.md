@@ -409,6 +409,21 @@ profile coefficients), with `e(inference_repeat_sets)` and
 more deletion units: an eligible stayer under match deletion, and under
 observation deletion also every match of a mover with two or more
 observations.
+With `inference(auto)` or `inference(q1)` the same model also posts
+`e(inference_intervals)` (one row per target: estimate, high-rank standard
+error, normal bounds, `q = 1` bounds, regime (0 normal, 1 `q = 1`, missing
+when neither exists), the reported bounds, the share of the estimated
+variance carried by the leading direction, curvature, critical value,
+eigenvalue share, largest squared weight, convergence of the search, and the
+status of the decomposition) and `e(inference_leading)` (one row per target
+with the 28 values of the leading direction and its decomposition), with
+`e(inference_q1_components)`, `e(inference_leading_steps)`,
+`e(inference_leading_unresolved)`, `e(inference_share_threshold)`,
+`e(inference_leading_request)` and `e(inference_regime_rule)`. The status is
+`FEVC_REPEAT_MEASUREMENT_Q1` when a component is reported with the `q = 1`
+interval; `e(V)` is then not posted, `e(inference_joint_posted)` is zero and
+the native joint status is 3. `e(inference)` remains `highrank`, the pass
+that was run, and `e(component_inference)` keeps the normal table.
 Leave-out residual standard errors post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
 `FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL` when a component variance is withheld,
 with `e(inference_variance_fit)` equal to `leaveout_residual`,
@@ -473,10 +488,9 @@ estimand. The catalog includes:
   `LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED` when it is combined with
   `inference(q1)`; `inference(auto)` does not raise the former;
 - `REPEAT_MEASUREMENT_TUPLE_REQUIRED` for
-  `inferencemodel(repeat_measurement)` outside match deletion, with
-  `project()`, or on a backend or plugin that cannot carry it, and
-  `REPEAT_MEASUREMENT_Q1_UNSUPPORTED` when it is combined with
-  `inference(q1)`;
+  `inferencemodel(repeat_measurement)` with `project()`, under observation
+  deletion with `nuisance(fixedoffset)`, or on a backend or plugin that
+  cannot carry it;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
   `INFERENCE_INTERVAL_FAILED`, and

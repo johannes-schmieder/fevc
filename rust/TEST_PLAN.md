@@ -40,7 +40,16 @@ Mata route, controls, the mover-only population, centering modes and the
 typed refusals; `fevc/tests/python/test_repeat_measurement_interface.py` pins
 the identifiers shared across layers. The same Stata file covers observation
 deletion on both Mata routes and, with a plugin built from the source, on the
-native route with and without controls. Not run: any installed-plugin or
+native route with and without controls. Leading directions:
+`repeat_measurement_leading_directions_match_dense_expectations` checks the
+eigenvalue against a dense power iteration, the decomposition identity, the
+remainder's influence, covariance, trace and pair term, the curvature, and
+that the high-rank covariance is bit-identical with and without the request;
+the unit tests cover the remainder's pair term, the larger-variance rule and
+the Jacobi eigen-solver; the plugin test crosses the boundary with and
+without the request; and the Stata file compares the exact Mata route with
+an independent dense calculation of every piece and runs the automatic and
+the forced request on all three routes. Not run: any installed-plugin or
 platform gate; no distributed binary has been rebuilt. The
 memory forecast of the shared pass is not separately checked against the heap
 for this variant.

@@ -15,14 +15,26 @@
   deletion with jointly estimated controls the native route adds an offset
   pass so that the control index is held fixed.
   Estimated control coefficients are treated as known. The default
-  (`inference(auto)`, `leaveout_residual`) is unchanged, and `inference(q1)`
-  is not available with the new model.
+  (`inference(auto)` without a model, `leaveout_residual`) is unchanged.
+- With `inference(auto)` or `inference(q1)` and
+  `inferencemodel(repeat_measurement)` the pass also finds the leading
+  direction of every component (a Lanczos iteration, a few dozen linear
+  solves) and the `q = 1` decomposition along it, and reports one interval
+  per component: the normal interval, or the Andrews-Mikusheva interval of
+  KSS when the direction carries more than five per cent of the estimated
+  sampling variance or the variance estimate is not positive
+  (`inference(q1)`: wherever it exists). A `q = 1` component has no standard
+  error, `e(V)` is posted only when every component is normal, and the
+  display explains which interval each component received. New returns:
+  `e(inference_intervals)`, `e(inference_leading)` and their scalars; new
+  status `FEVC_REPEAT_MEASUREMENT_Q1`. The five per cent threshold is a
+  development choice, not yet confirmed in a registered run.
 - The new model is a variant of the leave-out residual pass: same units,
   solves, routes and memory accounting. Native capability bit 19 and
   variance-source code 4 are additive, with a new diagnostic export
   (`vckss_rust_engine_repeat_measurement_diagnostic_v1`); the distributed
   plugins predate them. The Mata runtime build is
-  `vckss-residual-se-api4`. Exact Mata results agree with an independent
+  `vckss-residual-se-api5`. Exact Mata results agree with an independent
   dense calculation under both deletion modes; the Rust core is covered by
   unit tests with independent oracles, dense end-to-end tests for match and
   observation units and a plugin-boundary test. The native route passes the

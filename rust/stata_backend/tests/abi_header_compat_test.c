@@ -73,6 +73,10 @@ _Static_assert(offsetof(VckssLeaveoutResidualDiagnosticV1, residual_noise) == 22
 _Static_assert(VCKSS_CORE_REPEAT_SE_V1_READY == UINT64_C(524288), "repeat-measurement standard-error capability bit");
 _Static_assert(VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT == 4u, "repeat-measurement variance source");
 _Static_assert(sizeof(VckssRepeatMeasurementDiagnosticV1) == 120, "repeat-measurement diagnostic size");
+_Static_assert(sizeof(VckssRepeatMeasurementLeadingTargetV1) == 208, "repeat-measurement leading target size");
+_Static_assert(sizeof(VckssRepeatMeasurementLeadingV1) == 872, "repeat-measurement leading size");
+_Static_assert(offsetof(VckssRepeatMeasurementLeadingV1, target) == 40, "repeat-measurement leading target offset");
+_Static_assert(offsetof(VckssRepeatMeasurementLeadingTargetV1, eigenvalue) == 16, "repeat-measurement leading eigenvalue offset");
 _Static_assert(offsetof(VckssRepeatMeasurementDiagnosticV1, scale_floored) == 24, "repeat-measurement floor count offset");
 _Static_assert(offsetof(VckssRepeatMeasurementDiagnosticV1, scale_floor) == 56, "repeat-measurement scale floor offset");
 _Static_assert(offsetof(VckssRepeatMeasurementDiagnosticV1, profile) == 72, "repeat-measurement profile offset");

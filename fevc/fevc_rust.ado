@@ -594,7 +594,8 @@ program define fevc_rust, rclass
         // For leaveout_residual a probe is one pseudo-noise solve: four per
         // draw, at least two draws, and the normal reference only.
         if inlist("`model'","leaveout_residual","repeat_measurement") & ///
-            ("`reference'"!="q0" | `probes' < 8 | mod(`probes',4) != 0) {
+            (("`reference'"!="q0" & !("`model'"=="repeat_measurement" & ///
+                "$VCKSS_SE_LEADING"!="")) | `probes' < 8 | mod(`probes',4) != 0) {
             di as err "invalid leave-out residual standard-error request"
             exit 198
         }
@@ -812,6 +813,31 @@ program define fevc_rust, rclass
                 capture scalar drop __vckss_rm_profile_`index'
             }
             return matrix repeat_measurement = `repeat_shape'
+        }
+        // Leading directions: one row per reported target, 28 values in the
+        // order of the native export; the solves they added.
+        capture confirm scalar __vckss_rl_present
+        if !_rc {
+            local leading_present = scalar(__vckss_rl_present)
+            local leading_solves = scalar(__vckss_rl_direction_solves)+ ///
+                scalar(__vckss_rl_influence_solves)+scalar(__vckss_rl_kernel_solves)
+            if `leading_present'==1 {
+                tempname repeat_leading
+                matrix `repeat_leading' = J(4,28,.)
+                forvalues row = 1/4 {
+                    forvalues column = 1/28 {
+                        matrix `repeat_leading'[`row',`column'] = ///
+                            scalar(__vckss_rl_`row'_`column')
+                        capture scalar drop __vckss_rl_`row'_`column'
+                    }
+                }
+                return matrix repeat_leading = `repeat_leading'
+                return scalar repeat_leading_critical = scalar(__vckss_rl_critical)
+            }
+            return scalar repeat_leading_solves = `leading_solves'
+            foreach name in present direction_solves influence_solves kernel_solves critical {
+                capture scalar drop __vckss_rl_`name'
+            }
         }
         return matrix primitive_covariance = `primitive'
         return matrix covariance = `covariance'
@@ -1135,10 +1161,18 @@ program define fevc_rust, rclass
             // observation units too, add an offset pass of two solves per
             // point-estimate probe; they are part of the plan's right-hand
             // sides (deletion 1 is match, nuisance 1 is joint).
+            local component_draw_solves = `componentprobes'
             if `componentinference' & "$VCKSS_SE_MODEL"!="" & `generic_controls'>0 & ///
                 `native_nuisance'==1 &                                    ///
                 (`native_deletion'==1 | "$VCKSS_SE_MODEL"=="repeat_measurement") {
                 local componentprobes = `componentprobes'+2*`leverage_rhs'
+            }
+            // Leading directions are planned at the cap of their search:
+            // four searches, four remainder influences, and four remainder
+            // kernels per pseudo-noise draw.
+            if `componentinference' & "$VCKSS_SE_LEADING"!="" {
+                local componentprobes = `componentprobes'+4*$VCKSS_SE_LEADING_CAP+4+ ///
+                    `component_draw_solves'
             }
             capture noisily fevc__rust_plan_receipt                      ///
                 `componentinference' `componentprobes' `componentgramprobes' `execution' ///

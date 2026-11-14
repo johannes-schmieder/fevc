@@ -450,3 +450,149 @@ pub extern "C" fn vckss_rust_engine_repeat_measurement_diagnostic_v1(
         Ok(())
     })
 }
+
+/// Leading direction and `q = 1` decomposition of one reported target under
+/// repeat-measurement standard errors. `status` is the target's code of the
+/// decomposition (0 computed, 1 nonpositive variance, 2 singular pair, 3 no
+/// interval). `leading_variance` is the larger of the leave-out and the
+/// fitted value; the leave-out value recentres the leading square.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssRepeatMeasurementLeadingTargetV1 {
+    pub status: u32,
+    pub converged: u32,
+    pub steps: u32,
+    pub critical_draws: u32,
+    pub eigenvalue: f64,
+    pub second_eigenvalue: f64,
+    pub residual: f64,
+    pub leading_share: f64,
+    pub maximum_weight_squared: f64,
+    pub point_estimate: f64,
+    pub leading_score: f64,
+    pub leading_variance_leave_out: f64,
+    pub leading_variance_fitted: f64,
+    pub leading_variance: f64,
+    pub remainder_estimate: f64,
+    pub remainder_identity_error: f64,
+    pub leading_remainder_covariance: f64,
+    pub remainder_variance: f64,
+    pub remainder_influence_variance: f64,
+    pub remainder_trace_variance: f64,
+    pub remainder_trace_mcse: f64,
+    pub remainder_pair_term: f64,
+    pub standardized_determinant: f64,
+    pub curvature: f64,
+    pub critical_value: f64,
+    pub confidence_lower: f64,
+    pub confidence_upper: f64,
+    pub leading_f_statistic: f64,
+}
+
+/// Leading directions of the four reported targets (worker variance, firm
+/// variance, covariance, variance of the sum) and the linear solves they
+/// added. `present` is zero, and everything after it is zero, when the
+/// request did not ask for them.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssRepeatMeasurementLeadingV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub present: u32,
+    pub direction_solves: u32,
+    pub influence_solves: u32,
+    pub kernel_solves: u32,
+    pub critical_simulations: u32,
+    pub reserved: u32,
+    pub target: [VckssRepeatMeasurementLeadingTargetV1; 4],
+}
+
+const _: [(); 208] = [(); size_of::<VckssRepeatMeasurementLeadingTargetV1>()];
+const _: [(); 872] = [(); size_of::<VckssRepeatMeasurementLeadingV1>()];
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_repeat_measurement_leading_v1(
+    generation: u64,
+    output: *mut VckssRepeatMeasurementLeadingV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssRepeatMeasurementLeadingV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "repeat-measurement leading directions",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_repeat_measurement_leading")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_repeat_measurement_leading",
+                "repeat-measurement diagnostics require generic JLA",
+            ));
+        };
+        let shape = generic
+            .component_inference
+            .as_ref()
+            .and_then(|result| result.residual_noise.as_ref())
+            .and_then(|diagnostic| diagnostic.repeat.as_ref())
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "engine_repeat_measurement_leading",
+                    "the generation has no repeat-measurement standard errors",
+                )
+            })?;
+        let mut value = VckssRepeatMeasurementLeadingV1 {
+            struct_size: struct_size_u32::<VckssRepeatMeasurementLeadingV1>()?,
+            schema_version: 1,
+            generation,
+            ..VckssRepeatMeasurementLeadingV1::default()
+        };
+        if let Some(leading) = shape.leading.as_ref() {
+            value.present = 1;
+            value.direction_solves = leading.direction_solves;
+            value.influence_solves = leading.influence_solves;
+            value.kernel_solves = leading.kernel_solves;
+            value.critical_simulations = leading.critical_simulations;
+            for target in 0..4 {
+                let spectrum = &leading.spectrum[target];
+                let q1 = &leading.q1[target];
+                value.target[target] = VckssRepeatMeasurementLeadingTargetV1 {
+                    status: q1.status as u32,
+                    converged: u32::from(spectrum.certified),
+                    steps: spectrum.iterations,
+                    critical_draws: q1.critical_draws,
+                    eigenvalue: spectrum.leading_eigenvalue,
+                    second_eigenvalue: spectrum.second_eigenvalue,
+                    residual: spectrum.leading_residual,
+                    leading_share: spectrum.leading_share,
+                    maximum_weight_squared: spectrum.maximum_mode_weight_squared,
+                    point_estimate: q1.point_estimate,
+                    leading_score: q1.leading_score,
+                    leading_variance_leave_out: q1.leading_variance_correction,
+                    leading_variance_fitted: leading.leading_variance_fitted[target],
+                    leading_variance: q1.leading_variance,
+                    remainder_estimate: q1.remainder_estimate,
+                    remainder_identity_error: q1.remainder_identity_error,
+                    leading_remainder_covariance: q1.leading_remainder_covariance,
+                    remainder_variance: q1.remainder_variance,
+                    remainder_influence_variance: q1.remainder_influence_variance,
+                    remainder_trace_variance: q1.remainder_trace_variance,
+                    remainder_trace_mcse: q1.remainder_trace_mcse,
+                    remainder_pair_term: leading.remainder_pair_term[target],
+                    standardized_determinant: q1.standardized_determinant,
+                    curvature: q1.curvature,
+                    critical_value: q1.critical_value,
+                    confidence_lower: q1.confidence_lower,
+                    confidence_upper: q1.confidence_upper,
+                    leading_f_statistic: q1.leading_f_statistic,
+                };
+            }
+        }
+        write_output(output, value);
+        Ok(())
+    })
+}

@@ -3,6 +3,19 @@
 
 program define fevc__residual_se_post, eclass
     version 18.0
+    // Repeat-measurement standard errors with leading directions decide the
+    // reported interval of every component before anything is posted; the
+    // decision lives in this file and is reached through these two actions.
+    if "`1'"=="regime_decide" {
+        _fevc_se_regime_decide `2' `3' `4'
+        exit
+    }
+    if "`1'"=="regime_clear" {
+        capture matrix drop __fevc_se_leading
+        capture matrix drop __fevc_se_intervals
+        capture macro drop VCKSS_SE_ANY_Q1
+        exit
+    }
     // draws: pseudo-noise draws. omitted: 1 when no control term was needed
     // because there are no controls. route: rust or mata.
     args draws deletion omitted route
@@ -200,4 +213,157 @@ program define _fevc_repeat_se_post, eclass
     ereturn local status "FEVC_REPEAT_MEASUREMENT_SE"
     if e(inference_computed_targets)<4 ereturn local status "FEVC_REPEAT_MEASUREMENT_SE_PARTIAL"
     if e(inference_computed_targets)==0 ereturn local status "FEVC_STRUCTURED_INFERENCE_UNAVAILABLE"
+    // Leading directions and the interval reported for every component.
+    _fevc_se_regime_post
+    capture confirm scalar e(inference_leading_steps)
+    if !_rc {
+        if "`route'"=="rust" {
+            // The search, four remainder influences and four remainder
+            // kernels per draw are not part of the offset pass.
+            ereturn scalar inference_offset_pass_solves =            ///
+                e(inference_offset_pass_solves)-e(inference_leading_steps)-4- ///
+                4*e(inference_draws)
+        }
+        if e(inference_q1_components)>0 {
+            ereturn local status "FEVC_REPEAT_MEASUREMENT_Q1"
+        }
+    }
+    fevc__residual_se_post regime_clear
+end
+
+// The rule. A component is reported with the q = 1 interval when its
+// leading direction carries more than `share_threshold' of the estimated
+// sampling variance, or when the high-rank variance estimate is not
+// positive; under inference(q1) wherever that interval exists. The variance
+// of the sum has no dominant direction (its nonzero eigenvalues are all
+// equal) and keeps the normal interval under inference(auto).
+//
+// V: 4 x 4 high-rank covariance. b: 1 x 4 estimates. level: confidence level
+// in per cent. Reads __fevc_se_leading (4 x 28, the layout of the native
+// export) and $VCKSS_SE_LEADING (auto or q1). Leaves __fevc_se_intervals:
+//   1 estimate   2 highrank_se   3 normal_lb   4 normal_ub   5 q1_lb
+//   6 q1_ub      7 regime (0 normal, 1 q = 1, missing: none)  8 lb  9 ub
+//  10 variance_share  11 curvature  12 critical_value  13 eigen_share
+//  14 max_weight_sq   15 converged  16 q1_status
+program define _fevc_se_regime_decide
+    version 18.0
+    args V b level
+    local share_threshold .05
+    global VCKSS_SE_ANY_Q1 0
+    capture matrix drop __fevc_se_intervals
+    capture confirm matrix __fevc_se_leading
+    if _rc | !inlist("$VCKSS_SE_LEADING","auto","q1") exit
+    if rowsof(__fevc_se_leading)!=4 | colsof(__fevc_se_leading)!=28 {
+        di as error "repeat-measurement leading directions have the wrong shape"
+        exit 498
+    }
+    tempname table leading
+    matrix `leading' = __fevc_se_leading
+    matrix `table' = J(4,16,.)
+    local z = invnormal(.5+`level'/200)
+    local any = 0
+    forvalues t = 1/4 {
+        local estimate = `b'[1,`t']
+        local variance = `V'[`t',`t']
+        local lambda = `leading'[`t',5]
+        local score = `leading'[`t',11]
+        local leadvar = `leading'[`t',14]
+        local q1_ok = (`leading'[`t',1]==0 & !missing(`leading'[`t',26]) & ///
+            !missing(`leading'[`t',27]))
+        local normal_ok = (`variance'>0 & !missing(`variance'))
+        local share = .
+        if `normal_ok' {
+            // Parentheses: a negative macro value must be squared as a whole.
+            local share = (4*(`lambda')^2*max((`score')^2-(`leadvar'),0)*(`leadvar')+ ///
+                2*(`lambda')^2*(`leadvar')^2)/`variance'
+        }
+        local regime = .
+        if "$VCKSS_SE_LEADING"=="q1" {
+            if `q1_ok' local regime = 1
+            else if `normal_ok' local regime = 0
+        }
+        else {
+            if `q1_ok' & `t'<4 & (!`normal_ok' | `share'>`share_threshold') local regime = 1
+            else if `normal_ok' local regime = 0
+        }
+        matrix `table'[`t',1] = `estimate'
+        if `normal_ok' {
+            matrix `table'[`t',2] = sqrt(`variance')
+            matrix `table'[`t',3] = `estimate'-`z'*sqrt(`variance')
+            matrix `table'[`t',4] = `estimate'+`z'*sqrt(`variance')
+        }
+        if `q1_ok' {
+            // The decomposition is that of the standard-error pass. Its
+            // estimate differs from the posted one by projection noise on the
+            // matrix-free Mata route and by the estimator of the controls
+            // under joint nuisance; the interval moves with the posted one.
+            matrix `table'[`t',5] = `leading'[`t',26]+`estimate'-`leading'[`t',10]
+            matrix `table'[`t',6] = `leading'[`t',27]+`estimate'-`leading'[`t',10]
+        }
+        matrix `table'[`t',7] = `regime'
+        if `regime'==1 {
+            matrix `table'[`t',8] = `table'[`t',5]
+            matrix `table'[`t',9] = `table'[`t',6]
+            local any = 1
+        }
+        else if `regime'==0 {
+            matrix `table'[`t',8] = `table'[`t',3]
+            matrix `table'[`t',9] = `table'[`t',4]
+        }
+        matrix `table'[`t',10] = `share'
+        matrix `table'[`t',11] = `leading'[`t',24]
+        matrix `table'[`t',12] = `leading'[`t',25]
+        matrix `table'[`t',13] = `leading'[`t',8]
+        matrix `table'[`t',14] = `leading'[`t',9]
+        matrix `table'[`t',15] = `leading'[`t',2]
+        matrix `table'[`t',16] = `leading'[`t',1]
+    }
+    matrix rownames `table' = worker_variance firm_variance ///
+        worker_firm_covariance total_variance
+    matrix colnames `table' = estimate highrank_se normal_lb normal_ub ///
+        q1_lb q1_ub regime lb ub variance_share curvature critical_value ///
+        eigen_share max_weight_sq converged q1_status
+    matrix __fevc_se_intervals = `table'
+    global VCKSS_SE_ANY_Q1 `any'
+    global VCKSS_SE_SHARE_THRESHOLD `share_threshold'
+end
+
+program define _fevc_se_regime_post, eclass
+    version 18.0
+    capture confirm matrix __fevc_se_intervals
+    if _rc exit
+    tempname table leading
+    matrix `table' = __fevc_se_intervals
+    matrix `leading' = __fevc_se_leading
+    matrix rownames `leading' = worker_variance firm_variance ///
+        worker_firm_covariance total_variance
+    matrix colnames `leading' = status converged steps critical_draws ///
+        lambda1 lambda2 residual eigen_share max_weight_sq estimate b1 ///
+        var_b1_leaveout var_b1_fitted var_b1 theta_r identity_error ///
+        cov_b1_theta_r var_theta_r influence_var trace_var trace_mcse ///
+        pair_term determinant curvature critical_value q1_lb q1_ub F
+    local q1_components = 0
+    local unresolved = 0
+    local steps = 0
+    forvalues t = 1/4 {
+        if `table'[`t',7]==1 local ++q1_components
+        if `leading'[`t',2]!=1 local ++unresolved
+        local steps = `steps'+`leading'[`t',3]
+    }
+    ereturn scalar inference_q1_components = `q1_components'
+    ereturn scalar inference_leading_unresolved = `unresolved'
+    ereturn scalar inference_leading_steps = `steps'
+    ereturn scalar inference_share_threshold = $VCKSS_SE_SHARE_THRESHOLD
+    ereturn local inference_leading_request "$VCKSS_SE_LEADING"
+    ereturn local inference_regime_rule = cond("$VCKSS_SE_LEADING"=="q1", ///
+        "inference(q1): the q = 1 interval wherever it exists", ///
+        "q = 1 interval when the leading direction carries more than " + ///
+        strofreal($VCKSS_SE_SHARE_THRESHOLD) + ///
+        " of the estimated sampling variance or the high-rank variance estimate is not positive; normal interval otherwise")
+    ereturn local inference_reference_selected = cond(`q1_components'==0, ///
+        "q0 normal","q0 normal or q1 by component")
+    ereturn local inference_reference                             ///
+        "normal approximation, or the Andrews-Mikusheva interval along one leading direction (KSS q = 1), by component"
+    ereturn matrix inference_leading = `leading'
+    ereturn matrix inference_intervals = `table'
 end

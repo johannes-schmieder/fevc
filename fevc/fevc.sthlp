@@ -386,10 +386,31 @@ match size times a quadratic in the standardised estimated worker and firm
 effects, both fitted to leave-out variance products. The covariance is the
 KSS high-rank form with these variances plus a closed-form term for the
 pairs of units of one repeat-measurement set; it is reported as computed,
-without truncation. The method is available under both deletion modes and is
-never selected by {cmd:inference(auto)}. It treats estimated control coefficients as known and
-is only as good as the fitted model for movers. {cmd:inference(q1)} is not
-available with it.
+without truncation. The method is available under both deletion modes. It
+treats estimated control coefficients as known and is only as good as the
+fitted model for the units without repeat measurements.
+
+{pstd}
+{it:One interval per component.} With {cmd:inference(auto)} or
+{cmd:inference(q1)} the method also finds, for every component, the
+direction of the worker-firm network along which the estimate is most
+sensitive (the eigenvector of largest absolute eigenvalue), and what the
+estimate looks like along it. When no direction matters much, the estimate
+is close to normal and its interval is the estimate plus or minus 1.96
+standard errors. When one direction carries much of the sampling variance,
+as with a bottleneck between two parts of the network, the estimate is not
+close to normal; the interval is then the q = 1 interval of Kline, Saggio
+and S{c o/}lvsten (2020, Section 6), which need not be symmetric, and the
+component has no standard error. {cmd:inference(auto)} reports the q = 1
+interval for a component when its leading direction carries more than 5% of
+the estimated sampling variance or when the variance estimate is not
+positive, and the normal interval otherwise; the variance of the sum always
+keeps the normal interval. {cmd:inference(q1)} reports the q = 1 interval
+for every component that has one, and {cmd:inference(highrank)} computes no
+direction and reports normal intervals only. {cmd:e(V)} is posted only when
+every component has a normal interval; the display says which interval each
+component received and why. The directions cost a few dozen linear solves on
+top of the standard errors.
 
 {pstd}
 {it:Cost.} On the native backend they add three linear solves plus four per

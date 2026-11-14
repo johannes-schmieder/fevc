@@ -56,16 +56,27 @@ program define fevc__component_model_route, rclass
     local se_auto_reason ""
     local se_suppressed = (`se_auto' & "$VCKSS_SE_SUPPRESS"=="1")
     local residual_model = lower(strtrim(`"`inferencemodel'"'))
-    if `se_auto' & !inlist("`residual_model'","","leaveout_residual") {
+    if `se_auto' & !inlist("`residual_model'","","leaveout_residual","repeat_measurement") {
         quietly _fevc_component_route_failure "INFERENCE_MODEL_WITHOUT_INFERENCE" ///
-            "inference(auto) selects inferencemodel(leaveout_residual); other models need inference(highrank) or inference(q1)."
+            "inference(auto) selects inferencemodel(leaveout_residual) or carries inferencemodel(repeat_measurement); other models need inference(highrank) or inference(q1)."
         exit 198
     }
     local model_typed = ("`residual_model'" != "")
+    // Repeat-measurement standard errors find the leading direction of every
+    // component unless inference(highrank) asks for the normal interval
+    // alone. inference(auto) then reports, component by component, the
+    // normal interval or the q = 1 interval; inference(q1) reports the q = 1
+    // interval wherever it exists. The pass itself is the high-rank one.
+    local se_leading ""
+    if "`residual_model'"=="repeat_measurement" & inlist("`inference'","auto","q1") {
+        local se_leading `inference'
+    }
     if `se_auto' {
-        local inferencemodel leaveout_residual
+        local inferencemodel = cond("`residual_model'"=="repeat_measurement", ///
+            "repeat_measurement","leaveout_residual")
         local inference highrank
     }
+    if "`se_leading'"=="q1" local inference highrank
     local project_supplied = (strtrim(`"`project'"') != "")
     local projecteffect_supplied = (strtrim(`"`projecteffect'"') != "")
     local projectweight_supplied = (strtrim(`"`projectweight'"') != "")
@@ -145,11 +156,6 @@ program define fevc__component_model_route, rclass
     local repeat = "`inference'"!="none" & "`inferencemodel'"=="repeat_measurement"
     local residual = "`inference'"!="none" &                     ///
         inlist("`inferencemodel'","leaveout_residual","repeat_measurement")
-    if `repeat' & "`inference'"=="q1" {
-        quietly _fevc_component_route_failure "REPEAT_MEASUREMENT_Q1_UNSUPPORTED" ///
-            "inferencemodel(repeat_measurement) reports the normal interval; specify inference(highrank)."
-        exit 498
-    }
     if `residual' & "`inference'"=="q1" {
         quietly _fevc_component_route_failure "LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED" ///
             "inferencemodel(leaveout_residual) uses the normal reference; specify inference(highrank) or inference(auto)."
@@ -325,6 +331,12 @@ program define fevc__component_model_route, rclass
     // Read by the Mata runtimes and the posting helper; empty unless this
     // request carries one of the two residual-pass standard errors.
     global VCKSS_SE_MODEL = cond(`residual',"`inferencemodel'","")
+    // auto or q1 when the leading directions are computed; the search is
+    // capped at this many linear solves per component.
+    global VCKSS_SE_LEADING = cond(`residual' & "`inferencemodel'"=="repeat_measurement", ///
+        "`se_leading'","")
+    global VCKSS_SE_LEADING_CAP 40
+    fevc__residual_se_post regime_clear
     c_local inferencemodel "`inferencemodel'"
     c_local inferencedraws `inferencedraws'
     c_local se_auto `se_auto'

@@ -19,7 +19,7 @@ real scalar vckss_rse__api_level()
 
 string scalar vckss_rse__build_id()
 {
-    return("vckss-residual-se-api4")
+    return("vckss-residual-se-api5")
 }
 
 // Subtract the mass-weighted mean of every column in unit space. For one row
@@ -330,6 +330,368 @@ real matrix vckss_rse__aggregate(
     return(output)
 }
 
+// ---------------------------------------------------------------------------
+// Leading directions for repeat-measurement standard errors.
+//
+// For each of the four reported targets (worker variance, firm variance,
+// covariance, variance of the sum) the direction is the eigenvector of
+// A_t v = lambda S v of largest absolute eigenvalue, with S the normal matrix
+// of the unit design. Along it the estimate splits into
+// lambda (b^2 - V-hat[b]) + remainder, with b = w'y and w the unit-space
+// weights of the direction, and the q = 1 interval of KSS (Section 6) is
+// formed from the 2 x 2 covariance of (b, remainder). The remainder's kernel
+// is the target's kernel with its diagonal ratio net of the direction, minus
+// the rank-one part. The table that reaches Stata has the layout of the
+// native export: one row per target and 28 columns.
+// ---------------------------------------------------------------------------
+struct vckss_rse_leading {
+    real matrix mode, ratio, influence
+    real rowvector lambda, second, residual, steps, converged
+    real rowvector score, leave_out
+    real matrix noise_trace
+}
+
+// Remainder ratios, leading scores and their leave-out variances, once the
+// directions are known. `ratio' is the n x 3 target diagonal over the maker
+// diagonal; the fourth target is worker + firm + 2 covariance.
+void vckss_rse__lead_prepare(
+    struct vckss_rse_leading scalar lead,
+    real colvector y,
+    real colvector product,
+    real matrix ratio,
+    real colvector maker_inverse)
+{
+    real matrix full
+
+    full = (ratio,ratio[.,1]+ratio[.,2]+2:*ratio[.,3])
+    lead.ratio = full-(lead.mode:^2):*maker_inverse:*lead.lambda
+    lead.score = quadcross(lead.mode,y)'
+    lead.leave_out = quadcross(lead.mode:^2,product)'
+    lead.noise_trace = J(2,4,0)
+}
+
+// Sum over the repeat-measurement sets of 4 c^2 q^2 (T-2)(T-1)/(T+1), with
+// c the mean of `mover_weight' over a set of a mover and the sum of
+// `stayer_weight' over T-1 for a stayer.
+real scalar vckss_rse__pair(
+    real colvector y,
+    real colvector unit_set,
+    real colvector unit_mover,
+    real colvector mover_weight,
+    real colvector stayer_weight)
+{
+    real colvector permutation, members
+    real matrix panel
+    real scalar n, g, count, sample, weight, total
+
+    n = rows(y)
+    total = 0
+    permutation = order((unit_set,(1::n)),(1,2))
+    panel = panelsetup(unit_set[permutation],1)
+    for (g=1; g<=rows(panel); g++) {
+        members = permutation[|panel[g,1]\panel[g,2]|]
+        count = rows(members)
+        if (count < 2) continue
+        sample = quadvariance(y[members])
+        if (unit_mover[members[1]]) weight = mean(mover_weight[members])
+        else weight = sum(stayer_weight[members])/(count-1)
+        total = total+4*weight^2*sample^2*(count-2)*(count-1)/(count+1)
+    }
+    return(total)
+}
+
+// The 4 x 28 table. `influence' is the n x 3 realized influence of the
+// targets, `diagonal' the n x 3 target diagonals, `quadratic' the 3 x 3
+// pseudo-noise estimate of tr(K_t V K_s V). Returns J(0,0,.) when a
+// decomposition does not reproduce its direct remainder.
+real matrix vckss_rse__lead_finish(
+    struct vckss_rse_leading scalar lead,
+    real colvector y,
+    real colvector variance,
+    real matrix influence,
+    real colvector maker_inverse,
+    real matrix diagonal,
+    real colvector unit_set,
+    real colvector unit_mover,
+    real matrix quadratic,
+    real scalar draws,
+    real scalar confidence,
+    real scalar seed,
+    real scalar identity_tolerance)
+{
+    real matrix table, full_influence, full_diagonal, covariance
+    real rowvector interval, weight
+    real colvector w, remainder
+    real scalar t, lambda, point, direct, fitted, leading, linear, covar
+    real scalar trace_mean, mcse, pair, remainder_variance, correlation
+    real scalar determinant, status, curvature, critical, recentred, total
+    real scalar simulations
+
+    simulations = 100000
+    table = J(4,28,.)
+    full_influence = (influence,influence[.,1]+influence[.,2]+2:*influence[.,3])
+    full_diagonal = (diagonal,diagonal[.,1]+diagonal[.,2]+2:*diagonal[.,3])
+    weight = (1,1,2)
+    for (t=1; t<=4; t++) {
+        w = lead.mode[.,t]
+        lambda = lead.lambda[t]
+        remainder = lead.influence[.,t]
+        point = quadcross(y,full_influence[.,t])
+        direct = quadcross(y,remainder)
+        recentred = point-lambda*(lead.score[t]^2-lead.leave_out[t])
+        if (abs(direct-recentred) > identity_tolerance*
+            max((1,abs(point),abs(direct),abs(recentred)))) return(J(0,0,.))
+        fitted = quadcross(w:^2,variance)
+        leading = max((fitted,lead.leave_out[t]))
+        linear = 4*quadcross(remainder:^2,variance)
+        covar = 2*quadcross(w:*remainder,variance)
+        trace_mean = lead.noise_trace[1,t]/draws
+        mcse = draws > 1 ? sqrt(max((0,lead.noise_trace[2,t]/draws-trace_mean^2))/(draws-1)) : 0
+        // A stayer's diagonal is nonzero for the worker variance and for the
+        // variance of the sum only.
+        pair = vckss_rse__pair(y,unit_set,unit_mover,
+            (full_diagonal[.,t]-lambda:*w:^2):*maker_inverse,
+            ((t == 1 | t == 4) ? full_diagonal[.,t] : J(rows(y),1,0))-lambda:*w:^2)
+        remainder_variance = linear-2*trace_mean+pair
+        correlation = covar/sqrt(leading)/sqrt(remainder_variance)
+        determinant = (1-abs(correlation))*(1+abs(correlation))
+        status = 0
+        if (leading <= 0 | remainder_variance <= 0 | missing(remainder_variance)) status = 1
+        else if (missing(determinant) | determinant <= 1e-8) status = 2
+        curvature = critical = .
+        interval = (.,.)
+        if (status == 0) {
+            curvature = 2*abs(lambda)*leading/sqrt(remainder_variance*determinant)
+            critical = vckss_inf__critical(curvature,confidence,simulations,seed+t)
+            covariance = (leading,covar\covar,remainder_variance)
+            interval = vckss_inf__am_ci((lead.score[t]\recentred),covariance,
+                critical,lambda)
+            if (hasmissing(interval)) {
+                status = 3
+                critical = .
+            }
+        }
+        // tr(K V K V) of the target from the primitive traces.
+        if (t <= 3) total = quadratic[t,t]
+        else total = weight*quadratic*weight'
+        // The conditional operator binds more loosely than the comma.
+        table[t,.] = (status,lead.converged[t],lead.steps[t],
+            (status == 0 ? simulations : 0),lambda,lead.second[t],
+            lead.residual[t],(total > 0 ? (lambda*fitted)^2/total : .),
+            max(w:^2),point,lead.score[t],lead.leave_out[t],fitted,leading,
+            recentred,abs(direct-recentred),covar,remainder_variance,linear,
+            2*trace_mean,2*mcse,pair,determinant,curvature,critical,interval[1],
+            interval[2],(leading > 0 ? lead.score[t]^2/leading : .))
+    }
+    return(table)
+}
+
+// Exact directions from the dense normal-matrix inverse: the eigenvector of
+// S^-1/2 A_t S^-1/2 of largest absolute eigenvalue, mapped back.
+void vckss_rse__lead_exact(
+    struct vckss_rse_leading scalar lead,
+    real matrix design,
+    real matrix inverse,
+    struct vckss_target_matrices scalar targets)
+{
+    real matrix basis, root_inverse, vectors, target
+    real rowvector values, magnitude
+    real colvector permutation
+    real scalar t
+
+    symeigensystem(inverse,basis,values)
+    root_inverse = (basis:*sqrt(colmax((values\J(1,cols(values),0)))))*basis'
+    lead.mode = J(rows(design),4,.)
+    lead.lambda = lead.second = lead.residual = lead.steps = J(1,4,0)
+    lead.converged = J(1,4,1)
+    for (t=1; t<=4; t++) {
+        target = root_inverse*vckss_rse__lead_target(targets,t)*root_inverse
+        symeigensystem((target+target'):/2,vectors,values)
+        magnitude = abs(values)
+        permutation = order(magnitude',-1)
+        lead.lambda[t] = values[permutation[1]]
+        lead.second[t] = cols(values) > 1 ? values[permutation[2]] : 0
+        lead.mode[.,t] = design*(root_inverse*vectors[.,permutation[1]])
+        lead.mode[.,t] = lead.mode[.,t]:/sqrt(quadcross(lead.mode[.,t],lead.mode[.,t]))
+    }
+}
+
+// Coefficient-space image of one column under target t (1 to 4).
+real colvector vckss_rse__lead_apply(
+    struct vckss_fe_design scalar base,
+    real colvector share,
+    real colvector coefficient,
+    real scalar t)
+{
+    real matrix action
+
+    action = vckss_rse__target_action(base,share,coefficient)
+    if (t <= 3) return(action[.,t])
+    return(action[.,1]+action[.,2]+2:*action[.,3])
+}
+
+// Leading direction of target t by a thick-restart Lanczos iteration in the
+// S inner product: one linear solve per step. For u = S^-1 g the inner
+// product <u, v>_S is g'v; a second pass with the normal matrix applied to
+// the new direction restores orthogonality to rounding. `info' receives
+// (eigenvalue, second Ritz value, relative residual, solves, converged).
+// Returns the S-normalised coefficient direction, or J(0,1,.) if a solve fails.
+real colvector vckss_rse__lead_solve(
+    struct vckss_fe_design scalar base,
+    struct vckss_fe_design scalar units,
+    real colvector root,
+    real colvector share,
+    real scalar t,
+    real colvector start,
+    real scalar cap,
+    real scalar tol,
+    real scalar tolerance,
+    real scalar maxiter,
+    real rowvector info)
+{
+    struct vckss_solve_result scalar solved
+    real matrix basis, projected, vectors, reduced
+    real rowvector values
+    real colvector image, next, next_image, border, permutation, prediction
+    real colvector direction, kept
+    real scalar steps, size, lead_index, scale, nrm, residual, invariant
+    real scalar converged
+
+    info = J(1,5,.)
+    direction = start
+    prediction = vckss_rse__unit_predict(units,root,direction)
+    nrm = sqrt(quadcross(prediction,prediction))
+    if (nrm <= 0 | missing(nrm)) return(J(0,1,.))
+    basis = direction:/nrm
+    image = vckss_rse__lead_apply(base,share,basis,t)
+    projected = quadcross(basis,image)
+    steps = 0
+    while (1) {
+        solved = vckss__fe_solve_matrix(units,image,tolerance,maxiter)
+        if (solved.status != "CONVERGED") return(J(0,1,.))
+        steps++
+        next = solved.coefficient
+        next = next-basis*quadcross(basis,image)
+        prediction = vckss_rse__unit_predict(units,root,next)
+        next = next-basis*quadcross(basis,
+            vckss_rse__unit_transpose(units,root,prediction))
+        prediction = vckss_rse__unit_predict(units,root,next)
+        nrm = sqrt(quadcross(prediction,prediction))
+        size = cols(basis)
+        symeigensystem((projected+projected'):/2,vectors,values)
+        permutation = order(abs(values)',-1)
+        lead_index = permutation[1]
+        scale = abs(values[lead_index])
+        invariant = (scale == 0 | nrm <= 1e-12*scale)
+        residual = 0
+        if (!invariant) {
+            next = next:/nrm
+            next_image = vckss_rse__lead_apply(base,share,next,t)
+            border = quadcross(basis,next_image)
+            residual = abs(quadcross(border,vectors[.,lead_index]))/scale
+        }
+        converged = invariant | (residual <= tol & steps >= 2)
+        if (converged | steps >= cap) {
+            direction = basis*vectors[.,lead_index]
+            prediction = vckss_rse__unit_predict(units,root,direction)
+            nrm = sqrt(quadcross(prediction,prediction))
+            if (nrm <= 0 | missing(nrm)) return(J(0,1,.))
+            direction = direction:/nrm
+            info = (quadcross(direction,vckss_rse__lead_apply(base,share,direction,t)),
+                (size > 1 ? values[permutation[2]] : 0),residual,steps,converged)
+            return(direction)
+        }
+        if (size >= 6) {
+            // Thick restart: the three Ritz vectors of largest magnitude and
+            // the new direction span the next basis.
+            kept = permutation[|1\3|]
+            reduced = vectors[.,kept]
+            basis = basis*reduced
+            projected = (diag(values[kept]),quadcross(reduced,border)\
+                quadcross(border,reduced),quadcross(next,next_image))
+        }
+        else projected = (projected,border\border',quadcross(next,next_image))
+        basis = (basis,next)
+        image = next_image
+    }
+}
+
+// Remainder kernel images of the columns of `value' for the four targets,
+// stacked as four blocks of columns: one fit and four solves per column.
+real matrix vckss_rse__lead_images(
+    struct vckss_rse_leading scalar lead,
+    real matrix value,
+    struct vckss_fe_design scalar base,
+    struct vckss_fe_design scalar units,
+    real colvector root,
+    real colvector share,
+    real scalar tolerance,
+    real scalar maxiter,
+    string scalar status)
+{
+    struct vckss_solve_result scalar solved
+    real matrix residual, action, right_hand_side, image
+    real scalar columns, t, first, last
+
+    columns = cols(value)
+    status = "INFERENCE_SOLVE_FAILED"
+    solved = vckss__fe_solve_matrix(units,
+        vckss_rse__unit_transpose(units,root,value),tolerance,maxiter)
+    if (solved.status != "CONVERGED") return(J(0,0,.))
+    residual = value-vckss_rse__unit_predict(units,root,solved.coefficient)
+    action = vckss_rse__target_action(base,share,solved.coefficient)
+    right_hand_side = (action,action[|1,1\rows(action),columns|]+
+        action[|1,columns+1\rows(action),2*columns|]+
+        2:*action[|1,2*columns+1\rows(action),3*columns|])
+    for (t=1; t<=4; t++) {
+        first = (t-1)*columns+1
+        last = t*columns
+        right_hand_side[|1,first\rows(right_hand_side),last|] =
+            right_hand_side[|1,first\rows(right_hand_side),last|]+
+            0.5:*vckss_rse__unit_transpose(units,root,lead.ratio[.,t]:*value)
+    }
+    solved = vckss__fe_solve_matrix(units,right_hand_side,tolerance,maxiter)
+    if (solved.status != "CONVERGED") return(J(0,0,.))
+    image = vckss_rse__unit_predict(units,root,solved.coefficient)
+    for (t=1; t<=4; t++) {
+        first = (t-1)*columns+1
+        last = t*columns
+        image[|1,first\rows(image),last|] = image[|1,first\rows(image),last|]-
+            0.5:*lead.ratio[.,t]:*(residual+value)-
+            lead.lambda[t]:*lead.mode[.,t]*quadcross(lead.mode[.,t],value)
+    }
+    status = "CONVERGED"
+    return(image)
+}
+
+// Add the draws' contributions sum_a v_a (K_r zeta)_a^2 of the four targets.
+void vckss_rse__lead_trace(
+    struct vckss_rse_leading scalar lead,
+    real matrix image,
+    real colvector variance,
+    real scalar width)
+{
+    real rowvector value
+    real scalar t
+
+    for (t=1; t<=4; t++) {
+        value = quadcross(variance,image[|1,(t-1)*width+1\rows(image),t*width|]:^2)
+        lead.noise_trace[1,t] = lead.noise_trace[1,t]+sum(value)
+        lead.noise_trace[2,t] = lead.noise_trace[2,t]+sum(value:^2)
+    }
+}
+
+// Target matrix t (1 to 4) of the exact route.
+real matrix vckss_rse__lead_target(
+    struct vckss_target_matrices scalar targets,
+    real scalar t)
+{
+    if (t == 1) return(targets.worker)
+    if (t == 2) return(targets.firm)
+    if (t == 3) return(targets.covariance)
+    return(targets.worker+targets.firm+2:*targets.covariance)
+}
+
 void vckss_residual_se__stata(
     string scalar y_name,
     string scalar worker_name,
@@ -374,7 +736,9 @@ void vckss_residual_se__stata(
     real rowvector info, shape
     real colvector unit_worker, worker_effect, firm_effect
     real colvector unit_set, unit_mover, unit_firm
-    real matrix pair
+    real matrix pair, lead_image, lead_table
+    struct vckss_rse_leading scalar lead
+    real scalar leading
     real scalar n, parameters, worker_levels, firm_levels, control_count
     real scalar centered, j, k, z, point_identity, begin, finish, batch
     real scalar pairs, width, effective, truncation, repeat
@@ -553,6 +917,20 @@ void vckss_residual_se__stata(
             within*load
     }
 
+    // Leading directions and the realized influence of every remainder.
+    leading = repeat & st_global("VCKSS_SE_LEADING") != ""
+    if (leading) {
+        vckss_rse__lead_exact(lead,design,inverse,targets)
+        vckss_rse__lead_prepare(lead,y,product,ratio,maker_inverse)
+        lead.influence = J(n,4,.)
+        for (j=1; j<=4; j++) {
+            lead.influence[.,j] = vckss_rse__kernel(y,design,inverse,
+                vckss_rse__lead_target(targets,j),lead.ratio[.,j])-
+                (lead.lambda[j]*lead.score[j]):*lead.mode[.,j]
+        }
+        if (centered) lead.influence = vckss_rse__center(lead.influence,root)
+    }
+
     // Pseudo-noise with the working variances through the same kernel.
     rseed(seed)
     quadratic = calibration = J(3,3,0)
@@ -576,6 +954,17 @@ void vckss_residual_se__stata(
                 design,inverse,target_j,ratio[.,j])
         }
         if (centered) image = vckss_rse__center(image,root)
+        if (leading) {
+            lead_image = J(n,4*width,.)
+            for (j=1; j<=4; j++) {
+                lead_image[|1,(j-1)*width+1\n,j*width|] = vckss_rse__kernel(
+                    noise,design,inverse,vckss_rse__lead_target(targets,j),
+                    lead.ratio[.,j])-lead.lambda[j]:*lead.mode[.,j]*
+                    quadcross(lead.mode[.,j],noise)
+            }
+            if (centered) lead_image = vckss_rse__center(lead_image,root)
+            vckss_rse__lead_trace(lead,lead_image,variance,width)
+        }
         for (j=1; j<=3; j++) {
             for (k=1; k<=3; k++) {
                 quadratic[j,k] = quadratic[j,k]+sum(variance:*
@@ -621,7 +1010,10 @@ void vckss_residual_se__stata(
         V_primitive = eigenvectors*diag(eigenvalues)*eigenvectors'+2:*quadratic
     }
     V_primitive = (V_primitive+V_primitive'):/2
-    if (hasmissing(V_primitive) | min(diagonal(V_primitive)) <= 0) {
+    // With leading directions a nonpositive high-rank variance is the case
+    // the q = 1 interval exists for: the component then has no standard
+    // error, and no joint covariance is posted.
+    if (hasmissing(V_primitive) | (min(diagonal(V_primitive)) <= 0 & !leading)) {
         st_local(status_local,"INFERENCE_VARIANCE_INVALID")
         st_local(message_local,"a component variance estimate is not positive")
         return
@@ -652,6 +1044,18 @@ void vckss_residual_se__stata(
         spectrum[j,13] = draws
         spectrum[j,15] = max(score[.,j]:^2)/max((1e-300,sum(score[.,j]:^2)))
     }
+    if (leading) {
+        lead_table = vckss_rse__lead_finish(lead,y,variance,influence,
+            maker_inverse,ratio:/maker_inverse,unit_set,unit_mover,quadratic,
+            draws,confidence_level/100,seed,1e-8)
+        if (rows(lead_table) == 0) {
+            st_local(status_local,"TARGET_IDENTITY_FAILED")
+            st_local(message_local,
+                "the q=1 decomposition does not reproduce its remainder")
+            return
+        }
+        st_matrix("__fevc_se_leading",lead_table)
+    }
     st_matrix(V_primitive_name,V_primitive)
     st_matrix(V_name,V)
     st_matrix(results_name,results)
@@ -659,7 +1063,7 @@ void vckss_residual_se__stata(
         min(product),max(product),units.movers,n-units.movers,0,info[3],.,.))
     st_matrix(variance_diagnostics_name,(info[1],.,.,.,info[2],info[3],n,info[4]))
     st_matrix(spectrum_name,spectrum)
-    st_local("inference_joint_available","1")
+    st_local("inference_joint_available",min(diagonal(V)) > 0 ? "1" : "0")
     // Repeat-measurement standard errors hold the estimated offset fixed.
     st_local("inference_nuisance_omitted",
         (control_count > 0 & !repeat) ? "0" : "1")
@@ -836,8 +1240,12 @@ void vckss_residual_se_jla__stata(
     real colvector root, product, variance, scaled_residual
     real rowvector eigenvalues
     real colvector fourth, share, unit_worker, unit_firm, mass, unit_y
-    real colvector unit_set, unit_mover
-    real matrix pair
+    real colvector unit_set, unit_mover, lead_vector
+    real matrix pair, lead_image, lead_table
+    struct vckss_rse_leading scalar lead
+    real rowvector lead_info
+    real scalar leading
+    string scalar lead_status
     real colvector ix, permutation, members, gamma
     real matrix controls, residualized, precision, collapsed
     real matrix collapsed_residualized, within, load, noise, image, previous
@@ -1051,6 +1459,34 @@ void vckss_residual_se_jla__stata(
             "the working variances for the pseudo-noise are not positive")
         return
     }
+    // Leading directions, each search started from the previous direction,
+    // and the realized influence of every remainder.
+    leading = repeat & st_global("VCKSS_SE_LEADING") != ""
+    if (leading) {
+        lead.mode = J(n,4,.)
+        lead.lambda = lead.second = lead.residual = lead.steps =
+            lead.converged = J(1,4,.)
+        // A fixed start that depends on nothing but the coefficient index.
+        lead_vector = cos((1::(workers+firms-1)):*0.7390851332)+
+            sin((1::(workers+firms-1)):^2:*0.3183098862)
+        for (j=1; j<=4; j++) {
+            lead_vector = vckss_rse__lead_solve(base,units,root,share,j,
+                lead_vector,strtoreal(st_global("VCKSS_SE_LEADING_CAP")),1e-3,
+                tolerance,maxiter,lead_info)
+            if (rows(lead_vector) == 0) return
+            lead.lambda[j] = lead_info[1]
+            lead.second[j] = lead_info[2]
+            lead.residual[j] = lead_info[3]
+            lead.steps[j] = lead_info[4]
+            lead.converged[j] = lead_info[5]
+            lead.mode[.,j] = vckss_rse__unit_predict(units,root,lead_vector)
+        }
+        vckss_rse__lead_prepare(lead,y,product,ratio,maker_inverse)
+        lead.influence = vckss_rse__lead_images(lead,y,base,units,root,share,
+            tolerance,maxiter,lead_status)
+        if (lead_status != "CONVERGED") return
+        if (centered) lead.influence = vckss_rse__center(lead.influence,root)
+    }
     scaled_residual = residual:*sqrt(maker_inverse)
     score = 2:*influence:*scaled_residual
     if (control_count > 0) {
@@ -1073,6 +1509,13 @@ void vckss_residual_se_jla__stata(
             tolerance,maxiter,kernel_residual,kernel_status)
         if (kernel_status != "CONVERGED") return
         if (centered) image = vckss_rse__center(image,root)
+        if (leading) {
+            lead_image = vckss_rse__lead_images(lead,noise,base,units,root,
+                share,tolerance,maxiter,lead_status)
+            if (lead_status != "CONVERGED") return
+            if (centered) lead_image = vckss_rse__center(lead_image,root)
+            vckss_rse__lead_trace(lead,lead_image,variance,width)
+        }
         pseudo_residual = kernel_residual:^2:*maker_inverse
         for (j=1; j<=3; j++) {
             for (k=1; k<=3; k++) {
@@ -1118,7 +1561,10 @@ void vckss_residual_se_jla__stata(
         V_primitive = eigenvectors*diag(eigenvalues)*eigenvectors'+2:*quadratic
     }
     V_primitive = (V_primitive+V_primitive'):/2
-    if (hasmissing(V_primitive) | min(diagonal(V_primitive)) <= 0) {
+    // With leading directions a nonpositive high-rank variance is the case
+    // the q = 1 interval exists for: the component then has no standard
+    // error, and no joint covariance is posted.
+    if (hasmissing(V_primitive) | (min(diagonal(V_primitive)) <= 0 & !leading)) {
         st_local(status_local,"INFERENCE_VARIANCE_INVALID")
         st_local(message_local,"a component variance estimate is not positive")
         return
@@ -1149,6 +1595,18 @@ void vckss_residual_se_jla__stata(
     }
     // The kernel image of the outcome reproduces the point estimate only up
     // to projection noise, because the two sets of projections differ.
+    if (leading) {
+        lead_table = vckss_rse__lead_finish(lead,y,variance,influence[.,1..3],
+            maker_inverse,target_diagonal,unit_set,unit_mover,quadratic,
+            draws,confidence_level/100,seed,1e-6)
+        if (rows(lead_table) == 0) {
+            st_local(status_local,"TARGET_IDENTITY_FAILED")
+            st_local(message_local,
+                "the q=1 decomposition does not reproduce its remainder")
+            return
+        }
+        st_matrix("__fevc_se_leading",lead_table)
+    }
     st_matrix(V_primitive_name,V_primitive)
     st_matrix(V_name,V)
     st_matrix(results_name,results)
@@ -1157,7 +1615,7 @@ void vckss_residual_se_jla__stata(
         max(abs(quadcross(y,influence[.,1..3])-posted_corrected[1,1..3])),.))
     st_matrix(variance_diagnostics_name,(info[1],.,.,.,info[2],info[3],n,info[4]))
     st_matrix(spectrum_name,spectrum)
-    st_local("inference_joint_available","1")
+    st_local("inference_joint_available",min(diagonal(V)) > 0 ? "1" : "0")
     // Repeat-measurement standard errors hold the estimated offset fixed.
     st_local("inference_nuisance_omitted",
         (control_count > 0 & !repeat) ? "0" : "1")

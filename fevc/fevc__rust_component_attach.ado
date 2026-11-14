@@ -11,6 +11,15 @@ program define fevc__rust_component_attach, rclass
     // Diffuse match modes need more iterations to certify near-tied roots.
     // This is a pre-RNG budget, not a relaxed residual gate or a retry.
     local spectrum_iterations = cond("`deletion'"=="observation" | "`reference'"=="q0",512,128)
+    local spectrum_tolerance .002
+    // Repeat-measurement standard errors with leading directions: the q1
+    // reference requests the directions beside the high-rank covariance; the
+    // search stops at a relative residual of 1e-3 or at its cap.
+    if "`model'"=="repeat_measurement" & "$VCKSS_SE_LEADING"!="" {
+        local reference q1
+        local spectrum_iterations $VCKSS_SE_LEADING_CAP
+        local spectrum_tolerance .001
+    }
     local selector augmentcomponentv4
     // The leave-out residual source fits no Gram matrix. The transport still
     // takes a count, so send its smallest valid one; the receipt reports zero.
@@ -23,7 +32,7 @@ program define fevc__rust_component_attach, rclass
     capture noisily fevc__rust_public_call `selector' `handle', model(`model') ///
         reference(`reference') probes(`simulations') batch(`attachment_batch') ///
         spectrumprobes(128) spectrumiterations(`spectrum_iterations') seed(`inferenceseed') ///
-        psdtolerance(1e-8) spectrumtolerance(.002) confidence(`=`level'/100') ///
+        psdtolerance(1e-8) spectrumtolerance(`spectrum_tolerance') confidence(`=`level'/100') ///
         criticalsimulations(`critical_simulations') observationsperterm(5) ///
         foldseed(`inferenceseed') ranktolerance(`ranktol')             ///
         positivitymultiplier(1e-8) deletion(`deletion') gramprobes(`gramprobes')

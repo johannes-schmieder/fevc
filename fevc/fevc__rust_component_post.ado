@@ -18,7 +18,7 @@ program define fevc__rust_component_post, eclass
     ereturn local q0_status_codes "0 computed; 1 nonpositive variance; 4 no positive linear influence; 6 spectrum not certified"
     ereturn scalar inference_joint_status = `joint_status'
     ereturn scalar inference_joint_available = (`joint_status'==0)
-    ereturn local inference_joint_status_codes "0 admissible; 1 nonpositive diagonal; 2 materially indefinite"
+    ereturn local inference_joint_status_codes "0 admissible; 1 nonpositive diagonal; 2 materially indefinite; 3 a component is reported with the q = 1 interval"
     ereturn scalar inference_computed_targets = `computed_targets'
     if `joint_status'==0 ereturn matrix V_primitive = `primitive'
     ereturn matrix component_inference = `results'

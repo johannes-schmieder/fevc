@@ -41,6 +41,13 @@ program define fevc__rust_component_fetch, rclass
             colsof(`repeat_shape')==14)
         if _rc local repeat_present = 0
     }
+    // Leading directions of repeat-measurement standard errors and the
+    // solves they added; kept under a fixed name for the regime helper.
+    local leading_solves = 0
+    capture matrix drop __fevc_se_leading
+    capture confirm scalar r(repeat_leading_solves)
+    if !_rc local leading_solves = r(repeat_leading_solves)
+    capture matrix __fevc_se_leading = r(repeat_leading)
     local joint_status = r(joint_status)
     local variance_fit = r(variance_fit)
     matrix `units' = (r(unit_schema),r(unit_deletion),r(independent_units), ///
@@ -139,8 +146,10 @@ program define fevc__rust_component_fetch, rclass
             `receipt'[1,27]==0 & `receipt'[1,31]>0 & `receipt'[1,32]>=0 & ///
             `receipt'[1,32]<`expectedunits' & `receipt'[1,33]==0 & ///
             `simulations'>=8 & mod(`simulations',4)==0 & ///
-            `receipt'[1,22]>=`simulations'+3 &                    ///
-            mod(`receipt'[1,22]-`simulations'-3,2)==0 & "`reference'"=="q0"
+            `receipt'[1,22]>=`simulations'+3+`leading_solves' &    ///
+            mod(`receipt'[1,22]-`simulations'-3-`leading_solves',2)==0 & ///
+            "`reference'"=="q0" &                                  ///
+            (`leading_solves'>0)==("$VCKSS_SE_LEADING"!="" & `variance_fit'==4)
         else local ok = `ok' & `receipt'[1,26]==0 & `receipt'[1,27]==0 & ///
             `receipt'[1,32]==0 & `receipt'[1,33]==0
         local q0computed = 0
@@ -202,10 +211,11 @@ program define fevc__rust_component_fetch, rclass
         // Draws, offset-pass solves and working-variance terms must agree
         // with the shared receipt; model-based variances must be positive.
         local ok = `residual_diagnostic'[1,1]==`simulations'/4 &           ///
-            `residual_diagnostic'[1,5]==`receipt'[1,22]-`simulations'-3 &  ///
+            `residual_diagnostic'[1,5]==`receipt'[1,22]-`simulations'-3-`leading_solves' &  ///
             inrange(`residual_diagnostic'[1,3],0,5) &                      ///
             inrange(`residual_diagnostic'[1,4],0,cond(`variance_fit'==4,6,3)) & ///
-            `residual_diagnostic'[1,3]+`residual_diagnostic'[1,4]>0 &      ///
+            (`residual_diagnostic'[1,3]+`residual_diagnostic'[1,4]>0 |    ///
+                `variance_fit'==4) &                                       ///
             `residual_diagnostic'[1,6]>=0 & !missing(`residual_diagnostic'[1,6])
         // The repeat-measurement covariance is reported as computed: a
         // nonpositive diagonal is a target status there, not a failure.
@@ -331,6 +341,24 @@ program define fevc__rust_component_fetch, rclass
             matrix `receipt' = (`receipt',`repeat_shape')
         }
     }
+    // Repeat-measurement standard errors with leading directions: decide
+    // the interval of every component now. Joint status 3 says that a
+    // component is reported with the q = 1 interval, so that no covariance
+    // matrix of the four components is posted.
+    if `variance_fit'==4 & "$VCKSS_SE_LEADING"!="" {
+        // The covariance as computed: the joint export is withheld when a
+        // variance is not positive, which is when the q = 1 interval matters.
+        tempname computed
+        matrix `computed' = J(4,4,.)
+        forvalues row = 1/4 {
+            forvalues column = 1/4 {
+                matrix `computed'[`row',`column'] = ///
+                    `residual_diagnostic'[1,6+4*(`row'-1)+`column']
+            }
+        }
+        fevc__residual_se_post regime_decide `computed' `posted' `level'
+        if "$VCKSS_SE_ANY_Q1"=="1" matrix `receipt'[1,24] = 3
+    }
     matrix `outreceipt' = `receipt'
     matrix `outunits' = `units'
     matrix `outresults' = `inference_results'
@@ -343,6 +371,15 @@ program define fevc__rust_component_fetch, rclass
     // sources solve one system per simulation plus three and their Gram
     // probes; the leave-out residual source reports its own count, which
     // includes the offset pass under joint nuisance with controls.
-    return scalar plan_rhs = cond(inlist(`variance_fit',3,4),`receipt'[1,22], ///
-        `simulations'+3+`expectedgramprobes')
+    // The plan counts the search for the leading directions at its cap;
+    // the receipt holds the solves the search used.
+    local leading_plan_gap = 0
+    if `leading_solves'>0 {
+        local leading_plan_gap = 4*$VCKSS_SE_LEADING_CAP
+        forvalues row = 1/4 {
+            local leading_plan_gap = `leading_plan_gap'-__fevc_se_leading[`row',3]
+        }
+    }
+    return scalar plan_rhs = cond(inlist(`variance_fit',3,4),          ///
+        `receipt'[1,22]+`leading_plan_gap',`simulations'+3+`expectedgramprobes')
 end

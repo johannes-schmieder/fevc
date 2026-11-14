@@ -33,6 +33,15 @@ registered variance-source enumeration is unchanged. No distributed binary
 contains it; the native route passes the Stata regression with a plugin
 built from this source.
 
+With the `q1` reference the same pass also computes the leading direction of
+each of the four reported targets and the `q = 1` decomposition along it
+(`generic_jla::leading_direction`: thick-restart Lanczos in the `S` inner
+product, one solve per step; `residual_noise::finish_repeat_q1_target`). The
+high-rank covariance and the result transport are unchanged; the directions
+leave through `vckss_rust_engine_repeat_measurement_leading_v1` (872 bytes,
+four targets of 208 bytes). Their solves are planned at the cap of the search
+and receipted as used.
+
 ## November 10 leave-out residual standard errors (source only)
 
 `vckss-core::residual_noise` adds sampling standard errors for the four

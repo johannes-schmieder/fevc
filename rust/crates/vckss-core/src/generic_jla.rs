@@ -1375,6 +1375,23 @@ fn run_generic_jla_with_execution_interrupt(
                     .and_then(|value| {
                         value.checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes))
                     })
+                    .and_then(|value| {
+                        // Leading directions are planned at the cap of their
+                        // search: four searches, four remainder influences
+                        // and four remainder kernels per pseudo-noise draw.
+                        if prepared.repeat_measurement
+                            && prepared.options.reference_distribution
+                                == ComponentReferenceDistribution::Q1
+                        {
+                            (prepared.options.spectrum_iterations as usize)
+                                .checked_mul(REPORTED_TARGETS)?
+                                .checked_add(REPORTED_TARGETS)?
+                                .checked_add(prepared.options.probes as usize)?
+                                .checked_add(value)
+                        } else {
+                            Some(value)
+                        }
+                    })
             })
         })
         .ok_or_else(|| resource("generic-JLA planned RHS count overflow"))?;

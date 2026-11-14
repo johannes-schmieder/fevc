@@ -223,7 +223,12 @@ program define _fevc_display_inference
     version 18.0
     tempname component_inference q1_inference projection_inference
 
-    if inlist("`e(inference)'", "highrank", "q1") {
+    // Repeat-measurement standard errors with leading directions report one
+    // interval per component, normal or q = 1.
+    capture confirm matrix e(inference_intervals)
+    local by_component = (_rc==0)
+    if `by_component' _fevc_display_intervals
+    if !`by_component' & inlist("`e(inference)'", "highrank", "q1") {
         matrix `component_inference' = e(component_inference)
         di as txt _newline "Econometric component inference ("    ///
             as result "`e(inference)'" as txt "; "               ///
@@ -252,7 +257,7 @@ program define _fevc_display_inference
         }
         di as txt "{hline 78}"
     }
-    if "`e(inference)'"=="highrank" & "`e(inference_variance_fit)'"!="" {
+    if !`by_component' & "`e(inference)'"=="highrank" & "`e(inference_variance_fit)'"!="" {
         tempname q0_status
         matrix `q0_status' = e(q0_status)
         local targetnames : rownames `q0_status'
@@ -266,7 +271,7 @@ program define _fevc_display_inference
             }
         }
     }
-    if "`e(inference)'" == "q1" {
+    if !`by_component' & "`e(inference)'" == "q1" {
         matrix `q1_inference' = e(q1_inference)
         tempname q1_status
         capture matrix `q1_status' = e(q1_status)
@@ -334,6 +339,99 @@ program define _fevc_display_inference
     }
 end
 
+// One interval per component: the normal interval with its standard error,
+// or the q = 1 interval, which has none.
+program define _fevc_display_intervals
+    version 18.0
+    tempname table
+    matrix `table' = e(inference_intervals)
+    di as txt _newline "Component inference (" as result %4.1f e(level) ///
+        as txt "% confidence level)"
+    di as txt "{hline 78}"
+    di as txt %-18s "Component" %12s "Estimate" %12s "Std. err." ///
+        %13s "Lower" %13s "Upper" %10s "Interval"
+    di as txt "{hline 78}"
+    forvalues row = 1/4 {
+        if `row' == 1 local row_label "Worker variance"
+        else if `row' == 2 local row_label "Firm variance"
+        else if `row' == 3 local row_label "Worker-firm cov."
+        else local row_label "Total worker-firm"
+        local regime = `table'[`row',7]
+        local kind = cond(`regime'==1,"q = 1",cond(`regime'==0,"normal","none"))
+        if `regime'==0 {
+            di as txt %-18s "`row_label'" as result %12.6g `table'[`row',1] ///
+                %12.6g `table'[`row',2] %13.6g `table'[`row',8]        ///
+                %13.6g `table'[`row',9] as txt %10s "`kind'"
+        }
+        else {
+            di as txt %-18s "`row_label'" as result %12.6g `table'[`row',1] ///
+                as txt %12s "" as result %13.6g `table'[`row',8]      ///
+                %13.6g `table'[`row',9] as txt %10s "`kind'"
+        }
+    }
+    di as txt "{hline 78}"
+end
+
+// What the intervals above mean and why each component got the one it has.
+program define _fevc_display_interval_notes
+    version 18.0
+    tempname table
+    matrix `table' = e(inference_intervals)
+    local q1_components = e(inference_q1_components)
+    local threshold : display %2.0f 100*e(inference_share_threshold)
+    local threshold = strtrim("`threshold'")
+    local largest = 0
+    local shares ""
+    local weighty 0
+    local none 0
+    local unavailable 0
+    forvalues row = 1/3 {
+        local share = `table'[`row',10]
+        if `table'[`row',7]==0 & `table'[`row',16]!=0 & !missing(`share') & ///
+            `share'>e(inference_share_threshold) local unavailable 1
+        if !missing(`share') local largest = max(`largest',`share')
+        local text : display %4.1f 100*`share'
+        local shares "`shares'`=cond(`row'>1,", ","")'`=strtrim("`text'")'%"
+        if `table'[`row',7]==1 & `table'[`row',14]>.1 local weighty 1
+        if missing(`table'[`row',7]) local none 1
+    }
+    di as txt "Interval by component. normal: estimate +/- " ///
+        as result %4.2f invnormal(.5+e(level)/200) as txt " standard errors."
+    if "`e(inference_leading_request)'"=="q1" {
+        di as txt "q = 1: requested with inference(q1) for every component that has one."
+    }
+    else {
+        di as txt "q = 1: used when one direction of the worker-firm network carries more than `threshold'%"
+        di as txt "of the component's estimated sampling variance, or when the variance estimate"
+        di as txt "is not positive. Shares (worker, firm, covariance): `shares'."
+    }
+    if `q1_components'>0 {
+        di as txt "A q = 1 estimate is not close to normal, so it has no standard error; its"
+        di as txt "interval is the Andrews-Mikusheva interval along that direction (KSS 2020,"
+        di as txt "Section 6) and need not be symmetric around the estimate."
+        di as txt "e(V) is not posted: it is posted only when every component is normal."
+        di as txt "All intervals and the standard errors of the normal form are in"
+        di as txt "e(inference_intervals); the directions are in e(inference_leading)."
+    }
+    else di as txt "No component needs the q = 1 interval, and e(V) is posted."
+    if `weighty' {
+        di as txt "Warning: a leading direction rests on few deletion units (a squared weight"
+        di as txt "         above 0.1). The q = 1 interval assumes that no unit dominates it."
+    }
+    if e(inference_leading_unresolved)>0 {
+        di as txt "Note: " as result e(inference_leading_unresolved) as txt ///
+            " leading direction(s) were not resolved within the cap on linear solves;"
+        di as txt "      the largest eigenvalues are then close, and no single direction dominates."
+    }
+    if `unavailable' {
+        di as txt "Warning: a component calls for the q = 1 interval, but that interval could not"
+        di as txt "         be formed; the normal interval shown for it can under-cover."
+    }
+    if `none' {
+        di as txt "Note: a component has neither interval: its variance estimates are not positive."
+    }
+end
+
 // Leave-out residual standard errors: what was computed, what it assumes,
 // and the diagnostics that say when the normal interval is doubtful.
 program define _fevc_display_residual_se
@@ -345,7 +443,10 @@ program define _fevc_display_residual_se
         cond(`repeat',"repeat-measurement","leave-out residual") " (" ///
         as result e(inference_draws) as txt " pseudo-noise draws; " ///
         as result %12.0fc e(inference_independent_units) as txt " deletion units)."
-    if e(inference_joint_posted)==1 {
+    capture confirm matrix e(inference_intervals)
+    local by_component = (_rc==0)
+    if `by_component' _fevc_display_interval_notes
+    else if e(inference_joint_posted)==1 {
         di as txt "e(V) is posted for the four components. Numerical MCSE is computational only."
     }
     else {
@@ -363,12 +464,16 @@ program define _fevc_display_residual_se
         di as txt "Assumes independent deletion units and similar error variances among units"
         di as txt "that share a worker or a firm. Not robust to arbitrary heteroskedasticity."
     }
-    di as txt "Effective rank (worker, firm, covariance): " as result ///
-        %9.1f `rank'[1,1] %9.1f `rank'[2,1] %9.1f `rank'[3,1] ///
-        as txt "; largest unit influence share: " as result %6.4f e(inference_max_influence_share)
-    if e(inference_low_rank_warning)==1 {
-        di as txt "Warning: a low effective rank means few directions carry a component;"
-        di as txt "         normal confidence intervals can then under-cover."
+    // With leading directions the interval of each component already
+    // reflects whether one direction carries it.
+    if !`by_component' {
+        di as txt "Effective rank (worker, firm, covariance): " as result ///
+            %9.1f `rank'[1,1] %9.1f `rank'[2,1] %9.1f `rank'[3,1] ///
+            as txt "; largest unit influence share: " as result %6.4f e(inference_max_influence_share)
+        if e(inference_low_rank_warning)==1 {
+            di as txt "Warning: a low effective rank means few directions carry a component;"
+            di as txt "         normal confidence intervals can then under-cover."
+        }
     }
     if "`e(centering)'"=="corrected" | "$VCKSS_CENTERING"=="corrected" {
         di as txt "Standard errors describe the mean-centred estimate; the corrected-centering"

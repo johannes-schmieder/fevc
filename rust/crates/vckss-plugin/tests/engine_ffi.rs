@@ -4371,8 +4371,11 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
         vckss_rust_engine_leaveout_residual_diagnostic_v1,
         vckss_rust_engine_repeat_measurement_diagnostic_v1, VckssComponentInferenceResultReceiptV5,
         VckssLeaveoutResidualDiagnosticV1, VckssRepeatMeasurementDiagnosticV1,
-        VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL, VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT,
-        VCKSS_CORE_REPEAT_SE_V1_READY,
+        VCKSS_COMPONENT_REFERENCE_Q1, VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL,
+        VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT, VCKSS_CORE_REPEAT_SE_V1_READY,
+    };
+    use vckss_plugin::ffi_engine::{
+        vckss_rust_engine_repeat_measurement_leading_v1, VckssRepeatMeasurementLeadingV1,
     };
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
@@ -4413,9 +4416,15 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
     );
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);
 
-    let run = |source: u32| -> u64 {
+    let run_with = |source: u32, leading: bool| -> u64 {
         let mut request = augmentation;
         request.options.variance_source = source;
+        if leading {
+            // The q1 reference asks for the leading directions.
+            request.options.reference_distribution = VCKSS_COMPONENT_REFERENCE_Q1;
+            request.options.spectrum_iterations = 40;
+            request.options.spectrum_tolerance = 1.0e-3;
+        }
         let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
         assert_eq!(
             vckss_rust_engine_augment_match_component_inference_interrupt_v4(
@@ -4446,6 +4455,7 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
         );
         generation
     };
+    let run = |source: u32| run_with(source, false);
     let generation = run(VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT);
     let mut primitive = [42.0; 9];
     let mut covariance = [42.0; 16];
@@ -4534,6 +4544,26 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
         vckss_rust_engine_repeat_measurement_diagnostic_v1(generation, &mut shape, 119),
         ErrorCode::AbiMismatch as i32
     );
+    // No leading directions were requested: the export says so.
+    let mut leading = VckssRepeatMeasurementLeadingV1::default();
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_leading_v1(generation, &mut leading, 872),
+        0
+    );
+    assert_eq!(
+        (
+            leading.struct_size,
+            leading.schema_version,
+            leading.generation
+        ),
+        (872, 1, generation)
+    );
+    assert_eq!((leading.present, leading.direction_solves), (0, 0));
+    assert_eq!(leading.target[0], Default::default());
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_leading_v1(generation, &mut leading, 871),
+        ErrorCode::AbiMismatch as i32
+    );
     // The shared diagnostic is exported too: no control term, no truncation.
     let mut shared = VckssLeaveoutResidualDiagnosticV1::default();
     assert_eq!(
@@ -4552,10 +4582,88 @@ fn repeat_measurement_standard_errors_cross_the_plugin_boundary() {
     }
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);
 
+    // With the q1 reference the same request also carries the leading
+    // direction of every target and the decomposition along it. The result
+    // transport still describes the high-rank covariance, which is unchanged.
+    let plain = covariance;
+    let generation = run_with(VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT, true);
+    assert_eq!(
+        vckss_rust_engine_component_inference_result_v5(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            ptr::null_mut(),
+            0,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            targets.as_mut_ptr(),
+            8,
+            &mut receipt,
+            288,
+        ),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_leading_v1(generation, &mut leading, 872),
+        0
+    );
+    let base = &receipt.v4.v3.v2;
+    assert_eq!((base.reference_distribution, base.q1_present), (0, 0));
+    assert_eq!(receipt.variance_fit, 4);
+    for index in 0..16 {
+        assert_eq!(covariance[index].to_bits(), plain[index].to_bits());
+    }
+    assert_eq!(
+        (
+            leading.present,
+            leading.influence_solves,
+            leading.kernel_solves
+        ),
+        (1, 4, 32)
+    );
+    assert_eq!(leading.critical_simulations, 100_000);
+    let steps: u32 = leading.target.iter().map(|target| target.steps).sum();
+    assert_eq!(leading.direction_solves, steps);
+    assert!((4..=160).contains(&steps));
+    assert_eq!(receipt.v4.solver_columns, 35 + steps + 4 + 32);
+    for target in &leading.target {
+        assert!(target.status <= 3 && target.converged <= 1);
+        assert!(target.eigenvalue.is_finite() && target.eigenvalue != 0.0);
+        assert!(target.second_eigenvalue.abs() <= target.eigenvalue.abs() * (1.0 + 1e-9));
+        assert!(target.maximum_weight_squared > 0.0 && target.maximum_weight_squared <= 1.0);
+        assert!(target.leading_variance_fitted > 0.0);
+        assert!(target.leading_variance >= target.leading_variance_fitted);
+        assert!(target.leading_variance >= target.leading_variance_leave_out);
+        assert!(target.remainder_identity_error <= 1e-7);
+        if target.status == 0 {
+            assert_eq!(target.critical_draws, 100_000);
+            assert!(target.critical_value >= 1.9 && target.critical_value <= 2.6);
+            assert!(target.confidence_lower < target.confidence_upper);
+            assert!(target.curvature >= 0.0);
+        }
+    }
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+
     // A leave-out residual generation has no repeat-measurement shape.
     let generation = run(VCKSS_COMPONENT_VARIANCE_LEAVEOUT_RESIDUAL);
     assert_eq!(
         vckss_rust_engine_repeat_measurement_diagnostic_v1(generation, &mut shape, 120),
+        ErrorCode::UnsupportedFeature as i32
+    );
+    assert_eq!(
+        vckss_rust_engine_repeat_measurement_leading_v1(generation, &mut leading, 872),
         ErrorCode::UnsupportedFeature as i32
     );
     assert_eq!(vckss_rust_engine_release_v1(generation), 0);

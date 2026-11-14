@@ -54,8 +54,10 @@ def test_probe_count_convention_is_four_solves_per_draw():
     # Three influence solves, four per draw, and the offset pass when the
     # point estimate keeps controls in its operator.
     assert "`receipt'[1,22]>=`simulations'+3" in fetch
-    assert "mod(`receipt'[1,22]-`simulations'-3,2)==0" in fetch
-    assert "return scalar plan_rhs = cond(inlist(`variance_fit',3,4),`receipt'[1,22]," in fetch
+    # Leading directions of repeat-measurement standard errors add their own
+    # solves, which are zero for this method.
+    assert "mod(`receipt'[1,22]-`simulations'-3-`leading_solves',2)==0" in fetch
+    assert "`receipt'[1,22]+`leading_plan_gap',`simulations'+3+`expectedgramprobes')" in fetch
     command = read("fevc/fevc.ado")
     assert "local component_plan_rhs = r(plan_rhs)" in command
     assert "`r_plan_rhs'==`expected_rhs_rows'+`component_plan_rhs'" in command
@@ -141,7 +143,7 @@ def test_display_and_returns_state_the_assumption():
 def test_mata_runtime_is_separate_and_lazily_loaded():
     mata = read("fevc/fevc_residual_se.mata")
     assert "mata set matastrict on" in mata
-    assert 'return("vckss-residual-se-api4")' in mata
+    assert 'return("vckss-residual-se-api5")' in mata
     assert "void vckss_residual_se__stata(" in mata
     assert "void vckss_residual_se_jla__stata(" in mata
     assert "real colvector vckss_rse__finite_projection(" in mata
@@ -154,7 +156,7 @@ def test_mata_runtime_is_separate_and_lazily_loaded():
     helper = command[command.index("program define _fevc_residual_se_mata") :]
     helper = helper[: helper.index("\nend\n")]
     assert "findfile fevc_residual_se.mata" in helper
-    assert 'vckss_rse__build_id() == "vckss-residual-se-api4"' in helper
+    assert 'vckss_rse__build_id() == "vckss-residual-se-api5"' in helper
     assert "vckss_rse__loaded() == 1" in helper and "real scalar vckss_rse__loaded()" in mata
     assert "vckss_residual_se__stata(" in helper
     assert "vckss_residual_se_jla__stata(" in helper

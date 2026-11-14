@@ -3751,6 +3751,8 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
     VckssComponentInferenceUnitReceiptV2 units;
     VckssLeaveoutResidualDiagnosticV1 noise;
     VckssRepeatMeasurementDiagnosticV1 repeat;
+    VckssRepeatMeasurementLeadingV1 leading;
+    uint64_t leading_solves = 0u;
     VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
@@ -4085,12 +4087,60 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
                 status = vckss_rust_engine_repeat_measurement_diagnostic_v1(
                     generation, &repeat, (uint32_t)sizeof(repeat));
             }
+            memset(&leading, 0, sizeof(leading));
+            if (status == 0) {
+                status = vckss_rust_engine_repeat_measurement_leading_v1(
+                    generation, &leading, (uint32_t)sizeof(leading));
+            }
             if (status != 0) { free(storage); return vckss_rust_failure(status); }
+            /* Leading directions add their search, four remainder influences
+             * and four remainder kernels per pseudo-noise draw. */
+            if (leading.struct_size != sizeof(leading) || leading.schema_version != 1u ||
+                leading.generation != generation || leading.present > 1u || leading.reserved != 0u) {
+                free(storage); return vckss_usage("repeat-measurement leading directions did not reconcile");
+            }
+            if (leading.present == 1u) {
+                uint64_t steps = 0u;
+                for (i = 0; i < 4u; ++i) {
+                    const VckssRepeatMeasurementLeadingTargetV1 *target = &leading.target[i];
+                    steps += target->steps;
+                    if (target->status > 3u || target->converged > 1u || target->steps < 1u ||
+                        !isfinite(target->eigenvalue) || !isfinite(target->second_eigenvalue) ||
+                        !isfinite(target->residual) || target->residual < 0.0 ||
+                        !isfinite(target->maximum_weight_squared) ||
+                        target->maximum_weight_squared < 0.0 ||
+                        target->maximum_weight_squared > 1.0 + 1e-9 ||
+                        !isfinite(target->point_estimate) || !isfinite(target->leading_score) ||
+                        !isfinite(target->leading_variance_leave_out) ||
+                        !isfinite(target->leading_variance_fitted) ||
+                        target->leading_variance_fitted <= 0.0 ||
+                        target->leading_variance < target->leading_variance_fitted ||
+                        !isfinite(target->remainder_estimate) ||
+                        !isfinite(target->leading_remainder_covariance) ||
+                        !isfinite(target->remainder_variance) ||
+                        !isfinite(target->remainder_pair_term) ||
+                        (target->status == 0u &&
+                            (!isfinite(target->curvature) || target->curvature < 0.0 ||
+                             !isfinite(target->critical_value) || target->critical_value <= 0.0 ||
+                             !isfinite(target->confidence_lower) || !isfinite(target->confidence_upper) ||
+                             target->confidence_lower > target->confidence_upper ||
+                             target->critical_draws != leading.critical_simulations))) {
+                        free(storage); return vckss_usage("invalid repeat-measurement leading direction");
+                    }
+                }
+                if (leading.direction_solves != steps || leading.influence_solves != 4u ||
+                    leading.kernel_solves != base->probes || leading.critical_simulations < 1000u) {
+                    free(storage); return vckss_usage("repeat-measurement leading solves did not reconcile");
+                }
+                leading_solves = (uint64_t)leading.direction_solves + leading.influence_solves +
+                    leading.kernel_solves;
+            }
             if (noise.struct_size != sizeof(noise) || noise.schema_version != 1u ||
                 noise.generation != generation || noise.draws < 2u ||
                 (uint64_t)noise.draws * 4u != base->probes ||
                 noise.offset_pass_solves % 2u != 0u ||
-                receipt.solver_columns != (uint64_t)base->probes + 3u + noise.offset_pass_solves ||
+                receipt.solver_columns !=
+                    (uint64_t)base->probes + 3u + noise.offset_pass_solves + leading_solves ||
                 noise.controls != 0u || noise.signal_truncation != 0.0 ||
                 noise.working_floored != receipt5.floored_predictions ||
                 noise.working_floor != receipt5.positivity_floor ||
@@ -4120,8 +4170,11 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
                 free(storage); return vckss_usage("repeat-measurement diagnostics did not reconcile");
             }
             for (i = 0; i < 16u; ++i) {
+                /* The covariance is reported as computed. When a variance is
+                 * not positive the joint export above is withheld, and the
+                 * computed values travel in the diagnostic alone. */
                 if (!isfinite(noise.model_covariance[i]) ||
-                    noise.model_covariance[i] != covariance[i] ||
+                    (receipt5.joint_status == 0u && noise.model_covariance[i] != covariance[i]) ||
                     (i < 6u && !isfinite(repeat.profile[i])) ||
                     (i < 4u && !isnan(noise.effective_rank[i]) &&
                         (!isfinite(noise.effective_rank[i]) || noise.effective_rank[i] < 1.0))) {
@@ -4222,6 +4275,38 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
             for (index = 0; index < 6u; ++index) {
                 snprintf(name, sizeof(name), "__vckss_rm_profile_%u", index + 1u);
                 if ((status = vckss_save_double(name, repeat.profile[index])) != 0) return status;
+            }
+            /* Leading directions: counts, then 28 values per reported target
+             * in the order of VckssRepeatMeasurementLeadingTargetV1. */
+            if ((status = vckss_save_u64("__vckss_rl_present", leading.present)) != 0 ||
+                (status = vckss_save_u64("__vckss_rl_direction_solves", leading.direction_solves)) != 0 ||
+                (status = vckss_save_u64("__vckss_rl_influence_solves", leading.influence_solves)) != 0 ||
+                (status = vckss_save_u64("__vckss_rl_kernel_solves", leading.kernel_solves)) != 0 ||
+                (status = vckss_save_u64("__vckss_rl_critical", leading.critical_simulations)) != 0) return status;
+            if (leading.present == 1u) {
+                unsigned int target_index;
+                for (target_index = 0; target_index < 4u; ++target_index) {
+                    const VckssRepeatMeasurementLeadingTargetV1 *target = &leading.target[target_index];
+                    const double values[28] = {
+                        (double)target->status, (double)target->converged, (double)target->steps,
+                        (double)target->critical_draws, target->eigenvalue, target->second_eigenvalue,
+                        target->residual, target->leading_share, target->maximum_weight_squared,
+                        target->point_estimate, target->leading_score,
+                        target->leading_variance_leave_out, target->leading_variance_fitted,
+                        target->leading_variance, target->remainder_estimate,
+                        target->remainder_identity_error, target->leading_remainder_covariance,
+                        target->remainder_variance, target->remainder_influence_variance,
+                        target->remainder_trace_variance, target->remainder_trace_mcse,
+                        target->remainder_pair_term, target->standardized_determinant,
+                        target->curvature, target->critical_value, target->confidence_lower,
+                        target->confidence_upper, target->leading_f_statistic
+                    };
+                    for (index = 0; index < 28u; ++index) {
+                        snprintf(name, sizeof(name), "__vckss_rl_%u_%u", target_index + 1u, index + 1u);
+                        if ((status = vckss_save_double(name,
+                                isfinite(values[index]) ? values[index] : SV_missval)) != 0) return status;
+                    }
+                }
             }
         }
         if (receipt5.variance_fit == 3u || receipt5.variance_fit == 4u) {

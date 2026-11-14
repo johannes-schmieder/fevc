@@ -17,7 +17,15 @@ def test_unified_fitter_accounts_for_gram_solves_for_both_deletion_units():
 def test_public_q0_spectral_budget_does_not_change_q1_or_probe_defaults():
     attach = (ROOT / "fevc/fevc__rust_component_attach.ado").read_text()
     assert 'cond("`deletion\'"=="observation" | "`reference\'"=="q0",512,128)' in attach
-    assert 'spectrumtolerance(.002)' in attach
+    assert 'local spectrum_tolerance .002' in attach
+    assert "spectrumtolerance(`spectrum_tolerance')" in attach
+    # Only repeat-measurement standard errors with leading directions use
+    # another budget: the q1 reference, their own cap and tolerance.
+    override = attach[attach.index('if "`model\'"=="repeat_measurement" & "$VCKSS_SE_LEADING"!="" {') :]
+    override = override[: override.index("}")]
+    assert "local reference q1" in override
+    assert "local spectrum_iterations $VCKSS_SE_LEADING_CAP" in override
+    assert "local spectrum_tolerance .001" in override
     assert 'spectrumprobes(128)' in attach
     post = (ROOT / "fevc/fevc__rust_component_post.ado").read_text()
     assert 'inference_spectrum_iterations = e(component_spectrum)[1,14]' in post

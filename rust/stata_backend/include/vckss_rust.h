@@ -981,6 +981,59 @@ typedef struct VckssRepeatMeasurementDiagnosticV1 {
     double profile[6];
 } VckssRepeatMeasurementDiagnosticV1;
 
+/* Leading direction and q = 1 decomposition of one reported target under
+ * repeat-measurement standard errors. status is the target's code of the
+ * decomposition (0 computed, 1 nonpositive variance, 2 singular pair, 3 no
+ * interval). leading_variance is the larger of the leave-out and the fitted
+ * value; the leave-out value recentres the leading square. */
+typedef struct VckssRepeatMeasurementLeadingTargetV1 {
+    uint32_t status;
+    uint32_t converged;
+    uint32_t steps;
+    uint32_t critical_draws;
+    double eigenvalue;
+    double second_eigenvalue;
+    double residual;
+    double leading_share;
+    double maximum_weight_squared;
+    double point_estimate;
+    double leading_score;
+    double leading_variance_leave_out;
+    double leading_variance_fitted;
+    double leading_variance;
+    double remainder_estimate;
+    double remainder_identity_error;
+    double leading_remainder_covariance;
+    double remainder_variance;
+    double remainder_influence_variance;
+    double remainder_trace_variance;
+    double remainder_trace_mcse;
+    double remainder_pair_term;
+    double standardized_determinant;
+    double curvature;
+    double critical_value;
+    double confidence_lower;
+    double confidence_upper;
+    double leading_f_statistic;
+} VckssRepeatMeasurementLeadingTargetV1;
+
+/* Leading directions of the four reported targets (worker variance, firm
+ * variance, covariance, variance of the sum) and the linear solves they
+ * added. present is zero, and everything after it, when the request did not
+ * ask for them. */
+typedef struct VckssRepeatMeasurementLeadingV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t present;
+    uint32_t direction_solves;
+    uint32_t influence_solves;
+    uint32_t kernel_solves;
+    uint32_t critical_simulations;
+    uint32_t reserved;
+    VckssRepeatMeasurementLeadingTargetV1 target[4];
+} VckssRepeatMeasurementLeadingV1;
+
 typedef struct VckssComponentVectorV1 {
     double worker;
     double firm;
@@ -1800,6 +1853,11 @@ int32_t vckss_rust_engine_leaveout_residual_diagnostic_v1(
 int32_t vckss_rust_engine_repeat_measurement_diagnostic_v1(
     uint64_t generation,
     VckssRepeatMeasurementDiagnosticV1 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_repeat_measurement_leading_v1(
+    uint64_t generation,
+    VckssRepeatMeasurementLeadingV1 *output,
     uint32_t output_capacity_bytes
 );
 /* V2 changes policy, not the frozen V1 tuning-request layout. */
