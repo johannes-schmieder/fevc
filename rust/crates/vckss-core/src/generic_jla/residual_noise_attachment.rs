@@ -8,9 +8,71 @@
 use super::*;
 use crate::component_inference::residual_noise_result;
 use crate::residual_noise::{
-    center_units, finish_covariance, finish_repeat_covariance, fit_repeat_variance,
-    fit_working_variance, ControlAdjustment, Diagnostic, NoiseAccumulator, RepeatInputs,
+    center_units, finish_covariance, finish_repeat_covariance, finish_repeat_q1_target,
+    fit_repeat_variance, fit_working_variance, ControlAdjustment, Diagnostic, NoiseAccumulator,
+    RepeatInputs, RepeatLeading, RepeatVariance,
 };
+
+/// Leading directions of the four reported targets and what the `q = 1`
+/// decomposition along them needs from the realized outcome.
+struct LeadingState {
+    direction: Vec<leading_direction::LeadingDirection>,
+    /// Target diagonal net of the direction, over the maker diagonal.
+    ratio: [Vec<f64>; REPORTED_TARGETS],
+    /// Realized influence of the remainder.
+    influence: [Vec<f64>; REPORTED_TARGETS],
+    point_estimate: [f64; REPORTED_TARGETS],
+    leading_score: [f64; REPORTED_TARGETS],
+    leading_leave_out: [f64; REPORTED_TARGETS],
+    direct_remainder: [f64; REPORTED_TARGETS],
+    identity_tolerance: [f64; REPORTED_TARGETS],
+    /// Sum and sum of squares over draws of `sum_a v_a (K_r zeta)_a^2`.
+    trace: [(f64, f64); REPORTED_TARGETS],
+    direction_solves: u32,
+    kernel_solves: u32,
+}
+
+fn reported_diagonal(target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS], target: usize) -> Vec<f64> {
+    if target < PRIMITIVE_TARGETS {
+        return target_diagonal[target].clone();
+    }
+    (0..target_diagonal[0].len())
+        .map(|row| {
+            target_diagonal[0][row] + target_diagonal[1][row] + 2.0 * target_diagonal[2][row]
+        })
+        .collect()
+}
+
+/// Right-hand sides of the remainder kernels of one unit-space vector:
+/// `A_t beta + X'(ratio_t z / 2)` for the four reported targets.
+#[allow(clippy::too_many_arguments)]
+fn remainder_rhs(
+    problem: &CompressedProblem,
+    inference_rows: ComponentInferenceRows<'_>,
+    state: &LeadingState,
+    outcome: &[f64],
+    fit: &ModelCoefficients,
+    worker: &mut [f64],
+    firm: &mut [f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    for target in 0..REPORTED_TARGETS {
+        let (target_worker, target_firm, _) = reported_target_rhs(problem, fit, target, interrupt)?;
+        let score = component_transpose_rhs_by(
+            problem,
+            inference_rows,
+            |row| 0.5 * state.ratio[target][row] * outcome[row],
+            interrupt,
+        )?;
+        for index in 0..problem.workers() {
+            worker[target * problem.workers() + index] = target_worker[index] + score.0[index];
+        }
+        for index in 0..problem.firms() {
+            firm[target * problem.firms() + index] = target_firm[index] + score.1[index];
+        }
+    }
+    Ok(())
+}
 
 /// Unit-level inputs for the first-order control-estimation term.
 ///
@@ -304,11 +366,35 @@ pub(super) fn peak_bytes(
             )
         })?,
     ])?;
+    // Leading directions: four directions with their ratios and remainder
+    // influences, the leave-out products and one image on the units; the
+    // Lanczos basis with its work vectors and the four directions'
+    // coefficients; four remainder right-hand sides and solutions per draw of
+    // the batch; and one receipt per solve, the search counted at its cap.
+    let (leading_bytes, leading_receipts) = if prepared.repeat_measurement
+        && prepared.options.reference_distribution == ComponentReferenceDistribution::Q1
+    {
+        (
+            checked_sum(&[
+                checked_product(&[units, 14, 8], "leading-direction unit state")?,
+                checked_product(&[parameters, 18, 8], "leading-direction coefficient state")?,
+                checked_product(&[parameters, batch, 12, 8], "remainder kernel exchange")?,
+            ])?,
+            u64::from(prepared.options.spectrum_iterations)
+                .checked_mul(REPORTED_TARGETS as u64)
+                .and_then(|value| value.checked_add(REPORTED_TARGETS as u64))
+                .and_then(|value| value.checked_add(u64::from(prepared.options.probes)))
+                .ok_or_else(|| resource("leading-direction receipt count overflow"))?,
+        )
+    } else {
+        (0, 0)
+    };
     let receipts = checked_product(
         &[
             u64::from(prepared.options.probes)
                 .checked_add(PRIMITIVE_TARGETS as u64)
                 .and_then(|value| value.checked_add(offset_receipts))
+                .and_then(|value| value.checked_add(leading_receipts))
                 .ok_or_else(|| resource("leave-out residual receipt count overflow"))?,
             count(
                 core::mem::size_of::<ComponentInferenceSolveReceipt>(),
@@ -324,6 +410,7 @@ pub(super) fn peak_bytes(
         exchanged,
         solver,
         receipts,
+        leading_bytes,
         // The result crosses Rust and C once more on export.
         if prepared.individual_intervals {
             2 * (846 * 8 + 288)
@@ -544,7 +631,11 @@ pub(super) fn run(
         )?;
         (Some(fit), None)
     };
-    drop(proxy);
+    let leading_requested = repeat.is_some()
+        && prepared.options.reference_distribution == ComponentReferenceDistribution::Q1;
+    if !leading_requested {
+        proxy = Vec::new();
+    }
     let variance: &[f64] = match (&fit, &repeat) {
         (Some(fit), _) => &fit.variance,
         (None, Some(repeat)) => &repeat.variance,
@@ -636,6 +727,29 @@ pub(super) fn run(
     }
     drop(solved);
 
+    let mut leading = if leading_requested {
+        Some(prepare_leading(
+            problem,
+            prepared,
+            solver,
+            coefficients,
+            inference_rows,
+            working_y,
+            centered,
+            residual,
+            maker_inverse,
+            target_diagonal,
+            &influence,
+            &proxy,
+            match_mass,
+            &mut solve_receipts,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
+    drop(proxy);
+
     let rng = CounterRng::new(prepared.options.seed);
     let mut accumulator = NoiseAccumulator::default();
     let batch_width = prepared.options.batch_width.clamp(1, draws);
@@ -711,6 +825,39 @@ pub(super) fn run(
             interrupt,
         )?;
         drop((kernel_worker, kernel_firm, kernel_control));
+        // The remainder kernels of the four reported targets, on the same
+        // pseudo-noise.
+        let remainder_images = match leading.as_ref() {
+            Some(state) => {
+                let remainder_columns = width * REPORTED_TARGETS;
+                let mut remainder_worker = vec![0.0; problem.workers() * remainder_columns];
+                let mut remainder_firm = vec![0.0; problem.firms() * remainder_columns];
+                for local in 0..width {
+                    let base = local * REPORTED_TARGETS;
+                    remainder_rhs(
+                        problem,
+                        inference_rows,
+                        state,
+                        &pseudo_outcome[local * rows..(local + 1) * rows],
+                        &fitted.solution[local].coefficients,
+                        &mut remainder_worker[base * problem.workers()
+                            ..(base + REPORTED_TARGETS) * problem.workers()],
+                        &mut remainder_firm
+                            [base * problem.firms()..(base + REPORTED_TARGETS) * problem.firms()],
+                        interrupt,
+                    )?;
+                }
+                Some(solver.solve_batch_with_interrupt(
+                    &remainder_worker,
+                    &remainder_firm,
+                    &[],
+                    remainder_columns,
+                    width,
+                    interrupt,
+                )?)
+            }
+            None => None,
+        };
         for local in 0..width {
             let outcome = &pseudo_outcome[local * rows..(local + 1) * rows];
             let solution = &fitted.solution[local];
@@ -752,6 +899,46 @@ pub(super) fn run(
                     image,
                 ));
             }
+            if let (Some(state), Some(images)) = (leading.as_mut(), remainder_images.as_ref()) {
+                for target in 0..REPORTED_TARGETS {
+                    let image = &images.solution[local * REPORTED_TARGETS + target];
+                    component_predict(
+                        problem,
+                        inference_rows,
+                        solver,
+                        &image.coefficients,
+                        &mut prediction,
+                        interrupt,
+                    )?;
+                    let direction = &state.direction[target];
+                    let score = component_prediction_inner(&direction.mode, outcome)?;
+                    let mut remainder = finish_q1_influence(
+                        &prediction,
+                        &state.ratio[target],
+                        outcome,
+                        &pseudo_residual,
+                        &direction.mode,
+                        direction.eigenvalue,
+                        score,
+                    )?;
+                    if centered {
+                        center_units(&mut remainder, match_mass, interrupt)?;
+                    }
+                    let mut value = StableAccumulator::default();
+                    for row in 0..rows {
+                        value.add(variance[row] * remainder[row] * remainder[row]);
+                    }
+                    let value = value.finish();
+                    state.trace[target].0 += value;
+                    state.trace[target].1 += value * value;
+                    state.kernel_solves += 1;
+                    solve_receipts.push(component_solve_receipt(
+                        ComponentInferenceSolvePhase::Influence,
+                        (PRIMITIVE_TARGETS + target) as u32,
+                        image,
+                    ));
+                }
+            }
             accumulator.push(variance, maker_inverse, &pseudo_residual, kernel, interrupt)?;
         }
     }
@@ -784,7 +971,19 @@ pub(super) fn run(
                 &moments,
                 interrupt,
             )?;
-            let diagnostic = Diagnostic::repeat(repeat, &moments, &covariance)?;
+            let mut diagnostic = Diagnostic::repeat(repeat, &moments, &covariance)?;
+            if let (Some(state), Some(shape)) = (leading.take(), diagnostic.repeat.as_mut()) {
+                shape.leading = Some(finish_leading(
+                    prepared,
+                    state,
+                    repeat,
+                    variance,
+                    maker_inverse,
+                    target_diagonal,
+                    &moments,
+                    interrupt,
+                )?);
+            }
             (covariance, diagnostic)
         }
         (None, None) => unreachable!("one variance source is always formed"),
@@ -844,4 +1043,268 @@ pub(super) fn run(
     }
     result.variance_source = prepared.variance_source;
     Ok(result)
+}
+
+/// Leading directions and the realized pieces of the `q = 1` decomposition.
+///
+/// The directions are found one after the other, each started from the
+/// previous one: under a bottleneck the targets share their direction, and
+/// the later searches then need a couple of solves. For every target the
+/// remainder kernel is the target's kernel with its diagonal ratio net of the
+/// direction, minus the rank-one part; its influence on the outcome costs one
+/// solve.
+#[allow(clippy::too_many_arguments)]
+fn prepare_leading(
+    problem: &CompressedProblem,
+    prepared: &ComponentExecution<'_>,
+    solver: &PreparedModelSolver<'_>,
+    coefficients: &ModelCoefficients,
+    inference_rows: ComponentInferenceRows<'_>,
+    working_y: &[f64],
+    centered: bool,
+    residual: &[f64],
+    maker_inverse: &[f64],
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    influence: &[Vec<f64>; PRIMITIVE_TARGETS],
+    proxy: &[f64],
+    match_mass: Option<&[f64]>,
+    solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<LeadingState> {
+    let rows = working_y.len();
+    let before = solve_receipts.len();
+    let mut direction: Vec<leading_direction::LeadingDirection> = Vec::new();
+    for target in 0..REPORTED_TARGETS {
+        let found = leading_direction::leading_direction(
+            problem,
+            solver,
+            inference_rows,
+            target,
+            direction.last().map(|previous| &previous.coefficients),
+            prepared.options.spectrum_iterations,
+            prepared.options.spectrum_tolerance,
+            solve_receipts,
+            interrupt,
+        )?;
+        direction.push(found);
+    }
+    let direction_solves = (solve_receipts.len() - before) as u32;
+
+    let mut ratio: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| Vec::new());
+    let mut leading_score = [0.0; REPORTED_TARGETS];
+    let mut leading_leave_out = [0.0; REPORTED_TARGETS];
+    let mut point_estimate = [0.0; REPORTED_TARGETS];
+    for target in 0..REPORTED_TARGETS {
+        let found = &direction[target];
+        ratio[target] = q1_remainder_ratio(
+            &reported_diagonal(target_diagonal, target),
+            maker_inverse,
+            &found.mode,
+            found.eigenvalue,
+        )?;
+        leading_score[target] = component_prediction_inner(&found.mode, working_y)?;
+        let mut leave_out = StableAccumulator::default();
+        let mut point = StableAccumulator::default();
+        for row in 0..rows {
+            leave_out.add(found.mode[row] * found.mode[row] * proxy[row]);
+            let image = if target < PRIMITIVE_TARGETS {
+                influence[target][row]
+            } else {
+                influence[0][row] + influence[1][row] + 2.0 * influence[2][row]
+            };
+            point.add(working_y[row] * image);
+        }
+        leading_leave_out[target] = leave_out.finish();
+        point_estimate[target] = point.finish();
+    }
+
+    let mut state = LeadingState {
+        direction,
+        ratio,
+        influence: core::array::from_fn(|_| Vec::new()),
+        point_estimate,
+        leading_score,
+        leading_leave_out,
+        direct_remainder: [0.0; REPORTED_TARGETS],
+        identity_tolerance: [0.0; REPORTED_TARGETS],
+        trace: [(0.0, 0.0); REPORTED_TARGETS],
+        direction_solves,
+        kernel_solves: 0,
+    };
+    let mut worker_rhs = vec![0.0; problem.workers() * REPORTED_TARGETS];
+    let mut firm_rhs = vec![0.0; problem.firms() * REPORTED_TARGETS];
+    remainder_rhs(
+        problem,
+        inference_rows,
+        &state,
+        working_y,
+        coefficients,
+        &mut worker_rhs,
+        &mut firm_rhs,
+        interrupt,
+    )?;
+    let solved = solver.solve_batch_with_interrupt(
+        &worker_rhs,
+        &firm_rhs,
+        &[],
+        REPORTED_TARGETS,
+        REPORTED_TARGETS,
+        interrupt,
+    )?;
+    let mut prediction = vec![0.0; rows];
+    for target in 0..REPORTED_TARGETS {
+        let solution = &solved.solution[target];
+        component_predict(
+            problem,
+            inference_rows,
+            solver,
+            &solution.coefficients,
+            &mut prediction,
+            interrupt,
+        )?;
+        let found = &state.direction[target];
+        let mut remainder = finish_q1_influence(
+            &prediction,
+            &state.ratio[target],
+            working_y,
+            residual,
+            &found.mode,
+            found.eigenvalue,
+            state.leading_score[target],
+        )?;
+        if centered {
+            center_units(&mut remainder, match_mass, interrupt)?;
+        }
+        state.direct_remainder[target] = component_prediction_inner(working_y, &remainder)?;
+        // The identity between the recentred decomposition and this direct
+        // value holds to the accuracy of the two solves behind it.
+        state.identity_tolerance[target] = (64.0 * solution.receipt.full_residual).max(1.0e-7);
+        state.influence[target] = remainder;
+        solve_receipts.push(component_solve_receipt(
+            ComponentInferenceSolvePhase::Influence,
+            (PRIMITIVE_TARGETS + target) as u32,
+            solution,
+        ));
+    }
+    Ok(state)
+}
+
+/// Assemble the decomposition and the interval of every reported target.
+#[allow(clippy::too_many_arguments)]
+fn finish_leading(
+    prepared: &ComponentExecution<'_>,
+    state: LeadingState,
+    repeat: &RepeatVariance,
+    variance: &[f64],
+    maker_inverse: &[f64],
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    moments: &crate::residual_noise::NoiseMoments,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<RepeatLeading> {
+    let draws = f64::from(moments.draws);
+    let mut spectrum = [ComponentSpectrumDiagnostics::default(); REPORTED_TARGETS];
+    let mut q1 = [ComponentQ1TargetResult::default(); REPORTED_TARGETS];
+    let mut leading_variance_fitted = [0.0; REPORTED_TARGETS];
+    let mut remainder_pair_term = [0.0; REPORTED_TARGETS];
+    for target in 0..REPORTED_TARGETS {
+        let found = &state.direction[target];
+        let mean = state.trace[target].0 / draws;
+        let spread = (state.trace[target].1 / draws - mean * mean).max(0.0);
+        let mcse = if moments.draws > 1 {
+            (spread / (draws - 1.0)).sqrt()
+        } else {
+            0.0
+        };
+        let pair = repeat.remainder_pair_term(
+            &reported_diagonal(target_diagonal, target),
+            maker_inverse,
+            &found.mode,
+            found.eigenvalue,
+            target == 0 || target == REPORTED_TARGETS - 1,
+            interrupt,
+        )?;
+        remainder_pair_term[target] = pair;
+        let decomposition = finish_repeat_q1_target(
+            state.point_estimate[target],
+            state.leading_score[target],
+            state.leading_leave_out[target],
+            state.direct_remainder[target],
+            state.identity_tolerance[target],
+            found.eigenvalue,
+            &found.mode,
+            &state.influence[target],
+            variance,
+            mean,
+            mcse,
+            pair,
+            prepared.options.psd_tolerance,
+        )
+        .map_err(|mut error| {
+            error.message = format!("q1 target {target}: {}", error.message);
+            error
+        })?;
+        q1[target] = finish_q1_interval(
+            decomposition,
+            prepared.options.seed,
+            target,
+            found.eigenvalue,
+            prepared.options.confidence_level,
+            prepared.options.critical_simulations,
+        )?;
+        let mut fitted = StableAccumulator::default();
+        let mut largest = 0.0_f64;
+        for row in 0..variance.len() {
+            fitted.add(found.mode[row] * found.mode[row] * variance[row]);
+            largest = largest.max(found.mode[row] * found.mode[row]);
+        }
+        let fitted = fitted.finish();
+        leading_variance_fitted[target] = fitted;
+        // tr(K V K V) of the target, from the primitive traces.
+        let trace = if target < PRIMITIVE_TARGETS {
+            moments.trace[target * PRIMITIVE_TARGETS + target]
+        } else {
+            let weight = [1.0, 1.0, 2.0];
+            let mut total = 0.0;
+            for left in 0..PRIMITIVE_TARGETS {
+                for right in 0..PRIMITIVE_TARGETS {
+                    total += weight[left]
+                        * weight[right]
+                        * moments.trace[left.min(right) * PRIMITIVE_TARGETS + left.max(right)];
+                }
+            }
+            total
+        };
+        let square = (found.eigenvalue * fitted) * (found.eigenvalue * fitted);
+        spectrum[target] = ComponentSpectrumDiagnostics {
+            certified: found.converged,
+            leading_eigenvalue: found.eigenvalue,
+            second_eigenvalue: found.second_eigenvalue,
+            trace_square_raw: trace,
+            trace_square: trace,
+            trace_square_mcse: 0.0,
+            trace_reconciliation: 0.0,
+            leading_share: if trace > 0.0 {
+                square / trace
+            } else {
+                f64::NAN
+            },
+            leading_share_mcse_trace_only: 0.0,
+            remainder_leading_share: 0.0,
+            maximum_mode_weight_squared: largest,
+            leading_residual: found.residual,
+            second_residual: f64::NAN,
+            probes: moments.draws,
+            iterations: found.steps,
+        };
+    }
+    Ok(RepeatLeading {
+        spectrum,
+        q1,
+        leading_variance_fitted,
+        remainder_pair_term,
+        direction_solves: state.direction_solves,
+        influence_solves: REPORTED_TARGETS as u32,
+        kernel_solves: state.kernel_solves,
+        critical_simulations: prepared.options.critical_simulations,
+    })
 }

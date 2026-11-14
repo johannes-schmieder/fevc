@@ -27,7 +27,9 @@ use super::{
     invalid, nonfinite, positive_part, solve_reduced, NoiseMoments, ResidualCovariance,
     StableAccumulator, MAXIMUM_WORKING_TERMS, SQUARE, UNITS_PER_WORKING_TERM,
 };
-use crate::component_inference::{PRIMITIVE_TARGETS, REPORTED_TARGETS};
+use crate::component_inference::{
+    ComponentQ1Status, ComponentQ1TargetResult, PRIMITIVE_TARGETS, REPORTED_TARGETS,
+};
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck};
 use crate::structured_variance::normalized_midranks;
@@ -71,6 +73,19 @@ pub struct RepeatInputs<'a> {
     pub positivity_multiplier: f64,
 }
 
+/// Membership of the repeat-measurement sets, kept so that the pair term can
+/// be formed for another kernel on the same units.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct RepeatSets {
+    /// Units of all sets, grouped by set.
+    pub members: Vec<u32>,
+    /// One past the last member of every set.
+    pub end: Vec<u32>,
+    /// Sample variance of every set, before the positivity floor.
+    pub sample: Vec<f64>,
+    pub mover: Vec<bool>,
+}
+
 /// Unit variances and the outcome-free shape of their construction.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RepeatVariance {
@@ -101,6 +116,208 @@ pub struct RepeatVariance {
     /// stayer contributes to the worker-variance entry alone; a mover's set
     /// reaches all three kernels.
     pub adjustment: [f64; SQUARE],
+    pub sets: RepeatSets,
+}
+
+impl RepeatVariance {
+    /// Pair term of the remainder of one reported target after the direction
+    /// `mode` with eigenvalue `eigenvalue` is split off. Two units of one set
+    /// then share the weight `(B_aa - eigenvalue mode_a^2) / (1 - P_aa)`.
+    /// `stayer_diagonal` says whether the target's diagonal is nonzero on a
+    /// stayer's units: it is for the worker variance and the variance of the
+    /// sum, and vanishes for the firm variance and the covariance.
+    pub fn remainder_pair_term(
+        &self,
+        target_diagonal: &[f64],
+        maker_inverse: &[f64],
+        mode: &[f64],
+        eigenvalue: f64,
+        stayer_diagonal: bool,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<f64> {
+        let rows = self.variance.len();
+        if target_diagonal.len() != rows
+            || maker_inverse.len() != rows
+            || mode.len() != rows
+            || !eigenvalue.is_finite()
+        {
+            return Err(invalid("remainder pair-term inputs are inconsistent"));
+        }
+        let mut total = StableAccumulator::default();
+        let mut begin = 0_usize;
+        for set in 0..self.sets.end.len() {
+            checkpoint_chunk(interrupt, set, "repeat_measurement_remainder_pairs")?;
+            let end = self.sets.end[set] as usize;
+            let units = &self.sets.members[begin..end];
+            begin = end;
+            let count = units.len() as f64;
+            let mut weight = StableAccumulator::default();
+            for &unit in units {
+                let unit = unit as usize;
+                let square = eigenvalue * mode[unit] * mode[unit];
+                if self.sets.mover[set] {
+                    weight.add((target_diagonal[unit] - square) * maker_inverse[unit]);
+                } else if stayer_diagonal {
+                    weight.add(target_diagonal[unit] - square);
+                } else {
+                    weight.add(-square);
+                }
+            }
+            let weight = if self.sets.mover[set] {
+                weight.finish() / count
+            } else {
+                weight.finish() / (count - 1.0)
+            };
+            let sample = self.sets.sample[set];
+            total.add(
+                4.0 * weight * weight * sample * sample * (count - 2.0) * (count - 1.0)
+                    / (count + 1.0),
+            );
+        }
+        let total = total.finish();
+        if !total.is_finite() {
+            return Err(nonfinite("the remainder pair term is nonfinite"));
+        }
+        Ok(total)
+    }
+}
+
+/// The `q = 1` decomposition of one target with repeat-measurement variances.
+///
+/// `mode` is the direction split off, `influence` the realized influence of
+/// the remainder and `remainder_trace` the pseudo-noise estimate of
+/// `tr(K_r V K_r V)`. The variance of the leading score is the larger of the
+/// leave-out estimate, which also recentres the leading square, and the value
+/// from the unit variances; the leave-out estimate is unbiased but rests on
+/// the few units that carry the direction and can be far too small or
+/// negative. The remainder's variance is the high-rank form with its own pair
+/// term. Nothing is truncated: a nonpositive remainder variance or a singular
+/// pair is a status of the target.
+#[allow(clippy::too_many_arguments)]
+pub fn finish_repeat_q1_target(
+    point_estimate: f64,
+    leading_score: f64,
+    leading_variance_leave_out: f64,
+    direct_remainder_estimate: f64,
+    remainder_identity_tolerance: f64,
+    eigenvalue: f64,
+    mode: &[f64],
+    influence: &[f64],
+    variance: &[f64],
+    remainder_trace: f64,
+    remainder_trace_mcse: f64,
+    remainder_pair_term: f64,
+    psd_tolerance: f64,
+) -> Result<ComponentQ1TargetResult> {
+    if mode.len() != variance.len()
+        || influence.len() != variance.len()
+        || [
+            point_estimate,
+            leading_score,
+            leading_variance_leave_out,
+            direct_remainder_estimate,
+            remainder_identity_tolerance,
+            eigenvalue,
+            remainder_trace,
+            remainder_trace_mcse,
+            remainder_pair_term,
+            psd_tolerance,
+        ]
+        .iter()
+        .any(|value| !value.is_finite())
+        || remainder_trace_mcse < 0.0
+        || psd_tolerance < 0.0
+        || remainder_identity_tolerance < 0.0
+    {
+        return Err(invalid("repeat-measurement q=1 inputs are invalid"));
+    }
+    let mut fitted = StableAccumulator::default();
+    let mut linear = StableAccumulator::default();
+    let mut cross = StableAccumulator::default();
+    let mut largest = 0.0_f64;
+    for row in 0..variance.len() {
+        fitted.add(mode[row] * mode[row] * variance[row]);
+        let contribution = 4.0 * influence[row] * influence[row] * variance[row];
+        linear.add(contribution);
+        largest = largest.max(contribution);
+        cross.add(2.0 * mode[row] * variance[row] * influence[row]);
+    }
+    let leading_variance = fitted.finish().max(leading_variance_leave_out);
+    let linear = linear.finish();
+    let remainder_trace_variance = 2.0 * remainder_trace;
+    let remainder_variance = linear - remainder_trace_variance + remainder_pair_term;
+    let covariance = cross.finish();
+    let correlation = covariance / leading_variance.sqrt() / remainder_variance.sqrt();
+    let standardized_determinant = (1.0 - correlation.abs()) * (1.0 + correlation.abs());
+    let status = if leading_variance <= 0.0 || remainder_variance <= 0.0 {
+        ComponentQ1Status::NonpositiveVariance
+    } else if !standardized_determinant.is_finite() || standardized_determinant <= psd_tolerance {
+        ComponentQ1Status::SingularCovariance
+    } else {
+        ComponentQ1Status::Computed
+    };
+    let curvature = if status == ComponentQ1Status::Computed {
+        2.0 * eigenvalue.abs() * leading_variance
+            / (remainder_variance * standardized_determinant).sqrt()
+    } else {
+        f64::NAN
+    };
+    let leading_recentered_component =
+        eigenvalue * (leading_score * leading_score - leading_variance_leave_out);
+    let remainder_estimate = point_estimate - leading_recentered_component;
+    let remainder_identity_error = (remainder_estimate - direct_remainder_estimate).abs();
+    let scale = point_estimate
+        .abs()
+        .max(remainder_estimate.abs())
+        .max(direct_remainder_estimate.abs())
+        .max(1.0);
+    if remainder_identity_error > remainder_identity_tolerance * scale {
+        return Err(BackendError::new(
+            ErrorCode::TargetIdentityFailed,
+            "repeat_measurement_q1",
+            "the q=1 leave-out recentering does not reproduce the rank-one-subtracted target",
+        ));
+    }
+    let output = ComponentQ1TargetResult {
+        status,
+        point_estimate,
+        leading_score,
+        leading_variance_correction: leading_variance_leave_out,
+        leading_variance,
+        leading_recentered_component,
+        remainder_estimate,
+        remainder_identity_error,
+        leading_remainder_covariance: covariance,
+        remainder_variance,
+        remainder_trace_mcse: 2.0 * remainder_trace_mcse,
+        standardized_determinant,
+        remainder_influence_variance: linear,
+        remainder_trace_variance,
+        curvature,
+        critical_value: f64::NAN,
+        critical_draws: 0,
+        confidence_lower: f64::NAN,
+        confidence_upper: f64::NAN,
+        leading_f_statistic: if leading_variance > 0.0 {
+            leading_score * leading_score / leading_variance
+        } else {
+            f64::NAN
+        },
+        remainder_influence_concentration: if linear > 0.0 { largest / linear } else { 0.0 },
+    };
+    if [
+        output.leading_recentered_component,
+        output.remainder_estimate,
+        output.leading_variance,
+        output.remainder_variance,
+        output.leading_remainder_covariance,
+    ]
+    .iter()
+    .any(|value| !value.is_finite())
+    {
+        return Err(nonfinite("a repeat-measurement q=1 result is nonfinite"));
+    }
+    Ok(output)
 }
 
 fn constraint(message: impl Into<String>) -> BackendError {
@@ -197,6 +414,12 @@ pub fn fit_repeat_variance(
     let mut order = (0..rows).collect::<Vec<_>>();
     order.sort_unstable_by_key(|&unit| (input.set[unit], unit));
     let mut single = Vec::new();
+    let mut recorded = RepeatSets::default();
+    if u32::try_from(rows).is_err() {
+        return Err(invalid(
+            "repeat-measurement units exceed the supported count",
+        ));
+    }
     let mut adjustment = [StableAccumulator::default(); SQUARE];
     let mut sets = 0_u64;
     let mut set_units = 0_u64;
@@ -282,7 +505,11 @@ pub fn fit_repeat_variance(
         }
         for &unit in units {
             variance[unit] = sample.max(floor);
+            recorded.members.push(unit as u32);
         }
+        recorded.end.push(recorded.members.len() as u32);
+        recorded.sample.push(sample);
+        recorded.mover.push(mover);
         sets += 1;
         set_units += units.len() as u64;
     }
@@ -477,6 +704,7 @@ pub fn fit_repeat_variance(
         model_units: single.len() as u64,
         model_fit_units: fitted_units,
         adjustment: output,
+        sets: recorded,
     })
 }
 

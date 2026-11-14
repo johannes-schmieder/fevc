@@ -564,3 +564,136 @@ fn few_single_units_borrow_the_units_of_all_movers() {
         assert!((fit.variance[row] - 2.0).abs() <= 1.0e-12);
     }
 }
+
+#[test]
+fn remainder_pair_term_nets_the_direction_out_of_the_weights() {
+    // The fixture of the mover-set test: cell 4 of a mover (rows 0, 2, 5,
+    // sample variance 9) and a stayer's cell 9 (rows 1, 3, 6, variance 7).
+    let set = vec![4, 9, 4, 9, 2, 4, 9, 7];
+    let mover = vec![true, false, true, false, true, true, false, true];
+    let outcome = vec![0.0, 1.0, 3.0, 2.0, 5.0, 6.0, 6.0, -1.0];
+    let rows = set.len();
+    let units = Observations {
+        proxy: vec![0.5; rows],
+        outcome,
+        residual: vec![1.0; rows],
+        maker: vec![1.25; rows],
+        leverage: vec![0.2; rows],
+        mass: vec![1.0; rows],
+        set,
+        mover,
+        effect: vec![0.0; rows],
+        diagonal: [vec![0.2; rows], vec![0.1; rows], vec![-0.05; rows]],
+    };
+    let fit = fit_repeat_variance(units.input(), &mut NeverInterrupt).unwrap();
+    assert_eq!(fit.sets.end, vec![3, 6]);
+    assert_eq!(fit.sets.members, vec![0, 2, 5, 1, 3, 6]);
+    assert_eq!(fit.sets.mover, vec![true, false]);
+    let mode = vec![0.3, 0.1, 0.3, 0.1, 0.7, 0.3, 0.1, -0.2];
+    let eigenvalue = 0.5;
+    // Without a direction the term is the diagonal entry of the pair term.
+    for (target, stayer) in [(0, true), (1, false), (2, false)] {
+        let plain = fit
+            .remainder_pair_term(
+                &units.diagonal[target],
+                &units.maker,
+                &vec![0.0; rows],
+                eigenvalue,
+                stayer,
+                &mut NeverInterrupt,
+            )
+            .unwrap();
+        let expected = fit.adjustment[target * 4];
+        assert!((plain - expected).abs() <= 1.0e-13 * expected.abs().max(1.0));
+    }
+    // Mover set: (0.2 - 0.5 * 0.09) * 1.25; stayer: (0.2 - 0.5 * 0.01) * 3/2.
+    let weight_mover: f64 = (0.2 - 0.045) * 1.25;
+    let weight_stayer: f64 = (0.2 - 0.005) * 1.5;
+    let expected =
+        4.0 * 81.0 * 0.5 * weight_mover.powi(2) + 4.0 * 49.0 * 0.5 * weight_stayer.powi(2);
+    let value = fit
+        .remainder_pair_term(
+            &units.diagonal[0],
+            &units.maker,
+            &mode,
+            eigenvalue,
+            true,
+            &mut NeverInterrupt,
+        )
+        .unwrap();
+    assert!((value - expected).abs() <= 1.0e-12 * expected);
+    // A target without a stayer diagonal keeps the direction's own part.
+    let weight_mover: f64 = (0.1 - 0.045) * 1.25;
+    let weight_stayer: f64 = -0.005 * 1.5;
+    let expected =
+        4.0 * 81.0 * 0.5 * weight_mover.powi(2) + 4.0 * 49.0 * 0.5 * weight_stayer.powi(2);
+    let value = fit
+        .remainder_pair_term(
+            &units.diagonal[1],
+            &units.maker,
+            &mode,
+            eigenvalue,
+            false,
+            &mut NeverInterrupt,
+        )
+        .unwrap();
+    assert!((value - expected).abs() <= 1.0e-12 * expected);
+}
+
+#[test]
+fn q1_target_uses_the_larger_leading_variance_and_the_remainder_pair_term() {
+    let mode = [0.6, 0.0, 0.8];
+    let influence = [0.5, -1.0, 0.25];
+    let variance = [2.0, 0.5, 1.0];
+    let (eigenvalue, score, point) = (0.4_f64, 1.5_f64, 3.0_f64);
+    let fitted: f64 = 0.36 * 2.0 + 0.64;
+    let linear: f64 = 4.0 * (0.25 * 2.0 + 0.5 + 0.0625);
+    let cross: f64 = 2.0 * (0.6 * 2.0 * 0.5 + 0.8 * 0.25);
+    for leave_out in [0.5 * fitted, 3.0 * fitted] {
+        let remainder = point - eigenvalue * (score * score - leave_out);
+        let result = finish_repeat_q1_target(
+            point, score, leave_out, remainder, 1.0e-12, eigenvalue, &mode, &influence, &variance,
+            0.3, 0.01, 0.2, 1.0e-8,
+        )
+        .unwrap();
+        let leading = fitted.max(leave_out);
+        let remainder_variance = linear - 0.6 + 0.2;
+        assert_eq!(result.status, ComponentQ1Status::Computed);
+        assert!((result.leading_variance - leading).abs() <= 1.0e-14);
+        assert_eq!(result.leading_variance_correction, leave_out);
+        assert!((result.remainder_variance - remainder_variance).abs() <= 1.0e-14);
+        assert!((result.remainder_estimate - remainder).abs() <= 1.0e-14);
+        assert!((result.leading_remainder_covariance - cross).abs() <= 1.0e-14);
+        assert_eq!(result.remainder_trace_mcse, 0.02);
+        let correlation = cross / (leading * remainder_variance).sqrt();
+        let curvature = 2.0 * eigenvalue * leading
+            / (remainder_variance * (1.0 - correlation * correlation)).sqrt();
+        assert!((result.curvature - curvature).abs() <= 1.0e-12);
+    }
+    // A remainder variance that is not positive is a status, not an error.
+    let result = finish_repeat_q1_target(
+        point,
+        score,
+        fitted,
+        point - eigenvalue * (score * score - fitted),
+        1.0e-12,
+        eigenvalue,
+        &mode,
+        &influence,
+        &variance,
+        5.0,
+        0.01,
+        0.0,
+        1.0e-8,
+    )
+    .unwrap();
+    assert_eq!(result.status, ComponentQ1Status::NonpositiveVariance);
+    assert!(result.curvature.is_nan());
+    // A decomposition that does not reproduce the direct remainder is refused.
+    let error = finish_repeat_q1_target(
+        point, score, fitted, 0.0, 1.0e-12, eigenvalue, &mode, &influence, &variance, 0.3, 0.01,
+        0.2, 1.0e-8,
+    )
+    .unwrap_err();
+    assert_eq!(error.code, ErrorCode::TargetIdentityFailed);
+}

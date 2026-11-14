@@ -31,8 +31,8 @@ const SQUARE: usize = PRIMITIVE_TARGETS * PRIMITIVE_TARGETS;
 
 mod repeat;
 pub use repeat::{
-    finish_repeat_covariance, fit_repeat_variance, RepeatInputs, RepeatVariance, PROFILE_CAP,
-    PROFILE_TERMS, SCALE_FLOOR_SHARE,
+    finish_repeat_covariance, finish_repeat_q1_target, fit_repeat_variance, RepeatInputs,
+    RepeatSets, RepeatVariance, PROFILE_CAP, PROFILE_TERMS, SCALE_FLOOR_SHARE,
 };
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -715,6 +715,32 @@ pub struct RepeatDiagnostic {
     pub stayer_floored: u64,
     /// Closed-form term for the pairs of rows of one stayer (worker variance).
     pub stayer_pair_term: f64,
+    /// Present when the leading directions were requested.
+    pub leading: Option<RepeatLeading>,
+}
+
+/// Leading direction of every reported target and the `q = 1` decomposition
+/// along it, formed beside the high-rank covariance from the same unit
+/// variances and pseudo-noise draws.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RepeatLeading {
+    /// Eigenvalue, second Ritz value, residual, solves and the largest
+    /// squared unit weight of the direction. `leading_share` is the share of
+    /// the direction in the squared spectrum under the unit variances,
+    /// `(eigenvalue * fitted leading variance)^2 / tr(K V K V)`; with equal
+    /// variances it is the share of the squared eigenvalue.
+    pub spectrum: [crate::component_inference::ComponentSpectrumDiagnostics; REPORTED_TARGETS],
+    pub q1: [crate::component_inference::ComponentQ1TargetResult; REPORTED_TARGETS],
+    /// Variance of the leading score from the unit variances; the reported
+    /// `leading_variance` is the larger of it and the leave-out estimate.
+    pub leading_variance_fitted: [f64; REPORTED_TARGETS],
+    pub remainder_pair_term: [f64; REPORTED_TARGETS],
+    /// Linear solves of the direction search, of the remainder influences and
+    /// of the remainder kernels of the pseudo-noise draws.
+    pub direction_solves: u32,
+    pub influence_solves: u32,
+    pub kernel_solves: u32,
+    pub critical_simulations: u32,
 }
 
 impl Diagnostic {
@@ -775,6 +801,7 @@ impl Diagnostic {
                 stayer_units: fit.stayer_units,
                 stayer_floored: fit.stayer_floored,
                 stayer_pair_term: fit.adjustment[0],
+                leading: None,
             }),
         })
     }

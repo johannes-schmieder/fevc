@@ -17,6 +17,7 @@
 use core::cmp::Ordering;
 
 mod centering;
+mod leading_direction;
 mod numerical;
 mod pooled_component;
 pub(crate) mod residual_moment_attachment;

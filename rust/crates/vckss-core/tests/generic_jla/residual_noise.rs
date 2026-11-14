@@ -1042,6 +1042,13 @@ fn observation_repeat_problem(
 fn run_observation_repeat(
     problem: &CompressedProblem,
 ) -> vckss_core::generic_jla::GenericJlaResult {
+    run_observation_repeat_with(problem, false)
+}
+
+fn run_observation_repeat_with(
+    problem: &CompressedProblem,
+    leading: bool,
+) -> vckss_core::generic_jla::GenericJlaResult {
     let mut estimator = options(DeletionMode::Observation, NuisanceMode::Joint);
     estimator.probes = 200;
     estimator.centering = Centering::Mean;
@@ -1050,6 +1057,13 @@ fn run_observation_repeat(
         ComponentInferenceUnit::Observation,
         ComponentInferenceOptions {
             probes: 4 * DRAWS,
+            reference_distribution: if leading {
+                vckss_core::component_inference::ComponentReferenceDistribution::Q1
+            } else {
+                vckss_core::component_inference::ComponentReferenceDistribution::Q0
+            },
+            spectrum_iterations: 60,
+            spectrum_tolerance: 1.0e-9,
             ..ComponentInferenceOptions::default()
         },
         StructuredVarianceOptions::default(),
@@ -1291,6 +1305,186 @@ fn assert_observation_repeat(
             assert!(adjustment[index].abs() > 1e-6 * scale_value || index == 0);
         }
     }
+
+    // Leading directions and the q = 1 decomposition, when requested.
+    let Some(leading) = shape.leading.as_ref() else {
+        return;
+    };
+    assert_eq!(leading.influence_solves, 4);
+    assert_eq!(
+        leading.kernel_solves as usize,
+        4 * diagnostic.draws as usize
+    );
+    let combine = |values: &[Vec<f64>; 3], target: usize| -> Vec<f64> {
+        if target < 3 {
+            values[target].clone()
+        } else {
+            (0..values[0].len())
+                .map(|i| values[0][i] + values[1][i] + 2.0 * values[2][i])
+                .collect()
+        }
+    };
+    let mut steps = 0;
+    for target in 0..4 {
+        let spectrum = &leading.spectrum[target];
+        let q1 = &leading.q1[target];
+        let lambda = spectrum.leading_eigenvalue;
+        steps += spectrum.iterations;
+        assert!(spectrum.certified, "target {target} did not converge");
+        // The direction is an eigenvector of B_t = X S^-1 A_t S^-1 X' with the
+        // eigenvalue of largest magnitude. The engine does not return the
+        // weights, so they are recovered from the eigen-equation by a dense
+        // power iteration on B_t^2, which shares nothing with the Lanczos run.
+        let matrix = combine(&targets, target);
+        let b = dense_multiply(&dense_multiply(&bread, n, p, &matrix, p), n, p, &bread_t, n);
+        let mut mode: Vec<f64> = (0..n).map(|i| ((i * 37 + 11) % 23) as f64 - 11.0).collect();
+        for _ in 0..600 {
+            let image = dense_multiply(&b, n, n, &dense_multiply(&b, n, n, &mode, 1), 1);
+            let norm = image.iter().map(|v| v * v).sum::<f64>().sqrt();
+            mode = image.iter().map(|v| v / norm).collect();
+        }
+        let image = dense_multiply(&b, n, n, &mode, 1);
+        let dense_lambda: f64 = mode.iter().zip(&image).map(|(a, b)| a * b).sum();
+        // All nonzero eigenvalues of the sum's target are equal, so any of
+        // its directions is a leading one; compare the eigenvalue only.
+        assert!(
+            (lambda - dense_lambda).abs() <= 1.0e-6 * dense_lambda.abs().max(tolerance),
+            "target {target}: eigenvalue {lambda} versus {dense_lambda}"
+        );
+        assert!(spectrum.second_eigenvalue.abs() <= lambda.abs() * (1.0 + 1.0e-9));
+        if target == 3 {
+            continue;
+        }
+        let largest = mode.iter().fold(0.0_f64, |a, b| a.max(b * b));
+        assert!((spectrum.maximum_mode_weight_squared - largest).abs() <= 1.0e-5);
+        // The leading score fixes the sign of the dense direction.
+        let score: f64 = mode.iter().zip(&centered).map(|(a, b)| a * b).sum();
+        if score * q1.leading_score < 0.0 {
+            for value in &mut mode {
+                *value = -*value;
+            }
+        }
+        let score = score.abs() * q1.leading_score.signum();
+        let loose = 2.0e-4;
+        assert!((q1.leading_score - score).abs() <= loose * score.abs().max(1.0e-3));
+        let leave_out: f64 = (0..n).map(|a| mode[a] * mode[a] * proxy[a]).sum();
+        let fitted: f64 = (0..n).map(|a| mode[a] * mode[a] * variance[a]).sum();
+        assert!((q1.leading_variance_correction - leave_out).abs() <= loose * fitted);
+        assert!((leading.leading_variance_fitted[target] - fitted).abs() <= loose * fitted);
+        assert!((q1.leading_variance - fitted.max(leave_out)).abs() <= loose * fitted);
+        // Remainder kernel K_t - lambda H K1 H with K1 = w w' - (D1 M + M D1)/2.
+        let diagonal = combine(&attached.target_diagonal, target);
+        let mut k1 = vec![0.0; n * n];
+        for i in 0..n {
+            for j in 0..n {
+                let maker = f64::from(i == j) - projection[i * n + j];
+                k1[i * n + j] = mode[i] * mode[j]
+                    - 0.5
+                        * maker
+                        * (mode[i] * mode[i] * attached.maker_inverse[i]
+                            + mode[j] * mode[j] * attached.maker_inverse[j]);
+            }
+        }
+        center(&mut k1);
+        let full = combine(&kernel, target);
+        let remainder: Vec<f64> = (0..n * n).map(|i| full[i] - dense_lambda * k1[i]).collect();
+        let influence_r = dense_multiply(&remainder, n, n, outcome, 1);
+        let point: f64 = (0..n)
+            .map(|a| centered[a] * dense_multiply(&full, n, n, outcome, 1)[a])
+            .sum();
+        let direct: f64 = (0..n).map(|a| centered[a] * influence_r[a]).sum();
+        let recentred = point - dense_lambda * (score * score - leave_out);
+        let scale = point.abs().max(1.0e-6);
+        assert!((direct - recentred).abs() <= 1.0e-8 * scale.max(1.0));
+        assert!((q1.point_estimate - point).abs() <= loose * scale);
+        assert!((q1.remainder_estimate - recentred).abs() <= loose * scale);
+        assert!(q1.remainder_identity_error <= 1.0e-7);
+        let linear: f64 = (0..n)
+            .map(|a| 4.0 * variance[a] * influence_r[a] * influence_r[a])
+            .sum();
+        assert!((q1.remainder_influence_variance - linear).abs() <= loose * linear);
+        let cross: f64 = (0..n)
+            .map(|a| 2.0 * mode[a] * variance[a] * influence_r[a])
+            .sum();
+        assert!(
+            (q1.leading_remainder_covariance - cross).abs() <= loose * (fitted * linear).sqrt()
+        );
+        let mut trace = 0.0;
+        for u in 0..n {
+            for v in 0..n {
+                trace += remainder[u * n + v] * variance[v] * remainder[v * n + u] * variance[u];
+            }
+        }
+        assert!(
+            (q1.remainder_trace_variance - 2.0 * trace).abs()
+                <= 6.0 * q1.remainder_trace_mcse + loose * linear,
+            "target {target}: remainder trace {} versus {}",
+            q1.remainder_trace_variance,
+            2.0 * trace
+        );
+        // Pair term of the remainder, set by set.
+        let mut pair = 0.0;
+        for cell in 0..problem.cells() {
+            let units: Vec<usize> = (0..n)
+                .filter(|&row| problem.row_cell[row] as usize == cell)
+                .collect();
+            if units.len() < 2 {
+                continue;
+            }
+            let count = units.len() as f64;
+            let cell_mean = units.iter().map(|&u| outcome[u]).sum::<f64>() / count;
+            let sample = units
+                .iter()
+                .map(|&u| (outcome[u] - cell_mean).powi(2))
+                .sum::<f64>()
+                / (count - 1.0);
+            let weight = if mover(units[0]) {
+                units
+                    .iter()
+                    .map(|&u| {
+                        (diagonal[u] - dense_lambda * mode[u] * mode[u]) * attached.maker_inverse[u]
+                    })
+                    .sum::<f64>()
+                    / count
+            } else {
+                units
+                    .iter()
+                    .map(|&u| {
+                        (if target == 0 { diagonal[u] } else { 0.0 })
+                            - dense_lambda * mode[u] * mode[u]
+                    })
+                    .sum::<f64>()
+                    / (count - 1.0)
+            };
+            pair += 4.0 * weight * weight * sample * sample * (count - 2.0) * (count - 1.0)
+                / (count + 1.0);
+        }
+        assert!(
+            (leading.remainder_pair_term[target] - pair).abs() <= loose * pair.abs().max(1.0e-12)
+        );
+        let remainder_variance = linear - q1.remainder_trace_variance + pair;
+        assert!((q1.remainder_variance - remainder_variance).abs() <= loose * linear);
+        if q1.status == vckss_core::component_inference::ComponentQ1Status::Computed {
+            let correlation = cross / (fitted.max(leave_out) * remainder_variance).sqrt();
+            let curvature = 2.0 * dense_lambda.abs() * fitted.max(leave_out)
+                / (remainder_variance * (1.0 - correlation * correlation)).sqrt();
+            assert!((q1.curvature - curvature).abs() <= 10.0 * loose * curvature);
+            // The interval contains the estimate, and its critical value is
+            // the normal one or larger.
+            assert!(q1.critical_value >= 1.95 && q1.critical_value <= 2.5);
+            assert!(q1.confidence_lower < point && point < q1.confidence_upper);
+            let share = (dense_lambda * fitted).powi(2) / (0.5 * attached.trace_term[target * 4]);
+            assert!((spectrum.leading_share - share).abs() <= 10.0 * loose * share);
+        }
+    }
+    assert_eq!(leading.direction_solves, steps);
+    assert_eq!(
+        attached.solve_receipts.len(),
+        3 + 4 * diagnostic.draws as usize
+            + diagnostic.offset_pass_solves
+            + (leading.direction_solves + leading.influence_solves + leading.kernel_solves)
+                as usize
+    );
 }
 
 #[test]
@@ -1546,4 +1740,30 @@ fn repeat_measurement_standard_errors_do_not_depend_on_the_solver_route() {
             1.0e-6,
         );
     }
+}
+
+// The leading direction of every target and the q = 1 decomposition along it
+// are formed beside the high-rank covariance, which they do not change.
+#[test]
+fn repeat_measurement_leading_directions_match_dense_expectations() {
+    let problem = observation_repeat_fixture();
+    let plain = run_observation_repeat(&problem)
+        .component_inference
+        .expect("standard errors");
+    let attached = run_observation_repeat_with(&problem, true)
+        .component_inference
+        .expect("standard errors with leading directions");
+    for index in 0..9 {
+        assert_eq!(
+            plain.primitive_covariance[index].to_bits(),
+            attached.primitive_covariance[index].to_bits()
+        );
+    }
+    assert!(plain
+        .residual_noise
+        .as_ref()
+        .and_then(|value| value.repeat.as_ref())
+        .is_some_and(|shape| shape.leading.is_none()));
+    assert!(attached.q1.is_none());
+    assert_observation_repeat(&problem, &problem.outcome, &attached, 2.0e-9);
 }

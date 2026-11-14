@@ -535,14 +535,22 @@ pub fn prepare_repeat_measurement_with_interrupt(
     structured_options: StructuredVarianceOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PreparedComponentInference> {
+    // The q=1 reference asks for the leading direction of every target and
+    // the decomposition along it beside the high-rank covariance; the shared
+    // preparation knows the normal reference only.
+    let reference = options.reference_distribution;
     let mut prepared = prepare_residual_noise_with_interrupt(
         problem,
         unit,
-        options,
+        ComponentInferenceOptions {
+            reference_distribution: ComponentReferenceDistribution::Q0,
+            ..options
+        },
         structured_options,
         interrupt,
     )?;
     prepared.repeat_measurement = true;
+    prepared.options.reference_distribution = reference;
     Ok(prepared)
 }
 
