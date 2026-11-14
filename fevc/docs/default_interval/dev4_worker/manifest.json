@@ -1,0 +1,103 @@
+{
+ "run": "dev4_worker",
+ "pkgroot": "<scratch>/pkgmc/pkg-02d7955f/fevc",
+ "source_commit": "02d7955f",
+ "deletions": [
+  "match",
+  "observation"
+ ],
+ "reps_per_task": 25,
+ "tasks_per_cell": 20,
+ "threads": 1,
+ "expect_model": "repeat_measurement",
+ "expect_threshold": 0.1,
+ "purpose": "development check, not a confirmation: the plain default command with a control loaded on the worker effect and with more variation within matches",
+ "run_seed": 39,
+ "options": "none",
+ "cells": [
+  {
+   "name": "wrk_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "n_bridge": null,
+   "design_seed": 74,
+   "variance": "profile",
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   },
+   "nW": 12000,
+   "gap": 0.0,
+   "errors": "normal"
+  },
+  {
+   "name": "wrk_J100_b100_movers",
+   "group": "middle",
+   "nJ": 100,
+   "n_bridge": 100,
+   "design_seed": 75,
+   "variance": "movers",
+   "control": {
+    "alpha": 0.8,
+    "psi": 0.2,
+    "noise": 0.4
+   },
+   "nW": 12000,
+   "gap": 0.0,
+   "errors": "normal"
+  }
+ ],
+ "schema": "PKGMC-MANIFEST-V1",
+ "hashes": {
+  "plugin": "7614016e8697f88a0ce1137edd889c2bd992ce25538ec5f6962128a72f6a892b",
+  "task_do": "450eb72e8306abf156f49beddbc16d958f218f18ec4106559d7d7271557883bc",
+  "driver": "1b7fb97f54b5019b09325f23b832c91ad9a91c271dfff22c08b987edcc170331",
+  "aggregate": "87259015bd0db00b1cdf55c68b6dfaaf6729a6946de9a77985cac13ade3fc7df",
+  "confirm": "07cc70530976fe6869a9dd98467dc4db31e4eb50f9bf477bf9014c5a1517f87d",
+  "design_code": {
+   "designs.py": "08cf47fafb018c816322d140864328206f657a7b7846d25fb23e4ccc6d039798"
+  },
+  "ado": {
+   "fevc.ado": "2b566143e5f75c9cf86f7eaf02e6159b18f7e5ed61117b9a244ad5daf46670f9",
+   "fevc_residual_se.mata": "206f36d9cfaba30506db752f0608c4a728906da7b44cbf8421bd3a9196caba53",
+   "fevc__residual_se_post.ado": "9d7dbbc21bbb70665798b437aa6701fb252382452c79e9f9c34c3ceffd80733c",
+   "fevc__component_model_route.ado": "2d6d184881ad024c67d7abd63ef71281dc0cd3e6775f80780d87506c25a391a7"
+  }
+ },
+ "designs": {
+  "wrk_J100_bnone_profile": {
+   "sha256": "7ca0ad19d16ec8bf1e4b3b81b78e16eda051403a70da2b3fc97e60877a2024e9",
+   "person_years": 47674,
+   "workers": 11996,
+   "firms": 99,
+   "bridge_workers": 0,
+   "collapsed_rows": 40454,
+   "mover_rows": 6326,
+   "control_realised": {
+    "corr_x_effects": 0.5058056223616088,
+    "within_match_share": 0.49147040475925696,
+    "index_sd": 0.14083038809445148,
+    "effects_sd": 0.33604968048070777,
+    "controls": 1
+   }
+  },
+  "wrk_J100_b100_movers": {
+   "sha256": "8b674b4bf51d9dd90818a1bd65c3f112212529178a6591195c35449799daac09",
+   "person_years": 47986,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40495,
+   "mover_rows": 6509,
+   "control_realised": {
+    "corr_x_effects": 0.5052842784621101,
+    "within_match_share": 0.48691540613896656,
+    "index_sd": 0.14150280122578657,
+    "effects_sd": 0.3440075857690952,
+    "controls": 1
+   }
+  }
+ },
+ "tasks": 80
+}

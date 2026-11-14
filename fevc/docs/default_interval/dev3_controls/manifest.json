@@ -1,0 +1,398 @@
+{
+ "run": "dev3_controls",
+ "purpose": "development check, not a confirmation: the plain default command with controls (joint nuisance) after the first-order term for estimated control coefficients. The first four designs and the run seed are those of dev2_controls (same outcome draws, package before the term); the others vary the control: unrelated to the effects, two controls, a coefficient of one (large control index), error variance moving with the control inside a cell (mild, strong), much and little variation of the control within matches.",
+ "run_seed": 37,
+ "pkgroot": "<scratch>/pkgmc/pkg-02d7955f/fevc",
+ "source_commit": "02d7955f",
+ "deletions": [
+  "match",
+  "observation"
+ ],
+ "reps_per_task": 25,
+ "tasks_per_cell": 20,
+ "threads": 1,
+ "options": "none",
+ "expect_model": "repeat_measurement",
+ "expect_threshold": 0.1,
+ "cells": [
+  {
+   "name": "x_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "n_bridge": null,
+   "design_seed": 61,
+   "variance": "profile",
+   "errors": "normal",
+   "control": true,
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "x_J400_b300_g0_profile",
+   "group": "weak",
+   "nJ": 400,
+   "n_bridge": 300,
+   "design_seed": 62,
+   "variance": "profile",
+   "errors": "normal",
+   "control": true,
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "x_J100_b100_g0_movers",
+   "group": "middle",
+   "nJ": 100,
+   "n_bridge": 100,
+   "design_seed": 63,
+   "variance": "movers",
+   "errors": "normal",
+   "control": true,
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "x_J100_b30_g0_profile",
+   "group": "strong",
+   "nJ": 100,
+   "n_bridge": 30,
+   "design_seed": 64,
+   "variance": "profile",
+   "errors": "skew",
+   "control": true,
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "benign_J100_b100_movers",
+   "group": "middle",
+   "nJ": 100,
+   "n_bridge": 100,
+   "design_seed": 65,
+   "variance": "movers",
+   "errors": "normal",
+   "control": {
+    "alpha": 0.0,
+    "psi": 0.0
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "two_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "n_bridge": null,
+   "design_seed": 66,
+   "variance": "profile",
+   "errors": "normal",
+   "control": {
+    "second": true
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "two_J100_b30_profile",
+   "group": "strong",
+   "nJ": 100,
+   "n_bridge": 30,
+   "design_seed": 67,
+   "variance": "profile",
+   "errors": "normal",
+   "control": {
+    "second": true
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "coef1_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "n_bridge": null,
+   "design_seed": 68,
+   "variance": "profile",
+   "errors": "normal",
+   "control": {
+    "coef": 1.0
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "coef1_J100_b100_movers",
+   "group": "middle",
+   "nJ": 100,
+   "n_bridge": 100,
+   "design_seed": 69,
+   "variance": "movers",
+   "errors": "normal",
+   "control": {
+    "coef": 1.0
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "hetero25_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "n_bridge": null,
+   "design_seed": 70,
+   "variance": "profile",
+   "errors": "normal",
+   "control": {
+    "hetero": 0.25
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "hetero50_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "n_bridge": null,
+   "design_seed": 71,
+   "variance": "profile",
+   "errors": "normal",
+   "control": {
+    "hetero": 0.5
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "noisy_J100_b100_movers",
+   "group": "middle",
+   "nJ": 100,
+   "n_bridge": 100,
+   "design_seed": 72,
+   "variance": "movers",
+   "errors": "normal",
+   "control": {
+    "noise": 1.0
+   },
+   "nW": 12000,
+   "gap": 0.0
+  },
+  {
+   "name": "weak_J100_b100_movers",
+   "group": "middle",
+   "nJ": 100,
+   "n_bridge": 100,
+   "design_seed": 73,
+   "variance": "movers",
+   "errors": "normal",
+   "control": {
+    "noise": 0.05
+   },
+   "nW": 12000,
+   "gap": 0.0
+  }
+ ],
+ "schema": "PKGMC-MANIFEST-V1",
+ "hashes": {
+  "plugin": "7614016e8697f88a0ce1137edd889c2bd992ce25538ec5f6962128a72f6a892b",
+  "task_do": "450eb72e8306abf156f49beddbc16d958f218f18ec4106559d7d7271557883bc",
+  "driver": "1b7fb97f54b5019b09325f23b832c91ad9a91c271dfff22c08b987edcc170331",
+  "aggregate": "87259015bd0db00b1cdf55c68b6dfaaf6729a6946de9a77985cac13ade3fc7df",
+  "confirm": "07cc70530976fe6869a9dd98467dc4db31e4eb50f9bf477bf9014c5a1517f87d",
+  "design_code": {
+   "designs.py": "08cf47fafb018c816322d140864328206f657a7b7846d25fb23e4ccc6d039798"
+  },
+  "ado": {
+   "fevc.ado": "2b566143e5f75c9cf86f7eaf02e6159b18f7e5ed61117b9a244ad5daf46670f9",
+   "fevc_residual_se.mata": "206f36d9cfaba30506db752f0608c4a728906da7b44cbf8421bd3a9196caba53",
+   "fevc__residual_se_post.ado": "9d7dbbc21bbb70665798b437aa6701fb252382452c79e9f9c34c3ceffd80733c",
+   "fevc__component_model_route.ado": "2d6d184881ad024c67d7abd63ef71281dc0cd3e6775f80780d87506c25a391a7"
+  }
+ },
+ "designs": {
+  "x_J100_bnone_profile": {
+   "sha256": "2a0669dd4bc7731d5ac7d27ef7a33c6c078dd6de3dbea1b122fc622b0bb0918f",
+   "person_years": 48057,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 0,
+   "collapsed_rows": 40394,
+   "mover_rows": 6699
+  },
+  "x_J400_b300_g0_profile": {
+   "sha256": "28b33100cb9a70ed79f9a4e641b19bc6c97efdb7a2685680cb99b48a148d8c57",
+   "person_years": 47901,
+   "workers": 11937,
+   "firms": 379,
+   "bridge_workers": 299,
+   "collapsed_rows": 39702,
+   "mover_rows": 7207
+  },
+  "x_J100_b100_g0_movers": {
+   "sha256": "0b51f69c23a1d8ba856d5c815d574dc398b98df2d39fd9ded71731b907eaaf95",
+   "person_years": 48304,
+   "workers": 11994,
+   "firms": 99,
+   "bridge_workers": 100,
+   "collapsed_rows": 40856,
+   "mover_rows": 6359
+  },
+  "x_J100_b30_g0_profile": {
+   "sha256": "dd5fa4b2375e36ca95204bfef4bc4bd936e00a7ebf5dd95ab20cda56d271546b",
+   "person_years": 47926,
+   "workers": 11995,
+   "firms": 99,
+   "bridge_workers": 30,
+   "collapsed_rows": 40542,
+   "mover_rows": 6399
+  },
+  "benign_J100_b100_movers": {
+   "sha256": "756fd3ef2e32a75d01692a7fc27bbd7455d278ee5560a5dd8434f2e9d1252e48",
+   "person_years": 48078,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40659,
+   "mover_rows": 6470,
+   "control_realised": {
+    "corr_x_effects": -0.00016907278142953207,
+    "within_match_share": 0.6818122569015408,
+    "index_sd": 0.07483928548503065,
+    "effects_sd": 0.33799198841645467,
+    "controls": 1
+   }
+  },
+  "two_J100_bnone_profile": {
+   "sha256": "e32d68e0d1b764ae80cccc451de965b93d0e39d08ec4a6774a43261b171cb894",
+   "person_years": 47907,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 0,
+   "collapsed_rows": 40422,
+   "mover_rows": 6559,
+   "control_realised": {
+    "corr_x_effects": 0.5365736049484815,
+    "within_match_share": 0.46789912480892876,
+    "index_sd": 0.16315982268598436,
+    "effects_sd": 0.3440911878434574,
+    "controls": 2
+   }
+  },
+  "two_J100_b30_profile": {
+   "sha256": "658b07ab4f9474f3428bdac706bca17696bbc9341cbd7df1a7825b3da0ae9f20",
+   "person_years": 48002,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 30,
+   "collapsed_rows": 40414,
+   "mover_rows": 6414,
+   "control_realised": {
+    "corr_x_effects": 0.5387411461066732,
+    "within_match_share": 0.47035844787661907,
+    "index_sd": 0.1621101148675642,
+    "effects_sd": 0.34546980446890585,
+    "controls": 2
+   }
+  },
+  "coef1_J100_bnone_profile": {
+   "sha256": "8252927eeca8eb14c4d6feb9e3b3507d835c2837d202bf7a450160e6d0c6db09",
+   "person_years": 48119,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 0,
+   "collapsed_rows": 40378,
+   "mover_rows": 6755,
+   "control_realised": {
+    "corr_x_effects": 0.5347789228626602,
+    "within_match_share": 0.47132891407272237,
+    "index_sd": 0.3006246435198885,
+    "effects_sd": 0.3450887832866646,
+    "controls": 1
+   }
+  },
+  "coef1_J100_b100_movers": {
+   "sha256": "5d6d47ab5cc9ad1bf2b1adfafbbe12dac3cd40f6a9ab6b9293d449e7ed636d3c",
+   "person_years": 47761,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40382,
+   "mover_rows": 6458,
+   "control_realised": {
+    "corr_x_effects": 0.5436775335503902,
+    "within_match_share": 0.46794151850223303,
+    "index_sd": 0.300909471371174,
+    "effects_sd": 0.34762704811689926,
+    "controls": 1
+   }
+  },
+  "hetero25_J100_bnone_profile": {
+   "sha256": "d0cb56090f93488a31917156f773361f0be1b82e862d27490c0c08a7b6c672bc",
+   "person_years": 47830,
+   "workers": 11994,
+   "firms": 99,
+   "bridge_workers": 0,
+   "collapsed_rows": 40200,
+   "mover_rows": 6719,
+   "control_realised": {
+    "corr_x_effects": 0.5683384130100689,
+    "within_match_share": 0.442923621123384,
+    "index_sd": 0.09242113707209156,
+    "effects_sd": 0.361052911961881,
+    "controls": 1,
+    "variance_factor_p10": 0.4666111341030193,
+    "variance_factor_p90": 1.6752676461972298
+   }
+  },
+  "hetero50_J100_bnone_profile": {
+   "sha256": "403b095b976cb9cd8a89fae9d82ca954c130182c039538ac747b6da00d13ff77",
+   "person_years": 48014,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 0,
+   "collapsed_rows": 40490,
+   "mover_rows": 6618,
+   "control_realised": {
+    "corr_x_effects": 0.5620850243836323,
+    "within_match_share": 0.4463123236149888,
+    "index_sd": 0.09158315190749236,
+    "effects_sd": 0.3560541454335787,
+    "controls": 1,
+    "variance_factor_p10": 0.17083836290843982,
+    "variance_factor_p90": 2.157889895614013
+   }
+  },
+  "noisy_J100_b100_movers": {
+   "sha256": "8774bff92f20555fd1fc569396e8b8f89b94970c3f03fed624e672510b63fbd6",
+   "person_years": 48099,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40488,
+   "mover_rows": 6604,
+   "control_realised": {
+    "corr_x_effects": 0.1572223532238718,
+    "within_match_share": 0.6573059590347216,
+    "index_sd": 0.3060657183209656,
+    "effects_sd": 0.3471827753138947,
+    "controls": 1
+   }
+  },
+  "weak_J100_b100_movers": {
+   "sha256": "ef6963093d40212c6263b347ff36d60f2a795809aa53d37939feeb7ede6dfc4b",
+   "person_years": 47964,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 100,
+   "collapsed_rows": 40348,
+   "mover_rows": 6630,
+   "control_realised": {
+    "corr_x_effects": 0.9266683231674453,
+    "within_match_share": 0.05833391503285515,
+    "index_sd": 0.05116122905689353,
+    "effects_sd": 0.3413894125199251,
+    "controls": 1
+   }
+  }
+ },
+ "tasks": 520
+}

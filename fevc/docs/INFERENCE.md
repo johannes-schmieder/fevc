@@ -287,9 +287,10 @@ worker variance, the firm variance and the covariance:
 This is simulation evidence for designs of this kind, with one bottleneck
 at most, independent errors and no control variables; it is not a coverage
 guarantee, and it does not cover two or more dominant directions. The
-harness, the manifests (runs `conf1` and `conf2`, sha256 `6aee3af8e5e6...` and
-`08427f94de4b...`) and the outputs are kept with the companion material, not in
-this repository.
+harness is `fevc/tools/default_interval/`; the manifests (runs `conf1` and
+`conf2`, sha256 `6aee3af8e5e6...` and `08427f94de4b...`), cell tables and
+verdicts are in `fevc/docs/default_interval/`; the raw task outputs are
+kept outside the repository.
 
 #### A limit: outcomes with very little noise
 
@@ -305,35 +306,59 @@ outcome's mean part is 130 times the error variance; the model is fitted on
 2,836 matches of one observation). With variance ratios like those of wage
 data it is not expected.
 
-#### A limit: control variables correlated with the effects
+#### Simulations with controls
 
-The intervals treat estimated control coefficients as known, and the
-simulations above have no controls. A development check (not a
-confirmation) adds one control under the default joint nuisance: four
-designs from no bottleneck to 30 bridging workers, both deletion modes, 500
-replications each (4,000 fits, none failed, none without standard errors).
-The control is made adverse: 0.4 times the worker effect plus 0.8 times the
-firm effect plus noise, with a coefficient of 0.3, so that its correlation
-with the sum of the two effects is 0.55. An error in the estimated
-coefficient then moves the estimated effects along the control, and the
-variance of their sum most of all:
+All runs pass the plain default command (joint nuisance) through the
+harness; records are in `fevc/docs/default_interval/`.
 
-| component | standard error over spread of the estimates | coverage of the reported interval |
+*The term.* Before it, a development check (`dev2_controls`) with one
+control made adverse (0.4 times the worker effect plus 0.8 times the firm
+effect plus noise, coefficient 0.3, correlation with the sum of the effects
+0.55) found the standard error of the variance of the sum 9% to 16% too
+small in every one of eight cases (four designs from no bottleneck to 30
+bridging workers, both deletion modes, 500 replications each). The same
+designs with the same outcome draws after the term (`dev3_controls`):
+
+| component | standard error over spread, before | after | coverage, before | after |
+|---|---|---|---|---|
+| worker variance | 0.90 to 1.06 | 0.95 to 1.08 | 0.924 to 0.986 | 0.936 to 0.988 |
+| firm variance | 0.86 to 1.05 | 0.87 to 1.06 | 0.944 to 0.986 | 0.950 to 0.986 |
+| covariance | 0.95 to 1.29 | 0.96 to 1.29 | 0.934 to 0.992 | 0.934 to 0.992 |
+| variance of the sum | 0.84 to 0.91 | 0.97 to 1.04 | 0.904 to 0.920 | 0.938 to 0.956 |
+
+(A component that takes the `q = 1` interval has no standard error in
+use; its row is informative through the coverage.)
+
+*Other controls.* The same development run varies the control on designs
+without a bottleneck and with 30 or 100 bridging workers, 500 replications
+per design and deletion mode (13,000 fits in all, none failed, none
+without an interval; lowest coverage 0.918, mean 0.962):
+
+| control | realised | coverage of the reported interval |
 |---|---|---|
-| worker variance | 0.90 to 1.06 | 0.924 to 0.986 |
-| firm variance | 0.86 to 1.06 | 0.944 to 0.986 |
-| covariance | 0.95 to 1.29 | 0.934 to 0.992 |
-| variance of the sum | 0.84 to 0.91 | 0.904 to 0.920 |
+| unrelated to the effects | correlation 0.00 | 0.952 to 0.998 |
+| two controls (the adverse one and a trend in the year) | index 0.16 beside effects of 0.34 (standard deviations) | 0.936 to 0.992 |
+| loaded on the worker effect (`dev4_worker`) | correlation 0.51, index 0.14 | 0.932 to 0.984 |
+| much variation within matches | within-match share of its variance 0.66 | 0.950 to 0.988 |
+| little variation within matches | share 0.06, correlation 0.93 | 0.946 to 0.992 |
+| error variance moving with the control inside a cell, mild | variance factor 0.47 to 1.68 (10th to 90th percentile) | 0.944 to 0.972 |
+| the same, strong | factor 0.17 to 2.16 | 0.930 to 0.970 |
+| coefficient of one: an index as large as the effects | index 0.30 beside effects of 0.35 | 0.918 to 0.988 |
 
-The standard error of the sum is 9% to 16% too small in every one of the
-eight cases. That is roughly what the omitted first-order term, about
-`4 Cov(alpha + psi, x)^2 Var(beta-hat)`, amounts to in this design (a rough
-calculation, not a derived result); without controls the same ratio is 0.96
-to 1.05 and the interval covers 0.93 to 0.97. A
-control that is weakly related to the effects, or precisely estimated,
-costs correspondingly less. The leave-out residual model carries a
-first-order term for the control coefficients; this model does not yet,
-and `e(inference_nuisance_omitted)` is one to say so.
+*The limit that shows.* With the control index as large as the effects and
+no bottleneck, the default under match deletion reports a standard error
+of the covariance that is 12% too small (coverage 0.918; the other three
+components 0.932 to 0.934), and under observation deletion 0.934 to 0.956.
+The same design under `nuisance(fixedoffset)` (`dev4_fixedoffset`, match
+deletion, new draws) gives standard errors of 0.99 to 1.07 times the
+spread and coverage 0.948 to 0.962: the shortfall belongs to the joint
+estimate's additional term (limit 1 above), not to the standard error of
+the fixed-offset estimate. With a large control index, `nuisance(fixedoffset)`
+is the request whose standard error is the one computed.
+(`nuisance(fixedoffset)` with observation deletion is not covered and
+returns point estimates with a reason: 1,000 fits of that run, by design.)
+
+These are development checks, not confirmations.
 
 Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
 addition to the bits of the leave-out residual pass; variance-source code 4
