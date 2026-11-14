@@ -4103,32 +4103,32 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
             if (leading.present == 1u) {
                 uint64_t steps = 0u;
                 for (i = 0; i < 4u; ++i) {
-                    const VckssRepeatMeasurementLeadingTargetV1 *target = &leading.target[i];
-                    steps += target->steps;
-                    if (target->status > 3u || target->converged > 1u || target->steps < 1u ||
-                        !isfinite(target->eigenvalue) || !isfinite(target->second_eigenvalue) ||
-                        !isfinite(target->residual) || target->residual < 0.0 ||
-                        !isfinite(target->maximum_weight_squared) ||
-                        target->maximum_weight_squared < 0.0 ||
-                        target->maximum_weight_squared > 1.0 + 1e-9 ||
-                        !isfinite(target->point_estimate) || !isfinite(target->leading_score) ||
-                        !isfinite(target->leading_variance_leave_out) ||
-                        !isfinite(target->leading_variance_fitted) ||
+                    const VckssRepeatMeasurementLeadingTargetV1 *lead = &leading.target[i];
+                    steps += lead->steps;
+                    if (lead->status > 3u || lead->converged > 1u || lead->steps < 1u ||
+                        !isfinite(lead->eigenvalue) || !isfinite(lead->second_eigenvalue) ||
+                        !isfinite(lead->residual) || lead->residual < 0.0 ||
+                        !isfinite(lead->maximum_weight_squared) ||
+                        lead->maximum_weight_squared < 0.0 ||
+                        lead->maximum_weight_squared > 1.0 + 1e-9 ||
+                        !isfinite(lead->point_estimate) || !isfinite(lead->leading_score) ||
+                        !isfinite(lead->leading_variance_leave_out) ||
+                        !isfinite(lead->leading_variance_fitted) ||
                         /* With controls the fitted variance of the score has
                          * cross terms of either sign; the engine reports a
                          * non-positive leading variance as a status. */
-                        (noise.controls == 0u && target->leading_variance_fitted <= 0.0) ||
-                        target->leading_variance < target->leading_variance_fitted ||
-                        !isfinite(target->remainder_estimate) ||
-                        !isfinite(target->leading_remainder_covariance) ||
-                        !isfinite(target->remainder_variance) ||
-                        !isfinite(target->remainder_pair_term) ||
-                        (target->status == 0u &&
-                            (!isfinite(target->curvature) || target->curvature < 0.0 ||
-                             !isfinite(target->critical_value) || target->critical_value <= 0.0 ||
-                             !isfinite(target->confidence_lower) || !isfinite(target->confidence_upper) ||
-                             target->confidence_lower > target->confidence_upper ||
-                             target->critical_draws != leading.critical_simulations))) {
+                        (noise.controls == 0u && lead->leading_variance_fitted <= 0.0) ||
+                        lead->leading_variance < lead->leading_variance_fitted ||
+                        !isfinite(lead->remainder_estimate) ||
+                        !isfinite(lead->leading_remainder_covariance) ||
+                        !isfinite(lead->remainder_variance) ||
+                        !isfinite(lead->remainder_pair_term) ||
+                        (lead->status == 0u &&
+                            (!isfinite(lead->curvature) || lead->curvature < 0.0 ||
+                             !isfinite(lead->critical_value) || lead->critical_value <= 0.0 ||
+                             !isfinite(lead->confidence_lower) || !isfinite(lead->confidence_upper) ||
+                             lead->confidence_lower > lead->confidence_upper ||
+                             lead->critical_draws != leading.critical_simulations))) {
                         free(storage); return vckss_usage("invalid repeat-measurement leading direction");
                     }
                 }
@@ -4292,20 +4292,20 @@ static int vckss_componentresult(int argc, char *argv[], int individual)
             if (leading.present == 1u) {
                 unsigned int target_index;
                 for (target_index = 0; target_index < 4u; ++target_index) {
-                    const VckssRepeatMeasurementLeadingTargetV1 *target = &leading.target[target_index];
+                    const VckssRepeatMeasurementLeadingTargetV1 *lead = &leading.target[target_index];
                     const double values[28] = {
-                        (double)target->status, (double)target->converged, (double)target->steps,
-                        (double)target->critical_draws, target->eigenvalue, target->second_eigenvalue,
-                        target->residual, target->leading_share, target->maximum_weight_squared,
-                        target->point_estimate, target->leading_score,
-                        target->leading_variance_leave_out, target->leading_variance_fitted,
-                        target->leading_variance, target->remainder_estimate,
-                        target->remainder_identity_error, target->leading_remainder_covariance,
-                        target->remainder_variance, target->remainder_influence_variance,
-                        target->remainder_trace_variance, target->remainder_trace_mcse,
-                        target->remainder_pair_term, target->standardized_determinant,
-                        target->curvature, target->critical_value, target->confidence_lower,
-                        target->confidence_upper, target->leading_f_statistic
+                        (double)lead->status, (double)lead->converged, (double)lead->steps,
+                        (double)lead->critical_draws, lead->eigenvalue, lead->second_eigenvalue,
+                        lead->residual, lead->leading_share, lead->maximum_weight_squared,
+                        lead->point_estimate, lead->leading_score,
+                        lead->leading_variance_leave_out, lead->leading_variance_fitted,
+                        lead->leading_variance, lead->remainder_estimate,
+                        lead->remainder_identity_error, lead->leading_remainder_covariance,
+                        lead->remainder_variance, lead->remainder_influence_variance,
+                        lead->remainder_trace_variance, lead->remainder_trace_mcse,
+                        lead->remainder_pair_term, lead->standardized_determinant,
+                        lead->curvature, lead->critical_value, lead->confidence_lower,
+                        lead->confidence_upper, lead->leading_f_statistic
                     };
                     for (index = 0; index < 28u; ++index) {
                         snprintf(name, sizeof(name), "__vckss_rl_%u_%u", target_index + 1u, index + 1u);
