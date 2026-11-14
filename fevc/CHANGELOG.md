@@ -6,76 +6,126 @@ No unreleased changes.
 
 ## 0.6.0 — 2026-11-14
 
-- Make repeat-measurement standard errors with one interval per component
-  the default. `inference(auto)` without `inferencemodel()` now selects
-  `inferencemodel(repeat_measurement)`: every component is reported with the
-  normal interval or, when its leading direction carries more than ten per
-  cent of the estimated sampling variance or its variance estimate is not
-  positive, with the `q = 1` interval; `e(V)` is posted when all components
-  are normal, and the display explains the choice.
-  `inferencemodel(leaveout_residual)` keeps the earlier default. The rule
-  was developed on simulations through the command (16 designs, both
-  deletion modes, 32,000 fits) and then put to a registered confirmation on
-  20 new designs with tolerances fixed beforehand: the first run failed on
-  the bookkeeping of one fit that returned point estimates; the second, with
-  package, designs and tolerances unchanged, passed (40,000 fits; lowest
-  coverage 0.930, mean 0.959; `docs/INFERENCE.md`). On three Veneto panels
-  the default adds 24% to 30% to the time of the point estimates.
-- With controls, the repeat-measurement standard errors and the `q = 1`
-  pieces include the estimation of the control coefficients to first order:
-  the variance is that of the fixed-offset estimate under the noise of the
+- Report standard errors for the four components by default
+  (`inference(auto)`); 0.5.2 reported point estimates only unless component
+  inference was requested. They come from one method, the
+  repeat-measurement model, under match and observation deletion: deletion
+  units that share a worker-firm cell (a stayer's observations; under
+  observation deletion also a mover's match of two or more observations)
+  receive the sample variance of their outcomes; the remaining units
+  receive a two-step fitted model (a scale on the ranks of leverage and
+  match size times a quadratic in the standardised estimated worker and
+  firm effects, limited to three standard deviations); the covariance is
+  the KSS high-rank form, its quadratic part estimated from pseudo-noise
+  draws passed through the estimator, plus a closed-form term for the pairs
+  of units of one cell, reported without truncation. Available with
+  `deletionid()`, both populations, controls under either nuisance mode,
+  `targetweight()` and every `centering()` mode (under `centering(mean)`
+  the pseudo-noise is centred as the outcome, so no fixed-mean
+  approximation is made; under `centering(corrected)` the standard error is
+  that of the mean-centred estimate), on the native and Mata backends with
+  `algorithm(jla)` and on Mata `algorithm(exact)`. Under observation
+  deletion with jointly estimated controls the native route adds an offset
+  pass so that the control index is held fixed.
+- One interval per component: the pass also finds the leading direction of
+  every component (a Lanczos iteration, a few dozen linear solves) and the
+  `q = 1` decomposition along it, and reports the normal interval or, when
+  the direction carries more than ten per cent of the estimated sampling
+  variance or the variance estimate is not positive, the Andrews-Mikusheva
+  interval of KSS Section 7.1. A `q = 1` component has no standard error,
+  `e(V)` is posted only when every component is normal, and the display
+  explains which interval each component received. `inference(highrank)`
+  gives normal intervals only and `inference(q1)` the `q = 1` interval
+  wherever it exists; both are strict. `inference(none)` gives point
+  estimates only, `inferencedraws(#)` sets the pseudo-noise draws (default
+  8) and `inferencemodel(repeat_measurement)` names the method. New returns:
+  `e(inference_intervals)`, `e(inference_leading)`, `e(inference_repeat)`
+  and their scalars; new statuses `FEVC_REPEAT_MEASUREMENT_SE`,
+  `FEVC_REPEAT_MEASUREMENT_SE_PARTIAL` and `FEVC_REPEAT_MEASUREMENT_Q1`.
+- The rule was developed on simulations through the command (16 designs,
+  both deletion modes, 32,000 fits) and then put to a registered
+  confirmation on 20 new designs with tolerances fixed beforehand: the
+  first run failed on the bookkeeping of one fit that returned point
+  estimates; the second, with package, designs and tolerances unchanged,
+  passed (40,000 fits; lowest coverage 0.930, mean 0.959;
+  `docs/INFERENCE.md`). On three Veneto panels the default adds 24% to 30%
+  to the time of the point estimates.
+- With controls, the standard errors and the `q = 1` pieces include the
+  estimation of the control coefficients to first order: the variance is
+  that of the fixed-offset estimate under the noise of the
   control-adjusted outcome, its linear part from the influences projected
   off the controls with the realised within-unit products, its quadratic
   part from pseudo-noise transformed as the data are (under match deletion
   one further standard normal per unit and draw, from its own stream and
   counted in the random-number receipt). Both Mata routes and the native
   engine; no further linear solve. `e(inference_nuisance_omitted)` is zero
-  with controls. Requests without controls give bitwise the same native
-  results. In a development check repeating, with the same outcome draws,
-  the designs on which the earlier treatment was found short, the coverage
-  of the variance of the sum goes from 0.904-0.920 to 0.938-0.956 (26,000
-  development fits with controls, none failed). A registered confirmation
-  of the plain command with controls in every one of 20 new designs passed
-  (40,000 fits; lowest coverage 0.923, mean 0.960). Not covered: the
-  joint estimate's additional term in the control index (with an index as
-  large as the effects, the covariance under match deletion covers 0.918;
-  under `nuisance(fixedoffset)` 0.948-0.962), error variances that move
-  with a control inside a worker-firm cell, and coefficients the data
-  identify poorly; `docs/INFERENCE.md` gives the formulas and limits.
-- Add repeat-measurement standard errors,
-  `inferencemodel(repeat_measurement)`, under match and
-  observation deletion: deletion units that share a worker-firm cell (a
-  stayer's observations; under observation deletion also a mover's match of
-  two or more observations) receive the sample variance of their outcomes;
-  the remaining units receive a two-step fitted model (a scale on the ranks
-  of leverage and match size times a quadratic in the standardised estimated
-  worker and firm effects, limited to three standard deviations); the
-  covariance is the KSS high-rank form plus a closed-form term for the pairs
-  of units of one cell, reported without truncation. Under observation
-  deletion with jointly estimated controls the native route adds an offset
-  pass so that the control index is held fixed.
-- With `inference(auto)` or `inference(q1)` the pass also finds the leading
-  direction of every component (a Lanczos iteration, a few dozen linear
-  solves) and the `q = 1` decomposition along it, and reports one interval
-  per component: the normal interval, or the Andrews-Mikusheva interval of
-  KSS when the direction carries more than ten per cent of the estimated
-  sampling variance or the variance estimate is not positive
-  (`inference(q1)`: wherever it exists). A `q = 1` component has no standard
-  error, `e(V)` is posted only when every component is normal, and the
-  display explains which interval each component received. New returns:
-  `e(inference_intervals)`, `e(inference_leading)` and their scalars; new
-  status `FEVC_REPEAT_MEASUREMENT_Q1`.
-- The new model is a variant of the leave-out residual pass: same units,
-  solves, routes and memory accounting. Native capability bit 19 and
-  variance-source code 4 are additive, with a new diagnostic export
-  (`vckss_rust_engine_repeat_measurement_diagnostic_v1`); the distributed
-  plugins predate them. The Mata runtime build is
+  with controls; without controls the term vanishes. In a development check
+  on the designs where treating the coefficients as known falls short, the
+  term raises the coverage of the variance of the sum from 0.904-0.920 to
+  0.938-0.956 with the same outcome draws (26,000 development fits with
+  controls, none failed). A registered confirmation of the plain command
+  with controls in every one of 20 new designs passed (40,000 fits; lowest
+  coverage 0.923, mean 0.960). Not covered: the joint estimate's additional
+  term in the control index (with an index as large as the effects, the
+  covariance under match deletion covers 0.918; under
+  `nuisance(fixedoffset)` 0.948-0.962), error variances that move with a
+  control inside a worker-firm cell, and coefficients the data identify
+  poorly; `docs/INFERENCE.md` gives the formulas and limits.
+- The default never changes the selected backend, algorithm or solver route,
+  and a failed attempt is repeated without standard errors, so point
+  estimates never depend on them. Not covered, with point estimates and a
+  reason under the default and an error under `inference(highrank|q1)`:
+  `project()` in the same call, observation deletion with a fixed offset or
+  (native) frequency weights, `algorithm(auto)`, and native
+  `algorithm(exact)`.
+- Cost on the native backend: 35 linear solves at the default eight draws
+  for the standard errors and a few dozen for the leading directions and
+  the `q = 1` pieces, plus two per probe when controls stay in the operator
+  under joint nuisance. On Mata `algorithm(jla)` the standard errors are a
+  separate stage of about the cost of the point estimates. A mover-only
+  request without controls runs on the generic engine when standard errors
+  are attached.
+- Native capability bits 18 and 19, variance-source code 4 and the
+  diagnostic exports `vckss_rust_engine_leaveout_residual_diagnostic_v1`
+  and `vckss_rust_engine_repeat_measurement_diagnostic_v1` are additive;
+  `e(component_inference_receipt)` widens to 78 columns (39 to 64 the
+  diagnostic of the pass, 65 to 78 the shape of the variances). The
+  attachment's memory forecast is its own lifetime tally; the heap check on
+  every executor covers the pass in its leave-out residual configuration,
+  not separately the repeat-measurement variant. The Mata runtime build is
   `vckss-residual-se-api6`. Exact Mata results agree with an independent
   dense calculation under both deletion modes; the Rust core is covered by
   unit tests with independent oracles, dense end-to-end tests for match and
   observation units and a plugin-boundary test. The native route passes the
-  Stata regression with a plugin built from this source; no distributed
-  binary contains it.
+  Stata regression with a plugin built from this source; the distributed
+  plugins predate the method, and with them the default reports point
+  estimates and says why.
+- Removed: the experimental variance models of 0.5.2,
+  `inferencemodel(target_lowess)`, `inferencemodel(structured_common)` and
+  `inferencemodel(structured_leverage)`, and
+  `inferencemodel(leaveout_residual)`, a development model never released;
+  the options `inferencesimulations()`, `inferencebins()` and
+  `inferencegramprobes()`, which served only them; and component inference
+  with `project()` in one call (exact Mata in 0.5.2). A removed model stops
+  with `INFERENCE_MODEL_REMOVED`, a removed option with
+  `INFERENCE_OPTION_REMOVED` (return code 198), and `inference(highrank|q1)`
+  with `project()` with `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED`
+  (return code 498). `inference(highrank)` and `inference(q1)`, which in
+  0.5.2 selected `target_lowess` without a named model, now use the
+  repeat-measurement model. The statuses and returns that only the removed
+  models produced (among them `FEVC_STRUCTURED_Q0_INFERENCE`,
+  `FEVC_STRUCTURED_Q1_INFERENCE`, `KSS_HIGHRANK_INFERENCE`,
+  `KSS_Q1_INFERENCE`, `STRUCTURED_INFERENCE_TUPLE_REQUIRED`,
+  `INFERENCE_GRAM_TUPLE_REQUIRED`, `e(q1_inference)` and
+  `e(structured_variance_summary)`) are no longer reachable
+  (`docs/FAILURES_AND_RETURNS.md`). Their Mata and Rust machinery stays,
+  unreachable from the command; their documentation is that of the tag
+  `v0.5.2`.
+- Fix: native failures in five helper files (present since 0.5.2) called
+  programs private to `fevc.ado` and so stopped with "unrecognized" and
+  posted no withholding status. The new package files `fevc__rust_abort.ado`
+  and `fevc__post_failure.ado` serve every helper, which now posts its
+  status and releases the native handle.
 - The registered Stata suites and qualifiers keep the point-only default
   they were written for: `FEVC_DEFAULT_INFERENCE=none` is set where each
   starts (as a global in `run_all.do` and the Windows runtime driver, in
@@ -83,56 +133,14 @@ No unreleased changes.
   and the portability job). `test_default_inference.do` checks the
   command's own default natively and in Mata and runs in the quick suite,
   both qualifiers and the installer verification; the macOS qualifier also
-  runs both standard-error regression files on each architecture.
+  runs the standard-error regression file on each architecture.
 - The Monte Carlo harness for the default interval is in
   `tools/default_interval/` (designs, driver, aggregation, verdict, tests);
   compact records of every run are in `docs/default_interval/`. Its
   requirement `pandas` is pinned in `requirements/dev.txt`.
-- The C shim compiles under MSVC `/W4 /WX` again: a hidden local and
-  three records that MSVC could not prove initialised (no change in what
-  they carry; the macOS plugin is unchanged by the first fix).
-- Corrections: the `q = 1` interval is that of KSS Section 7.1 (it was
-  cited as Section 6, also in the display); the technical supplement no
-  longer calls the joint and the fixed-offset estimate equivalent to first
-  order, and states the term by which they differ.
-- Fix the default request: under `inference(auto)` without a typed
-  `inferencemodel()`, the model was reset to `target_lowess` and the command
-  stopped with `INFERENCE_DELETION_UNSUPPORTED` for match deletion, so a
-  plain `fevc y, worker() firm()` failed unless
-  `FEVC_DEFAULT_INFERENCE=none` was set.
-- Add leave-out residual standard errors, normal intervals and `e(V)` for
-  the four components (`inferencemodel(leaveout_residual)`; the default
-  until the repeat-measurement model replaced it). `inference(none)` gives
-  point estimates only; `inference(highrank) inferencemodel(leaveout_residual)`
-  requests them strictly; `inferencedraws(#)` sets the pseudo-noise draws.
-- The default never changes the selected backend, algorithm or solver route,
-  and a failed attempt is repeated without standard errors, so point
-  estimates never depend on them.
-- Cost on the native backend: 35 linear solves at the default eight draws,
-  plus two per probe when controls stay in the operator under match
-  deletion. On Mata `algorithm(jla)` they are a separate stage of about the
-  cost of the point estimates.
-- A mover-only request without controls runs on the generic engine when
-  standard errors are attached.
-- The leave-out residual standard errors assume similar error variances
-  among units sharing a worker or firm and are not robust to arbitrary
-  heteroskedasticity. The display states this and reports an effective-rank
-  diagnostic.
-- Not covered: `project()` in the same call, observation deletion with a
-  fixed offset or (native) frequency weights, `algorithm(auto)`, and native
-  `algorithm(exact)`. These return point estimates with a reason.
-- Native capability bit 18 and variance-source code 3 are additive. The
-  distributed plugins predate them. The Stata and Mata sources for this
-  feature have not been executed; Rust is covered by dense-oracle and ABI
-  tests. `FEVC_DEFAULT_INFERENCE=none` keeps the earlier default for suites
-  written for it.
-- The native route also posts `e(V_modelbased)` and `e(se_modelbased)`,
-  the covariance that takes the fitted working variances as true, with the
-  working-variance term counts and signal truncation, through an additive
-  plugin diagnostic (`vckss_rust_engine_leaveout_residual_diagnostic_v1`).
-- The attachment's memory forecast is its own lifetime tally, checked
-  against the process heap on every executor.
-- Technical supplement: `docs/standard_errors/standard_errors.tex`.
+- Technical supplement: `docs/standard_errors/standard_errors.tex`, the
+  pass the standard errors use, including the term by which the joint and
+  the fixed-offset estimates differ.
 
 ## 0.5.2 — 2026-11-07
 

@@ -278,15 +278,15 @@ With {cmd:mcse(off)}, the diagnostics are missing even in exact mode, but
 the corrected point estimate is still computed.
 
 {pstd}
-Projections and component {cmd:inference(highrank|q1)} accept {cmd:mean}
-(the default) and {cmd:none}, but not {cmd:corrected}; requesting
-{cmd:corrected} with either stops the command before estimation. For
-projections, centering changes the standard errors but not the coefficients.
-For component inference, mean centering treats the observed mean as a known
-constant and ignores the uncertainty from estimating it. This is an
-approximation, not inference conditional on the observed mean. Component
-inference and {cmd:project()} can be requested in the same call only with
-exact Mata and without a structured model. A failed centering calculation
+Projections accept {cmd:mean} (the default) and {cmd:none}, but not
+{cmd:corrected}; requesting {cmd:corrected} with {cmd:project()} stops the
+command before estimation. For projections, centering changes the standard
+errors but not the coefficients. The
+{help fevc##se:standard errors of the components} accept all three
+settings. Their simulated noise is centred as the outcome is, so the
+estimated mean needs no separate approximation; under {cmd:corrected} they
+are those of the mean-centred estimate and treat the small
+corrected-centering increment as fixed. A failed centering calculation
 returns an error and never switches to another setting.
 
 {pstd}
@@ -355,13 +355,6 @@ controls are not silently dropped. See the
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 40}inference seed; default 8675309
   {hline 76}
 
-{pstd}
-fevc 0.6.0 removed {cmd:inferencemodel(leaveout_residual)},
-{cmd:inferencemodel(target_lowess)}, {cmd:inferencemodel(structured_common)},
-{cmd:inferencemodel(structured_leverage)}, {cmd:inferencesimulations()},
-{cmd:inferencebins()} and {cmd:inferencegramprobes()}; a request for one of
-them stops with a message.
-
 {marker se}{...}
 {pstd}
 {bf:Standard errors and intervals (the default).} {cmd:fevc} reports a
@@ -376,8 +369,10 @@ returns point estimates with a one-line reason; it never changes the
 backend, algorithm or solver route you selected, and if the calculation that
 carries the standard errors stops, the command runs once more without them
 so that the point estimates are always returned. {cmd:inference(none)}
-turns them off. {cmd:inference(auto) inferencemodel(repeat_measurement)}
-requests the same strictly: the command stops if they cannot be computed.
+turns them off. {cmd:inference(highrank)} and {cmd:inference(q1)} request
+them strictly: the command stops if they cannot be computed.
+{cmd:inferencemodel(repeat_measurement)} names the method and may be
+omitted.
 
 {pstd}
 {it:The variances.} Deletion units that share a worker and a firm are
@@ -390,9 +385,12 @@ every match with two or more observations has them. The remaining units
 receive a fitted model, a scale that depends on the ranks of leverage and
 match size times a quadratic in the standardised estimated worker and firm
 effects, both fitted to leave-out variance products. The covariance is the
-KSS high-rank form with these variances plus a closed-form term for the
-pairs of units of one repeat-measurement set; it is reported as computed,
-without truncation.
+KSS high-rank form with these variances: its part linear in the errors comes
+from the influence of every unit, and its part quadratic in them from
+simulated noise with these variances, passed through exactly the
+calculation applied to the data. A closed-form term is added for the pairs
+of units of one repeat-measurement set. The covariance is reported as
+computed, without truncation.
 
 {pstd}
 {it:One interval per component.} For every component the command also
@@ -435,8 +433,8 @@ sample variance of a repeat-measurement set needs nothing else.{p_end}
 {phang2}2. For units without repeat measurements (a mover's collapsed
 match; under observation deletion a mover's match of one observation) the
 error variance follows the fitted model. {bf:The intervals are as good as}
-{bf:that model}; they are not robust to arbitrary heteroskedasticity among
-those units.{p_end}
+{bf:that model and, for those units, not robust to arbitrary}
+{bf:heteroskedasticity.}{p_end}
 {phang2}3. At most one direction of the network dominates a component, and
 no single deletion unit dominates that direction. Two or more dominant
 directions are not covered by either interval.{p_end}
@@ -458,11 +456,12 @@ default then returns point estimates and says so.{p_end}
 {pstd}
 The choice between the two intervals is made from the data.
 The rule and its threshold were fixed after development simulations and
-then confirmed in a registered simulation through the command itself, at
-the second attempt; the first failed on the bookkeeping of one fit that
-returned point estimates (the inference guide gives designs, tolerances and
-both results). That is simulation evidence for designs with at most one
-bottleneck and without controls; it is not a coverage guarantee.
+then confirmed in registered simulations through the command itself:
+without controls at the second attempt (the first failed on the
+bookkeeping of one fit that returned point estimates), and with controls in
+every design at the first (the inference guide gives designs, tolerances
+and results). That is simulation evidence for designs with at most one
+bottleneck; it is not a coverage guarantee.
 There is no theoretical result for a data-dependent choice between the two
 intervals. Under {cmd:centering(corrected)} the intervals describe the
 mean-centred estimate and treat the small corrected-centering increment as
@@ -494,6 +493,10 @@ backend;{p_end}
 {phang2}a native plugin built before this feature.{p_end}
 
 {pstd}
+With {cmd:inference(highrank)} or {cmd:inference(q1)} these cases stop the
+command instead; with {cmd:project()} it stops before estimation.
+
+{pstd}
 On the native backend the calculation that carries the standard errors uses
 the automatic executor for attachments in place of the point-only one, and a
 request without controls and without stayers runs on the generic engine
@@ -503,176 +506,29 @@ failure that can come from the standard errors is followed by one more run
 without them; option, variable and sample errors are reported once.
 
 {pstd}
-{bf:Leave-out residual standard errors.}
-{cmd:inferencemodel(leaveout_residual)}, with {cmd:inference(auto)} or
-strictly with {cmd:inference(highrank)}, requests the standard errors that
-were the default before: a standard error and a normal interval for each of
-the four components, with {cmd:e(V)}, and no q = 1 alternative. They are
-available wherever the default is.
+{it:Settings.} {cmd:inferencedraws()} sets the number of pseudo-noise draws
+(default 8); each draw costs four linear solves, and four more when the
+leading directions are computed. {cmd:inferenceseed()} sets their seed. Both
+are separate from the point-estimation probes set by {cmd:probes()}, and the
+numerical MCSE does not cover them. The
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
+gives the formulas, the simulations and their limits;
+{help fevc##component_example:Example 5} shows the syntax.
 
 {pstd}
-{it:What it does.} The KSS estimate is a quadratic form in the outcome. Its
-sampling variance has a leading part that is linear in the errors and a
-smaller part that is quadratic in them. The leading part is estimated from
-squared regression residuals, each divided by its residual-maker diagonal
-(the HC2 form). The quadratic part, and the pure-noise amount that squaring
-noisy estimates adds to the leading part, are found by passing simulated
-noise through exactly the calculation applied to the data. A small working
-model of the error variances (ranks of leverage and unit size, by movers and
-stayers) is used only to generate that noise. With controls, the units are
-formed after subtracting the fitted control index, and a first-order term
-adds the uncertainty in the estimated control coefficients; the same standard
-error serves {cmd:nuisance(joint)} and {cmd:nuisance(fixedoffset)}. It is
-the standard error of the fixed-offset estimate; the joint estimate differs
-from it by a term that involves the control index and is not covered. See the technical supplement
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/standard_errors/standard_errors.tex":docs/standard_errors}.
-
-{pstd}
-They assume independent deletion units, as above, and that error variances
-are similar among units that share a worker or a firm, or that their
-differences are unrelated to the squared influence of those units.
-{bf:They are not robust to arbitrary heteroskedasticity.} With the high
-leverage of worker-firm data a squared residual averages the variances of
-linked units, so this cannot be avoided without the leave-two-out sample
-splitting of KSS, which {cmd:fevc} does not implement. The normal interval
-also needs that no single direction and no single unit dominates a
-component. Heavy-tailed errors make these standard errors too large rather
-than too small.
-
-{pstd}
-{it:Diagnostics.} {cmd:e(inference_effective_rank)} reports, for each
-component, the effective rank of the squared kernel estimated from the
-draws, with the implied lower and upper bounds on the share of the leading
-direction. Values in the hundreds or more indicate a diffuse component. A
-value near one means a few directions carry the component, as when two
-groups of firms are joined by a handful of movers; normal intervals then
-under-cover whatever variance estimate is used, the display warns, and
-{cmd:inference(q1)} is the method designed for that case.
-{cmd:e(inference_max_influence_share)} is the largest share of the squared
-first-order influence held by one unit. {cmd:e(inference_psd_cleanup)}
-records any truncation of the leading part to a positive semidefinite
-matrix, and {cmd:e(variance_floor_share)} the share of units at the working
-variance floor.
-
-{pstd}
-The evidence for the leave-out residual method is a simulation study and
-dense-oracle tests described in the supplement; it is development evidence,
-not a coverage guarantee.
-
-{pstd}
-{bf:Other inference methods.}
-Component inference is experimental. {cmd:inference(highrank)} requests
-normal-approximation (Gaussian) intervals for the four components. They
-require that no single direction in the data dominate a component and that
-individual observations have limited influence. {cmd:inference(q1)} allows
-one dominant, weakly identified direction with a diffuse remainder; it does
-not cover several such directions (multi-mode weakness). For these methods
-there is no automatic choice between them, and successful computation does not
-establish valid coverage. Both rely on a model for the error variances and
-on assumptions beyond those needed for point estimates. Under the default
-{cmd:centering(mean)}, the observed mean is treated as fixed, which requires
-the uncertainty in estimating it to be negligible; use {cmd:centering(none)}
-for the uncentered calculation.
-
-{pstd}
-Without {cmd:inferencemodel()}, component inference uses exact Mata
-calculation, observation deletion, and unit frequency weights.
-Observation-q1 calibration retains a documented limitation: in the
-package's confirmation runs, its standard errors narrowly failed one
-calibration check (see the inference guide). The explicit
-structured models {cmd:structured_common} and {cmd:structured_leverage}
-impose additional assumptions on the error variances; they are not
-unrestricted heteroskedasticity-robust inference. {cmd:structured_common}
-lets the variance depend on a richer set of design features;
-{cmd:structured_leverage} is a simpler sensitivity specification. Neither is
-chosen automatically.
-
-{pstd}
-{bf:Movers and stayers together (pooled match inference).} Use
-{cmd:deletion(match)}, {cmd:nuisance(fixedoffset)}, a structured model and
-the default {cmd:stayers(both)}, or {cmd:stayers(movers)} for movers only.
-Errors may be correlated within a mover's match, but mover matches and the
-individual observations of each stayer are assumed independent, including
-repeated observations of one stayer and frequency copies of a stayer row.
-The variance model has separate coefficients for movers and stayers.
-With {cmd:deletionid()}, a worker with several IDs at one firm counts as a
-mover. Fixed-offset match inference is approximate, ignoring
-nuisance-control estimation uncertainty, and under the default centering it
-also ignores the uncertainty in the observed mean.
-
-{pstd}
-{bf:Small and large datasets use different calculations.} For small designs
-within the exact-size and memory limits, select
-{cmd:backend(mata) algorithm(exact)}. For large datasets, select
-{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)} with
-{cmd:preconditioner(diagonal)} or {cmd:preconditioner(cmg)}. Both accept the
-two structured models, {cmd:deletionid()}, {cmd:targetweight()} and positive
-integer frequency weights. Mata JLA does not support structured inference,
-and structured inference cannot be combined with {cmd:project()} in the same
-call. For example, with outcome {cmd:y}, control {cmd:x}, worker identifier
-{cmd:id} and firm identifier {cmd:firmid}, a small-sample request is
-
-{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset)}
-{cmd:stayers(both) backend(mata) algorithm(exact) inference(highrank) inferencemodel(structured_common)}{p_end}
-
-{pstd}
-and a large-sample request is
-
-{phang2}{cmd:fevc y x, worker(id) firm(firmid) deletion(match) nuisance(fixedoffset)}
-{cmd:stayers(both) backend(rust) rng(counter_v1) algorithm(jla) engine(generic)}
-{cmd:preconditioner(diagonal) inference(highrank) inferencemodel(structured_common)}{p_end}
-
-{pstd}
-Replace {cmd:inference(highrank)} by {cmd:inference(q1)} only when the
-one-dominant-direction assumptions are appropriate. See the
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_INFERENCE.md":pooled inference guide}.
-
-{pstd}
-The inference calculations have their own numerical settings.
-{cmd:inferencedraws()} sets the pseudo-noise draws of
-{cmd:leaveout_residual} and {cmd:repeat_measurement}; each draw costs four
-linear solves on the Rust route. {cmd:inferencesimulations()}, {cmd:inferencegramprobes()} and
-{cmd:inferencebins()} do not apply to that method.
-{cmd:inferencesimulations()} sets the number of simulation draws used for the
-covariance on both backends; {cmd:inferencegramprobes()} sets the random
-probes Rust uses to fit the structured variance model; {cmd:inferencebins()}
-applies to the observation-level smoothing method ({cmd:target_lowess}) used
-without {cmd:inferencemodel()}. These are separate from the point-estimation
-probes set by {cmd:probes()}, and the numerical MCSE does not cover them.
-
-{pstd}
-Gaussian results are stored in {cmd:e(component_inference)} and q1 results
-in {cmd:e(q1_inference)}. A successful command can still withhold individual
-intervals: {cmd:e(q0_status)} and {cmd:e(q1_status)} record availability,
-with zero meaning computed. A withheld q1 interval is not replaced by a
-Gaussian one. Structured highrank posts {cmd:e(V)} only when its joint
-covariance and all individual checks pass; structured q1 does not post
-{cmd:e(V)}. Thus {cmd:lincom} requires an available highrank covariance.
-Failures that affect the whole calculation, such as a failed solver
-accuracy check, stop the command with an error.
-
-{pstd}
-For pooled inference, {cmd:e(inference_mover_units)},
-{cmd:e(inference_stayer_units)} and {cmd:e(inference_independent_units)}
-count the independent units. {cmd:e(residual_moment_diagnostics)} and
-{cmd:e(component_spectrum)} describe the variance-model fit and how
-concentrated each component is. These checks describe the realized design;
-they do not establish coverage.
-
-{pstd}
-In the package's simulation assessment, the exact Mata method produced
-intervals too rarely in three of its four primary designs (22 failed
-availability checks), while the native calculation produced intervals in
-all eight primary designs and passed the broad descriptive checks but was
-materially sensitive to the number of probes. These finite designs provide no general
-coverage guarantee, and no conservative-coverage guarantee is implied.
-Read the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide},
-the {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md":assessment}
-and the separate
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/POOLED_COMPONENT_ASSESSMENT.md":pooled mover-stayer assessment}
-before reporting intervals; evidence for observation or mover-only inference
-does not establish coverage for pooled inference. An
-{help fevc##component_example:illustrative example} appears below.
+{bf:Removed in 0.6.0.} The standard errors of the components come from the
+one method above. Version 0.6.0 removed the experimental variance
+models of version 0.5.2, {cmd:inferencemodel(target_lowess)},
+{cmd:inferencemodel(structured_common)} and
+{cmd:inferencemodel(structured_leverage)}, and the options that served only
+them, {cmd:inferencesimulations()}, {cmd:inferencebins()} and
+{cmd:inferencegramprobes()}; {cmd:inferencemodel(leaveout_residual)}, added
+during development, was removed before release. A request for one of them
+stops before estimation with return code 198 and
+{cmd:e(withholding_status)} {cmd:INFERENCE_MODEL_REMOVED} or
+{cmd:INFERENCE_OPTION_REMOVED}; omit the option. {cmd:inference(highrank)}
+and {cmd:inference(q1)}, which in 0.5.2 selected an exact
+observation-deletion method, now choose the interval of this method.
 
 {dlgtab:Fixed-effect projection inference}
 
@@ -963,12 +819,12 @@ not mistaken for zero.
 {cmd:corrected}, and {cmd:e(mcse_centering)} records the matching MCSE
 convention: {cmd:uncentered}, {cmd:fixed observed mean}, or
 {cmd:fixed observed mean and fixed centering increment}. Both are recorded
-in exact mode and with MCSE off. With component inference,
-{cmd:e(inference_centering)} is {cmd:uncentered} or {cmd:fixed observed mean}
-and {cmd:e(inference_mean_omitted)} is 0 or 1; these are absent for
-point-only or projection-only requests and cleared on failure. The
-inference convention is separate from the MCSE convention and from the
-omitted uncertainty in fitted controls.
+in exact mode and with MCSE off. With standard errors of the components,
+{cmd:e(inference_centering)} describes how they treat centering
+({cmd:uncentered} under {cmd:none}) and {cmd:e(inference_mean_omitted)} is
+0, because their simulated noise is centred as the outcome is; these are
+absent for point-only or projection-only requests and cleared on failure.
+The inference convention is separate from the MCSE convention.
 
 {pstd}
 {bf:Additional numerical diagnostics.} {cmd:e(numerical_mcse)} and
@@ -991,9 +847,10 @@ this calculation fails, the MCSE is withheld and
 {pstd}
 {bf:Sample and other results.} {cmd:e(sample)} identifies retained rows.
 Sample counts include {cmd:e(N)}, {cmd:e(worker_levels)}, and
-{cmd:e(firm_levels)}. Component covariance is posted in {cmd:e(V)} only for
-supported successful inference requests; q1 intervals have separate returns.
-For repeat-measurement standard errors {cmd:e(inference_variance_fit)} is
+{cmd:e(firm_levels)}. The covariance of the components is posted in
+{cmd:e(V)} only when every component has a normal interval;
+{cmd:e(inference_intervals)} holds the interval reported for each.
+For the {help fevc##se:standard errors} {cmd:e(inference_variance_fit)} is
 {cmd:repeat_measurement}; {cmd:e(inference_repeat)} holds the numbers of
 scale and profile terms, the scale floor and how often it bound, the numbers
 of repeat-measurement sets and of their units (the eligible stayers and
@@ -1001,29 +858,19 @@ their observations under match deletion; under observation deletion also
 every match of a mover with two or more observations), the worker-variance
 entry of the pair term and the six profile coefficients, and
 {cmd:e(inference_repeat_sets)} and {cmd:e(inference_pair_term)} repeat two
-of them as scalars.
-For {help fevc##se:leave-out residual standard errors},
-{cmd:e(inference_variance_fit)} is {cmd:leaveout_residual},
-{cmd:e(component_inference)} holds the estimates, standard errors and
-interval limits, {cmd:e(V)} and {cmd:e(V_primitive)} the covariance,
-{cmd:e(inference_draws)} the draws, {cmd:e(inference_effective_rank)} and
-{cmd:e(inference_max_influence_share)} the diagnostics, and
+of them as scalars. {cmd:e(component_inference)} holds the estimates,
+high-rank standard errors and normal interval limits, {cmd:e(V)} and
+{cmd:e(V_primitive)} the covariance when it is posted,
+{cmd:e(inference_draws)} the draws, {cmd:e(inference_nuisance_omitted)} 0
+when the estimation of the controls enters and 1 without controls, and
 {cmd:e(inference_variance_warning)} the variance assumption. After
 {cmd:inference(auto)}, {cmd:e(inference_auto)} is 1 and
 {cmd:e(inference_auto_reason)} is empty when standard errors were computed
-and otherwise says why they were not; {cmd:e(inference_offset_pass_solves)}
-counts the solves of the additional pass under joint nuisance with controls.
-On the native backend, {cmd:e(inference_working_terms)} holds the number of
-working-variance terms kept for mover units and for stayer observations,
-{cmd:e(inference_signal_truncation)} the size of the negative part removed
-from the signal term, {cmd:e(inference_controls)} the controls whose
-estimation enters the standard errors, and {cmd:e(V_modelbased)} with
-{cmd:e(se_modelbased)} the covariance and standard errors obtained when the
-fitted working variances replace the squared residuals in the signal term.
-The reported standard errors are the residual-based ones; a large gap
-between the two says the working-variance model fits the error variances
-poorly. Columns 39 to 64 of {cmd:e(component_inference_receipt)} carry the
-same quantities as they crossed the plugin boundary.
+and otherwise says why they were not. On the native backend
+{cmd:e(inference_offset_pass_solves)} counts the solves of the additional
+pass under joint nuisance with controls, and columns 39 to 78 of
+{cmd:e(component_inference_receipt)} carry the diagnostics of the
+calculation as they crossed the plugin boundary.
 {cmd:e(projection_b)}, {cmd:e(projection_V)}, and
 {cmd:e(projection_results)} contain projection results. Timing diagnostics
 use only Stata timers that are not already in use and leave the caller's

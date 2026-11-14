@@ -1,41 +1,61 @@
-# Standard errors by default: repeat-measurement model and automatic interval — November 14, 2026
+# 0.6.0 release candidate: standard errors by default — November 14, 2026
 
-Branch work, not released. `inference(auto)`, the default, now selects
-`inferencemodel(repeat_measurement)`: sample variances for deletion units
-with independent repeat measurements, a fitted model for the others, and
-one interval per component, normal or `q = 1`, chosen from the leading
-direction (share of the estimated sampling variance above ten per cent);
-`e(V)` is posted when every component is normal. Both deletion modes, the
-native and both Mata routes. See the
-[decision](docs/DECISIONS.md) and [INFERENCE.md](docs/INFERENCE.md).
+Branch `repeat-measurement-se` (draft pull request #8), not released. The
+plain command reports standard errors for the four components, from one
+method (owner's decisions of 2026-11-13 and 2026-11-14): the
+repeat-measurement model, with one interval per component, normal or
+`q = 1`, chosen from the leading direction's share of the estimated
+sampling variance (above ten per cent, the owner's threshold); `e(V)` when
+every component is normal; with controls, the estimation of their
+coefficients to first order. `inference(highrank)` and `inference(q1)` are
+the strict requests; `inference(none)` gives point estimates. The variance
+models of 0.5.2 and the never-released leave-out residual model are
+removed from the command. See the [decisions](docs/DECISIONS.md) and
+[INFERENCE.md](docs/INFERENCE.md).
 
-Evidence: dense-oracle and cross-route regression in
-`tests/stata/test_repeat_measurement_se.do`; a development simulation
-through the command (16 designs, 32,000 fits) on which the rule was chosen;
-two registered confirmations of the plain default command on 20 new
-designs: the first FAILED its verdict on the inventory (one fit of 40,000
-returned point estimates and the harness rejected its output; every
-coverage tolerance was met when that fit is counted as not covered), the
-second, with package, designs and tolerances unchanged, met all tolerances
-(lowest coverage 0.930, mean 0.959, 40,000 fits, none failed); end-to-end runs of
-the plain default on three Veneto panels (2.3 to 5.2 million person-years,
-both deletion modes: all components normal, 24% to 30% more time than the
-point estimates). Source gates on the branch: Python suite, assembly check,
-Rust workspace, Stata quick suite and the two standard-error regression
-files with a plugin built from the source.
+Evidence: dense-oracle and cross-route regression
+(`tests/stata/test_repeat_measurement_se.do`); simulations through the
+command with the harness in `tools/default_interval/` (records in
+`docs/default_interval/`). Without controls: development (32,000 fits), a
+first confirmation that FAILED on the bookkeeping of one fit that returned
+point estimates, a second that passed (40,000 fits; lowest coverage 0.930,
+mean 0.959). With controls: development (26,000 fits, none failed) and a
+registered confirmation on 20 new designs that passed (40,000 fits; lowest
+coverage 0.923, mean 0.960), run on the source `f3938986` and its
+qualified macOS arm64 plugin; the release source gives bitwise the same
+results for 36 default requests on every route. End-to-end on three Veneto
+panels with the default of `fb49e16d` (no controls): all components
+normal, 24% to 30% more time than the point estimates. Named limits: the
+joint estimate's additional term in the control index; error variances
+that move with a control inside a cell; two or more dominant directions;
+outcomes with almost no noise.
 
-Open, for the owner: the threshold of the rule (ten per cent, chosen by the
-implementer); whether to import the simulation harness into the repository;
-rebuilding and qualifying the distributed plugins, which predate the method
-(until then the default reports point estimates and says why); merge, tag
-and release; and whether to add the first-order term for estimated control
-coefficients to this model: a development check with a control strongly
-correlated with the effects finds the standard error of the sum 9% to 16%
-too small (coverage 0.90 to 0.92), the other components little affected.
-Not claimed: a theoretical result for the data-dependent choice; two or
-more dominant directions; simulations on the Mata routes beyond the
-regression tests; outcomes with almost no noise, where the default can
-return point estimates only.
+Native binaries: macOS qualified at `f3938986`
+(`CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION`, before the removal and two
+fixes; to be repeated at the build commit); Linux built and checked on SCC
+by a diagnostic job, not yet the registered qualifier; Windows built and
+audited by the hosted workflow, not yet run under licensed Stata.
+
+Open, for the owner, in this order:
+
+1. Fast-forward `main` to the build commit (the branch is a fast-forward of
+   `main`; a merge commit would give the Linux build another source commit
+   than the other binaries), then run the registered Linux qualification
+   (`rust/stata_backend/scc/deploy_linux_bundle.sh`, which requires `main`).
+2. Windows: approve the change of the private runner's export list (three
+   additive diagnostics exports) and a campaign protocol against 0.5.2
+   (the 0.5.2 protocol compares with 0.5.1, times plain calls, which now
+   compute standard errors, and its cell 5 uses a removed model); then the
+   18 licensed runs.
+3. The adoption commit: the five binaries, the adoption manifest, the
+   release links in `README.md` and `INSTALLATION.md`, a parity-matrix row
+   for the repeat-measurement standard errors, and the status documents of
+   the distributed binaries; then `fevc/tools/build_github_release.py`, the
+   tag `v0.6.0`, the release and the install checks.
+
+Not claimed: a theoretical result for the data-dependent choice between
+the two intervals; simulations on the Mata routes beyond the regression
+tests.
 
 ## Previous checkpoint
 

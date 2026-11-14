@@ -146,13 +146,13 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
 
 With JLA, `centering(corrected)` reports the same MCSE as `centering(mean)`
 for the same call, so it does not include the numerical uncertainty in the
-adjustment. Projections and component `inference(highrank|q1)` accept
-`mean` (the default) and `none`, but not `corrected`. For projections,
-centering changes the standard errors but not the coefficients. For
-component inference, mean centering treats the observed mean as a known
-constant and ignores the uncertainty from estimating it; this is an
-approximation, not inference conditional on the observed mean.
-`e(inference_centering)` and `e(inference_mean_omitted)` record this choice.
+adjustment. Projections accept `mean` (the default) and `none`, but not
+`corrected`; for projections, centering changes the standard errors but not
+the coefficients. The standard errors of the components accept all three
+settings: their simulated noise is centred as the outcome is, and under
+`corrected` they are those of the mean-centred estimate with the
+adjustment treated as fixed. `e(inference_centering)` and
+`e(inference_mean_omitted)` record this.
 See [the centering guide](docs/CENTERING.md) for formulas, restrictions and
 timing evidence.
 
@@ -169,34 +169,28 @@ These views show the decomposition, retained population, computation choices,
 and diagnostics. Estimates and supporting results are also stored in `e()`;
 see `help fevc` for their names.
 
-By default the command reports leave-out residual standard errors and normal
-intervals for the four components and posts their covariance as `e(V)`. They
-assume independent deletion units and similar error variances among units
-that share a worker or a firm; they are not robust to arbitrary
-heteroskedasticity. `inference(none)` gives point estimates only. See
-`help fevc##se` and the
-[technical supplement](docs/standard_errors/standard_errors.tex).
+By default the command reports repeat-measurement standard errors for the
+four components: a confidence interval for each, normal where the estimate
+is close to normal and otherwise the `q = 1` interval of Kline, Saggio and
+Sølvsten (2020, Section 7.1), chosen component by component from the share
+of the estimated sampling variance carried by the leading direction
+(threshold ten per cent), and their covariance as `e(V)` when every
+component is normal. Deletion units that repeat a worker–firm cell receive
+their own sample variance and the others a fitted model, so the intervals
+are as good as that model for those units and not robust to arbitrary
+heteroskedasticity; with controls, their estimation enters to first order.
+`inference(highrank)` gives normal intervals only, `inference(q1)` the
+`q = 1` interval wherever it exists, and `inference(none)` point estimates
+only. See `help fevc##se` and the [inference guide](docs/INFERENCE.md),
+which gives the simulations behind the rule and their limits; they are not
+a coverage guarantee.
 
-Projection standard errors and the other component intervals require
-explicit options and have different assumptions. Both accept mean (the
-default) and no centering. That component inference is experimental: it relies
-on a model for the error variances, structured models impose further
-assumptions, fixed-offset match inference omits the uncertainty from
-estimating the controls, and observation-q1 calibration retains a
-documented limitation. Confidence intervals that pool movers and stayers
-require explicit structured models and assume independent stayer
-observations; see the
-[pooled inference guide](docs/POOLED_COMPONENT_INFERENCE.md). Read the
-[inference guide](docs/INFERENCE.md) before requesting intervals or standard
-errors.
-
-In the package's simulation assessment, the exact Mata method produced
-intervals too rarely in three of its four primary designs (22 failed
-availability checks), and the native calculation, which produced intervals
-in all eight primary designs, was materially sensitive to numerical
-settings. These results do not establish
-general coverage; see the
-[assessment](docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md).
+Projection standard errors (`project()`) are requested separately, have
+their own assumptions and accept mean (the default) and no centering; with
+`project()` the default reports point estimates for the components. Version
+0.6.0 removed the experimental variance models of 0.5.2
+(`inferencemodel(target_lowess|structured_common|structured_leverage)`) and
+the options that tuned them; a request for one stops with a message.
 
 ## Runnable examples
 
@@ -212,7 +206,7 @@ estat decomposition, full
 
 `ex1` is a larger positive-sorting panel; `ex2` is its small exact-calculation
 counterpart. `ex3` illustrates frequency and target weights, `ex4` a projection
-on firm size, and `ex5` component-inference syntax on a fixed small dataset.
+on firm size, and `ex5` the standard-error options on a fixed small dataset.
 The helper prints observations, workers, firms, and the true variance components
 for the realized data and example weighting. It retains `worker_fe`, `firm_fe`,
 and `error`; inspect the construction with `viewsource fevc__simulate_data.ado`.

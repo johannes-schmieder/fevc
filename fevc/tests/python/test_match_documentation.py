@@ -83,12 +83,15 @@ def test_active_guidance_has_no_superseded_match_restriction(path, obsolete):
 def test_help_retains_scope_warning_and_links_to_detailed_inference():
     text = " ".join((ROOT / "fevc/fevc.sthlp").read_text().split())
     reference = " ".join((ROOT / "fevc/docs/INFERENCE.md").read_text().split())
-    assert "ignoring nuisance-control estimation uncertainty" in text
-    assert "Observation-q1 calibration retains a documented limitation" in text
+    # fevc 0.6.0 removed the match and structured models; the help says so
+    # and no longer offers them.
+    assert "Removed in 0.6.0" in text
+    assert "INFERENCE_MODEL_REMOVED" in text
+    assert "Observation-q1 calibration retains a documented limitation" not in text
     assert "docs/INFERENCE.md" in text
-    # Confirmation history belongs in the detailed reference, not the applied help.
-    assert "one failed SE-ratio gate" in reference
-    assert "Independent q0 and repaired eligible q1 confirmations pass" in reference
+    # Their confirmation history is documented at the v0.5.2 tag.
+    assert "## Removed in 0.6.0" in reference
+    assert "blob/v0.5.2/fevc/docs/INFERENCE.md" in reference
 
 
 def test_help_preserves_all_runnable_example_names():
@@ -131,5 +134,8 @@ def test_catalog_preserves_match_install_inventory():
     assert previous == [
         x for x in manifest.splitlines() if x.startswith("f ") and x not in additive_helpers
     ]
-    assert "fixed-offset match" in manifest
-    assert "fixed-offset match" in (ROOT / "fevc/stata.toc").read_text()
+    # Since 0.6.0 the catalog no longer advertises fixed-offset match inference.
+    toc = (ROOT / "fevc/stata.toc").read_text()
+    for catalog in (manifest, toc):
+        assert "fixed-offset match" not in catalog
+        assert "standard errors by default; block projections on request" in catalog

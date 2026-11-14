@@ -1,5 +1,8 @@
 # Individual structured inference: development interface
 
+> **Removed from the command in fevc 0.6.0** (owner's decision of 2026-11-14): the structured models described here stop with `INFERENCE_MODEL_REMOVED`.
+> This document is kept as a design record; current standard errors are in [INFERENCE.md](INFERENCE.md).
+
 This is the owner-approved candidate in
 [`inference_completion_v1.json`](inference_completion_v1.json),
 not a qualified release. Existing source-bound confirmations and failures are

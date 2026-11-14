@@ -8,14 +8,14 @@ and the installed `help fevc`.
 - [Estimator and sample](ESTIMATOR_CONTRACT.md): targets, controls, weighting,
   deletion, and retained population.
 - [Outcome centering](CENTERING.md): None/Mean/Corrected, exact/JLA,
-  Mean projection and fixed-observed-mean component inference, Stata's
-  frequency-weighted mean, the KSS mean distinction, MCSE, native availability
-  and local timing evidence.
-- [Inference](INFERENCE.md): supported requests, assumptions, and limitations.
-- [Pooled mover–stayer inference](POOLED_COMPONENT_INFERENCE.md): explicit Rust/JLA
-  and exact Mata structured models, independent physical stayers and fixed offsets.
-- [Pooled development assessment](POOLED_COMPONENT_ASSESSMENT.md): registered
-  primary results, every withheld target, stress cases and numerical sensitivity.
+  Mean projection, Stata's frequency-weighted mean, the KSS mean
+  distinction, MCSE, native availability and local timing evidence.
+- [Inference](INFERENCE.md): the repeat-measurement standard errors of the
+  components (the default), block projections, assumptions, simulations and
+  limitations, and the models removed in 0.6.0.
+- [Pooled mover–stayer inference](POOLED_COMPONENT_INFERENCE.md) and its
+  [development assessment](POOLED_COMPONENT_ASSESSMENT.md): design records of
+  the structured models removed from the command in 0.6.0.
 - [Memory](MEMORY.md): optional budgets, forecasts, and returned diagnostics.
 - [Failures and returned results](FAILURES_AND_RETURNS.md).
 - [Changelog](../CHANGELOG.md).
@@ -33,7 +33,8 @@ and the installed `help fevc`.
 - [Control-basis certification](CONTROL_BASIS_CERTIFICATION.md) and
   [block-control derivation](BLOCK_CONTROL_DERIVATION.md).
 - [Matrix-free component inference](MATRIX_FREE_COMPONENT_INFERENCE.md) and
-  [individual inference interface](INDIVIDUAL_INFERENCE_INTERFACE.md).
+  [individual inference interface](INDIVIDUAL_INFERENCE_INTERFACE.md): design
+  records of the structured models removed in 0.6.0.
 - [Backend capabilities](RUST_MATA_PARITY.md).
 - [Design decisions](DECISIONS.md).
 
@@ -50,10 +51,11 @@ status are in [native provenance](../../native/README.md).
   implementation, independent algebra, bounded sampling assessment, companion
   technical note and exact-source platform qualification.
 - [Standard errors: technical supplement](standard_errors/standard_errors.tex): the
-  leave-out residual method behind `inferencemodel(leaveout_residual)` (the
-  default until the repeat-measurement model of [INFERENCE.md](INFERENCE.md)
-  replaced it), its assumptions, diagnostics, simulation evidence and
-  implementation status. LaTeX source; build with `latexmk -pdf`.
+  leave-out residual method, removed before release, whose pass (pseudo-noise
+  trace, control term, cost and memory accounting) the repeat-measurement
+  standard errors of [INFERENCE.md](INFERENCE.md) share; its assumptions,
+  diagnostics, simulation evidence and implementation status. LaTeX source;
+  build with `latexmk -pdf`.
 - [Automatic standard errors: proposal](AUTOMATIC_INFERENCE_PROPOSAL.md): diagnosis of the
   earlier inference routes, the design choice and the first prototype evidence. The
   supplement supersedes its implementation plan.

@@ -36,9 +36,24 @@ frequency and target weights, match or observation deletion, and
 `stayers(movers|both)`. Match deletion with `stayers(both)` retains its hybrid
 correction: mover match blocks and separate stayer observation copies.
 
+## Standard errors of the components
+
+The standard errors of the components (the repeat-measurement model of
+[the inference guide](INFERENCE.md#centering-routes-and-the-reported-covariance),
+the only component inference since 0.6.0) accept None, Mean and Corrected.
+Under Mean the pseudo-noise is centred as the outcome is, so the kernel is
+that of the centred estimate and no fixed-mean approximation is made;
+`e(inference_mean_omitted)` is zero. Under Corrected the standard error is
+that of the mean-centred estimate and treats the corrected-centering
+increment as fixed, as the numerical MCSE does. They are not combined with
+`project()` in one call.
+
 ## Component inference with a fixed observed mean
 
-`inference(highrank|q1)` accepts Mean (the default) and None on every
+This section describes the exact and structured models removed from the
+command in 0.6.0; it is kept as the 0.5.2 record.
+
+In 0.5.2 `inference(highrank|q1)` accepted Mean (the default) and None on every
 previously supported inference tuple. Mean uses the observed retained
 physical-frequency mean `c = ubar` as a fixed constant in the inference
 calculation. This omits uncertainty from estimating the mean; it is a working
@@ -100,10 +115,9 @@ limits are recorded in the [adoption manifest](../../native/pooled-component-202
 \]
 The fitted projection coefficients, leave-out residuals, score loadings and
 residual-squared naive covariance are unchanged. Corrected projection is not
-implemented. Existing combined exact-Mata `project()` and component
-`inference()` requests accept Mean or None, using the same observed mean.
-Native combined component/projection requests remain unsupported for either
-centering mode.
+implemented. Since 0.6.0 `project()` is not combined with component
+standard errors in one call; with `project()` the default reports point
+estimates for the components.
 
 The mean uses Stata's frequency-weight convention on the retained working
 outcome: `sum(f_i*u_i)/sum(f_i)`, as in `summarize u if e(sample) [fw=f]`.
@@ -187,10 +201,11 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
 - Only Corrected JLA requires an even `probes()` budget of at least four.
   Mean and None keep the ordinary probe rules. Exact Corrected does not
   require an even budget; probes are not used by exact estimation.
-- Component `inference(highrank|q1)` and `project()` accept Mean (the default)
-  or None on their existing supported tuples. Corrected with either request
-  returns `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) before estimator
-  RNG. The command does not silently switch to None.
+- `project()` accepts Mean (the default) or None on its supported tuples.
+  Corrected with `project()` returns `CENTERING_INFERENCE_UNSUPPORTED`
+  (return code 498) before estimator RNG. The command does not silently
+  switch to None. The standard errors of the components accept all three
+  modes.
 - An unknown mode returns `INVALID_CENTERING` (return code 198).
   Additional correction-system failures return a typed error; the command
   does not substitute None or Mean or fall back after RNG.
@@ -199,10 +214,9 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   `fevc_rust probe` exposes `r(centering_api)`; a missing/zero capability
   does not support active centering. Mean projection additionally requires
   projection-centering API 1, exposed as `r(projection_centering_api)`.
-  Mean component inference additionally requires component-centering API 1,
-  exposed as `r(component_centering_api)`. Existing combined exact-Mata
-  requests support Mean; native combined component/projection requests remain
-  unsupported. Missing metadata is zero; explicit None needs neither
+  Mean standard errors of the components additionally require
+  component-centering API 1, exposed as `r(component_centering_api)`.
+  Missing metadata is zero; explicit None needs neither
   attachment-centering capability on its separately supported native requests.
 - The five included payloads expose all three centering capabilities.
   All are rebuilt from `002205f2` and include pooled component inference and
@@ -252,12 +266,13 @@ from the private collector.
 | `e(mcse_centering)` for None | `uncentered` |
 | `e(mcse_centering)` for Mean | `fixed observed mean` |
 | `e(mcse_centering)` for Corrected | `fixed observed mean and fixed centering increment` |
-| `e(inference_centering)` with active component inference | `uncentered` for None; `fixed observed mean` for Mean. |
-| `e(inference_mean_omitted)` with active component inference | `0` for None; `1` for Mean. |
+| `e(inference_centering)` with standard errors of the components | `uncentered` for None; `mean-centred estimate; pseudo-noise centred identically` for Mean; `standard error of the mean-centred estimate; corrected-centering increment treated as fixed` for Corrected. |
+| `e(inference_mean_omitted)` with standard errors of the components | `0` in every mode. |
 
 The centering and MCSE macros are recorded even in exact mode and with MCSE off.
-The two inference returns are present only for active component inference;
-Mean component output and diagnostic replay state the omitted mean uncertainty.
+The two inference returns are present only for active component inference.
+The models removed in 0.6.0 recorded `fixed observed mean` and `1` under
+Mean, and their output stated the omitted mean uncertainty.
 They describe sampling-inference assumptions separately from numerical MCSE.
 `e(mcse_centering)` describes the convention if a diagnostic is calculated;
 availability is determined separately by `e(mcse_available)` and status.

@@ -1,5 +1,8 @@
 # Matrix-free component inference
 
+> **Removed from the command in fevc 0.6.0** (owner's decision of 2026-11-14): the structured models described here stop with `INFERENCE_MODEL_REMOVED`.
+> This document is kept as a design record; current standard errors are in [INFERENCE.md](INFERENCE.md).
+
 ## Status and authority
 
 The 2026-09-08 owner-approved **development candidate** is governed by

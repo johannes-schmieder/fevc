@@ -1,5 +1,8 @@
 # Pooled mover–stayer component inference
 
+> **Removed from the command in fevc 0.6.0** (owner's decision of 2026-11-14): the structured models described here stop with `INFERENCE_MODEL_REMOVED`.
+> This document is kept as a design record; current standard errors are in [INFERENCE.md](INFERENCE.md).
+
 The October 9 development implementation supports pooled match component
 inference in scalable Rust/JLA and exact Mata. Select a structured variance
 model explicitly. Omitting `inferencemodel()` retains the existing exact

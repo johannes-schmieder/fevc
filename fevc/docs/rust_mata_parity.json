@@ -12,11 +12,11 @@
   "rows": [
     {
       "id": "pooled-match-component",
-      "surface": "Pooled mover–stayer structured match q0/q1",
+      "surface": "Pooled mover–stayer structured match q0/q1 (removed in 0.6.0)",
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Explicit exact Mata and scalable Rust/JLA, fixed offsets and independent physical stayers. Separate type variance coefficients in one residual-moment Gram; dense and literal-expansion oracles pass. The 16000-call assessment has full primary availability and passes its descriptive screens; stress failures and numerical sensitivity remain in POOLED_COMPONENT_ASSESSMENT.md. All five current plugins are rebuilt at ec5e1e0e with the existing capability/receipt contracts and bounded residual refinement. Mac arm64/Rosetta, SCC Linux and private Windows native/installed checks pass, including shared full-CMG pooled structured-common/leverage q0/q1 at one/two Windows workers. native/windows-cmg-20261107/manifest.json; POOLED_COMPONENT_INFERENCE.md."
+      "evidence": "Removed from the command in fevc 0.6.0 (owner's decision of 2026-11-14): a request stops with INFERENCE_MODEL_REMOVED; the machinery stays, unreachable, and the statuses and evidence below are the 0.5.2 record (INFERENCE.md, Removed in 0.6.0). Explicit exact Mata and scalable Rust/JLA, fixed offsets and independent physical stayers. Separate type variance coefficients in one residual-moment Gram; dense and literal-expansion oracles pass. The 16000-call assessment has full primary availability and passes its descriptive screens; stress failures and numerical sensitivity remain in POOLED_COMPONENT_ASSESSMENT.md. All five current plugins are rebuilt at ec5e1e0e with the existing capability/receipt contracts and bounded residual refinement. Mac arm64/Rosetta, SCC Linux and private Windows native/installed checks pass, including shared full-CMG pooled structured-common/leverage q0/q1 at one/two Windows workers. native/windows-cmg-20261107/manifest.json; POOLED_COMPONENT_INFERENCE.md."
     },
     {
       "id": "mean-centering",
@@ -28,11 +28,11 @@
     },
     {
       "id": "mean-component-inference",
-      "surface": "Fixed-observed-mean component highrank/q1 inference",
+      "surface": "Fixed-observed-mean component highrank/q1 inference (removed in 0.6.0)",
       "mata": "implemented",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "Independent fixed-c exact/native algebra, source/capability/caller-state and q1 imperfect-solve tests pass. Full and installed Mean qualification passes for the adopted Mac b9f80ce9, Linux 63757839 and Windows 240ad74d payloads on their recorded routes; original Mac/Linux reuse excludes the unrepaired lower-level serial Corrected route. Error probes stay uncentered and mean-estimation uncertainty is omitted. Completed assessment retains 22 exact-Mata availability-screen failures in both arms; eight native cells have 100% availability and pass broad descriptive screens. Material numerical sensitivity and earlier calibration limits remain, with no general coverage claim. MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md; native/mean-component-20261008/manifest.json."
+      "evidence": "Removed from the command in fevc 0.6.0 (owner's decision of 2026-11-14): a request stops with INFERENCE_MODEL_REMOVED; the machinery stays, unreachable, and the statuses and evidence below are the 0.5.2 record (INFERENCE.md, Removed in 0.6.0). Independent fixed-c exact/native algebra, source/capability/caller-state and q1 imperfect-solve tests pass. Full and installed Mean qualification passes for the adopted Mac b9f80ce9, Linux 63757839 and Windows 240ad74d payloads on their recorded routes; original Mac/Linux reuse excludes the unrepaired lower-level serial Corrected route. Error probes stay uncentered and mean-estimation uncertainty is omitted. Completed assessment retains 22 exact-Mata availability-screen failures in both arms; eight native cells have 100% availability and pass broad descriptive screens. Material numerical sensitivity and earlier calibration limits remain, with no general coverage claim. MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md; native/mean-component-20261008/manifest.json."
     },
     {
       "id": "exact-corrected-centering",
@@ -132,27 +132,27 @@
     },
     {
       "id": "exact-component-inference",
-      "surface": "Exact observation-deletion component inference",
+      "surface": "Exact observation-deletion component inference (removed in 0.6.0)",
       "mata": "implemented",
       "rust": "deferred",
       "alpha_required": false,
-      "evidence": "Independent exact fixed-c covariance/q1 identities and source regression gates pass. The completed Mean-versus-fixed-c0 assessment retains 22 availability-screen failures across exact highrank k12/k20 and q1 k12; exact q1 k20 passes the broad screens. This is no general coverage qualification. Historical erratum and failures remain source-bound. MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md; INFERENCE_REPAIR_ERRATUM_2026-09-04.md."
+      "evidence": "Removed from the command in fevc 0.6.0 (owner's decision of 2026-11-14): a request stops with INFERENCE_MODEL_REMOVED; the machinery stays, unreachable, and the statuses and evidence below are the 0.5.2 record (INFERENCE.md, Removed in 0.6.0). Independent exact fixed-c covariance/q1 identities and source regression gates pass. The completed Mean-versus-fixed-c0 assessment retains 22 availability-screen failures across exact highrank k12/k20 and q1 k12; exact q1 k20 passes the broad screens. This is no general coverage qualification. Historical erratum and failures remain source-bound. MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md; INFERENCE_REPAIR_ERRATUM_2026-09-04.md."
     },
     {
       "id": "structured-observation-component-inference",
-      "surface": "Structured observation-deletion component inference",
+      "surface": "Structured observation-deletion component inference (removed in 0.6.0)",
       "mata": "deferred",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "direct residual Gram with 2,048 probes and unified residual-moment fit implemented; bounded local Mac/replay checks in INFERENCE_COMPLETION_2026-09-08.md. Prior observation confirmation FAIL (q1 firm SE ratio 1.1012 > 1.10) and subsequent calibration failures remain limitations, not waived gates"
+      "evidence": "Removed from the command in fevc 0.6.0 (owner's decision of 2026-11-14): a request stops with INFERENCE_MODEL_REMOVED; the machinery stays, unreachable, and the statuses and evidence below are the 0.5.2 record (INFERENCE.md, Removed in 0.6.0). direct residual Gram with 2,048 probes and unified residual-moment fit implemented; bounded local Mac/replay checks in INFERENCE_COMPLETION_2026-09-08.md. Prior observation confirmation FAIL (q1 firm SE ratio 1.1012 > 1.10) and subsequent calibration failures remain limitations, not waived gates"
     },
     {
       "id": "fixedoffset-match-component-inference",
-      "surface": "Explicit fixed-offset match q0/q1 component inference",
+      "surface": "Explicit fixed-offset match q0/q1 component inference (removed in 0.6.0)",
       "mata": "deferred",
       "rust": "qualified",
       "alpha_required": false,
-      "evidence": "independent q0/q1 confirmations pass in their registered regimes; explicit tuple and additive V1 unit receipt pass integrated Stata and clean-source macOS arm64/Rosetta native/install qualification at 53f22a1; nuisance estimation uncertainty omitted; no Linux/Windows/new-scale or release claim (FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)"
+      "evidence": "Removed from the command in fevc 0.6.0 (owner's decision of 2026-11-14): a request stops with INFERENCE_MODEL_REMOVED; the machinery stays, unreachable, and the statuses and evidence below are the 0.5.2 record (INFERENCE.md, Removed in 0.6.0). independent q0/q1 confirmations pass in their registered regimes; explicit tuple and additive V1 unit receipt pass integrated Stata and clean-source macOS arm64/Rosetta native/install qualification at 53f22a1; nuisance estimation uncertainty omitted; no Linux/Windows/new-scale or release claim (FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)"
     },
     {
       "id": "fixed-effect-projection-inference",

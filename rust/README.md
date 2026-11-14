@@ -110,13 +110,15 @@ Private internal identifiers retain their established names and ABI meanings.
 
 ## Outcome centering
 
-The pooled mover–stayer component route supports generic JLA with
-fixed nuisance offsets, original mover deletion units and independent physical
-stayer observations. It uses a joint residual-moment fit with separate variance
-coefficients by type. Public callers need the additive mixed-component capability
-and unit receipt V2. See the [pooled contract](../fevc/docs/POOLED_COMPONENT_INFERENCE.md)
-and [current checkpoint](../fevc/PLAN.md) for assessment and native distribution
-status; historical qualification below retains its original scope.
+The pooled mover–stayer structured component route (generic JLA with fixed
+nuisance offsets, original mover deletion units, independent physical stayer
+observations and a joint residual-moment fit with separate variance
+coefficients by type) was removed from the `fevc` command in 0.6.0; the code
+stays, unreachable from the command, and the
+[pooled contract](../fevc/docs/POOLED_COMPONENT_INFERENCE.md) is its design
+record. The repeat-measurement standard errors still need the additive
+mixed-component capability and unit receipt V2. Historical qualification
+below retains its original scope.
 
 The core supports None, Mean and Corrected in exact and JLA point execution.
 Mean changes only the retained working-outcome correction factor. Corrected
@@ -125,15 +127,15 @@ full/two-half leverage pools. Its numerical covariance is Mean's with the
 increment fixed. Centering API 1 configures a prepared generation before
 solve independently of numerical API 2 and without changing old ABI layouts.
 Mean projection uses the same retained frequency-weighted working-outcome
-mean in its covariance proxy. Mean highrank and q1 component inference
-use that observed mean as fixed in realized influence and q1 calculations;
-residual-moment fitting and Gaussian error probes are unchanged. This omits
-mean-estimation uncertainty and does not claim conditional validity given
-the estimated mean. Corrected projection/component inference remains
-unsupported. Mean projection requires additive projection-centering API 1;
-Mean component inference requires additive component-centering API 1.
-Existing combined exact-Mata requests support Mean; native combined
-component/projection requests remain unsupported for Mean and None. Explicit
+mean in its covariance proxy. The repeat-measurement attachment centres its
+pseudo-noise as the outcome is, so Mean needs no fixed-mean approximation,
+and accepts Corrected (the standard error of the mean-centred estimate with
+the increment fixed). The structured attachments, unreachable from the
+command since 0.6.0, held the observed mean fixed, and the native boundary
+rejects Corrected for them and for projection. Mean projection requires
+additive projection-centering API 1; Mean component standard errors require
+additive component-centering API 1. The command does not combine component
+standard errors and projection in one call. Explicit
 None needs neither attachment-centering capability for its separately
 supported requests. Existing supported tuples and ABI
 request/result layouts remain.

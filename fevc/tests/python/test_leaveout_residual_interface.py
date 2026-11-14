@@ -268,9 +268,13 @@ def test_native_diagnostics_reach_stata_through_an_additive_transport():
         "ereturn scalar inference_controls",
     ):
         assert returned in post
+    # These returns belonged to inferencemodel(leaveout_residual), removed in
+    # 0.6.0: the repeat-measurement receipt has 78 columns, so the 64-column
+    # branch above does not post them and the help does not list them.
     help_text = read("fevc/fevc.sthlp")
     for returned in ("e(V_modelbased)", "e(se_modelbased)", "e(inference_working_terms)"):
-        assert returned in help_text
+        assert returned not in help_text
+    assert "columns 39 to 78" in " ".join(help_text.split())
 
 
 def test_attachment_memory_forecast_is_its_own_lifetime_tally():

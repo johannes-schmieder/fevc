@@ -352,8 +352,12 @@ Mean and Corrected support existing exact, generic, compressed and hybrid
 point routes. Mean also supports projection through the same working-outcome
 factor in observation, match and eligible-stayer covariance contractions.
 Projection coefficients, full residuals, score loadings and naive covariance
-remain unchanged. Highrank and q1 component inference also accept Mean on
-existing supported tuples, holding the observed mean fixed. Exact Mata uses
+remain unchanged. The repeat-measurement standard errors of the components,
+the only component inference since 0.6.0, accept all three modes: their
+pseudo-noise is centred as the outcome is, and under Corrected the
+increment is held fixed. The rest of this paragraph describes the exact and
+structured models removed from the command in 0.6.0, which accepted Mean on
+their tuples, holding the observed mean fixed. Exact Mata uses
 the centered outcome in its target-specific smoother, primitive/polarized
 influences and q1 leading/remainder calculations. Native residual-moment
 fitting uses unchanged residuals. Its match collapse is
@@ -361,19 +365,19 @@ fitting uses unchanged residuals. Its match collapse is
 mean or their own means; the quadratic trace kernel remains the original
 one. Preserve the raw q1 recenter and exact remainder-identity gate. The
 calculation omits mean-estimation uncertainty without claiming conditional
-validity given that mean. Corrected with projection or component inference
+validity given that mean. Corrected with projection, and with those models,
 is rejected before RNG.
 Correction scratch is forecast and admitted before stochastic work.
 Extra-system failures are typed errors and cannot trigger post-RNG fallback.
 The additive native centering API configures a prepared generation before
 solve without altering the established ABI structures; numerical API 2
 remains independent. Native Mean projection additionally requires the additive
-projection-centering API 1 capability. Mean component inference additionally
-requires component-centering API 1: Rust core readiness bit 16 in the existing
-capabilities struct/export plus matching C transport. There is no new DLL
-export or ABI layout. Missing metadata is zero, and checks precede
-preparation/RNG. Existing combined exact-Mata requests support Mean; native
-combined component/projection requests remain unsupported for Mean and None.
+projection-centering API 1 capability. Mean component standard errors
+additionally require component-centering API 1: Rust core readiness bit 16 in
+the existing capabilities struct/export plus matching C transport. There is
+no new DLL export or ABI layout. Missing metadata is zero, and checks precede
+preparation/RNG. Component standard errors and projection are not combined
+in one call.
 Explicit None retains its existing native contract. The Mata runtime build
 identity has suffix `component-mean1`, preventing stale inference code from
 using the prior calculation. See [CENTERING.md](CENTERING.md),

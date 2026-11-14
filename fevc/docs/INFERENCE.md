@@ -1,40 +1,36 @@
 # Inference
 
-Component-inference routes in this guide accept Mean (the exact/JLA default)
-and explicit None. Mean treats the observed retained working-outcome mean as
-a fixed constant in highrank and q1 inference, omitting its estimation
-uncertainty. This is an approximation, not conditional validity given the
-observed mean. Existing combined exact-Mata inference/projection requests
-accept both modes; native combined component/projection requests remain
-unsupported. Corrected with either request is rejected before estimator
-RNG; all other tuple restrictions remain.
-The centered point estimator's numerical MCSE is a separate diagnostic,
-with the fixed-mean/increment conventions in [CENTERING.md](CENTERING.md).
-
-## Leave-out residual standard errors
-
-`inferencemodel(leaveout_residual)`, the default before the
-repeat-measurement model of the next section, uses a different
-construction from the methods described below: squared residuals carry the
-leading term of the KSS variance formula, and simulated noise passed through
-the estimator supplies the quadratic term and a calibration. They assume
-similar error variances among units that share a worker or a firm and are not
-robust to arbitrary heteroskedasticity. The method, its assumptions,
-diagnostics, evidence and supported routes are in the
-[technical supplement](standard_errors/standard_errors.tex). The rest of this
-document concerns the earlier exact and structured methods.
+`fevc` 0.6.0 reports standard errors for the four components (worker
+variance, firm variance, worker–firm covariance and variance of the sum) by
+one method, the repeat-measurement model below. It is the default,
+`inference(auto)`: every component is reported with a normal interval or
+the `q = 1` interval of KSS, chosen from the data, and `e(V)` is posted when
+every component is normal. `inference(highrank)` asks for normal intervals
+only and `inference(q1)` for the `q = 1` interval wherever it exists; both
+are strict and stop when the standard errors cannot be computed, where the
+default returns point estimates with a reason. `inference(none)` gives point
+estimates only. `inferencemodel(repeat_measurement)` names the method and
+may be omitted; `inferencedraws()` and `inferenceseed()` set its
+pseudo-noise draws and their seed. Block projections of the fixed effects
+(`project()`) have their own leave-out covariance; with `project()` the
+default reports point estimates for the components, and explicit
+`inference(highrank|q1)` with `project()` stops with
+`COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED`. The variance models of
+0.5.2 and the development model `leaveout_residual` were removed; see
+[Removed in 0.6.0](#removed-in-060). The numerical MCSE of the point
+estimates is a separate diagnostic, with the conventions in
+[CENTERING.md](CENTERING.md).
 
 ## Repeat-measurement standard errors
 
-This model, with one interval per component, is the default:
-`inference(auto)` without `inferencemodel()` selects it, and
-`inferencemodel(repeat_measurement)` requests it by name with
-`inference(auto)`, `inference(highrank)` or `inference(q1)`. It runs the
-same pass as the leave-out residual method on the deletion units (under match deletion the
+This model, with one interval per component, is the default and the only
+variance model of the command: `inference(auto)`, `inference(highrank)` and
+`inference(q1)` use it, and `inferencemodel(repeat_measurement)` names it.
+It runs one pass on the deletion units (under match deletion the
 collapsed mover matches and one unit per physical stayer observation; under
 observation deletion every physical observation), with three influence
-solves and four solves per pseudo-noise draw, and differs in the variances
-and in how the covariance is assembled:
+solves and four solves per pseudo-noise draw (the fit of the draw and its
+three kernel images). The variances and the covariance are:
 
 - deletion units that share a worker-firm cell have identical regressors and
   independent errors under the independence the point estimator already
@@ -64,8 +60,8 @@ and in how the covariance is assembled:
 With true variances for the units outside sets and no controls the estimate
 is exactly unbiased when the errors of every set are normal with one
 variance per set, whatever those variances are. With the fitted model it is
-as good as that model; estimated effects enter the profile, and the
-observed mean is handled as in the leave-out residual pass. Observation
+as good as that model; estimated effects enter the profile, and centering
+is treated as described [below](#centering-routes-and-the-reported-covariance). Observation
 deletion needs joint nuisance and, natively, unit frequencies. The
 derivation is in a technical note maintained with the companion paper; the
 simulation harness is `fevc/tools/default_interval/` and its evidence
@@ -402,332 +398,48 @@ of the other variance models and two fixes outside the default's
 computation; the default's results are bitwise the same (see the
 compatibility note in `docs/default_interval/README.md`).
 
-Native requests need readiness bit 19 (`r(component_repeat_api) == 1`) in
-addition to the bits of the leave-out residual pass; variance-source code 4
-and the diagnostic export
-`vckss_rust_engine_repeat_measurement_diagnostic_v1` are additive. The Mata
-routes (`backend(mata)`, exact or `algorithm(jla)`) carry the model without
-a plugin.
+### Centering, routes and the reported covariance
 
-## Scope
+*Centering.* Under `centering(mean)`, the default, the estimate subtracts
+the retained frequency-weighted mean of the outcome (net of the fitted
+controls under `nuisance(fixedoffset)`). The pseudo-noise is centred in the
+same way before it enters the kernel, so the kernel is that of the centred
+estimate and no approximation that holds the observed mean fixed is needed;
+`e(inference_mean_omitted)` is zero. `centering(none)` uses the uncentered
+kernel. Under `centering(corrected)` the standard error is that of the
+mean-centred estimate and treats the corrected-centering increment as
+fixed, as the numerical MCSE does. `e(inference_centering)` records which.
 
-FEVC provides opt-in econometric component inference through two
-separately identified families. Point estimation remains the default and
-continues to post no `e(V)`. Omitting `inferencemodel()` uses the deterministic
-Mata exact target-specific family and requires:
+*Routes.* The native route attaches the pass to generic JLA under
+Counter-V1 with the automatic, diagonal or CMG solver route. A mover-only
+request without controls runs on the generic engine when standard errors
+are attached, and under joint nuisance with controls one further target
+pass of two solves per point-estimate probe forms the fixed-offset units.
+Native requests need readiness bit 18 (`r(component_residual_api) == 1`),
+which the pass introduced, bit 19 (`r(component_repeat_api) == 1`),
+`r(component_mixed_api) == 1` and, under `centering(mean)`,
+`r(component_centering_api) == 1`; variance-source code 4 and the
+diagnostic exports `vckss_rust_engine_leaveout_residual_diagnostic_v1` (of
+the shared pass) and `vckss_rust_engine_repeat_measurement_diagnostic_v1`
+are additive. The plugins distributed with 0.5.2 predate bits 18 and 19, so
+with them the default returns point estimates and says why. The Mata routes
+(`backend(mata)`, or `rng(stata)` under `backend(auto)`, with
+`algorithm(jla)` or `algorithm(exact)`) carry the model without a plugin;
+under `algorithm(jla)` the standard errors are a separate stage that draws
+its own projections and costs about as much as the point estimates. The
+native attachment has its own memory forecast, a lifetime tally of its
+allocations. The pass (the pseudo-noise trace estimate, the control term,
+cost and memory accounting) is written up in the
+[technical supplement](standard_errors/standard_errors.tex) for the
+leave-out residual method that shared it; that method's squared-residual
+variances are not used.
 
-- `deletion(observation)`;
-- `algorithm(exact)` or an omitted/automatic algorithm that resolves to
-  exact;
-- the Mata backend and guarded Stata RNG;
-- either observation population: `stayers(both)` by default or explicit
-  `stayers(movers)`; and
-- unit frequency weights.
-
-The explicit fixed-offset match route below also permits positive integer
-frequency mass; observation component inference remains unit-frequency.
-The symmetric population options do not change the observation inference
-formula or its default retained sample. Earlier prerelease observation calls
-called that population `movers` while retaining eligible one-firm workers;
-explicit `stayers(movers)` now filters those workers before graph selection.
-The new explicit structured match routes also support pooled mover–stayer
-inference, as described below; that capability does not change observation semantics.
-The supported explicit Rust generic-JLA attachment
-implements matrix-free `q=0` and eligible one-mode `q=1` component inference
-with a named structured variance model. The current development candidate
-uses one residual-moment fitter for observation and match deletion.
-It is selected only by
-`inferencemodel(structured_common|structured_leverage)` together with the
-explicit Rust/JLA/Counter-V1 observation or fixed-offset match tuple, or
-explicit Mata/exact fixed-offset match tuple. Omitting
-`inferencemodel()` preserves the exact Mata target-specific smoother. The
-paper's unrestricted KSS variance-product construction remains unimplemented
-and has no reserved FEVC option token; see
-[`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
-A separate, explicit scalable Rust/JLA capability is
-available for `project()` under observation or match deletion and supports
-positive integer frequency weights as literal physical copies. These restrictions
-prevent the command from silently changing the dependence model, deletion
-unit, or randomized approximation.
-
-The implementation follows the high-rank and rank-one procedures described by
-Kline, Saggio, and Sølvsten (2020) and the KSS Matlab package's
-observable behavior. It is repository-authored MIT source. No MATLAB
-source, critical-value table, or binary data are included.
-
-## Fixed-observed-mean approximation
-
-For Mean, let `c = sum_i f_i u_i / sum_i f_i` over the retained working
-outcome and write `z = u - c`. Joint nuisance handling uses the retained
-outcome; fixed-offset handling first subtracts the full fitted nuisance
-index. Neither target nor projection weights redefine `c`. The fit,
-residuals, target matrices and eigendirections are unchanged.
-
-The realized component calculation uses `z` in every influence vector and
-raw leave-out variance proxy, including primitive/polarized exact-Mata
-smoothing and q1 leading/remainder terms. Native residual-moment variance
-fitting uses unchanged residuals. For fixed-offset match inference the
-collapsed outcome is `sqrt(F_g) (ubar_g-c)`. This is not subtraction of the
-unweighted mean of the square-root-mass-transformed outcomes.
-
-For an exact observation kernel `C`, the fixed-c calculation uses `z'Cz`
-and influence `Cz`, retaining the quadratic-noise trace for `C`. Gaussian
-inference error draws remain uncentered: neither `c` nor each draw's own mean
-is subtracted. Centering those error draws would describe a different kernel.
-q1 retains its raw recenter and exact remainder-identity gate.
-
-The approximation is credible only when the effect of estimating `c` is
-negligible on the target's sampling scale, including the q1 remainder scale.
-It does not remove estimated-mean bias or guarantee conservative intervals.
-This condition is separate from highrank diffuseness, one-mode q1
-identification, the variance model and independence assumptions. Fixed-offset
-match inference additionally omits nuisance-control estimation uncertainty.
-The [centering guide](CENTERING.md#component-inference-with-a-fixed-observed-mean)
-details these distinctions.
-
-`e(inference_centering)` records `fixed observed mean` or `uncentered`, and
-`e(inference_mean_omitted)` is respectively `1` or `0`. Both belong only to
-active component requests. The default output and diagnostic replay state
-Mean's omission; numerical MCSE remains a separate diagnostic. Native Mean
-component inference requires `r(component_centering_api) == 1` in addition
-to point-centering support. Native Mean projection separately requires
-`r(projection_centering_api) == 1`. Existing combined exact-Mata requests
-support Mean; native combined component/projection requests remain unsupported
-for both Mean and None.
-
-The [completed 12-cell assessment](MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
-retains **22 failed exact-Mata availability-screen entries**: highrank k12/k20
-and q1 k12 fail in both Mean and fixed-c0 arms. The eight native primary cells
-have 100% interval availability and pass the broad descriptive screens.
-Fixed-outcome native checks nevertheless show material numerical sensitivity,
-including point-budget endpoint changes up to 1.15 dense-oracle SD. These
-results separate mean-approximation error from other inference limitations;
-they establish no general coverage guarantee.
-
-The [native payload guide](RC_BINARY_PAYLOAD.md) records the current
-distributed artifacts and their exact platform qualification. Pooled match
-inference additionally requires `r(component_mixed_api) == 1`; an ado update
-alone does not add that capability to an older plugin. Check the loaded
-plugin with `fevc_rust probe`.
-Historical None confirmations, calibration failures and platform receipts retain their
-original scope; engineering qualification does not imply general coverage.
-
-## Variance proxy and smoothing
-
-There are two distinct implemented variance-model families. The default exact
-Mata family below is target-specific and KSS Matlab-compatible. It is not the
-paper's unrestricted heteroskedastic variance-product construction. The
-explicit Rust family fits one common positive variance vector. For either
-deletion unit, the new candidate solves the residual-moment equations
-`Z'[(I-P) ◦ (I-P)]Z gamma = Z'e²`, using 2,048 Gaussian probes by default for
-the small Gram matrix: one half the centered sample covariance of
-`Z'[(g-Pg)^2]`, with denominator `R-1`. This direct residual representation
-avoids an additional subtractive estimated-leverage term. Estimated JLA leverages and a fit-only positivity floor
-mean this implementation is not an exactly unbiased variance estimator.
-It uses no ridge, cross-fitting or fallback model. Observation rows use the
-full-model projection; match rows use weighted, fixed-offset aggregates and
-their FE-only projection. Residuals are aggregated before squaring. The match
-common model adds regression mass to the predictor set.
-`structured_common` uses normalized midranks of leverage and all
-three primitive target diagonals with squares and pairwise interactions;
-`structured_leverage` uses leverage and its square as a sensitivity model.
-Outcome-free redundant columns are removed without changing the variance-model
-span; genuine weak identification still fails the existing rank gates. The
-support requirement counts independent units per active term. Full details,
-positivity and support failures, and diagnostics are in
-[`INDIVIDUAL_INFERENCE_INTERFACE.md`](INDIVIDUAL_INFERENCE_INTERFACE.md) and
-[`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
-The structured model is an additional statistical assumption, not an
-unqualified heteroskedasticity-robust construction. V5's severe omitted-driver
-fixtures produced visibly invalid intervals even though the established
-component point estimator was unchanged. Cross-fitting and agreement with the
-leverage-only sensitivity fit cannot detect a driver omitted from both models.
-The historical V5 confirmation passed the registered correct-model and mild-
-misspecification gates on its own source; its scope and limits are recorded in
-[`structured_inference_confirmation_v5_result.json`](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/structured_inference_confirmation_v5_result.json).
-It does not qualify the later q1 repair. The corrected observation confirmation
-has one failed SE-ratio gate (1.101204 versus 1.10), an unresolved calibration
-limitation recorded in `RC_OBSERVATION_CONFIRMATION_2026-09-05.md`.
-
-The runnable candidate retains **200 JLA probes by default**. The separate
-`inferencegramprobes(#)` option sets Gram precision for this explicit structured
-Rust tuple: integers 512 through 2,147,483,647, default 2,048, subject to count
-limits and the selected [memory policy](MEMORY.md). An omitted memory budget
-never rejects a forecast; an explicit budget warns by default, and only
-`memorycheck(error)` makes it a forecast gate. Actual allocation failures
-remain errors. Inference memory bounds remain conservative and are not
-qualified by the point-estimation full-CMG accuracy measurements. Unsupported explicit use is rejected before RNG. Counts
-below 2,048 are a lower-precision speed tradeoff, not recommended for reported
-inference. `e(inference_gram_method)` is `direct_residual_covariance`.
-Changing this count leaves point, covariance, spectral and critical-value RNG
-addresses unchanged. A few preselected inference seeds provide a numerical
-sensitivity check; do not select a seed or q to obtain preferred intervals.
-Larger Gram budgets can reduce numerical error, but cannot ensure coverage.
-
-The [completion scope](inference_completion_v1.json) freezes this approximate
-candidate without another coverage campaign. The archived 1,600-call direct
-2,048-probe assessment improves numerical stability but retains three calibration
-screen failures. Exact-Gram diagnosis resolves two, with the observation-controls
-firm case still outside its historical screen. Severe variance-model
-misspecification and estimated fixed offsets remain substantive limitations.
-Old confirmation passes and failures remain source-specific; neither those
-passes nor the new engineering replays establish universal KSS coverage.
-
-### Individual intervals and joint covariance
-
-Native result V5 checks each target separately. A materially indefinite joint
-matrix no longer discards otherwise computable individual intervals. It is
-withheld, not projected onto the PSD cone. `e(q0_status)` and, for q1,
-`e(q1_status)` distinguish computed from unavailable intervals;
-`e(inference_joint_status)` reports joint admissibility. For q0, `e(V)` is
-posted only if the joint matrix and all four target checks pass. For q1 no
-Gaussian `e(V)` is posted; use the reported q1 intervals. Shared fit, input and
-solver failures remain atomic. Numerical availability alone is not evidence
-of coverage, a diffuse q0 spectrum, or a one-mode q1 remainder.
-
-### Explicit fixed-offset match inference
-
-The separate public match tuple requires all of:
-
-```text
-backend(rust) rng(counter_v1) algorithm(jla) engine(generic)
-deletion(match) nuisance(fixedoffset) stayers(both|movers)
-preconditioner(diagonal|cmg)
-inference(highrank|q1)
-inferencemodel(structured_common|structured_leverage)
-```
-
-Default/explicit `stayers(both)` includes eligible original stayers as
-independent physical observations. The additional exact route replaces
-Rust/JLA/Counter-V1 and the preconditioner with
-`backend(mata) algorithm(exact)`. Both require an explicit structured model.
-See [pooled inference](POOLED_COMPONENT_INFERENCE.md); historical mover-only
-confirmation evidence below retains its original scope.
-
-It estimates the full joint model once, forms `y_star` with `gamma_hat`,
-and holds that offset fixed in an FE-only whole-match calculation. Regression
-mass and the weighted offset-outcome mean reduce each physical match block
-to one exact scalar sufficient row. One Gaussian inference draw is generated
-per declared match, irrespective of frequency mass. Different `deletionid()`
-values remain separate units even at the same worker--firm coordinate.
-Target mass retains its existing stored-row meaning.
-
-The working model permits unrestricted covariance inside an original match
-and assumes independence across declared matches, including different matches
-of the same worker. The primary structured aggregate-match variance model
-adds normalized match-mass midrank to the leverage and primitive-target
-features (21 candidate terms); the leverage-only sensitivity retains three
-candidate terms. Design-equivalent matches stay in the same outcome-free
-variance-regression fold. Severe omitted aggregate-variance drivers can
-invalidate the reported uncertainty.
-
-**Required interpretation: Fixed-offset approximate match inference, ignoring
-nuisance-control estimation uncertainty.** Same-sample estimation of controls
-can induce cross-match dependence; few controls do not guarantee negligible
-uncertainty or conditional validity. There is no delta-method, influence,
-cross-fitted FE-model, joint-nuisance or second-stage correction. See the
-[controls diagnosis](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md).
-
-Independent q0 and repaired eligible q1 confirmations pass in their declared
-fixed-offset regimes:
-[match q0](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/RC_MATCH_Q0_CONFIRMATION_2026-09-05.md) and
-[match q1](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/fevc/docs/INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md).
-Their estimated-controls cases are calibration limitations, not coverage
-claims. Historical development failures remain unchanged. The
-[owner-approved interface decision](fixed_offset_match_interface_v1.json)
-permits this integration while retaining the corrected observation-q1
-confirmation's failed SE-ratio gate as an unresolved RC limitation; it does
-not turn that failure into a pass.
-
-The grouped q1 leading square uses the raw leave-match product
-`sum_g v_1g^2 z_g_c ehat_g,-g,c`, where `z_g_c` is the centered
-collapsed working outcome for Mean and the original one for None; positive
-modeled variances are used only
-for covariance and studentization. Independent physical-block and collapsed
-oracles protect this identity. The interval uses the existing corrected
-KSS/Andrews--Mikusheva ellipse-image calculation. A computed target is covered
-by the intended q1 claim only if it has one dominant mode and a diffuse
-remainder; covariance targets can be multi-mode. No automatic q selection or
-universal concentration cutoff is applied.
-
-The public V1 unit receipt reports independent/effective match counts,
-largest regression-mass share, match leverage, minimum maker denominator and
-omitted nuisance uncertainty. Existing spectrum, influence, variance-fit,
-PSD, solve and target-local q1 status diagnostics remain mandatory. Stata
-reconciles the receipt with the prepared match count before posting.
-Unsupported tuples and shared structural/numerical failures remain atomic;
-an unavailable target's AM endpoints are missing, never replaced with q0
-intervals. See [returns](FAILURES_AND_RETURNS.md) for the full schema.
-
-For the retained exact design, let \(H=X'X\),
-\(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
-\(\widehat e_{i,-i}=\widehat e_i/(1-P_{ii})\).
-
-For a quadratic target \(Q\), define
-\(B_{ii}=x_i'H^{-1}QH^{-1}x_i\). The high-rank calculation smooths the
-maintained-procedure proxy
-\(\widehat\sigma_{Q,i}^2=z_i\widehat e_{i,-i}\) over
-\((P_{ii},B_{ii})\), separately for movers and
-stayers. The implementation rank-bins each dimension, aggregates populated
-joint cells, and applies a weighted local-linear tricube fit. `inferencebins()`
-sets the maximum requested joint-cell resolution; the default is 1,000.
-Here `z_i=u_i-c` for Mean and `z_i=u_i` for None; the original fit and
-leave-out residuals are preserved.
-
-Materially negative fitted variances withhold the request. Tiny negative
-roundoff values are set to zero and counted in
-`e(inference_diagnostics)[1,"variance_floor_count"]`.
-
-## High-rank component covariance
-
-For each of the worker variance, firm variance, and worker--firm covariance
-targets, FEVC evaluates the KSS high-rank variance approximation
-
-\[
-\widehat V_Q = 4\sum_i W_{Q,i}^2\widetilde\sigma_{Q,i}^2
-              - \widehat{\operatorname{Var}}(\widehat\theta_Q^*).
-\]
-
-The first term uses the target-specific influence weights evaluated at the
-selected centered or uncentered working outcome. The second is the variance
-of the original corrected quadratic kernel on uncentered Gaussian error
-draws with fitted observation variances. `inferencesimulations()` controls this numerical
-approximation and defaults to 1,000. This simulation error is computational;
-it is not a second sampling uncertainty estimate.
-
-The three-by-three primitive covariance is assembled by polarization. Each
-pair applies the same scalar procedure to the summed target, using the same
-standardized simulation draws. A fixed linear map then adds the fourth target,
-
-\[
-\theta_T=\theta_\alpha+\theta_\psi+2\theta_{\alpha\psi},
-\]
-
-so `e(V)` is a coherent four-by-four covariance matrix and the corresponding
-identity holds exactly up to roundoff. A materially indefinite covariance is
-withheld. Only a negative eigenvalue within the registered numerical tolerance
-may be set to zero, with the adjustment recorded as `psd_cleanup`.
-
-Request this calculation with
-
-```stata
-fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) inference(highrank)
-```
-
-`e(component_inference)` contains the four estimates, standard errors, and
-ordinary Wald interval endpoints.
-
-For the structured Rust `q=0` mode, strong identification requires the leading
-generalized spectral contribution to vanish along the intended asymptotic
-sequence and the linear-influence contribution to satisfy the corresponding
-diffuseness/Lindeberg condition. FEVC reports both diagnostics but imposes no
-universal cutoff. Selecting `inference(highrank)` or obtaining a numerical
-result does not establish those target-specific conditions.
-
-Because accepted component inference posts matching coefficient names in
-`e(b)` and a coherent covariance in `e(V)`, Stata's standard `lincom` command
-works without a FEVC-specific wrapper. For example,
+*The reported covariance.* The pass estimates the covariance of the worker
+variance, the firm variance and the covariance and maps it through
+`total = worker + firm + 2 × covariance`, so `e(V)`, when it is posted, is
+a coherent four-by-four matrix with the coefficient names of `e(b)`, and
+Stata's standard `lincom` command works without a FEVC-specific wrapper.
+For example,
 
 ```stata
 lincom worker_variance + firm_variance + 2*worker_firm_covariance
@@ -737,41 +449,7 @@ reproduces the posted `total_variance` estimate and standard error. This is
 distinct from the KSS Matlab function `lincom_KSS`, whose purpose is
 fixed-effect projection inference and whose FEVC counterpart is `project()`.
 
-## Rank-one weak-identification intervals
-
-`inference(q1)` retains the high-rank covariance and additionally isolates the
-largest absolute eigenvalue of
-\(H^{-1/2}QH^{-1/2}\) for each target. It reports the dominant eigenvalue,
-its squared spectral share, the maximum squared observation-mode weight, the
-rank-one covariance terms, the \(F\) diagnostic, curvature, and the simulated
-critical value.
-
-For observation-space leading mode \(v_1\), FEVC forms
-
-\[
-\widehat b_1=v_1'z,
-\qquad
-\widehat V_{b_1}^{\mathrm{LO}}
-=\sum_i v_{1i}^2 z_i\widehat e_{i,-i},
-\]
-
-with `z=u-c` for Mean and `z=u` for None, and removes
-\(\lambda_1(\widehat b_1^2-\widehat V_{b_1}^{\mathrm{LO}})\)
-from the unchanged leave-out component point estimate. This raw leave-out
-product is not positivity-smoothed. In the structured Rust modes, the common
-positive fitted variance vector separately estimates the joint covariance of
-the leading score and Gaussian remainder. The native implementation verifies
-that the resulting remainder agrees with the direct rank-one-subtracted leave-out
-quadratic form after accounting for the independently computed signed
-normal-equation residual contribution of both accepted native solves. The
-arithmetic threshold and both solve gates are unchanged; an unexplained
-identity error withholds inference. The public remainder-identity diagnostic
-retains the raw discrepancy before this numerical certificate. This shared
-None/Mean repair does not change the point, covariance or interval calculation
-and is separate from the statistical mean approximation. See the
-[numerical certificate](NUMERICAL_ARCHITECTURE.md#native-q1-remainder-certificate).
-
-For curvature \(\kappa>0\), the q=1 critical-value draw is
+*The `q = 1` critical value.* For curvature \(\kappa>0\), a critical-value draw is
 
 \[
 \sqrt{\chi_1^2+(\widetilde\chi_1+1/\kappa)^2}-1/\kappa,
@@ -785,32 +463,17 @@ by a global angular grid followed by bounded refinement. It does not ship or
 interpolate the KSS Matlab package's unlicensed critical-value table.
 This critical value is based on the maximal-curvature circle and gives the KSS
 uniform asymptotic guarantee of coverage at least at the nominal level under
-its maintained assumptions. FEVC's fitted-variance and fixed-observed-mean
-approximations require their own validity conditions; selecting Mean does
-not inherit that guarantee automatically. It is
+its maintained assumptions. The fitted variance model and the
+data-dependent choice of interval require their own conditions; the
+reported interval does not inherit that guarantee automatically. It is
 not an exact finite-sample quantile of the shortest distance to a particular
 parabola, so design-specific conservatism is expected and is not removed by an
 empirical critical value.
 
-```stata
-fevc wage controls, worker(worker_id) firm(firm_id)       ///
-    deletion(observation) inference(q1) level(95)
-```
-
-The Anderson--Rubin-style endpoints and all diagnostics are stored in
-`e(q1_inference)`. The command withholds singular or indefinite rank-one
-covariance estimates rather than substituting a Wald interval.
-
-The confirmed `q=1` regime is target-specific: one leading mode is removed and
-the remaining kernel and linear-influence contributions must be diffuse. A
-target with several concentrated modes remains outside the coverage claim even
-if the calculation succeeds; V5's deliberately multi-mode covariance target
-is the canonical example. FEVC therefore reports leading and remainder shares,
-maximum mode weight, and remainder-influence concentration without applying a
-post-hoc cutoff or automatically changing `q`. The KSS/Andrews--Mikusheva
-reference has an asymptotic at-least-nominal uniform coverage guarantee under
-its assumptions and may be modestly conservative for a particular design.
-This is not a new coverage guarantee for FEVC's observed-mean approximation.
+The high-rank form and the `q = 1` interval follow Kline, Saggio and
+Sølvsten (2020); the variance model is FEVC's own. The implementation is
+repository-authored MIT source. No MATLAB source, critical-value table, or
+binary data are included.
 
 ## Fixed-effect projections
 
@@ -903,7 +566,9 @@ cross-coordinate IDs fail with `CROSS_COORDINATE_MATCH`.
 
 A residual-squared plug-in covariance is returned separately as a descriptive
 naive comparison. Projection inference does not populate the component
-`e(V)` unless `inference(highrank|q1)` is also requested.
+`e(V)`: with `project()` the default reports point estimates for the
+components, and `inference(highrank|q1)` with `project()` stops with
+`COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED`.
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///
@@ -1058,31 +723,34 @@ same-host KSS Matlab speed comparison or new cross-platform performance claim.
 
 ## RNG and failure behavior
 
-`inferenceseed()` affects only the numerical high-rank and q=1 simulations.
-The outer command restores the caller's RNG algorithm, stream, and complete
+`inferenceseed()` seeds the standard-error calculation: its pseudo-noise
+draws, the `q = 1` critical-value simulations and, on the Mata
+`algorithm(jla)` stage, its own projections. The point estimates use
+`seed()`. The outer command restores the caller's RNG algorithm, stream, and complete
 state on success and every supported failure. Repeating the same accepted
 request with the same source, data, options, and inference seed is
 deterministic.
 
-Requested inference is atomic with the point estimate: if smoothing,
-covariance, eigen, projection, or runtime validation fails, no partial
-estimation result is posted. Typed failure statuses and the stored-return
+A strict request (`inference(highrank)`, `inference(q1)` or `project()`)
+is atomic with the point estimate: if the variance fit, covariance, leading
+direction, projection, or runtime validation fails, no partial estimation
+result is posted. Under the default a failure that can come from the
+standard errors is followed by one more run without them, and
+`e(inference_auto_reason)` names the status of the stopped run. Typed
+failure statuses and the stored-return
 contract are listed in [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md).
 
 ## Interpretation boundary
 
-Component procedures estimate sampling uncertainty under their explicitly
-selected target-specific or structured variance model; neither implemented
-component family is the paper's unrestricted variance-product construction.
-Projection inference additionally
+The standard errors of the components estimate sampling uncertainty under
+the repeat-measurement variance model: sample variances where deletion
+units repeat a worker–firm cell and a fitted model elsewhere. They are not
+the unrestricted leave-two-out construction of KSS. Projection inference
 supports independent match blocks with unrestricted within-match covariance,
 including the default mixed mover-match/stayer-observation population. On the
 scalable projection route, JLA approximates the leverage and block-deleted
 residual used by the covariance estimator; probe dispersion itself is not
-reported as an econometric standard error. The binned local-linear
-calculation for component inference is the KSS Matlab-compatible
-high-rank approximation; it is not the separately derived fully unbiased
-leave-three-out variance estimator.
+reported as an econometric standard error.
 
 The source-bound comparison in
 [archived inference/KSS Matlab qualification record](https://github.com/johannes-schmieder/fevc/blob/ffca8b5cfc0ff8c495923c00d93ca292528e57d9/docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
@@ -1094,9 +762,8 @@ standard errors are not treated as a parity gate.
 
 Parallel declared match blocks at one worker--firm coefficient cell use the
 original-deletion-unit population contract in `ESTIMATOR_CONTRACT.md`. Exact
-Mata projection and current Rust projection inherit that partition. Native
-match-component inference counts distinct deletion units, including for workers
-at one model firm, while retaining its fixed-offset, mover-only contract.
+Mata projection and current Rust projection inherit that partition, and so
+do the standard errors of the components.
 Old native runtimes without deletion-unit readiness return
 `RUST_PARALLEL_DELETION_UNSUPPORTED` for strict requests before preparation/RNG.
 Engineering parity tests do not extend historical inference-coverage claims.
@@ -1109,3 +776,46 @@ point estimates only. Sampling covariance, intervals, projection coefficients
 and their extra simulations receive no numerical MCSE. Their capability and
 scientific gates are unchanged. Use `mcse(off)` to skip the main all-probe
 diagnostic; numerical covariance is never substituted for `e(V)`.
+
+## Removed in 0.6.0
+
+On the owner's decision of 2026-11-14 ("Only the default";
+[DECISIONS.md](DECISIONS.md)) the command offers one way to get standard
+errors of the components. Removed from the command:
+
+- `inferencemodel(target_lowess)`, the exact Mata observation-deletion
+  model that `inference(highrank|q1)` selected without `inferencemodel()`
+  in 0.5.2 (binned local-linear smoothing of leave-out variance proxies,
+  with the observed mean held fixed);
+- `inferencemodel(structured_common)` and `inferencemodel(structured_leverage)`,
+  the experimental structured residual-moment models of 0.5.2 for
+  observation deletion, fixed-offset match deletion and pooled movers and
+  stayers, on Rust/JLA/Counter-V1 and exact Mata;
+- `inferencemodel(leaveout_residual)`, a squared-residual (HC2) method
+  added during development after 0.5.2 and never released; the
+  repeat-measurement model runs its pass with different variances;
+- `inferencesimulations()`, `inferencebins()` and `inferencegramprobes()`,
+  which tuned only those models; and
+- component inference and `project()` in one call, which 0.5.2 allowed on
+  exact Mata.
+
+A request for a removed model stops before estimation with
+`INFERENCE_MODEL_REMOVED`, one for a removed option with
+`INFERENCE_OPTION_REMOVED` (return code 198 for both), and explicit
+`inference(highrank|q1)` with `project()` with
+`COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED` (return code 498).
+`inference(highrank)` and `inference(q1)` now select the intervals of the
+repeat-measurement model; their results equal those with
+`inferencemodel(repeat_measurement)`. The Mata and Rust machinery of the
+removed models stays in the source, unreachable from the command. Their
+derivations, assumptions, confirmations and failures (the fixed-observed-mean
+approximation, the structured variance fit, the fixed-offset match
+confirmations, the observation-`q1` calibration failure, the Mean component
+assessment) are documented at the git tag `v0.5.2`, in
+[INFERENCE.md at v0.5.2](https://github.com/johannes-schmieder/fevc/blob/v0.5.2/fevc/docs/INFERENCE.md);
+the design records [POOLED_COMPONENT_INFERENCE.md](POOLED_COMPONENT_INFERENCE.md),
+[MATRIX_FREE_COMPONENT_INFERENCE.md](MATRIX_FREE_COMPONENT_INFERENCE.md) and
+[INDIVIDUAL_INFERENCE_INTERFACE.md](INDIVIDUAL_INFERENCE_INTERFACE.md) and
+the dated assessments remain in this directory. The leave-out residual
+method is described in the
+[technical supplement](standard_errors/standard_errors.tex).

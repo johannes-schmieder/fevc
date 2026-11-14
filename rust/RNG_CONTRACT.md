@@ -78,7 +78,8 @@ standard normal. Multiplication by the square root of the positive oracle
 variance produces the pseudo-outcome. The complete logical-atom and two-word-
 per-atom counts, overflow, and per-entity word cap are preflighted before
 estimator RNG. This mapping is schedule and batch invariant and is used by the
-supported explicit structured component-inference capability.
+structured component-inference capability, which is unreachable from the
+command since fevc 0.6.0.
 
 Explicit q=1 critical-value simulation addresses each target and simulation in
 the critical-value domain and always consumes two Box--Muller normals (four

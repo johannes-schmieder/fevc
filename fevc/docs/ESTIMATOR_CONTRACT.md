@@ -186,17 +186,13 @@ Mean's numerical MCSE treats the observed mean as fixed. Corrected uses
 exactly Mean's numerical MCSE/covariance, also treating its added increment
 as fixed. Enabled exact MCSE is zero; off is unavailable. Projection accepts
 Mean and None, using the same mean in its symmetrized block covariance proxy;
-projection coefficients and naive covariance are unchanged. Component
-`inference(highrank|q1)` accepts Mean or None on every existing supported
-tuple. Existing combined exact-Mata requests support Mean; native combined
-component/projection requests remain unsupported for both Mean and None.
-Mean holds the
-observed mean fixed in realized influence, exact-route variance-proxy and
-q1 leading/remainder calculations; Gaussian error probes remain uncentered.
-This omits mean-estimation uncertainty and is not inference conditional on
-the estimated mean. Fixed-offset nuisance uncertainty is a separate omission.
-Corrected with either inference or projection remains unsupported. See
-[INFERENCE.md](INFERENCE.md) for the unchanged tuple, variance-model and
+projection coefficients and naive covariance are unchanged. Corrected
+projection remains unsupported. The standard errors of the components
+accept None, Mean and Corrected: their pseudo-noise is centred as the
+outcome is, so Mean needs no fixed-mean approximation, and under Corrected
+they are those of the mean-centred estimate with the increment treated as
+fixed. They are not combined with `project()` in one call. See
+[INFERENCE.md](INFERENCE.md) for the tuple, variance-model and
 identification restrictions.
 
 ## Sample and dependence contract
@@ -283,16 +279,16 @@ selection is explicit in `e(stayers)` and `e(stayer_option_schema)`.
 ## Scope of the result
 
 These formulas define the ordinary point estimates; the Mean default modifies
-the correction as specified above. Component inference requires
-`centering(none)`. Component `inference(highrank|q1)` defaults to the observation-only
-exact Mata target-specific variance approximation; supported
-explicit `inferencemodel(structured_common|structured_leverage)` attaches
-matrix-free covariance inference to the unchanged generic-JLA point result.
-Its explicit match tuple additionally requires `nuisance(fixedoffset)` and
-`stayers(movers)`: control-estimation uncertainty is omitted, and a structured
-model for independent aggregate-match variances is imposed. This is approximate
-match inference, not joint-control or unrestricted KSS inference. It does not
-change the default joint-nuisance, combined-population point estimator.
+the correction as specified above. The standard errors of the components,
+reported by default, come from one method, the repeat-measurement model of
+[`INFERENCE.md`](INFERENCE.md): on the same deletion units and population as
+the point estimate, sample variances for units that repeat a worker--firm
+cell and a fitted model for the others, with the estimation of the controls
+entering to first order. With controls they are the standard errors of the
+fixed-offset estimate; INFERENCE.md states what this leaves out under joint
+nuisance. They never change the point estimator, its
+backend, algorithm or solver route. The exact and structured variance
+models of 0.5.2 were removed from the command in 0.6.0.
 Fixed-effect `project()` instead inherits the point estimator's effective
 deletion and population contract: omitted `deletion()` means declared mover
 matches plus eligible-stayer observation units. Its block cross-fit covariance

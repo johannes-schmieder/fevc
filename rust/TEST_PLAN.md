@@ -339,8 +339,13 @@ release.
 
 ## Mean component inference gate
 
-The public Mean default is accepted for highrank and q1 on every existing
-component tuple. The native requirement is additive
+fevc 0.6.0 removed the exact and structured component models from the
+command; this gate and the matrix-free component-inference gate below
+describe their retained machinery and the 0.5.2 record. Their Stata files
+now drive the repeat-measurement model.
+
+In 0.5.2 the public Mean default was accepted for highrank and q1 on every
+existing component tuple. The native requirement is additive
 `component_centering_api=1`, independent of point/projection centering and
 numerical API capabilities. Rust readiness bit 16 uses the existing
 capabilities struct/export; the C shim exposes the field only when the bit is
@@ -452,6 +457,9 @@ SCC or platform matrix.
 
 ## Supported explicit matrix-free component-inference gate
 
+The structured models of this gate were removed from the command in 0.6.0
+(see the note under the Mean component inference gate).
+
 The pooled mover–stayer extension additionally requires
 `test_pooled_component_inference.do` for both structured models on Rust and
 exact Mata, including installed candidate bytes. Independent mixed-unit dense
@@ -501,7 +509,8 @@ and isolated-install gates; the current result and limitations are in
 `../fevc/docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`.
 
 The oracle-variance layer is internal; the structured-variance observation-
-deletion attachment is a supported explicit public route, not a default. Its
+deletion attachment was a supported explicit public route in 0.5.2 and is
+unreachable from the command since 0.6.0. Its
 focused source gate requires independent dense identities for `H^{-1}`, `P`,
 the three `B_t` and zero-diagonal `C_t` kernels, combined influence vectors,
 and the common one-solve Gaussian scalar; joint trace-covariance Monte Carlo

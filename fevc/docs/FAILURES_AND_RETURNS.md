@@ -13,10 +13,9 @@ The column order of every result matrix is:
 `mcse`. Its last row equals the selected-mode diagnostic `e(mcse)`. The corrected row is also stored in `e(b)` and `e(kss)`.
 The component rows and selected MCSE are available separately as `e(plugin)`, `e(correction)`,
 and `e(mcse)`. Point-only and projection-only calls post no `e(V)`.
-The new explicit Rust structured candidate posts `e(V)` only for
-`inference(highrank)` when the joint covariance is admissible and every q0
-target check passes. Its q1 route posts no Gaussian `e(V)`. The independent
-exact Mata family's posting contract is unchanged.
+The standard errors of the components post `e(V)` only when the joint
+covariance is admissible and every component has a normal interval; see
+[Successful status](#successful-status).
 
 ## Outcome-centering metadata
 
@@ -105,23 +104,88 @@ preparation/RNG under the ordinary consent rules. This capability failure
 is distinct from `STALE_NUMERICAL_RUNTIME` for explicit all-probe MCSE.
 Mean projection additionally requires native projection-centering API 1
 (`r(projection_centering_api)`); None projection does not require it. The same
-preflight/fallback rules apply when that capability is absent. Mean component
-inference additionally requires `r(component_centering_api) == 1`. Existing
-combined exact-Mata requests support Mean; native combined component/projection
-requests remain unsupported for both Mean and None. Missing metadata is zero,
-and probe cache state is cleared. Separate None component/projection
-requests retain their existing capability requirements.
+preflight/fallback rules apply when that capability is absent. Native Mean
+standard errors of the components additionally require
+`r(component_centering_api) == 1`; they are never combined with `project()`
+in one call. Missing metadata is zero, and probe cache state is cleared.
+None requests retain their existing capability requirements.
 
-For active component inference, `e(inference_centering)` records `uncentered`
-for None or `fixed observed mean` for Mean, and `e(inference_mean_omitted)`
-records `0` or `1`, respectively. These returns are absent for point-only or
-projection-only requests and cleared on failure. Mean treats the observed
-retained physical-frequency working-outcome mean as a constant, omitting its
-estimation uncertainty. The output and diagnostic replay state this
-approximation. It is separate from numerical MCSE and from fixed-offset
-nuisance uncertainty; it does not claim conditional validity given that mean.
+For the standard errors of the components, `e(inference_centering)` records
+`uncentered` for None, `mean-centred estimate; pseudo-noise centred
+identically` for Mean, and `standard error of the mean-centred estimate;
+corrected-centering increment treated as fixed` for Corrected;
+`e(inference_mean_omitted)` is `0` in every mode, because the pseudo-noise
+is centred as the outcome is and no fixed-mean approximation is made. These
+returns are absent for point-only or projection-only requests and cleared on
+failure. They are separate from numerical MCSE. The models removed in 0.6.0
+recorded `fixed observed mean` and `1` under Mean.
 
 ## Opt-in inference matrices
+
+The standard errors of the components post `e(component_inference)`
+(estimate, high-rank standard error and normal endpoints for each target)
+and, when the joint covariance is admissible and every component has a
+normal interval, `e(V_primitive)` for worker variance, firm variance, and
+worker--firm covariance and `e(V)`, which adds the total target through the
+exact linear identity `total=worker+firm+2*covariance`. Their own returns,
+`e(inference_intervals)`, `e(inference_leading)`, `e(inference_repeat)` and
+the scalars that go with them, are listed under
+[Successful status](#successful-status). The native route also posts the
+attachment's shared returns, defined in the subsection below:
+`e(q0_status)`; `e(inference_joint_status)`, `e(inference_joint_available)`
+and `e(inference_joint_posted)` (joint status 3 when a component is
+reported with the `q = 1` interval); `e(inference_computed_targets)`;
+`e(component_spectrum)`, `e(component_trace_mcse)`, `e(variance_floor)` and
+`e(variance_floor_share)`; `e(inference_solver_columns)`;
+`e(component_inference_receipt)` and `e(component_augmentation_receipt)`;
+and the unit receipt `e(component_unit_receipt)` with
+`e(inference_independent_units)` and, under match deletion,
+`e(inference_mover_units)`, `e(inference_stayer_units)`,
+`e(inference_effective_matches)`, `e(inference_largest_mass_share)`,
+`e(inference_largest_leverage)` and `e(inference_smallest_maker)`. For these
+standard errors `e(inference_nuisance_omitted)` is zero when the model has
+controls, whose estimation enters to first order, and one without controls.
+
+Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
+`e(projection_V_naive)`, and `e(projection_results)`. They do not populate the
+component `e(V)`; with `project()` the default reports point estimates for the
+components, and explicit component inference in the same call is refused.
+`e(inference_diagnostics)` records simulations, seed, bins, confidence level,
+component and projection PSD cleanups, component and projection variance-proxy
+ranges, mover/stayer row counts, and the count of tiny fitted variances set to zero. See
+[`INFERENCE.md`](INFERENCE.md) for definitions and limitations.
+
+Projection metadata records the effective deletion mode, mover/stayer
+partition, exact or sparse-JLA route, and the fixed-effect normalization. The
+reported slopes are invariant to equivalent worker/firm location shifts. The
+automatic constant is explicitly normalization-dependent under the last-
+retained-firm-zero convention.
+
+`e(decomposition)` is the applied additive view. Its rows are
+`worker_variance`, `firm_variance`, `sorting_2covariance`, and
+`total_worker_firm`; its columns are `plugin`, `bias_correction`, `corrected`,
+`plugin_share_outcome`, `corrected_share_outcome`,
+`plugin_share_worker_firm`, and `corrected_share_worker_firm`. Unlike the raw
+covariance in the established matrices, the sorting row is twice the
+worker--firm covariance, so the first three rows add to the fourth. Shares are
+stored as proportions and are missing when their denominator is nonpositive.
+Negative component contributions remain valid when the denominator is
+positive.
+
+### Returns of the models removed in 0.6.0
+
+The rest of this section describes the returns of the exact and structured
+models removed from the command in 0.6.0 (see
+[INFERENCE.md](INFERENCE.md#removed-in-060)). The shared returns named at
+the start of this section keep the meanings given here on the native route
+of the repeat-measurement standard errors, except the nuisance flag. The
+others,
+including `e(q1_inference)`, `e(q1_status)`, `e(q1_computed_targets)`,
+`e(component_q1_diagnostics)`, `e(structured_variance_summary)`,
+`e(structured_variance_folds)`, `e(structured_variance_cv)`,
+`e(residual_moment_diagnostics)`, `e(inference_gram_probes)`,
+`e(inference_gram_method)`, `e(variance_gram_rcond)` and
+`e(component_raw_covariance)`, are no longer reachable from the command.
 
 When the joint matrix is admissible, component inference posts `e(V_primitive)` for
 worker variance, firm variance, and worker--firm covariance. `e(V)` adds the
@@ -248,31 +312,6 @@ malformed shared state, resource rejection, or interruption withholds the
 atomic result. These diagnostics do not assert that
 a computed target has a one-mode, diffuse-remainder asymptotic regime.
 
-Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
-`e(projection_V_naive)`, and `e(projection_results)`. They do not populate the
-component `e(V)` unless component inference is requested in the same call.
-`e(inference_diagnostics)` records simulations, seed, bins, confidence level,
-component and projection PSD cleanups, component and projection variance-proxy
-ranges, mover/stayer row counts, and the count of tiny fitted variances set to zero. See
-[`INFERENCE.md`](INFERENCE.md) for definitions and limitations.
-
-Projection metadata records the effective deletion mode, mover/stayer
-partition, exact or sparse-JLA route, and the fixed-effect normalization. The
-reported slopes are invariant to equivalent worker/firm location shifts. The
-automatic constant is explicitly normalization-dependent under the last-
-retained-firm-zero convention.
-
-`e(decomposition)` is the applied additive view. Its rows are
-`worker_variance`, `firm_variance`, `sorting_2covariance`, and
-`total_worker_firm`; its columns are `plugin`, `bias_correction`, `corrected`,
-`plugin_share_outcome`, `corrected_share_outcome`,
-`plugin_share_worker_firm`, and `corrected_share_worker_firm`. Unlike the raw
-covariance in the established matrices, the sorting row is twice the
-worker--firm covariance, so the first three rows add to the fourth. Shares are
-stored as proportions and are missing when their denominator is nonpositive.
-Negative component contributions remain valid when the denominator is
-positive.
-
 ## Main metadata
 
 The command records the requested, complete, initial-component, mover-input,
@@ -383,23 +422,25 @@ scientific, numerical, memory-policy/reconciliation, and restoration gates. The 
 is an engine-development label, not a scale qualification. Neither status
 means that the application's independence assumptions were verified.
 
-Accepted opt-in requests instead use `KSS_HIGHRANK_INFERENCE`,
-`KSS_Q1_INFERENCE`, or `KSS_PROJECTION_INFERENCE`, with combined component and
-projection variants when both are requested. These statuses mean that the
-finite inference calculation passed the registered numerical and capability
-gates; they do not verify the sampling assumptions in an application.
-For Mean, read these statuses together with `e(inference_centering)` and
-`e(inference_mean_omitted)`; successful calculation does not validate the
-omitted-mean-uncertainty approximation.
-The explicitly selected Rust structured modes use
-`FEVC_STRUCTURED_Q0_INFERENCE` and `FEVC_STRUCTURED_Q1_INFERENCE`. The FEVC
-prefix is intentional: these are pragmatic structured-variance extensions,
-not the paper's unrestricted-heteroskedastic KSS variance-product estimator.
-Repeat-measurement standard errors (the default, `inference(auto)`, and
-`inferencemodel(repeat_measurement)` by name) post
+A projection request uses `KSS_PROJECTION_INFERENCE`. Like the statuses
+below, it means that the finite inference calculation passed the registered
+numerical and capability gates; none verifies the sampling assumptions in an
+application. The statuses `KSS_HIGHRANK_INFERENCE`, `KSS_Q1_INFERENCE`,
+`KSS_Q1_PARTIAL`, their combined projection variants,
+`FEVC_STRUCTURED_Q0_INFERENCE`, `FEVC_STRUCTURED_Q1_INFERENCE` and their
+`_PARTIAL` forms belonged to the models removed in 0.6.0 and are no longer
+reachable from the command.
+The standard errors of the components (the default, `inference(auto)`;
+`inference(highrank)` or `inference(q1)`; `inferencemodel(repeat_measurement)`
+by name) post
 `FEVC_REPEAT_MEASUREMENT_SE`, or `FEVC_REPEAT_MEASUREMENT_SE_PARTIAL` when a
-component variance is withheld, with `e(inference_variance_fit)` equal to
-`repeat_measurement`, the returns of the leave-out residual pass listed next,
+component variance is withheld (`FEVC_STRUCTURED_INFERENCE_UNAVAILABLE`, a
+name kept from the structured models, when none is available), with
+`e(inference_variance_fit)` equal to `repeat_measurement`, the returns of the
+shared pass (`e(inference_draws)`, `e(inference_simulations)`,
+`e(inference_effective_rank)`, `e(inference_min_effective_rank)`,
+`e(inference_max_influence_share)`, `e(inference_low_rank_warning)` and the
+assumption text in `e(inference_variance_warning)`),
 `e(inference_nuisance_omitted)` equal to zero when the model has controls
 (their estimation enters the standard errors to first order) and to one
 when it has none, and the shape of the variances
@@ -425,15 +466,8 @@ with the 28 values of the leading direction and its decomposition), with
 `FEVC_REPEAT_MEASUREMENT_Q1` when a component is reported with the `q = 1`
 interval; `e(V)` is then not posted, `e(inference_joint_posted)` is zero and
 the native joint status is 3. `e(inference)` remains `highrank`, the pass
-that was run, and `e(component_inference)` keeps the normal table.
-Leave-out residual standard errors (`inferencemodel(leaveout_residual)`)
-post `FEVC_LEAVEOUT_RESIDUAL_SE`, or
-`FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL` when a component variance is withheld,
-with `e(inference_variance_fit)` equal to `leaveout_residual`,
-`e(inference_draws)`, `e(inference_effective_rank)`,
-`e(inference_max_influence_share)`, `e(inference_low_rank_warning)` and the
-assumption text in `e(inference_variance_warning)`. Under
-`inference(auto)`, with either model, `e(inference_auto)` is 1 and
+that was run, and `e(component_inference)` keeps the normal table. Under
+`inference(auto)`, `e(inference_auto)` is 1 and
 `e(inference_auto_reason)` is empty when the standard errors were computed
 and otherwise states why the request returned
 point estimates only; that outcome is not a failure and keeps the
@@ -441,11 +475,18 @@ point-estimate status. If the run that carried them stops, the command runs
 once more without them and the reason names the status of the stopped run.
 `e(inference_offset_pass_solves)` counts the additional target-pass solves
 under joint nuisance with controls on the native backend. The native route
-also posts `e(V_modelbased)`, `e(se_modelbased)`,
-`e(inference_working_terms)`, `e(inference_signal_truncation)` and
-`e(inference_controls)`, and widens `e(component_inference_receipt)` to 64
-columns; a diagnostic that does not reconcile with the shared receipt
-withholds the standard errors with the internal-invariant status.
+widens `e(component_inference_receipt)` to 78 columns: 39 to 64 carry the
+diagnostic of the shared pass (draws, controls, model terms, offset-pass
+solves, the covariance as computed and the effective ranks) and 65 to 78
+the shape of the variances in `e(inference_repeat)`; a diagnostic that does
+not reconcile with the shared receipt withholds the standard errors with
+the internal-invariant status. `inferencemodel(leaveout_residual)`, removed
+before release, posted `FEVC_LEAVEOUT_RESIDUAL_SE` or
+`FEVC_LEAVEOUT_RESIDUAL_SE_PARTIAL`, `e(inference_variance_fit)` equal to
+`leaveout_residual`, a 64-column receipt and `e(V_modelbased)`,
+`e(se_modelbased)`, `e(inference_working_terms)`,
+`e(inference_signal_truncation)` and `e(inference_controls)`; the
+repeat-measurement route posts none of them.
 
 ## Withholding statuses
 
@@ -460,10 +501,9 @@ estimand. The catalog includes:
 
 - `INVALID_CENTERING` (return code 198) for an unknown centering mode;
 - `CENTERING_INFERENCE_UNSUPPORTED` (return code 498) for Corrected with
-  active component `inference()` or `project()`, rejected before estimator RNG.
-  Mean (the default) and None are permitted on existing supported tuples,
-  including combined exact-Mata requests; native combined component/projection
-  requests remain unsupported for Mean and None;
+  `project()`, rejected before estimator RNG. Mean (the default) and None are
+  permitted on the supported projection tuples; the standard errors of the
+  components accept all three modes;
 - `INVALID_FREQUENCY`, `PHYSICAL_TOTAL_LIMIT` when the exact literal count
   exceeds `2^53`, and `INVALID_TARGET_WEIGHT`;
 - `INVALID_DEPVAR`, `INVALID_CONTROLS`, `INVALID_INPUT`, `NONFINITE_INPUT`,
@@ -472,29 +512,47 @@ estimand. The catalog includes:
   `INVALID_MEMORY_ENVELOPE`, `INVALID_WALL_ENVELOPE`, and `INVALID_ENGINE`;
 - `UNSUPPORTED_ALGORITHM`, `UNSUPPORTED_DELETION`,
   `UNSUPPORTED_DELETION_ID`, and `UNSUPPORTED_STAYER_CONVENTION`;
+- `INFERENCE_MODEL_REMOVED` (return code 198) for
+  `inferencemodel(target_lowess|structured_common|structured_leverage|leaveout_residual)`,
+  before every other check: "inferencemodel(...) was removed in fevc 0.6.0;
+  fevc reports repeat-measurement standard errors by default (help fevc,
+  Standard errors)";
+- `INFERENCE_OPTION_REMOVED` (return code 198) for `inferencesimulations()`,
+  `inferencebins()` or `inferencegramprobes()`: "...() applied only to the
+  variance models removed in fevc 0.6.0";
 - `INVALID_INFERENCE`, `INVALID_INFERENCE_TUNING`,
   `INVALID_INFERENCE_MODEL`, and `INFERENCE_MODEL_WITHOUT_INFERENCE`,
   `INVALID_PROJECTION_EFFECT`, `INVALID_PROJECTION_WEIGHT`, and
   `PROJECTION_OPTIONS_INCOMPLETE` for malformed inference requests;
-- `INFERENCE_DELETION_UNSUPPORTED`, `INFERENCE_STAYER_UNSUPPORTED`,
-  `INFERENCE_FREQUENCY_UNSUPPORTED`, `JLA_INFERENCE_UNSUPPORTED`,
-  `RUST_INFERENCE_UNSUPPORTED`, and `COUNTER_INFERENCE_UNSUPPORTED` for
-  component requests outside the exact-observation Mata capability, or a
-  projection tuple outside the separately documented block capability;
-- `INFERENCE_MODEL_UNSUPPORTED`, `STRUCTURED_INFERENCE_TUPLE_REQUIRED`,
-  `STRUCTURED_FREQUENCY_UNSUPPORTED`, and
-  `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED` for a structured request
-  outside its supported explicit tuple; unknown model tokens instead fail
-  as `INVALID_INFERENCE_MODEL`;
-- `LEAVEOUT_RESIDUAL_TUPLE_REQUIRED` for a strict
-  `inference(highrank) inferencemodel(leaveout_residual)` request that the
-  selected options or the installed plugin cannot carry, and
-  `LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED` when it is combined with
-  `inference(q1)`; `inference(auto)` does not raise the former;
-- `REPEAT_MEASUREMENT_TUPLE_REQUIRED` for
-  `inferencemodel(repeat_measurement)` with `project()`, under observation
-  deletion with `nuisance(fixedoffset)`, or on a backend or plugin that
-  cannot carry it;
+  `inferencemodel()` accepts only `repeat_measurement`, and any other
+  unknown token fails as `INVALID_INFERENCE_MODEL`;
+- `JLA_INFERENCE_UNSUPPORTED`, `RUST_INFERENCE_UNSUPPORTED`, and
+  `COUNTER_INFERENCE_UNSUPPORTED` for a projection tuple outside the
+  separately documented block capability;
+- `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED` (return code 498) for
+  explicit `inference(highrank)` or `inference(q1)` with `project()`:
+  "Standard errors of the components and project() cannot be combined in one
+  call; run them in separate calls." With `project()` the default reports
+  point estimates for the components;
+- `REPEAT_MEASUREMENT_TUPLE_REQUIRED` (return code 498) for a strict
+  `inference(highrank)` or `inference(q1)` request that the options or the
+  installed plugin cannot carry: observation deletion with
+  `nuisance(fixedoffset)` or, natively, frequency weights; `algorithm(auto)`;
+  native `algorithm(exact)`; a plugin without the capability.
+  `inference(auto)` returns point estimates with the reason instead;
+- statuses that only the models removed in 0.6.0 produced and that are no
+  longer reachable from the command: `INFERENCE_DELETION_UNSUPPORTED`,
+  `INFERENCE_STAYER_UNSUPPORTED`, `INFERENCE_FREQUENCY_UNSUPPORTED` and the
+  component variants of the three statuses above (requests outside the
+  exact-observation Mata capability); `INFERENCE_MODEL_UNSUPPORTED`,
+  `STRUCTURED_INFERENCE_TUPLE_REQUIRED` and
+  `STRUCTURED_FREQUENCY_UNSUPPORTED` (a structured request outside its
+  explicit tuple); `INFERENCE_GRAM_TUPLE_REQUIRED` (see below);
+  `MIXED_COMPONENT_NATIVE_REQUIRED` (structured pooled match inference on a
+  plugin without the mixed capability); and `LEAVEOUT_RESIDUAL_TUPLE_REQUIRED`
+  and `LEAVEOUT_RESIDUAL_Q1_UNSUPPORTED` (`inferencemodel(leaveout_residual)`,
+  removed before release). Their definitions are kept for the retained
+  machinery and the 0.5.2 record;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
   `INFERENCE_INTERVAL_FAILED`, and
@@ -581,11 +639,15 @@ correction follows declared match blocks, while its stayer correction is not
 match-robust. `stayers(movers)` is the explicit opt-out when a uniformly
 match-deleted target is required.
 
-Explicit `inferencegramprobes()` outside the supported structured Rust component
-tuple returns `INFERENCE_GRAM_TUPLE_REQUIRED` before estimator RNG. A noninteger
-or count outside [512,2147483647] returns `INVALID_INFERENCE_TUNING`. Omitted
-precision is 2048. Current Stata requires component interface 4; a stale plugin
-returns `COMPONENT_NATIVE_INTERFACE_REQUIRED`. The result count must equal
+`inferencegramprobes()` was removed in 0.6.0 and stops with
+`INFERENCE_OPTION_REMOVED`. In 0.5.2 it set the Gram probes of the structured
+Rust tuple (integers from 512 to 2147483647, default 2048); outside that
+tuple it returned `INFERENCE_GRAM_TUPLE_REQUIRED`, which is no longer
+reachable. `INVALID_INFERENCE_TUNING` now covers `inferencedraws()` outside
+[2,4096] and `inferenceseed()` outside [1,2147483629]. Current Stata requires
+component interface 4; with an older plugin the default reports point
+estimates and a strict request stops with
+`REPEAT_MEASUREMENT_TUPLE_REQUIRED`. The result count must equal
 the requested/planned count; a corrupted receipt fails atomically.
 
 ## Control-basis certification (API 23)

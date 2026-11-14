@@ -89,6 +89,11 @@ records the method, assumptions, local timings and evidence.
 
 ## Inference
 
+The component-inference items below record the decisions behind the exact and
+structured models of 0.5.x. Those models were removed from the command on
+2026-11-14 (0.6.0; see that section below); the `project()` and licensing
+items remain current.
+
 - Version `0.5.0-alpha.1` adds inference only by explicit request. Point-only
   behavior and the absence of `e(V)` on default calls are unchanged.
 - Component `inference(highrank|q1)` defaults to Mata exact with observation
@@ -528,6 +533,29 @@ records of its runs are in the repository (`tools/default_interval/`,
 `docs/default_interval/`). The registered suites keep the point-only
 default they were written for, and the command's own default has a test of
 its own in every suite and qualifier. The version is 0.6.0.
+
+The owner then asked: "what do you mean by: 'inferencemodel(leaveout_residual)
+keeps the earlier default' What default? I thought the plan was that we were
+offering only one way to get standard errors. explain." Offered three
+options, he chose "Only the default". Accordingly the command computes the
+standard errors of the components by one method, the repeat-measurement
+model. `inferencemodel(leaveout_residual)`, added on 2026-11-10 and never
+released, and the three experimental structured models of 0.5.2,
+`inferencemodel(target_lowess)`, `inferencemodel(structured_common)` and
+`inferencemodel(structured_leverage)`, are removed, with the options that
+served only them (`inferencesimulations()`, `inferencebins()`,
+`inferencegramprobes()`). A request for one of them stops before every other
+check with `INFERENCE_MODEL_REMOVED` or `INFERENCE_OPTION_REMOVED` (return
+code 198) and a message that names the change. `inference(highrank)` and
+`inference(q1)` stay as interval overrides of the one method (normal
+intervals only; the `q = 1` interval wherever it exists), and
+`inferencemodel(repeat_measurement)` stays as an alias. Explicit
+`inference(highrank|q1)` with `project()`, which 0.5.2 allowed on exact
+Mata, stops with `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED`; `project()`
+alone or beside the default is unchanged. The Mata and Rust machinery of
+the removed models stays in the source, unreachable from the command, and
+the plugin is unchanged; their documentation is that of the tag `v0.5.2`
+([INFERENCE.md](INFERENCE.md), Removed in 0.6.0).
 
 Merging into `main`, adopting the rebuilt binaries, tagging and publishing
 remain the owner's to carry out. The Windows binary needs, besides, an

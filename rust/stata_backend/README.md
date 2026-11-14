@@ -11,10 +11,11 @@ returns an 80-byte schema-2 receipt: the original unit fields followed by
 are unchanged. The wrapper clears optional transport fields before each fetch
 and requires both counts for schema 2.
 
-Default/explicit `stayers(both)` structured match inference requires this
-capability before preparation or RNG. See the
-[pooled contract](../../fevc/docs/POOLED_COMPONENT_INFERENCE.md) and
-[checkpoint](../../fevc/PLAN.md) for assessment and platform status.
+The repeat-measurement standard errors require this capability, with bits
+18 and 19, before preparation or RNG. The structured match inference that
+introduced it was removed from the command in fevc 0.6.0; the
+[pooled contract](../../fevc/docs/POOLED_COMPONENT_INFERENCE.md) is its
+design record and the [checkpoint](../../fevc/PLAN.md) gives platform status.
 Earlier payload records below retain their original capabilities and evidence scope.
 
 ## Current pooled component inference binaries
@@ -128,9 +129,11 @@ Exact, generic/compressed JLA and existing hybrid point executors receive
 the configured mode. Corrected JLA requires even probes of at least four
 and uses the existing full/two-half leverage pools. Mean MCSE fixes the
 observed mean; Corrected fixes the added increment too and returns Mean's
-MCSE/covariance. Mean projection and Mean component highrank/q1 inference
-are supported on their existing tuples; Corrected with either attachment is
-rejected by the frontend and native boundary.
+MCSE/covariance. Mean projection and Mean standard errors of the components
+are supported on their existing tuples. Corrected projection is rejected by
+the frontend and native boundary; the repeat-measurement attachment accepts
+Corrected, and the native boundary still rejects it for the structured
+attachments, which are unreachable from the command since 0.6.0.
 Projection uses the same frequency-weighted retained working-outcome mean as
 point centering. Only the outcome factor in covariance contractions changes;
 projection coefficients and residual-squared naive covariance are unchanged.
@@ -178,17 +181,19 @@ transport and Rust readiness are required: absent metadata is zero, with
 cached scalars cleared before and after a probe. This adds no DLL export and
 changes no request, result or capabilities layout.
 
-Mean component inference requires this capability and point-centering API 1
-before preparation/RNG. Native Mean projection separately requires
-projection-centering API 1. Existing combined exact-Mata requests support Mean;
-native combined component/projection requests remain unsupported for both
-Mean and None. No platform tuple is added. Explicit None retains its previous
-capability requirements. Validate configuration both before and after
-attachment; Corrected remains a typed pre-RNG failure. No late fallback is
-permitted.
+Mean standard errors of the components require this capability and
+point-centering API 1 before preparation/RNG. Native Mean projection
+separately requires projection-centering API 1. The command does not combine
+component standard errors and projection in one call. No platform tuple is
+added. Explicit None retains its previous capability requirements. Validate
+configuration both before and after attachment; Corrected projection
+remains a typed pre-RNG failure. No late fallback is permitted.
 
-Mean holds the observed retained physical-frequency working-outcome mean
-fixed. Realized influences and q1 leading/remainder terms consume the centered
+The repeat-measurement attachment centres its pseudo-noise as the outcome
+is and posts `e(inference_mean_omitted)=0`. The rest of this section
+describes the structured attachments and the exact-Mata model, unreachable
+from the command since 0.6.0. There, Mean holds the observed retained
+physical-frequency working-outcome mean fixed. Realized influences and q1 leading/remainder terms consume the centered
 outcome; the residual-moment variance fit uses unchanged residuals. Gaussian
 inference error probes are never shifted by the observed mean or their own
 sample means. Fixed-offset match collapse uses `sqrt(F_g)(ubar_g-c)` and one

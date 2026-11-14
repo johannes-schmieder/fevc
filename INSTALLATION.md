@@ -73,8 +73,12 @@ assert "`e(backend_selected)'" == "rust"
 ```
 
 The probe values correspond to live progress reporting, outcome centering,
-mean-centered projections, mean-centered component inference, and
-confidence intervals that pool movers and stayers.
+mean-centered projections, and two capabilities that the standard errors
+of the components need on the native backend (mean centering, and units
+that pool movers and stayers). The 0.5.2 plugins predate the standard
+errors of version 0.6.0, which also need `r(component_residual_api) == 1`
+and `r(component_repeat_api) == 1`; with them the default reports point
+estimates and says why, or uses Mata when you select `backend(mata)`.
 
 ## Installing a specific release
 
@@ -124,10 +128,11 @@ restart Stata or run `discard` to clear cached programs and Mata definitions.
 ## Using a self-built or older native plugin
 
 The Mata backend (`backend(mata)`) runs on every platform and supports most
-features. In Mata, projections and component inference use exact
-calculation and are therefore limited to small designs. Live progress,
-`rng(counter_v1)` and some structured component-inference requests,
-including all with observation deletion, require the Rust plugin; see the
+features. In Mata, projections use exact calculation and are therefore
+limited to small designs; the standard errors of the components run with
+`algorithm(jla)` as a separate stage of about the cost of the point
+estimates, or with `algorithm(exact)`. Live progress and `rng(counter_v1)`
+require the Rust plugin; see the
 [backend reference](fevc/docs/RUST_MATA_PARITY.md). A self-built or older
 native plugin may lack some features. Check it with
 `fevc_rust probe` and `return list`:
@@ -135,9 +140,9 @@ native plugin may lack some features. Check it with
 - `r(centering_api) == 1` is needed for outcome centering with the Rust
   backend;
 - `r(projection_centering_api) == 1` for mean-centered projections;
-- `r(component_centering_api) == 1` for mean-centered component inference;
-- `r(component_mixed_api) == 1` for confidence intervals that pool movers and
-  stayers; and
+- `r(component_residual_api) == 1`, `r(component_repeat_api) == 1` and
+  `r(component_mixed_api) == 1` for the standard errors of the components,
+  and `r(component_centering_api) == 1` for them under mean centering; and
 - `r(numerical_api) == 2` for the numerical MCSE.
 
 A value of 0 means the feature is not available. When a feature is
@@ -145,9 +150,11 @@ missing, `backend(auto)` uses Mata if it can do so before estimation starts.
 An explicit `backend(rust)` or `rng(counter_v1)` stops with an error instead.
 For the numerical MCSE, an omitted `mcse()` keeps the native point estimates
 and reports the MCSE as unavailable, while an explicit `mcse(all)` stops with
-an error. Projections and component inference cannot be combined in one
-native call; they can be combined only in exact Mata without a structured
-variance model. See the
+an error. For the standard errors of the components, the default reports
+point estimates with the reason, while `inference(highrank)` or
+`inference(q1)` stops with an error. With `project()` the default reports
+point estimates for the components, and an explicit `inference(highrank)`
+or `inference(q1)` stops before estimation. See the
 [centering guide](fevc/docs/CENTERING.md) and the
 [native plugin records](native/README.md).
 

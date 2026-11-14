@@ -1,3 +1,3 @@
 v 0.6.0
 d Prerelease KSS leave-out bias-corrected variance components
-p fevc KSS variance components with standard errors by default; exact or structured inference on request, including fixed-offset matches and block projections
+p fevc KSS variance components with standard errors by default; block projections on request

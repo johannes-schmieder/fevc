@@ -54,9 +54,28 @@ diagnostics and the simulation evidence, and separates what has been
 verified from what has not.
 \end{abstract}
 
+\begin{sloppypar}
+\paragraph{Status in \fevc{} 0.6.0.} The command does not offer the method
+of this note: its option during development,
+\texttt{inferencemodel(leaveout\_\allowbreak residual)}, was removed before
+release (owner's decision of 14 November 2026), and a request for it stops
+with \texttt{INFERENCE\_\allowbreak MODEL\_\allowbreak REMOVED}.
+The standard errors that \fevc{} 0.6.0 reports, the repeat-measurement
+model of \texttt{docs/INFERENCE.md}, run the same pass: the deletion units,
+the influence and pseudo-noise solves, the trace estimate of
+Section~\ref{sec:noise}, a first-order control term built as in
+Section~\ref{sec:controls}, and the routes, cost and memory accounting.
+They replace the squared-residual
+signal term and the working variances by sample variances for units that
+repeat a worker--firm cell and a fitted model for the other units, report
+the covariance without truncation, and add a leading direction and a $q=1$
+interval for every component. Statements below about the default and its
+options describe the source of 10 November 2026.
+\end{sloppypar}
+
 \section{What is reported, in brief}\label{sec:brief}
 
-By default \fevc{} reports a standard error and a normal confidence
+By default the method reports a standard error and a normal confidence
 interval for each component and posts the $4\times4$ covariance matrix of
 the four components as \texttt{e(V)}. Section~\ref{sec:status} lists the
 few requests for which it returns point estimates only. Three statements
@@ -780,9 +799,11 @@ never changes the backend, algorithm or solver route the user selected. If
 the native executor or the Mata stage that carries them stops, the command
 runs once more without them, so the point estimates do not depend on the
 standard errors; option, variable and sample errors are reported once.
-\texttt{inference(none)} gives point estimates only, and
-\texttt{inferencemodel(leaveout\_residual)} with \texttt{inference(highrank)}
-requests the standard errors strictly.
+\texttt{inference(none)} gives point estimates only. (The option that
+requested this method strictly, \texttt{inferencemodel(leaveout\_residual)}
+with \texttt{inference(highrank)}, was removed in 0.6.0; there
+\texttt{inference(highrank)} requests the repeat-measurement standard errors
+strictly.)
 
 \paragraph{Rust core and plugin (tested).} The method is implemented in
 \texttt{rust/\allowbreak crates/\allowbreak vckss-core/\allowbreak src/\allowbreak residual\_noise.rs} and attached to the
@@ -834,8 +855,10 @@ six controls. That checks the algorithms, not the Mata syntax.
 \paragraph{Stata front end (written, not executed).} The route validation,
 attachment, receipt reconciliation, posting, display and help were changed
 for the new default. A regression file,
-\texttt{tests/stata/test\_leaveout\_residual\_se.do}, exercises the default
-request and its routes and is likewise unexecuted. The registered suites
+\texttt{tests/stata/test\_leaveout\_residual\_se.do}, exercised the default
+request and its routes and was likewise unexecuted; it was removed in
+0.6.0, and \texttt{tests/stata/test\_repeat\_measurement\_se.do} covers the
+shared pass. The registered suites
 were written for the point-only default; the environment setting
 \texttt{FEVC\_DEFAULT\_INFERENCE=none} keeps them on it.
 

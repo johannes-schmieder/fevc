@@ -159,7 +159,8 @@ def test_version_identifiers_agree() -> None:
     assert project["project"]["version"] == VERSION
     toc = (ROOT / "stata.toc").read_text(encoding="utf-8").splitlines()
     assert toc[0] == f"v {VERSION}"
-    assert "exact or structured inference" in " ".join(toc).lower()
+    assert "standard errors by default; block projections on request" in " ".join(toc).lower()
+    assert "structured" not in " ".join(toc).lower()
     for path in ROOT.glob("*.ado"):
         posted_versions = re.findall(r'ereturn local version "([^"]+)"', path.read_text())
         assert all(value == VERSION for value in posted_versions), path.name
@@ -370,17 +371,28 @@ def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None
         "asymptotic at-least-nominal under the reference assumptions; potentially conservative",
     ):
         assert field in post
+    # The help and the guide state the removal and the one method's limits;
+    # neither offers a removed model as a request.
     for statement in (
-        "supported explicit Rust",
-        "Point estimation remains the default",
-        "universal concentration cutoff",
-        "multi-mode",
-        "severe omitted-driver",
-        "not unrestricted",
+        "Removed in 0.6.0",
+        "inferencemodel(structured_common)",
+        "INFERENCE_MODEL_REMOVED",
+        "INFERENCE_OPTION_REMOVED",
+        "two or more dominant directions",
+        "not the unrestricted leave-two-out construction",
     ):
         assert statement.lower() in help_words
+    for statement in (
+        "Point estimation remains the default",
+        "supported explicit Rust",
+        "Observation-q1 calibration retains a documented limitation",
+    ):
+        assert statement.lower() not in help_words
     assert "test_rust_component_inference.do" in installer
-    assert "structured observation-deletion component inference" in manifest.lower()
+    descriptions = [line.lower() for line in manifest.splitlines() if line.startswith("d ")]
+    assert any("standard errors by default; block projections on request" in line
+               for line in descriptions)
+    assert not any("structured" in line or "q0/q1" in line for line in descriptions)
 
 
 def test_package_records_internal_license_boundary() -> None:
