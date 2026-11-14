@@ -107,14 +107,17 @@ set obs 3
 generate long sentinel = _n
 quietly _datasignature
 local before `"`r(datasignature)'"'
+global FEVC_DEFAULT_INFERENCE "none"
 fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+global FEVC_DEFAULT_INFERENCE ""
 assert "`e(version)'" == "{expected_version}"
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`before'"'
 estat decomposition, full
 help fevc
+do "{test_root}/fevc/tests/stata/test_default_inference.do" "{plus}/f"
 do "{test_root}/fevc/tests/stata/test_rust_match_component_inference.do" "{plus}/f"
 do "{test_root}/fevc/tests/stata/test_pooled_component_inference.do" "{plus}/f" mata structured_common
 do "{test_root}/fevc/tests/stata/test_pooled_component_inference.do" "{plus}/f" mata structured_leverage
@@ -135,6 +138,7 @@ exit 0
                 transcript = sanitize(completed.stdout)
                 (output / (label + '.sanitized.log')).write_text(transcript)
                 if (completed.returncode or 'FEVC PUBLIC INSTALL PASS' not in completed.stdout
+                        or 'PASS test_default_inference.do default=checked native=1' not in completed.stdout
                         or 'PASS test_rust_match_component_inference.do' not in completed.stdout
                         or not pooled_checks_passed(completed.stdout)
                         or 'PASS test_pooled_deletion.do' not in completed.stdout

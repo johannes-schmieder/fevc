@@ -285,6 +285,11 @@ install -m 0755 "${candidate}" \
   "${candidate_sha256}" ]] || fail "staged test artifact hash mismatch"
 
 last_run_directory=
+# The registered cases were written for the point-only default and name no
+# inference() option; they keep it. The full suite carries the files on
+# standard errors, and the default-inference case runs with the switch off.
+export FEVC_DEFAULT_INFERENCE=none
+
 run_stata_case() {
   local label=$1 do_file=$2 marker=$3 return_code run_directory
   local working_directory marker_file
@@ -388,6 +393,11 @@ run_stata_case public-route \
 run_stata_case public-control-panel \
   "${test_package_dir}/tests/stata/test_control_panel.do" \
   'PASS test_control_panel.do' "${test_package_dir}" rust
+unset FEVC_DEFAULT_INFERENCE
+run_stata_case default-inference \
+  "${test_package_dir}/tests/stata/test_default_inference.do" \
+  'PASS test_default_inference.do default=checked native=1' "${test_package_dir}"
+export FEVC_DEFAULT_INFERENCE=none
 VCKSS_STATA_CASE_CWD=${test_root} \
 VCKSS_STATA_MARKER_FILE=${test_root}/run_all.log \
 run_stata_case full-suite \

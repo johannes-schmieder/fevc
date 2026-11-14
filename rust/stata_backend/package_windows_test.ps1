@@ -54,6 +54,8 @@ log using fevc-windows-test.log, text replace name(fevc_windows_test)
 which fevc
 fevc_rust probe
 assert r(progress_api)==2
+* The examples are checked as point estimates; standard errors are the default otherwise.
+global FEVC_DEFAULT_INFERENCE "none"
 foreach example in exact_controls jla_controls {
     fevc_run `example' using fevc.sthlp
     assert "`e(backend_selected)'"=="rust"

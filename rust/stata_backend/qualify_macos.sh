@@ -728,6 +728,11 @@ display as result "VCKSS_STATA_ENV version=`c(stata_version)' edition=`c(edition
 exit 0
 EOF
 
+# The registered cases were written for the point-only default and name no
+# inference() option; they keep it. The cases on standard errors name their
+# requests, and the default-inference cases run with the switch off.
+export FEVC_DEFAULT_INFERENCE=none
+
 last_run_directory=
 run_stata_case() {
   local architecture=$1
@@ -879,6 +884,24 @@ run_stata_case arm64 public-individual-inference \
 run_stata_case arm64 backend-routing \
   "${package_dir}/tests/stata/test_backend_routing.do" \
   'PASS test_backend_routing.do' "${test_package_dir}"
+run_stata_case arm64 repeat-measurement-se \
+  "${package_dir}/tests/stata/test_repeat_measurement_se.do" \
+  'PASS test_repeat_measurement_se.do' "${test_package_dir}"
+run_stata_case arm64 leaveout-residual-se \
+  "${package_dir}/tests/stata/test_leaveout_residual_se.do" \
+  'PASS test_leaveout_residual_se.do' "${test_package_dir}"
+# The command's own default needs the switch off.
+unset FEVC_DEFAULT_INFERENCE
+run_stata_case arm64 default-inference \
+  "${package_dir}/tests/stata/test_default_inference.do" \
+  'PASS test_default_inference.do default=checked native=1' "${test_package_dir}"
+export FEVC_DEFAULT_INFERENCE=none
+# The command's own default needs the switch off.
+unset FEVC_DEFAULT_INFERENCE
+run_stata_case arm64 universal-default-inference \
+  "${package_dir}/tests/stata/test_default_inference.do" \
+  'PASS test_default_inference.do default=checked native=1' "${universal_test_package_dir}"
+export FEVC_DEFAULT_INFERENCE=none
 run_stata_case arm64 universal-lifecycle \
   "${package_dir}/tests/stata/test_rust_plugin.do" \
   'FEVC RUST PLUGIN PASS' "${universal_test_package_dir}"
@@ -1086,6 +1109,24 @@ run_stata_case x86_64 public-timer-ownership \
   run_stata_case x86_64 backend-routing \
     "${package_dir}/tests/stata/test_backend_routing.do" \
     'PASS test_backend_routing.do' "${test_package_dir}"
+  run_stata_case x86_64 repeat-measurement-se \
+    "${package_dir}/tests/stata/test_repeat_measurement_se.do" \
+    'PASS test_repeat_measurement_se.do' "${test_package_dir}"
+  run_stata_case x86_64 leaveout-residual-se \
+    "${package_dir}/tests/stata/test_leaveout_residual_se.do" \
+    'PASS test_leaveout_residual_se.do' "${test_package_dir}"
+  # The command's own default needs the switch off.
+  unset FEVC_DEFAULT_INFERENCE
+  run_stata_case x86_64 default-inference \
+    "${package_dir}/tests/stata/test_default_inference.do" \
+    'PASS test_default_inference.do default=checked native=1' "${test_package_dir}"
+  export FEVC_DEFAULT_INFERENCE=none
+  # The command's own default needs the switch off.
+  unset FEVC_DEFAULT_INFERENCE
+  run_stata_case x86_64 universal-default-inference \
+    "${package_dir}/tests/stata/test_default_inference.do" \
+    'PASS test_default_inference.do default=checked native=1' "${universal_test_package_dir}"
+  export FEVC_DEFAULT_INFERENCE=none
   run_stata_case x86_64 universal-lifecycle \
     "${package_dir}/tests/stata/test_rust_plugin.do" \
     'FEVC RUST PLUGIN PASS' "${universal_test_package_dir}"

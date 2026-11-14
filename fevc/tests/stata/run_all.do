@@ -3,6 +3,11 @@ clear all
 set more off
 set varabbrev off
 
+* The suite was written for the point-only default and keeps it. The files
+* on standard errors name their requests; test_default_inference.do checks
+* the command's own default and restores this setting.
+global FEVC_DEFAULT_INFERENCE "none"
+
 args suite
 if "`suite'" == "" local suite quick
 if !inlist("`suite'", "quick", "full") {
@@ -39,6 +44,7 @@ do `"`pkgroot'/tests/stata/test_component_centering_exact.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' mata structured_leverage
 do `"`pkgroot'/tests/stata/test_pooled_component_inference.do"' `"`pkgroot'"' mata structured_common
 do `"`pkgroot'/tests/stata/test_repeat_measurement_se.do"' `"`pkgroot'"'
+do `"`pkgroot'/tests/stata/test_default_inference.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_projection_mean.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_centering_exact.do"' `"`pkgroot'"' mata
 do `"`pkgroot'/tests/stata/test_centering_jla.do"' `"`pkgroot'"' mata
@@ -127,6 +133,7 @@ do `"`pkgroot'/tests/stata/test_scale_engine_reductions.do"'
 do `"`pkgroot'/tests/stata/test_scale_command.do"'
 
 if "`suite'" == "full" {
+    do `"`pkgroot'/tests/stata/test_leaveout_residual_se.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_control_panel.do"' `"`pkgroot'"' mata
     do `"`pkgroot'/tests/stata/test_control_akm.do"'
     do `"`pkgroot'/tests/stata/test_lockstep_pcg.do"'

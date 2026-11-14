@@ -3,6 +3,8 @@ clear all
 set more off
 set processors 2
 set varabbrev off
+// The registered groups were written for the point-only default and keep it.
+global FEVC_DEFAULT_INFERENCE "none"
 assert c(stata_version) == 19
 assert c(MP) == 1
 assert `"`c(os)'"' == "Windows"

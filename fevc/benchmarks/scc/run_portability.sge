@@ -25,6 +25,8 @@ cd "$KSS_SOURCE_DIR"
   > "$job_dir/full_suite.application.txt" 2>&1
 grep -F "FEVC TEST SUITE PASS: full" "$job_dir/full_suite.application.txt"
 
+# The install test was written for the point-only default.
+export FEVC_DEFAULT_INFERENCE=none
 /usr/bin/time -v -o "$job_dir/install.resources.txt" \
   stata-mp -q do "$KSS_SOURCE_DIR/fevc/tests/stata/test_install.do" \
   "$KSS_SOURCE_DIR/fevc" "$job_dir/install" \

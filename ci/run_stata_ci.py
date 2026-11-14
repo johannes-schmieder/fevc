@@ -202,7 +202,11 @@ def main() -> int:
         "--",
         *stata_command,
     ]
-    supervisor_rc = subprocess.run(supervisor, check=False).returncode
+    # The registered suites were written for the point-only default and name
+    # no inference() option; keep them on it, as fevc/tools/run_checks.py does.
+    environment = os.environ.copy()
+    environment.setdefault("FEVC_DEFAULT_INFERENCE", "none")
+    supervisor_rc = subprocess.run(supervisor, check=False, env=environment).returncode
     if supervisor_rc != 0 and not process_json.exists():
         process_json.write_text(
             json.dumps(
