@@ -1,0 +1,253 @@
+{
+ "run": "dev2_controls",
+ "purpose": "development check, not a confirmation: the plain default command with one control variable in the model (joint nuisance)",
+ "run_seed": 37,
+ "pkgroot": "<scratch>/pkgmc/pkg-fb49e16d/fevc",
+ "source_commit": "fb49e16d",
+ "deletions": [
+  "match",
+  "observation"
+ ],
+ "reps_per_task": 25,
+ "tasks_per_cell": 20,
+ "threads": 1,
+ "options": "none",
+ "expect_model": "repeat_measurement",
+ "expect_threshold": 0.1,
+ "cells": [
+  {
+   "name": "x_J100_bnone_profile",
+   "group": "none",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": null,
+   "design_seed": 61,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "control": true
+  },
+  {
+   "name": "x_J400_b300_g0_profile",
+   "group": "weak",
+   "nJ": 400,
+   "nW": 12000,
+   "n_bridge": 300,
+   "design_seed": 62,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "control": true
+  },
+  {
+   "name": "x_J100_b100_g0_movers",
+   "group": "middle",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 63,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "control": true
+  },
+  {
+   "name": "x_J100_b30_g0_profile",
+   "group": "strong",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 64,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "skew",
+   "control": true
+  }
+ ],
+ "schema": "PKGMC-MANIFEST-V1",
+ "hashes": {
+  "plugin": "4485a8c26599f316d778c2b0e4797d9f114f40dc54943af5d210cca2435291e6",
+  "task_do": "57a34bd1286e0ae932469cc7d98e2f4cf8a2af5aef512a218c464b81be836da5",
+  "driver": "1afa16a6889bccd405a499e56d143f9f2e6cbfebd3e7420877ff8ae1d12f64da",
+  "aggregate": "99040a40930f34b93356e3906a71d5fa1a877c5c79c96579bc3e149ab4392c98",
+  "confirm": "9664bf18148522c110c3c941b42f36a54abf7c0281de0c25ae7b33eac16bbaa6",
+  "design_code": {
+   "lp_q1sim.py": "bbdb4c6299a27eb2b4cee7ef98c2bd55717bc3fa834d30d496f82d7fb9e8d5f6",
+   "lp6.py": "f02e4242196236d75890e7e58010f7db222fab3eb55445f0c9249ac324511d89",
+   "akm_design.py": "a2c6ad9b8b3afee5de7a2acaf71708ea04c8400761c4c42463eaa561fb4d5924"
+  },
+  "ado": {
+   "fevc.ado": "983694cfba52aa8606508e6af8e69433855d856f3d2251bb64c5d6f0dba7aff4",
+   "fevc_residual_se.mata": "8d39370d0dea477a6ad1fb28b0783d458f69ba051a2fc463e2a42f7369c4fa2b",
+   "fevc__residual_se_post.ado": "00b942bd4dbb4276da8ce8deb423dc92c3af3ed4891a1cd218bcec8be835493a",
+   "fevc__component_model_route.ado": "2d6d184881ad024c67d7abd63ef71281dc0cd3e6775f80780d87506c25a391a7"
+  }
+ },
+ "designs": {
+  "x_J100_bnone_profile": {
+   "sha256": "2a0669dd4bc7731d5ac7d27ef7a33c6c078dd6de3dbea1b122fc622b0bb0918f",
+   "person_years": 48057,
+   "workers": 12000,
+   "firms": 100,
+   "bridge_workers": 0,
+   "collapsed_rows": 40394,
+   "mover_rows": 6699,
+   "realised": {
+    "person": {
+     "kappa": 0.03321676439498243,
+     "share": 0.0015906741193302783,
+     "share_square": 0.0005510989582878455,
+     "b1_over_sd": -0.9711764757946827,
+     "max_w2": 0.05063699303322652,
+     "lam1": 0.00030658312266145665,
+     "theta": 0.09376496393862543,
+     "V": 7.288472817554768e-07
+    },
+    "firm": {
+     "kappa": 0.043972554290775456,
+     "share": 0.012993901963739866,
+     "share_square": 0.0009527017190294557,
+     "b1_over_sd": -2.5138619072707997,
+     "max_w2": 0.058274217420321746,
+     "lam1": 0.00030658312265689135,
+     "theta": 0.01655746279334063,
+     "V": 4.3952554329638667e-07
+    },
+    "cov": {
+     "kappa": 0.12548557140205135,
+     "share": 0.01725872612353288,
+     "share_square": 0.007726711752926777,
+     "b1_over_sd": 0.7853802771227572,
+     "max_w2": 0.055235240836376986,
+     "lam1": -0.0002908852555485212,
+     "theta": 0.006386436504311868,
+     "V": 4.827291660236265e-08
+    }
+   }
+  },
+  "x_J400_b300_g0_profile": {
+   "sha256": "28b33100cb9a70ed79f9a4e641b19bc6c97efdb7a2685680cb99b48a148d8c57",
+   "person_years": 47901,
+   "workers": 11937,
+   "firms": 379,
+   "bridge_workers": 299,
+   "collapsed_rows": 39702,
+   "mover_rows": 7207,
+   "realised": {
+    "person": {
+     "kappa": 0.0909886226735141,
+     "share": 0.0043982970318319995,
+     "share_square": 0.004120648137055846,
+     "b1_over_sd": -0.18354823423648797,
+     "max_w2": 0.0038352663995391274,
+     "lam1": 0.0010681222751886164,
+     "theta": 0.09206651113755412,
+     "V": 8.050286124930094e-07
+    },
+    "firm": {
+     "kappa": 0.13277583844098426,
+     "share": 0.009633262676384775,
+     "share_square": 0.008725054114335112,
+     "b1_over_sd": -0.22813595318024668,
+     "max_w2": 0.0038703879827284553,
+     "lam1": 0.0010681222751980992,
+     "theta": 0.012522559027093923,
+     "V": 3.7983105556830955e-07
+    },
+    "cov": {
+     "kappa": 0.26685507265983377,
+     "share": 0.034252875162453386,
+     "share_square": 0.034218800834688166,
+     "b1_over_sd": -0.022313426028210438,
+     "max_w2": 0.0038718306381608386,
+     "lam1": -0.0010524392278231211,
+     "theta": 0.005271662486724302,
+     "V": 9.404881304138093e-08
+    }
+   }
+  },
+  "x_J100_b100_g0_movers": {
+   "sha256": "0b51f69c23a1d8ba856d5c815d574dc398b98df2d39fd9ded71731b907eaaf95",
+   "person_years": 48304,
+   "workers": 11994,
+   "firms": 99,
+   "bridge_workers": 100,
+   "collapsed_rows": 40856,
+   "mover_rows": 6359,
+   "realised": {
+    "person": {
+     "kappa": 0.4911046774956925,
+     "share": 0.11457043789346578,
+     "share_square": 0.10545293971986805,
+     "b1_over_sd": -0.20791867510975212,
+     "max_w2": 0.009947586212146977,
+     "lam1": 0.0027049553024391564,
+     "theta": 0.09390197109832166,
+     "V": 1.8928483066727364e-06
+    },
+    "firm": {
+     "kappa": 0.5911352948765436,
+     "share": 0.25222720930892156,
+     "share_square": 0.13020318989945937,
+     "b1_over_sd": 0.6845368833039185,
+     "max_w2": 0.00998614952519428,
+     "lam1": 0.002704955302434406,
+     "theta": 0.013639494687408694,
+     "V": 1.5440821207319984e-06
+    },
+    "cov": {
+     "kappa": 1.5423746377982588,
+     "share": 0.5479437176180353,
+     "share_square": 0.49183390545516176,
+     "b1_over_sd": 0.23883346389701127,
+     "max_w2": 0.009986004141874784,
+     "lam1": -0.0026894186972035924,
+     "theta": 0.005469903773943465,
+     "V": 4.033577125786127e-07
+    }
+   }
+  },
+  "x_J100_b30_g0_profile": {
+   "sha256": "dd5fa4b2375e36ca95204bfef4bc4bd936e00a7ebf5dd95ab20cda56d271546b",
+   "person_years": 47926,
+   "workers": 11995,
+   "firms": 99,
+   "bridge_workers": 30,
+   "collapsed_rows": 40542,
+   "mover_rows": 6399,
+   "realised": {
+    "person": {
+     "kappa": 1.0561680441380632,
+     "share": 0.5376449267295087,
+     "share_square": 0.2612309414919577,
+     "b1_over_sd": 0.7273655043608465,
+     "max_w2": 0.032525336425438096,
+     "lam1": 0.009142128240796105,
+     "theta": 0.09475627950516202,
+     "V": 1.6224431615839328e-06
+    },
+    "firm": {
+     "kappa": 1.2901311821152317,
+     "share": 0.7742536562182742,
+     "share_square": 0.14638717075027768,
+     "b1_over_sd": 1.4644250339994878,
+     "max_w2": 0.03256242055658651,
+     "lam1": 0.009142128240796066,
+     "theta": 0.0192426932536734,
+     "V": 2.89794581765328e-06
+    },
+    "cov": {
+     "kappa": 3.9041658058926965,
+     "share": 0.822222666591173,
+     "share_square": 0.6464328849685458,
+     "b1_over_sd": 0.3687398670198662,
+     "max_w2": 0.03256246657583136,
+     "lam1": -0.009126476135265633,
+     "theta": 0.00783774982829246,
+     "V": 6.538552715605444e-07
+    }
+   }
+  }
+ },
+ "tasks": 160
+}

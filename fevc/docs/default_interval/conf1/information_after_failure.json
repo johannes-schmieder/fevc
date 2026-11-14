@@ -1,0 +1,84 @@
+{
+ "run": "conf1",
+ "replications": 40000,
+ "fit_failures": 0,
+ "fallbacks": [
+  {
+   "cell": "c_J400_b300_g3_profile",
+   "deletion": "observation",
+   "rep": 761,
+   "status": "KSS_POINT_ESTIMATES_ONLY"
+  }
+ ],
+ "rule_mismatches": 0,
+ "criteria": {
+  "min_success_rate": {
+   "tolerance": 0.99,
+   "observed": 0.994,
+   "met": true
+  },
+  "min_coverage": {
+   "tolerance": 0.92,
+   "observed": 0.937,
+   "case": "c_J100_b1000_g0_profile/match/cov",
+   "met": true,
+   "cases_below": 0,
+   "cases": 160
+  },
+  "min_mean_coverage": {
+   "tolerance": 0.94,
+   "observed": 0.9599,
+   "met": true
+  },
+  "max_length_ratio_none": {
+   "tolerance": 1.1,
+   "observed": 1.0593879632022707,
+   "met": true
+  },
+  "min_posted_none": {
+   "tolerance": 0.5,
+   "observed": 0.604,
+   "met": true
+  }
+ },
+ "by_group": {
+  "middle": {
+   "normal": 0.556,
+   "q1": 0.958,
+   "reported": 0.945,
+   "q1_used": 0.7688
+  },
+  "none": {
+   "normal": 0.943,
+   "q1": 0.953,
+   "reported": 0.944,
+   "q1_used": 0.0647
+  },
+  "signal": {
+   "normal": 0.919,
+   "q1": 0.946,
+   "reported": 0.946,
+   "q1_used": 0.9998
+  },
+  "strong": {
+   "normal": 0.495,
+   "q1": 0.961,
+   "reported": 0.961,
+   "q1_used": 1.0
+  },
+  "weak": {
+   "normal": 0.931,
+   "q1": 0.938,
+   "reported": 0.937,
+   "q1_used": 0.1727
+  }
+ },
+ "sum": [
+  0.939,
+  0.971
+ ],
+ "always_normal_min": 0.76,
+ "no_interval_max": 6,
+ "q1_used_none": 0.06470833333333333,
+ "posted_none_mean": 0.886125
+}
