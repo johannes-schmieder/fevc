@@ -42,7 +42,8 @@ foreach required in fevc.ado fevc_rust.ado ///
     fevc__rust_comp_batch_receipt.ado                  ///
     fevc__rust_component_fetch.ado                     ///
     fevc__rust_component_post.ado                      ///
-    fevc__failure_guidance.ado {
+    fevc__failure_guidance.ado                         ///
+    fevc__rust_abort.ado fevc__post_failure.ado {
     local install_subdir = lower(substr("`required'",1,1))
     confirm file `"`install_root'/`install_subdir'/`required'"'
 }

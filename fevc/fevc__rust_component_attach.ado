@@ -38,7 +38,7 @@ program define fevc__rust_component_attach, rclass
         positivitymultiplier(1e-8) deletion(`deletion') gramprobes(`gramprobes')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
+        capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') ///
             phase(component_augmentation)
         exit `failure_rc'
     }
@@ -53,7 +53,7 @@ program define fevc__rust_component_attach, rclass
         r(total_prepared_resident_bytes)==`resident' &              ///
         ("$VCKSS_MEMORY_ADVISORY"=="1" | r(augmentation_peak_forecast_bytes)<=`memorylimit')
     if !`ok' {
-        capture noisily _fevc_rust_abort, rc(498) handle(`handle') ///
+        capture noisily fevc__rust_abort, rc(498) handle(`handle') ///
             phase(component_augmentation)
         exit 498
     }

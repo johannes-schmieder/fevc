@@ -29,7 +29,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     if !`context_ok' {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The planned exact poster received an invalid context shape."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "exact_context"
@@ -145,7 +145,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     if !`tuple_ok' {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The planned exact poster received an invalid expected tuple."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "exact_tuple"
@@ -156,7 +156,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
         exactexecution(`exactexecution') exactthreads(`nativethreads')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(exact_result_export)
         exit _rc
     }
@@ -172,7 +172,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     if `reconcile_rc' {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The planned exact V7 reconciler was unavailable."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "exact_reconcile"
@@ -186,7 +186,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
         `"`r(execution_plan_schema)'"'!="VCKSS-EXECUTION-PLAN-V1" {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "Planned exact V7 reconciliation failed: `reconcile_detail'."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "exact_reconcile"
@@ -197,7 +197,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
         exactexecution(`exactexecution') exactthreads(`nativethreads')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(exact_result_reexport)
         exit _rc
     }
@@ -206,7 +206,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     if mreldif(`raw_results',`validated_results') != 0 {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The immutable exact generation changed between reconciliation and posting."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "exact_reexport"
@@ -359,7 +359,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     if !`context_ok' {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The planned exact public context did not reconcile with the validated V7 result."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "exact_context_reconcile"
@@ -369,14 +369,14 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc | r(state)!=0 | r(handle)!=0 {
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The planned exact release did not return the native engine to idle state."
         exit 498
     }

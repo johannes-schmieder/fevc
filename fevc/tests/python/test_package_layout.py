@@ -81,6 +81,8 @@ def test_package_manifest_is_complete() -> None:
         "fevc__rust_component_post.ado",
         "fevc__residual_se_post.ado",
         "fevc__failure_guidance.ado",
+        "fevc__rust_abort.ado",
+        "fevc__post_failure.ado",
         "fevc.sthlp",
     }
     for relative in shipped:

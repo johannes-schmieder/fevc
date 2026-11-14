@@ -60,22 +60,23 @@ foreach deletion in observation match {
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
     foreach solver of local solvers {
         foreach reference in highrank q1 {
-            // Repeat-measurement standard errors. An explicit batch: with
-            // engine(generic) and an automatic batch the native component batch
-            // receipt of a request without a Gram fit is rejected (known defect).
+            // Repeat-measurement standard errors with an automatic batch: the
+            // diagonal queue and the direct CMG attachment executor report
+            // their work and the component batch receipt.
             local common worker(worker) firm(firm) stayers(movers) `options' ///
                 algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-                batch(8) probes(200) targetweight(target) centering(none) inference(`reference') nodisplay
+                probes(200) targetweight(target) centering(none) inference(`reference') nodisplay
             quietly fevc y x, `common' mcse(off)
             assert "`e(inference_model)'"=="repeat_measurement"
             matrix point=e(kss)
             matrix intervals=e(component_inference)
             matrix spectrum=e(component_spectrum)
             matrix units=e(inference_repeat)
-            // Only the diagonal queue reports execution work; explicit CMG
-            // batches use the legacy path.
-            local queue = `execution' & "`solver'"=="diagonal"
-            if `queue' matrix work=e(rust_execution_receipt)
+            local queue = `execution'
+            if `queue' {
+                matrix work=e(rust_execution_receipt)
+                matrix widths=e(rust_component_batch_receipt)
+            }
             local joint=e(inference_joint_available)
             local computed=e(inference_computed_targets)
             if "`reference'"=="q1" {
@@ -93,12 +94,18 @@ foreach deletion in observation match {
                     fit rank point projection component gram logical queued cmg refinement {
                     assert e(rust_execution_receipt)[1,"`field'"]==work[1,"`field'"]
                 }
-                // How many workers took a task depends on scheduling.
-                assert inrange(e(rust_execution_receipt)[1,"active"],1,work[1,"threads"])
+                // How many queue workers took a task depends on scheduling;
+                // the direct CMG executor reports none.
+                if "`solver'"=="diagonal" assert inrange(e(rust_execution_receipt)[1,"active"],1,work[1,"threads"])
+                else assert e(rust_execution_receipt)[1,"active"]==0 & work[1,"active"]==0
                 assert work[1,"gram"]==0
                 assert work[1,"component"]==e(component_inference_receipt)[1,"solver_columns"]
                 assert e(rust_execution_receipt)[1,"residual"]<=e(residual_acceptance_tolerance)
                 assert e(rust_execution_receipt)[1,"peak"]>=work[1,"peak"]
+                foreach field in policy reason declared_component declared_gram component gram cap threads capacity {
+                    assert e(rust_component_batch_receipt)[1,"`field'"]==widths[1,"`field'"]
+                }
+                assert widths[1,"declared_gram"]==0 & widths[1,"gram"]==0
             }
             assert e(inference_joint_available)==`joint' & e(inference_computed_targets)==`computed'
             if "`reference'"=="q1" {

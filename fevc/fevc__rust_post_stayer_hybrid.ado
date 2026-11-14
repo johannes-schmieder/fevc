@@ -22,7 +22,7 @@ program define fevc__rust_post_stayer_hybrid, eclass sortpreserve
         rowsof(`receipt')!=1 | colsof(`receipt')!=24 |              ///
         rowsof(`raw')!=4 | colsof(`raw')!=4 |                       ///
         rowsof(`source')!=2 | colsof(`source')!=4 {
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"      ///
             "The reconciled Rust stayer-hybrid posting context has an invalid shape."
         exit 498
     }

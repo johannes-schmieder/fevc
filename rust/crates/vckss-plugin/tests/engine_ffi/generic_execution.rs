@@ -566,6 +566,117 @@ fn v7_automatic_component_batches_are_distinct_from_literal_eight() {
     }
 }
 
+// The repeat-measurement source fits no Gram matrix: under both policies its
+// receipt declares and selects no Gram width, which the C shim and the Stata
+// receipt check accept beside the Gram case. Width 0 asks for the automatic
+// policy (V5 attachment), any other width is literal (V4).
+fn attach_repeat_measurement(generation: u64, grouped: bool, width: u32) {
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    ok(
+        vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+            &mut augmentation,
+            bytes::<VckssComponentInferenceAugmentationRequestInterruptV1>(),
+        ),
+    );
+    augmentation.options.variance_source = VCKSS_COMPONENT_VARIANCE_REPEAT_MEASUREMENT;
+    augmentation.options.seed = 8_675_309;
+    augmentation.options.probes = 32;
+    augmentation.options.batch_width = width;
+    // As the Stata attachment sends: the automatic cap then follows threads.
+    augmentation.options.spectrum_probes = 128;
+    let function = match (grouped, width) {
+        (false, 0) => vckss_rust_engine_augment_component_inference_interrupt_v5,
+        (true, 0) => vckss_rust_engine_augment_match_component_inference_interrupt_v5,
+        (false, _) => vckss_rust_engine_augment_component_inference_interrupt_v4,
+        (true, _) => vckss_rust_engine_augment_match_component_inference_interrupt_v4,
+    };
+    ok(function(generation, &augmentation, 512));
+}
+
+#[test]
+fn v7_automatic_component_batches_without_a_gram_fit_declare_no_gram_width() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    for grouped in [false, true] {
+        let deletion = if grouped {
+            VCKSS_DELETION_MATCH
+        } else {
+            VCKSS_DELETION_OBSERVATION
+        };
+        let nuisance = if grouped {
+            VCKSS_NUISANCE_FIXED_OFFSET
+        } else {
+            VCKSS_NUISANCE_JOINT
+        };
+        let mut columns = OwnedColumns::structured_component();
+        if grouped {
+            for (row, key) in columns.deletion.iter_mut().enumerate() {
+                *key = (row / 2 + 1) as f64;
+            }
+        }
+        let mut reference: Option<(Vec<f64>, [f64; 4])> = None;
+        for (executor, threads, automatic) in [
+            (1, 1, false),
+            (1, 1, true),
+            (1, 7, true),
+            (2, 1, true),
+            (2, 7, true),
+        ] {
+            reset();
+            let generation = prepare_with_controls_memory(&columns, &[], deletion, 1 << 30);
+            attach_repeat_measurement(generation, grouped, if automatic { 0 } else { 8 });
+            let mut old = request(deletion, nuisance, 0, executor, threads, false);
+            old.v4.v3.v2.v1.probes = 17;
+            old.v4.v3.v2.v1.seed = 8_675_309;
+            if automatic {
+                let mut new = VckssEngineSolveRequestV7 {
+                    v6: old,
+                    ..Default::default()
+                };
+                new.v6.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV7>();
+                ok(vckss_rust_engine_solve_v7(generation, &new));
+            } else {
+                ok(vckss_rust_engine_solve_v6(generation, &old));
+            }
+            let work = work(generation);
+            assert_eq!(work.gram_rhs_count, 0);
+            let mut batch = VckssComponentBatchReceiptV1::default();
+            ok(vckss_rust_engine_component_batch_receipt_v1(
+                generation,
+                &mut batch,
+                bytes::<VckssComponentBatchReceiptV1>(),
+            ));
+            let cap = (8 * threads).clamp(32, 128) as u64;
+            assert_eq!(batch.generation, generation);
+            assert_eq!(batch.policy, u32::from(automatic));
+            assert_eq!(
+                batch.declared_component_width,
+                if automatic { 1 } else { 8 }
+            );
+            assert_eq!((batch.declared_gram_width, batch.gram_width), (0, 0));
+            assert_eq!(batch.component_width, if automatic { cap } else { 8 });
+            assert_eq!(batch.automatic_cap, cap);
+            assert_eq!(batch.permitted_threads, u64::from(threads));
+            assert_eq!(batch.maximum_rhs_capacity, work.maximum_rhs_capacity);
+            assert!(batch.maximum_rhs_capacity >= batch.component_width);
+            assert_eq!(
+                batch.command_peak_forecast_bytes,
+                work.command_peak_forecast_bytes
+            );
+            let (science, receipt) = inference(generation);
+            assert_eq!(receipt.gram_probes, 0);
+            assert_eq!(receipt.variance_fit, 4);
+            let science = (science, point(generation));
+            if let Some((expected, expected_point)) = &reference {
+                close(&science.0, expected);
+                close(&science.1, expected_point);
+            } else {
+                reference = Some(science);
+            }
+            ok(vckss_rust_engine_release_v1(generation));
+        }
+    }
+}
+
 fn inference(generation: u64) -> (Vec<f64>, VckssComponentInferenceResultReceiptV5) {
     inference_with_q1(generation, false)
 }

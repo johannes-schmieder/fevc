@@ -68,10 +68,9 @@ forvalues cell=3/5 {
             generate double tw=fw*(1+mod(_n,7)/10)
             generate double x=sin(_n/7)+mod(_n,5)/3
             local controls x [fw=fw]
-            // Pooled movers and stayers on full CMG, point estimates only:
-            // repeat-measurement standard errors cannot ride the direct CMG
-            // executor (known automatic component batch receipt defect).
-            local extra stayers(both) nuisance(fixedoffset) targetweight(tw) centering(none)
+            // Pooled movers and stayers on full CMG with repeat-measurement
+            // standard errors, carried by the direct CMG attachment executor.
+            local extra stayers(both) nuisance(fixedoffset) targetweight(tw) inference(highrank) inferenceseed(1791) centering(none)
             local probes 200
         }
 
@@ -82,7 +81,12 @@ forvalues cell=3/5 {
             tolerance(`tolerance') `extra' nodisplay
         assert "`e(cmg_backend)'"=="CMG_FULL_V2"
         assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
-        if `cell'==5 assert e(N_stayers)>0 & "`e(stayers)'"=="both"
+        if `cell'==5 {
+            assert e(N_stayers)>0 & "`e(stayers)'"=="both"
+            assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
+            assert "`e(rust_execution_mode)'"=="direct_attachments"
+            assert e(rust_component_batch_receipt)[1,"gram"]==0
+        }
         display "CMG_RESULT_EXPORTS case=`cell' count=$FEVC_CMG_RESULT_EXPORTS"
         assert $FEVC_CMG_RESULT_EXPORTS == 1
         quietly fevc_rust snapshot

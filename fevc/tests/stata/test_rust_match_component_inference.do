@@ -31,8 +31,8 @@ local caller_rng `"`c(rngstate)'"'
 quietly datasignature
 local caller_data `"`r(datasignature)'"'
 
-// The explicit generic tuple keeps an explicit batch(): with an automatic
-// component batch the native receipt check refuses the residual pass.
+// The explicit generic tuple keeps the explicit batch() of these checks; the
+// batch-invariance check widens it.
 local point centering(none) worker(worker) firm(firm) deletion(match) deletionid(match) ///
     nuisance(fixedoffset) stayers(movers) backend(rust) rng(counter_v1) ///
     algorithm(jla) engine(generic) preconditioner(diagonal) probes(256) ///

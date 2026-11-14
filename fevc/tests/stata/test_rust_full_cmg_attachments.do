@@ -49,34 +49,51 @@ generate double y = worker-.8*firm+1.4*x+(mod((_n-1)*37+11,101)/50-1)*(1.4+.05*w
 // masses. The uniform-target alteration is separately replayed and rejected
 // by legacy and candidate solvers under the unchanged complete-residual gate.
 generate double target = (.75+mod((_n-1)*13,29)/31)*(1+.1*worker)^2*(1+.1*firm)^2
-// Repeat-measurement standard errors on both solvers. With engine(generic)
-// and an automatic batch the native component batch receipt of a request
-// without a Gram fit is rejected (known defect), so the direct CMG attachment
-// executor cannot carry them; an explicit batch runs the legacy path.
+// Repeat-measurement standard errors on both solvers with an automatic batch:
+// with CMG the direct attachment executor carries them. They fit no Gram
+// matrix, so the component batch receipt declares and selects no Gram width.
+local inference_cap = min(128,max(32,8*`test_threads'))
 foreach deletion in observation match {
     local options deletion(`deletion')
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
     foreach solver in diagonal cmg {
-        display "INFERENCE_ATTEMPT deletion=`deletion' solver=`solver' batch=8 heterogeneous_target=1"
+        display "INFERENCE_ATTEMPT deletion=`deletion' solver=`solver' batch=auto heterogeneous_target=1"
         noisily fevc y x, worker(worker) firm(firm) stayers(movers) `options' ///
             algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-            batch(8) probes(200) targetweight(target) centering(none) inference(highrank) nodisplay
+            probes(200) targetweight(target) centering(none) inference(highrank) nodisplay
         assert "`e(inference_model)'"=="repeat_measurement"
         assert "`e(preconditioner_selected)'"==upper("`solver'")
         assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
         // The diagonal queue reports its work on macOS and Linux only.
         capture confirm matrix e(rust_execution_receipt)
         if !_rc {
-            assert "`solver'"=="diagonal"
             assert e(rust_execution_receipt)[1,"threads"]==`test_threads'
             assert e(rust_execution_receipt)[1,"component"]== ///
                 e(component_inference_receipt)[1,"solver_columns"]
+        }
+        if "`solver'"=="cmg" {
+            matrix work = e(rust_execution_receipt)
+            matrix inference_batch = e(rust_component_batch_receipt)
+            assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
+            assert inference_batch[1,"policy"]==1
+            assert inference_batch[1,"declared_component"]==1
+            assert inference_batch[1,"declared_gram"]==0 & inference_batch[1,"gram"]==0
+            assert inference_batch[1,"component"]==`inference_cap'
+            assert inference_batch[1,"cap"]==`inference_cap'
+            assert inference_batch[1,"threads"]==`test_threads'
+            assert inference_batch[1,"capacity"]==work[1,"capacity"]
+            assert work[1,"gram"]==0
+            assert work[1,"logical"]==work[1,"fit"]+1+600+work[1,"component"]
+            assert work[1,"residual"]<=e(residual_acceptance_tolerance)
         }
         if "`solver'"=="diagonal" {
             matrix point = e(kss)
             matrix component = e(component_inference)
         }
         else {
+            assert "`e(rust_execution_mode)'"=="direct_attachments"
+            assert work[1,"logical"]+work[1,"refinement"]==work[1,"cmg"]
+            assert e(full_cmg_receipt)[1,"probe_tolerance"]==1e-10
             assert mreldif(point,e(kss))<1e-8
             assert mreldif(component,e(component_inference))<1e-8
         }

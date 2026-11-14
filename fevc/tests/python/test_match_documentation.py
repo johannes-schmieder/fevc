@@ -122,6 +122,8 @@ def test_catalog_preserves_match_install_inventory():
         "f fevc__rust_cmg_model.ado",
         "f fevc__rust_comp_batch_receipt.ado",
         "f fevc__rust_core_ready.ado",
+        "f fevc__rust_abort.ado",
+        "f fevc__post_failure.ado",
     }
     assert additive_helpers <= set(manifest.splitlines())
     # Compare the historical inventory under the current helper filename convention.

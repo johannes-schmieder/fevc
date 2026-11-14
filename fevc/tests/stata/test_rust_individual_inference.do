@@ -24,8 +24,7 @@ generate double target = (.75+mod((_n-1)*13,29)/31)*(1+.1*worker)^2*(1+.1*firm)^
 generate double control = .31*mod(_n-1,2)+mod(_n-1,7)/29
 generate double shock = (mod((_n-1)*37+11,101)/50-1)*(1.4+.05*worker+.036*firm)
 generate double outcome = worker-.8*firm+1.4*control+shock
-// The explicit generic tuple keeps an explicit batch(): with an automatic
-// component batch the native receipt check refuses the residual pass.
+// The explicit generic tuple keeps the explicit batch() of these checks.
 local common worker(worker) firm(firm) stayers(movers) backend(rust) rng(counter_v1) ///
     algorithm(jla) engine(generic) preconditioner(diagonal) batch(16) ///
     targetweight(target)

@@ -201,9 +201,8 @@ restore
 
 // Native reporting preserves repeat-measurement standard errors and their
 // strict work gates; use the established heterogeneous-target fixture. The
-// explicit generic diagonal route takes an explicit batch: with an automatic
-// batch the native component batch receipt of a request without a Gram fit
-// is rejected (known defect). The automatic executor needs none.
+// explicit generic diagonal route runs with an automatic batch, which posts
+// the component batch receipt of a request without a Gram fit.
 preserve
 clear
 set obs 800
@@ -220,7 +219,7 @@ foreach deletion in observation match {
         foreach reference in highrank q1 {
             local solver
             if "`route'"=="generic" local solver rng(counter_v1) algorithm(jla) ///
-                engine(generic) preconditioner(diagonal) batch(8)
+                engine(generic) preconditioner(diagonal)
             local common worker(worker) firm(firm) deletion(`deletion') `nuisance' ///
                 stayers(movers) backend(rust) `solver' probes(200) targetweight(target) ///
                 centering(none) inference(`reference')
@@ -247,6 +246,11 @@ foreach deletion in observation match {
                 assert e(rust_execution_receipt)[1,"gram"]==0
                 assert e(rust_execution_receipt)[1,"component"]== ///
                     e(component_inference_receipt)[1,"solver_columns"]
+            }
+            if "`route'"=="generic" {
+                assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
+                assert e(rust_component_batch_receipt)[1,"policy"]==1
+                assert e(rust_component_batch_receipt)[1,"gram"]==0
             }
         }
     }

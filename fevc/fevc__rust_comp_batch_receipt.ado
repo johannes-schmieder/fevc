@@ -8,7 +8,7 @@ program define fevc__rust_comp_batch_receipt, rclass
     capture noisily fevc__rust_public_call componentbatchreceipt `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
+        capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') ///
             phase(component_batch_receipt)
         exit `failure_rc'
     }
@@ -37,7 +37,7 @@ program define fevc__rust_comp_batch_receipt, rclass
             `batch'[1,12]==`work'[1,9] & `batch'[1,13]==`work'[1,22]
     }
     if !`ok' {
-        capture noisily _fevc_rust_abort, rc(498) handle(`handle') ///
+        capture noisily fevc__rust_abort, rc(498) handle(`handle') ///
             phase(component_batch_reconcile)
         exit 498
     }

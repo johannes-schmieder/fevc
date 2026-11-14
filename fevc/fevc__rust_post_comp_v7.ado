@@ -93,7 +93,7 @@ program define fevc__rust_post_comp_v7, eclass sortpreserve
     if !`context_ok' {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "The compressed V7 poster did not receive a complete validated context."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "compressed_context"
@@ -234,7 +234,7 @@ program define fevc__rust_post_comp_v7, eclass sortpreserve
     if !`context_ok' {
         capture quietly fevc__rust_public_call release `handle'
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "Compressed V7 public context did not reconcile with the validated result family."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "compressed_context_reconcile"
@@ -248,19 +248,19 @@ program define fevc__rust_post_comp_v7, eclass sortpreserve
     capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(release_snapshot)
         exit _rc
     }
     if r(state)!=0 | r(handle)!=0 {
         capture quietly fevc_rust clear
-        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+        quietly fevc__post_failure "INTERNAL_INVARIANT_FAILED"        ///
             "Compressed V7 release succeeded without an idle native snapshot."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "release_snapshot"

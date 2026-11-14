@@ -411,6 +411,139 @@ if `native' {
         inference(highrank) nodisplay
     _rm_check 8 150 `native_control_term'
     assert mreldif(native_point,e(kss))<1e-5
+
+    * engine(generic) with an automatic batch: the diagonal queue and the
+    * direct CMG attachment executor carry the pass, whose component batch
+    * receipt declares and selects no Gram width. The default is named as
+    * inference(auto) because a suite may switch the plain default off. The
+    * standard errors equal those of an explicit batch holding every probe,
+    * and those of engine(generic) alone, to the 1e-8 the routes promise
+    * for changes of batch width, solver and threads.
+    foreach deletion in match observation {
+        foreach inference in auto highrank {
+            local request worker(worker_id) firm(firm_id) backend(rust) ///
+                engine(generic) deletion(`deletion') inference(`inference') nodisplay
+            quietly fevc log_wage, `request'
+            matrix generic_ci = e(component_inference)
+            foreach solver in diagonal cmg {
+                quietly fevc log_wage, `request' preconditioner(`solver')
+                assert substr("`e(status)'",1,24)=="FEVC_REPEAT_MEASUREMENT_"
+                assert "`e(inference_model)'"=="repeat_measurement"
+                assert "`e(rust_execution_mode)'"== ///
+                    cond("`solver'"=="diagonal","diagonal_queue","direct_attachments")
+                assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
+                matrix batch = e(rust_component_batch_receipt)
+                assert batch[1,"policy"]==1 & batch[1,"declared_component"]==1
+                assert batch[1,"declared_gram"]==0 & batch[1,"gram"]==0
+                assert inrange(batch[1,"component"],1,batch[1,"cap"])
+                quietly fevc_rust snapshot
+                assert r(state)==0 & r(handle)==0
+                local automatic_status "`e(status)'"
+                matrix automatic_ci = e(component_inference)
+                local automatic_joint = e(inference_joint_posted)
+                if `automatic_joint' matrix automatic_V = e(V)
+                if "`inference'"=="auto" matrix automatic_table = e(inference_intervals)
+                quietly fevc log_wage, `request' preconditioner(`solver') batch(256)
+                assert "`e(status)'"=="`automatic_status'"
+                capture confirm matrix e(rust_component_batch_receipt)
+                assert _rc
+                assert mreldif(e(component_inference),automatic_ci)<1e-8
+                assert e(inference_joint_posted)==`automatic_joint'
+                if `automatic_joint' assert mreldif(e(V),automatic_V)<1e-8
+                if "`inference'"=="auto" assert mreldif(e(inference_intervals),automatic_table)<1e-8
+                assert mreldif(automatic_ci,generic_ci)<1e-8
+            }
+        }
+    }
+
+    * A native failure inside a helper ado-file posts its typed status and
+    * releases the generation: the component attachment and the component
+    * batch receipt (strict and default requests), and the release and the
+    * immutable re-export of the exact and the compressed posters. The
+    * helpers reach the abort routine and the failure poster, which live in
+    * their own ado-files; a helper cannot call another file's private
+    * programs. The injected native failure is the same call on a generation
+    * that does not exist.
+    capture program drop fevc__rust_public_call
+    program define fevc__rust_public_call, rclass
+        version 18.0
+        gettoken command rest : 0
+        if "`command'"=="result" & !strpos(`"`rest'"',"componentinference(") {
+            global RM_POSTER_RESULTS = $RM_POSTER_RESULTS + 1
+        }
+        if "`command'"=="$RM_HELPER_FAULT" {
+            gettoken handle rest : rest, parse(" ,")
+            fevc_rust `command' 2147483647 `rest'
+            exit 498
+        }
+        tempname result
+        fevc_rust `command' `rest'
+        local altered = "`command'"=="result" & "$RM_HELPER_FAULT"=="reexport" & ///
+            $RM_POSTER_RESULTS==2
+        if `altered' {
+            matrix `result' = r(result)
+            matrix `result'[1,1] = `result'[1,1]+1
+        }
+        return add
+        if `altered' return matrix result = `result'
+    end
+    tempfile helper_log
+    quietly log using `"`helper_log'"', text replace name(rm_helper_faults)
+    foreach case in componentbatchreceipt:component_batch_receipt ///
+        augmentcomponentv5:component_augmentation {
+        gettoken fault phase : case, parse(":")
+        local phase : subinstr local phase ":" ""
+        global RM_HELPER_FAULT `fault'
+        global RM_POSTER_RESULTS 0
+        capture noisily fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+            engine(generic) preconditioner(cmg) inference(highrank) nodisplay
+        assert _rc==498 & "`e(status)'"=="WITHHELD"
+        assert "`e(withholding_status)'"=="STALE_CONTEXT"
+        assert "`e(native_error_phase)'"=="`phase'"
+        quietly fevc_rust snapshot
+        assert r(state)==0 & r(handle)==0
+        * The default reports the point estimates and says why.
+        capture noisily fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+            engine(generic) preconditioner(cmg) inference(auto) nodisplay
+        assert _rc==0 & "`e(status)'"=="KSS_POINT_ESTIMATES_ONLY"
+        assert strpos("`e(inference_auto_reason)'","STALE_CONTEXT")>0
+        quietly fevc_rust snapshot
+        assert r(state)==0 & r(handle)==0
+    }
+    foreach case in exact:release:STALE_CONTEXT:release ///
+        exact:reexport:INTERNAL_INVARIANT_FAILED:exact_reexport ///
+        compressed:release:STALE_CONTEXT:release {
+        tokenize "`case'", parse(":")
+        local route algorithm(exact)
+        if "`1'"=="compressed" local route algorithm(jla) stayers(movers)
+        global RM_HELPER_FAULT `3'
+        global RM_POSTER_RESULTS 0
+        capture noisily fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+            `route' inference(none) nodisplay
+        assert _rc==498 & "`e(status)'"=="WITHHELD"
+        assert "`e(withholding_status)'"=="`5'" & "`e(native_error_phase)'"=="`7'"
+        quietly fevc_rust snapshot
+        assert r(state)==0 & r(handle)==0
+    }
+    quietly log close rm_helper_faults
+    macro drop RM_HELPER_FAULT RM_POSTER_RESULTS
+    program drop fevc__rust_public_call
+    * No helper fell through to Stata's report of a missing command.
+    tempname stream
+    file open `stream' using `"`helper_log'"', read text
+    file read `stream' line
+    while r(eof)==0 {
+        assert !strpos(`"`macval(line)'"',"is unrecognized")
+        file read `stream' line
+    }
+    file close `stream'
+    * Without the hook both routes succeed.
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+        algorithm(exact) inference(none) nodisplay
+    assert "`e(result_family)'"=="exact"
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+        algorithm(jla) stayers(movers) inference(none) nodisplay
+    assert "`e(result_family)'"=="compressed"
 }
 else {
     * A plugin without the capability refuses a strict native request.

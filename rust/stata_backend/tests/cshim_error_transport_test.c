@@ -145,6 +145,7 @@ static int solve_v8_calls;
 static VckssEngineSolveRequestInterruptV6 captured_solve_v6;
 static VckssEngineSolveRequestInterruptV8 captured_solve_v8;
 static VckssGenericExecutionReceiptV1 execution_receipt;
+static VckssComponentBatchReceiptV1 component_batch_receipt;
 static VckssExactExecutionReceiptV1 exact_execution_receipt;
 static VckssExactExecutionRequestInterruptV1 captured_exact_execution;
 static int exact_execution_calls;
@@ -480,10 +481,7 @@ int32_t vckss_rust_engine_component_batch_receipt_v1(
     uint64_t generation, VckssComponentBatchReceiptV1 *output, uint32_t capacity)
 {
     assert(generation == active_generation && output != NULL && capacity == sizeof(*output));
-    memset(output, 0, sizeof(*output));
-    output->struct_size = sizeof(*output);
-    output->schema_version = 1u;
-    output->generation = generation;
+    *output = component_batch_receipt;
     return 0;
 }
 
@@ -958,6 +956,7 @@ static void reset_transport(void)
         .fit_rhs_count = 1, .point_probe_rhs_count = 51, .logical_rhs_count = 52,
         .queued_rhs_count = 51, .command_peak_forecast_bytes = 4096,
         .maximum_complete_residual = 1e-12};
+    memset(&component_batch_receipt, 0, sizeof(component_batch_receipt));
     solved_generation = 0;
     memset(&captured_solve_v4, 0, sizeof(captured_solve_v4));
     memset(&captured_solve_v5, 0, sizeof(captured_solve_v5));
@@ -1298,6 +1297,37 @@ int main(void)
     fail_scalar = 1;
     assert(vckss_generic_execution_receipt(705, 0) != 0);
     assert_released_idle(705);
+
+    /* Component batch receipts. Under the automatic policy an attachment with
+       a Gram fit declares Gram width 1; the residual-noise sources fit no Gram
+       matrix and declare and select width 0. Every other combination stays
+       inconsistent, and a refusal releases the generation. */
+    {
+        const uint64_t cases[][4] = {
+            /* policy, declared Gram, Gram, accepted */
+            {1u, 1u, 4u, 1u}, {1u, 0u, 0u, 1u}, {1u, 0u, 4u, 0u}, {1u, 2u, 4u, 0u},
+            {1u, 2u, 0u, 0u}, {0u, 0u, 0u, 1u}, {0u, 8u, 4u, 1u}};
+        for (size_t i = 0; i < sizeof(cases)/sizeof(cases[0]); ++i) {
+            reset_transport();
+            active_generation = 705;
+            component_batch_receipt = (VckssComponentBatchReceiptV1){
+                .struct_size = sizeof(component_batch_receipt), .schema_version = 1u,
+                .policy = (uint32_t)cases[i][0], .selection_reason = cases[i][0] ? 2u : 1u,
+                .generation = 705, .declared_component_width = cases[i][0] ? 1u : 8u,
+                .declared_gram_width = cases[i][1], .component_width = 4u,
+                .gram_width = cases[i][2], .automatic_cap = 32u, .permitted_threads = 7u,
+                .maximum_rhs_capacity = 4u, .command_peak_forecast_bytes = 4096u};
+            if (cases[i][3]) {
+                assert(vckss_component_batch_receipt(705) == 0);
+                assert(active_generation == 705 && release_calls == 0 && scalar_calls == 13);
+            } else {
+                assert(vckss_component_batch_receipt(705) == 498);
+                assert_released_idle(705);
+                assert_exported_primary(VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                    "INTERNAL_INVARIANT_FAILED", "component batch receipt is inconsistent");
+            }
+        }
+    }
 
     reset_transport();
     active_generation = UINT64_C(701);

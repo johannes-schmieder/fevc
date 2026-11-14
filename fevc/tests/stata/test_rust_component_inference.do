@@ -30,8 +30,8 @@ generate double outcome_leverage = 2 + .06*worker - .11*firm + .25*control + ///
 generate double outcome_null = 0
 generate byte copies = 2
 
-// The explicit generic tuple needs an explicit batch(): with an automatic
-// component batch the native receipt check refuses the residual pass.
+// Every call names its batch(); the batch-invariance checks below compare
+// explicit widths.
 local common_options worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1)     ///
     preconditioner(diagonal) probes(160) tolerance(1e-11)            ///

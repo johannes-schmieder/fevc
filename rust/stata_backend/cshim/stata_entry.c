@@ -447,9 +447,12 @@ static int vckss_component_batch_receipt(uint64_t generation)
         r.command_peak_forecast_bytes == work.command_peak_forecast_bytes &&
         r.maximum_rhs_capacity >= r.component_width &&
         r.maximum_rhs_capacity >= r.gram_width;
+    /* An attachment without a Gram fit (the residual-noise sources) declares
+       and selects no Gram width under either policy. */
     if (r.policy == 1u) valid = valid && r.selection_reason != 1u &&
         r.component_width <= r.automatic_cap && r.gram_width <= r.automatic_cap &&
-        r.declared_component_width == 1u && r.declared_gram_width == 1u;
+        r.declared_component_width == 1u &&
+        (r.declared_gram_width == 1u || (r.declared_gram_width == 0u && r.gram_width == 0u));
     for (size_t i = 0; i < sizeof(values)/sizeof(values[0]); ++i)
         valid = valid && values[i] <= VCKSS_MAX_EXACT_STATA_INTEGER;
     if (!valid) {

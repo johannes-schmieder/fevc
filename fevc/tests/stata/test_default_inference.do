@@ -119,6 +119,21 @@ foreach backend in mata rust {
         _default_check `backend'
     }
 }
+* So does engine(generic) with either preconditioner and an automatic batch,
+* whose component batch receipt declares no Gram width.
+if `native' {
+    foreach solver in diagonal cmg {
+        foreach deletion in match observation {
+            quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(rust) ///
+                engine(generic) preconditioner(`solver') deletion(`deletion') nodisplay
+            _default_check rust
+            assert e(rust_component_batch_receipt)[1,"declared_gram"]==0
+            assert e(rust_component_batch_receipt)[1,"gram"]==0
+            quietly fevc_rust snapshot
+            assert r(state)==0 & r(handle)==0
+        }
+    }
+}
 * No backend named: the command chooses one and either reports the
 * intervals or says why it could not.
 quietly fevc log_wage x1, worker(worker_id) firm(firm_id) nodisplay

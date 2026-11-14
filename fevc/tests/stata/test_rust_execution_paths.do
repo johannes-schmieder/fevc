@@ -186,47 +186,80 @@ generate double y = worker-.8*firm+1.4*x+(mod((_n-1)*37+11,101)/50-1)*(1.4+.05*w
 // masses. The uniform-target alteration is separately replayed and rejected
 // by legacy and candidate solvers under the unchanged complete-residual gate.
 generate double target = (.75+mod((_n-1)*13,29)/31)*(1+.1*worker)^2*(1+.1*firm)^2
-// Repeat-measurement standard errors. With engine(generic) and an automatic
-// batch the native component batch receipt of a request without a Gram fit is
-// rejected (known defect), so the solvers run with an explicit batch: the
-// diagonal queue reports the work, explicit CMG batches use the legacy path.
+// Repeat-measurement standard errors, which fit no Gram matrix. With an
+// automatic batch the diagonal queue and the direct CMG attachment executor
+// carry them and post the component batch receipt; with an explicit batch the
+// diagonal queue reports the work and explicit CMG batches use the legacy path.
 foreach deletion in observation match {
     local options deletion(`deletion')
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
     foreach solver in diagonal cmg {
-        display "INFERENCE_ATTEMPT deletion=`deletion' solver=`solver' batch=8 heterogeneous_target=1"
-        noisily fevc y x, worker(worker) firm(firm) stayers(movers) `options' ///
-            algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
-            batch(8) probes(200) targetweight(target) centering(none) inference(highrank) nodisplay
-        assert "`e(inference_model)'"=="repeat_measurement"
-        assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
-        if "`solver'"=="diagonal" {
-            assert "`e(rust_execution_mode)'"=="diagonal_queue"
-            matrix work = e(rust_execution_receipt)
-            assert work[1,"threads"]==4 & work[1,"mode"]==1
-            assert work[1,"gram"]==0 & work[1,"projection"]==0 & work[1,"point"]==600
-            assert work[1,"leverage"]==8 & work[1,"target"]==8
-            // Four solves per pseudo-noise draw, three influence solves, and
-            // under joint nuisance the offset pass of two solves per probe.
-            assert work[1,"component"]==e(component_inference_receipt)[1,"solver_columns"]
-            assert work[1,"component"]==4*e(inference_draws)+3+e(inference_offset_pass_solves)
-            assert e(inference_offset_pass_solves)==cond("`deletion'"=="observation",400,0)
-            assert work[1,"logical"]==work[1,"fit"]+1+600+work[1,"component"]
-            assert work[1,"logical"]==work[1,"queued"]+work[1,"fit"]
-            assert work[1,"cmg"]==0 & work[1,"cmg_concurrency"]==0
-            assert work[1,"residual"]<=e(residual_acceptance_tolerance)
-            matrix point = e(kss)
-            matrix component = e(component_inference)
+        foreach width in auto 8 {
+            display "INFERENCE_ATTEMPT deletion=`deletion' solver=`solver' batch=`width' heterogeneous_target=1"
+            noisily fevc y x, worker(worker) firm(firm) stayers(movers) `options' ///
+                algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
+                batch(`width') probes(200) targetweight(target) centering(none) inference(highrank) nodisplay
+            assert "`e(inference_model)'"=="repeat_measurement"
+            assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
+            assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
+            local queue = "`solver'"=="diagonal" | "`width'"=="auto"
+            if `queue' {
+                assert "`e(rust_execution_mode)'"==cond("`solver'"=="diagonal","diagonal_queue","direct_attachments")
+                matrix work = e(rust_execution_receipt)
+                assert work[1,"threads"]==4 & work[1,"mode"]==1+("`solver'"=="cmg")
+                assert work[1,"gram"]==0 & work[1,"projection"]==0 & work[1,"point"]==600
+                // Four solves per pseudo-noise draw, three influence solves, and
+                // under joint nuisance the offset pass of two solves per probe.
+                assert work[1,"component"]==e(component_inference_receipt)[1,"solver_columns"]
+                assert work[1,"component"]==4*e(inference_draws)+3+e(inference_offset_pass_solves)
+                assert e(inference_offset_pass_solves)==cond("`deletion'"=="observation",400,0)
+                assert work[1,"logical"]==work[1,"fit"]+1+600+work[1,"component"]
+                assert work[1,"residual"]<=e(residual_acceptance_tolerance)
+            }
+            if "`width'"=="auto" {
+                matrix inference_batch = e(rust_component_batch_receipt)
+                assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
+                assert inference_batch[1,"policy"]==1
+                assert inference_batch[1,"declared_component"]==1
+                // No Gram fit: no Gram width is declared or selected.
+                assert inference_batch[1,"declared_gram"]==0 & inference_batch[1,"gram"]==0
+                assert inference_batch[1,"component"]==32
+                assert inference_batch[1,"cap"]==32 & inference_batch[1,"threads"]==4
+                assert inference_batch[1,"capacity"]==work[1,"capacity"]
+            }
+            else {
+                capture confirm matrix e(rust_component_batch_receipt)
+                assert _rc!=0
+            }
+            if "`solver'"=="diagonal" {
+                assert work[1,"leverage"]==cond("`width'"=="auto",32,8)
+                assert work[1,"target"]==cond("`width'"=="auto",32,8)
+                assert work[1,"logical"]==work[1,"queued"]+work[1,"fit"]
+                assert work[1,"cmg"]==0 & work[1,"cmg_concurrency"]==0
+            }
+            else if "`width'"=="auto" {
+                assert work[1,"logical"]+work[1,"refinement"]==work[1,"cmg"]
+                assert e(full_cmg_receipt)[1,"probe_tolerance"]==1e-10
+            }
+            else {
+                assert "`e(preconditioner_selected)'"=="CMG"
+                capture confirm matrix e(rust_execution_receipt)
+                assert _rc!=0
+            }
+            // Batch width and solver preserve the Counter-V1 draws.
+            if "`solver'"=="diagonal" & "`width'"=="auto" {
+                matrix point = e(kss)
+                matrix component = e(component_inference)
+                matrix covariance = e(V)
+            }
+            else {
+                assert mreldif(point,e(kss))<1e-8
+                assert mreldif(component,e(component_inference))<1e-8
+                assert mreldif(covariance,e(V))<1e-8
+            }
+            quietly fevc_rust snapshot
+            assert r(state)==0 & r(handle)==0
         }
-        else {
-            assert "`e(preconditioner_selected)'"=="CMG"
-            capture confirm matrix e(rust_execution_receipt)
-            assert _rc!=0
-            assert mreldif(point,e(kss))<1e-8
-            assert mreldif(component,e(component_inference))<1e-8
-        }
-        quietly fevc_rust snapshot
-        assert r(state)==0 & r(handle)==0
     }
 }
 // The structured model and its Gram precision were removed in fevc 0.6.0.

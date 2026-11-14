@@ -304,7 +304,7 @@ program define _fevc_rust_generic, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
@@ -421,7 +421,7 @@ program define _fevc_rust_generic, eclass sortpreserve
         deletion(`deletionmode')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -561,7 +561,7 @@ program define _fevc_rust_generic, eclass sortpreserve
         signaturelo(`cap_request_signature_lo') numericalall(`="$VCKSS_NMC_MODE"=="all"')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(solve)
         exit _rc
     }
@@ -569,14 +569,14 @@ program define _fevc_rust_generic, eclass sortpreserve
         capture noisily fevc__numerical fetch `handle' `probes'
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_export)
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_export)
             exit _rc
         }
     }
     capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -907,14 +907,14 @@ program define _fevc_rust_generic, eclass sortpreserve
     capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(release_snapshot)
         exit _rc
     }
     if r(state)!=0 | r(handle)!=0 {
@@ -1497,7 +1497,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
@@ -1680,7 +1680,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         deletion(`deletionmode') `probeorder_option' `implicit_match_option'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -1876,14 +1876,14 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             capture quietly fevc__rust_public_call release `handle'
             local failure_rc = _rc
             if `failure_rc' {
-                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
+                capture noisily fevc__rust_abort, rc(`failure_rc') ///
                     handle(`handle') phase(stayer_exact_limit_release) norelease
                 exit _rc
             }
             capture quietly fevc_rust clear
             local failure_rc = _rc
             if `failure_rc' {
-                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
+                capture noisily fevc__rust_abort, rc(`failure_rc') ///
                     phase(stayer_exact_limit_clear) norelease
                 exit _rc
             }
@@ -1914,7 +1914,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             handle(`handle')
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc')     ///
+            capture noisily fevc__rust_abort, rc(`failure_rc')     ///
                 handle(`handle') phase(stayer_augmentation)
             exit _rc
         }
@@ -2045,7 +2045,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             projectweight(`projectweight') ranktolerance(`ranktol')
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc')    ///
+            capture noisily fevc__rust_abort, rc(`failure_rc')    ///
                 handle(`handle') phase(projection_augmentation)
             exit _rc
         }
@@ -2270,7 +2270,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local failure_rc = _rc
         local solve_failure_phase = cond(`exact_selected_pre_rng', ///
             "solve_exact","solve_jla")
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(`solve_failure_phase')
         exit _rc
     }
@@ -2280,7 +2280,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture noisily fevc__numerical fetch `handle' `probes'
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_result)
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_result)
             exit _rc
         }
         local numerical_executed = real("$VCKSS_NMC_EXECUTED")
@@ -2292,7 +2292,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture noisily fevc__rust_public_call executionreceipt `handle'
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
             exit _rc
         }
         matrix `generic_work' = r(receipt)
@@ -2319,7 +2319,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     local result_export_rc = _rc
     if `result_export_rc' {
         local failure_rc = `result_export_rc'
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -2391,7 +2391,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             capture noisily fevc__rust_public_call executionreceipt `handle'
             if _rc {
                 local failure_rc = _rc
-                capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
+                capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') phase(execution_receipt)
                 exit _rc
             }
             matrix `generic_work' = r(receipt)
@@ -2416,7 +2416,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             componentprobes(0) componentgramprobes(0)
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+            capture noisily fevc__rust_abort, rc(`failure_rc')          ///
                 handle(`handle') phase(resolved_result_refresh)
             exit _rc
         }
@@ -2441,7 +2441,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_unit_receipt' `deletionmode' `result_units' `inferencegramprobes'
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') ///
                 phase(component_result_export)
             exit `failure_rc'
         }
@@ -2455,7 +2455,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 componentgramprobes(`component_gram_probes')
             if _rc {
                 local failure_rc = _rc
-                capture noisily _fevc_rust_abort, rc(`failure_rc')            ///
+                capture noisily fevc__rust_abort, rc(`failure_rc')            ///
                     handle(`handle') phase(component_result_refresh)
                 exit _rc
             }
@@ -2505,7 +2505,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local full_cmg_receipt_rc = _rc
         if `full_cmg_receipt_rc' {
             local failure_rc = `full_cmg_receipt_rc'
-            capture noisily _fevc_rust_abort, rc(`failure_rc')     ///
+            capture noisily fevc__rust_abort, rc(`failure_rc')     ///
                 handle(`handle') phase(full_cmg_receipt)
             exit _rc
         }
@@ -2559,7 +2559,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 `nuisance_code' `probes' `cmg_rhs_count' `numerical_all' `numerical_executed'
             if _rc {
                 local failure_rc = _rc
-                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
+                capture noisily fevc__rust_abort, rc(`failure_rc') ///
                     handle(`handle') phase(full_cmg_model_receipt)
                 exit _rc
             }
@@ -2714,7 +2714,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
                 `ranktol' `blocktol' `stayer_aug_ctx'
             local stayer_capture_rc = _rc
             if `stayer_capture_rc' {
-                capture noisily _fevc_rust_abort, rc(`stayer_capture_rc') ///
+                capture noisily fevc__rust_abort, rc(`stayer_capture_rc') ///
                     handle(`handle') phase(stayer_result_export)
                 exit _rc
             }
@@ -2800,7 +2800,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             local full_cmg_result_refresh_rc = _rc
             if `full_cmg_result_refresh_rc' {
                 local failure_rc = `full_cmg_result_refresh_rc'
-                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
+                capture noisily fevc__rust_abort, rc(`failure_rc') ///
                     handle(`handle') phase(full_cmg_result_refresh)
                 exit _rc
             }
@@ -2982,7 +2982,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             componentgramprobes(`component_gram_probes')
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(full_cmg_generic_refresh)
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') phase(full_cmg_generic_refresh)
             exit _rc
         }
     }
@@ -3111,7 +3111,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             columns(`projection_columns')
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc')    ///
+            capture noisily fevc__rust_abort, rc(`failure_rc')    ///
                 handle(`handle') phase(projection_result_export)
             exit _rc
         }
@@ -3558,14 +3558,14 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(release_snapshot)
         exit _rc
     }
     if r(state)!=0 | r(handle)!=0 {
@@ -7875,99 +7875,6 @@ program define _vckss_impl, eclass sortpreserve
     if "`nodisplay'" == "" fevc__display
 end
 
-program define _fevc_rust_abort, eclass
-    version 18.0
-    syntax , RC(integer) [HANDLE(real 0) PHASE(string) NORELEASE]
-
-    if `rc' == 1 {
-        if `handle' > 0 & "`norelease'" == "" {
-            capture quietly fevc_rust release `handle'
-        }
-        capture quietly fevc_rust clear
-        ereturn clear
-        exit 1
-    }
-
-    capture quietly fevc_rust lasterror
-    if _rc {
-        local native_code = .
-        local native_status "NATIVE_ERROR_UNAVAILABLE"
-        local native_detail "The Rust failure occurred, but its structural error receipt could not be retrieved."
-    }
-    else {
-        local native_code = r(native_error_code)
-        local native_status `"`r(native_error_status)'"'
-        local native_detail `"`r(native_error_detail)'"'
-    }
-    local public_rc = `rc'
-    // Preserve the established public Mata status for a deletion identifier
-    // that crosses worker-firm coordinates.  The native canonicalizer uses
-    // the broader typed INVALID_IDENTIFIER family internally.
-    if `"`native_status'"'=="INVALID_IDENTIFIER" &                 ///
-        strpos(`"`native_detail'"',"deletion identifier")>0 {
-        local native_status "CROSS_COORDINATE_MATCH"
-    }
-    if `"`native_status'"'=="RESOURCE_LIMIT" &                    ///
-        strpos(`"`native_detail'"',"exact_limit()")>0 {
-        local native_status "EXACT_SIZE_LIMIT"
-        local public_rc = 198
-    }
-    if `"`native_status'"'=="RESOURCE_LIMIT" &                    ///
-        strpos(`"`native_detail'"',"deletion block")>0 {
-        local native_status "BLOCK_SIZE_LIMIT"
-        local public_rc = 198
-    }
-    if `"`native_status'"'=="RESOURCE_LIMIT" &                    ///
-        strpos(`"`native_detail'"',"physical-frequency total")>0 {
-        local native_status "PHYSICAL_TOTAL_LIMIT"
-        local public_rc = 498
-    }
-    if `"`native_status'"'=="SINGULAR_INFORMATION" &              ///
-        "`phase'"=="solve_jla" {
-        local native_status "SINGULAR_NUISANCE_BLOCK"
-    }
-    if `"`native_status'"'=="INVERSE_RESIDUAL_FAILED" &           ///
-        strpos(`"`native_detail'"',"control_basis_gram")>0 {
-        local native_status "AMBIGUOUS_CONTROL_BASIS"
-    }
-    if `"`native_status'"'=="GRAPH_UNIDENTIFIED" &                ///
-        strpos(`"`native_detail'"',"tie for largest-component")>0 {
-        local native_status "AMBIGUOUS_LARGEST_COMPONENT"
-    }
-    // A Stata-side failure can occur after native preparation (for example,
-    // while copying the retained mask or returned matrices).  In that case
-    // the native error slot is still the cleared OK receipt.  Preserve the
-    // original Stata rc, clean the registry, and do not manufacture a typed
-    // native failure with status OK.
-    if !missing(`native_code') & `native_code' == 0 &          ///
-        "`native_status'" == "OK" {
-        if `handle' > 0 & "`norelease'" == "" {
-            capture quietly fevc_rust release `handle'
-        }
-        capture quietly fevc_rust clear
-        ereturn clear
-        exit `rc'
-    }
-    if `handle' > 0 & "`norelease'" == "" {
-        capture quietly fevc_rust release `handle'
-    }
-    capture quietly fevc_rust clear
-    quietly _vckss_post_failure "`native_status'" `"`native_detail'"'
-    quietly fevc__control_failure_post `"`native_detail'"'
-    ereturn scalar native_error_code = `native_code'
-    ereturn local native_error_phase "`phase'"
-    ereturn local backend_requested "rust"
-    ereturn local backend_selected ""
-    ereturn local backend_routing_reason                       ///
-        "explicit Rust lifecycle failed; no fallback is permitted"
-    ereturn local rng_requested `"${VCKSS_ROUTE_RNG_REQUESTED}"'
-    ereturn local rng_selected ""
-    ereturn scalar backend_option_supplied = 1
-    ereturn scalar rng_option_supplied =                       ///
-        real("${VCKSS_ROUTE_RNG_SUPPLIED}")
-    exit `public_rc'
-end
-
 program define _fevc_rust_finally
     version 18.0
 
@@ -8085,7 +7992,7 @@ program define _vckss_rexact, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
@@ -8096,7 +8003,7 @@ program define _vckss_rexact, eclass sortpreserve
         deletion(`deletionmode')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -8240,7 +8147,7 @@ program define _vckss_rexact, eclass sortpreserve
         exactlegacy(`exact_legacy') threads(`native_threads')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(solve)
         exit _rc
     }
@@ -8248,7 +8155,7 @@ program define _vckss_rexact, eclass sortpreserve
     capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -8483,7 +8390,7 @@ program define _vckss_rexact, eclass sortpreserve
         capture noisily fevc__rust_public_call exactexecutionreceipt `handle'
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') ///
                 phase(exact_execution_receipt)
             exit `failure_rc'
         }
@@ -8525,7 +8432,7 @@ program define _vckss_rexact, eclass sortpreserve
     capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
@@ -8858,7 +8765,7 @@ program define _fevc_rust_public, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
@@ -8868,7 +8775,7 @@ program define _fevc_rust_public, eclass sortpreserve
         generate(`rust_keep') memorygib(`memorygib')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily fevc__rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -9015,7 +8922,7 @@ program define _fevc_rust_public, eclass sortpreserve
         numericalall(`="$VCKSS_NMC_MODE"=="all"')
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')       ///
             handle(`handle') phase(solve)
         exit _rc
     }
@@ -9024,14 +8931,14 @@ program define _fevc_rust_public, eclass sortpreserve
         capture noisily fevc__numerical fetch `handle' `probes'
         if _rc {
             local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_export)
+            capture noisily fevc__rust_abort, rc(`failure_rc') handle(`handle') phase(numerical_export)
             exit _rc
         }
     }
     capture noisily fevc__rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')       ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -9285,14 +9192,14 @@ program define _fevc_rust_public, eclass sortpreserve
     capture quietly fevc__rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')       ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
+        capture noisily fevc__rust_abort, rc(`failure_rc')       ///
             phase(release_snapshot)
         exit _rc
     }
@@ -9616,65 +9523,12 @@ program define _fevc_native_threads, eclass
     }
 end
 
+// The failure poster lives in fevc__post_failure.ado, where the helper
+// ado-files can reach it (a program defined after the first one of an
+// ado-file is private to that file); this file keeps its private name.
 program define _vckss_post_failure, eclass
     version 18.0
-    args failure_status failure_detail
-    quietly fevc__failure_guidance "`failure_status'"
-    local failure_reason `"`r(reason)'"'
-    local failure_suggestion `"`r(suggestion)'"'
-    if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
-    ereturn clear
-    ereturn local cmd "fevc"
-    ereturn local version "0.6.0"
-    ereturn local model "linear"
-    ereturn local correction_method "kss"
-    ereturn local status "WITHHELD"
-    ereturn local withholding_status "`failure_status'"
-    ereturn local withholding_detail `"`failure_detail'"'
-    ereturn local withholding_reason `"`failure_reason'"'
-    ereturn local withholding_suggestion `"`failure_suggestion'"'
-    if "${VCKSS_ROUTE_STAYERS_REQUESTED}"!="" ///
-        ereturn local stayers "${VCKSS_ROUTE_STAYERS_REQUESTED}"
-    if "${VCKSS_ROUTE_METADATA_READY}" == "1" {
-        ereturn local backend_requested ///
-            `"${VCKSS_ROUTE_BACKEND_REQUESTED}"'
-        ereturn local backend_selected ///
-            `"${VCKSS_ROUTE_BACKEND_SELECTED}"'
-        ereturn local backend_routing_reason ///
-            `"${VCKSS_ROUTE_BACKEND_REASON}"'
-        ereturn scalar backend_option_supplied = ///
-            real("${VCKSS_ROUTE_BACKEND_SUPPLIED}")
-        ereturn local rng_requested `"${VCKSS_ROUTE_RNG_REQUESTED}"'
-        ereturn local rng_selected `"${VCKSS_ROUTE_RNG_SELECTED}"'
-        ereturn scalar rng_option_supplied = ///
-            real("${VCKSS_ROUTE_RNG_SUPPLIED}")
-        ereturn scalar backend_fallback = ///
-            real("${VCKSS_ROUTE_FALLBACK}")
-        ereturn local backend_fallback_reason ///
-            `"${VCKSS_ROUTE_FB_REASON}"'
-        ereturn local backend_fallback_phase ///
-            `"${VCKSS_ROUTE_FB_PHASE}"'
-        if "${VCKSS_ROUTE_ALGORITHM_REQUESTED}" != "" {
-            ereturn local algorithm "${VCKSS_ROUTE_ALGORITHM_REQUESTED}"
-            ereturn local engine_requested "${VCKSS_ROUTE_ENGINE_REQUESTED}"
-            ereturn local preconditioner_requested ///
-                "${VCKSS_ROUTE_PRECOND_REQUESTED}"
-            ereturn local deletion "${VCKSS_ROUTE_DELETION_REQUESTED}"
-            ereturn local nuisance "${VCKSS_ROUTE_NUISANCE_REQUESTED}"
-            ereturn scalar algorithm_option_supplied =             ///
-                real("${VCKSS_ROUTE_ALGORITHM_SUPPLIED}")
-            ereturn scalar engine_option_supplied =                ///
-                real("${VCKSS_ROUTE_ENGINE_SUPPLIED}")
-            ereturn scalar preconditioner_option_supplied =        ///
-                real("${VCKSS_ROUTE_PRECOND_SUPPLIED}")
-            ereturn scalar batch_option_supplied =                 ///
-                real("${VCKSS_ROUTE_BATCH_SUPPLIED}")
-            ereturn scalar stayers_option_supplied =               ///
-                real("${VCKSS_ROUTE_STAYERS_SUPPLIED}")
-            ereturn scalar deletionid_option_supplied =            ///
-                real("${VCKSS_ROUTE_DELETIONID_SUPPLIED}")
-        }
-    }
+    fevc__post_failure `0'
 end
 
 // Loads the exact-Mata inference runtime, or stops with the same typed

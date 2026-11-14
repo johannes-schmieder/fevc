@@ -363,6 +363,8 @@ source_inputs=(
   "${package_dir}/fevc__rust_component_fetch.ado"
   "${package_dir}/fevc__rust_component_post.ado"
   "${package_dir}/fevc__failure_guidance.ado"
+  "${package_dir}/fevc__rust_abort.ado"
+  "${package_dir}/fevc__post_failure.ado"
   "${package_dir}/fevc.pkg"
   "${package_dir}/stata.toc"
   "${package_dir}/fevc.sthlp"

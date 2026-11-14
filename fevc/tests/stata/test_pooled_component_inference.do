@@ -41,9 +41,9 @@ if "`model'"=="structured_leverage" {
 local weight [fw=fw]
 if "`backend'"=="rust" & "`deletion'"=="observation" local weight
 local route backend(mata) algorithm(exact)
-// An explicit batch: with engine(generic), preconditioner(diagonal|cmg) and an
-// automatic batch the plugin rejects the component batch receipt of this model.
-if "`backend'"=="rust" local route backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(`solver') batch(8) probes(200) mcse(off)
+// An automatic batch: with CMG the direct attachment executor carries the
+// standard errors.
+if "`backend'"=="rust" local route backend(rust) rng(counter_v1) algorithm(jla) engine(generic) preconditioner(`solver') probes(200) mcse(off)
 local common worker(worker) firm(firm) deletion(`deletion') nuisance(`nuisance') targetweight(tw) `route' nodisplay
 local inference inferenceseed(1791)
 local rng0 `"`c(rngstate)'"'
@@ -55,6 +55,10 @@ if "`backend'"=="rust" {
     assert "`e(preconditioner_selected)'"==upper("`solver'")
     assert "`e(inference_solver_selected)'"==upper("`solver'")
     assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
+}
+if "`backend'"=="rust" & "`solver'"=="cmg" {
+    assert "`e(cmg_backend)'"=="CMG_FULL_V2"
+    assert "`e(rust_execution_mode)'"=="direct_attachments"
 }
 assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
 assert "`e(inference_model)'"=="repeat_measurement"
@@ -89,6 +93,10 @@ fevc shifted control `weight', `common' `inference' inference(highrank)
 assert mreldif(basepoint,e(b))<1e-9
 assert mreldif(baseinterval,e(component_inference))<1e-8
 fevc y control `weight', `common' `inference' inference(q1)
+if "`backend'"=="rust" & "`solver'"=="cmg" {
+    assert "`e(cmg_backend)'"=="CMG_FULL_V2"
+    assert "`e(rust_execution_mode)'"=="direct_attachments"
+}
 assert "`e(inference_leading_request)'"=="q1"
 matrix table=e(inference_intervals)
 matrix lead=e(inference_leading)
@@ -130,8 +138,7 @@ if "`backend'"=="rust" {
     generate long original_order=_n
     gsort -original_order
     local alternate : subinstr local common "preconditioner(diagonal)" "preconditioner(cmg)"
-    local alternate : subinstr local alternate "batch(8)" "batch(16)"
-    fevc y control `weight', `alternate' `inference' inference(highrank) nativethreads(2)
+    fevc y control `weight', `alternate' `inference' inference(highrank) batch(16) nativethreads(2)
     assert "`e(inference_solver_selected)'"=="CMG"
     assert mreldif(basepoint,e(b))<1e-8
     assert mreldif(baseinterval,e(component_inference))<1e-8
