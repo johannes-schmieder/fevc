@@ -6,6 +6,14 @@ No unreleased changes.
 
 ## 0.6.0 — 2026-11-14
 
+- Rebuild all five plugins from common source `2082f209`. Mac arm64/Rosetta,
+  SCC Linux and all 18 private Windows groups pass; Stata 15.1 full and
+  installed-native qualification passes. Exact receipts and scope:
+  `../native/repeat-measurement-20261115/manifest.json`.
+- Preserve requested repeat-measurement inference on Windows explicit generic
+  JLA with a diagonal preconditioner; backend, solver and point-only dispatch
+  retain their existing choices. The failed first confirmation is retained.
+
 - Support Stata 15 diagnostic tables beyond its legacy matrix-write limit,
   retaining every native RHS receipt on generic and compressed routes.
 
@@ -101,13 +109,12 @@ No unreleased changes.
   attachment's memory forecast is its own lifetime tally; the heap check on
   every executor covers the pass in its leave-out residual configuration,
   not separately the repeat-measurement variant. The Mata runtime build is
-  `vckss-residual-se-api6`. Exact Mata results agree with an independent
+  `vckss-residual-se-api7`. Exact Mata results agree with an independent
   dense calculation under both deletion modes; the Rust core is covered by
   unit tests with independent oracles, dense end-to-end tests for match and
-  observation units and a plugin-boundary test. The native route passes the
-  Stata regression with a plugin built from this source; the distributed
-  plugins predate the method, and with them the default reports point
-  estimates and says why.
+  observation units and a plugin-boundary test. All five distributed plugins now include the method and pass their
+  source-bound platform qualification. Unsupported default requests return
+  point estimates with an explanation.
 - Removed: the experimental variance models of 0.5.2,
   `inferencemodel(target_lowess)`, `inferencemodel(structured_common)` and
   `inferencemodel(structured_leverage)`, and

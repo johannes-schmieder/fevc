@@ -1,0 +1,40 @@
+{
+  "schema": "FEVC-WINDOWS-DISPATCH-FIX-V1",
+  "status": "DEVELOPMENT_REGRESSION_PASS",
+  "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "prior_build_source_commit": "e9c5f9698ced32044d3effea86d271280e645f28",
+  "qualification_overlay_commit": "60e7532851ff77df9f5cfc90490891d9030de79b",
+  "production_changed_paths": [
+    "fevc/fevc.ado"
+  ],
+  "behavior": "Already-supported explicit generic/diagonal requests carry repeat-measurement inference through the planned helper on Windows; legacy diagonal execution, backend/solver selection and inference(none) dispatch are preserved.",
+  "regression": "test_rust_component_inference.do, full existing strict regression plus automatic inference, unchanged point/solver/backend assertions",
+  "failed_confirmation": {
+    "campaign_sha256": "7960215be6dc9075cf45c8eacf27a930cf87a52e59f642f8e870f5691d71ba7d",
+    "run_id": "win-20261115T171913Z-1cc8ee36",
+    "status": "FAIL",
+    "group": "legacy",
+    "stage": "observation_component",
+    "stata_rc": 9,
+    "remaining_groups_unstarted": 16,
+    "automatic_retries": 0
+  },
+  "diagnosis": {
+    "run_id": "win-20261115T175719Z-5ac32172",
+    "explicit_highrank_requested": true,
+    "returned_status": "KSS_POINT_ESTIMATES_ONLY",
+    "q0_matrix_present": false
+  },
+  "development_patch_test": {
+    "run_id": "win-20261115T181133Z-4c76e481",
+    "transport_commit": "30ddfef7019c8e13cee09ed9a92405c974f3fb80",
+    "outcome": "COMPLETE_TEST_PASSED_EXPECTED_DIAGNOSTIC_EXIT",
+    "expected_sentinel": 90001,
+    "cleanup_verified": true,
+    "scope": "Declared patched Ado with old hosted binary, not qualification"
+  },
+  "source_checks": "1019 Python tests and six static checks pass at the new common build; ten exact qualification-only overlay paths deferred to matching binary/manifest adoption.",
+  "registered_gates_changed": false,
+  "new_all_platform_qualification_required": true,
+  "earlier_development_failures_retained": "Private release work archive, including failed catalog setup and an overly narrow automatic-interval test assertion corrected to documented normal/q1 behavior."
+}

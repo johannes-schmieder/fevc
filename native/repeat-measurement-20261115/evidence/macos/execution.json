@@ -1,0 +1,8 @@
+{
+  "started_utc": "2026-11-15T18:21:26.116848+00:00",
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "status": "PASS",
+  "restored": true,
+  "qualifier_exit_code": 0,
+  "completed_utc": "2026-11-15T18:57:34.580220+00:00"
+}

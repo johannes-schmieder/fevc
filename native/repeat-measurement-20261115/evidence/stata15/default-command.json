@@ -1,0 +1,14 @@
+{
+  "schema": "FEVC-STATA15-DEFAULT-COMMAND-V1",
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "started_utc": "2026-11-15T19:28:26.486729+00:00",
+  "status": "PASS",
+  "scope": "Additional fresh-process verification of the actual no-option default. The full suite used the registered point-only environment and checked explicit inference requests.",
+  "native_plugin_sha256": "c01d68b9af514b551035c2cd69ab0f49e470cd44a117bdc7061e9e8ad415f09f",
+  "timeout_seconds": 1800,
+  "environment_default_override": false,
+  "completed_utc": "2026-11-15T19:28:40.728381+00:00",
+  "supervisor_returncode": 0,
+  "process_returncode": 0,
+  "raw_log_sha256": "12e79c74054b717babe0afc49f8f8b659a7ff272270465d7f8d279cde52cc5f8"
+}

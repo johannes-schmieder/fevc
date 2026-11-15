@@ -1,0 +1,9 @@
+VCKSS_SCC_LINUX_WRAPPER_RECEIPT_V1
+status=PASS
+job_id=8632839
+hostname=scc-tb4
+slots=4
+source_commit=2082f20974d6437814905c351f13509ff934d04e
+source_bundle_sha256=e99f0120a27c141dd37cf2576feab96dec6f97b7acd3aedf984d4f65f905563c
+started_utc=2026-11-15T18:21:14Z
+finished_utc=2026-11-15T19:11:13Z

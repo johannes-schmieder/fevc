@@ -1,0 +1,233 @@
+{
+  "schema": "FEVC-WINDOWS-CMG-CAMPAIGN-V1",
+  "registration_kind": "CONFIRMATION",
+  "created_at": "2026-11-15T19:12:59.781735+00:00",
+  "cmg_commit": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "candidate": {
+    "production_commit": "2082f20974d6437814905c351f13509ff934d04e",
+    "binary_sha256": "e27fd9ad34b7484423f5178563aed36385a5619d4f52a5b66c5e70f080c309a5",
+    "hosted_build_run_id": "43746190747",
+    "hosted_rust_run_id": "43746193470",
+    "hosted_spi_run_id": "43746196017"
+  },
+  "incumbent": {
+    "production_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+    "package_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
+    "binary_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+    "hosted_build_run_id": "42394565802",
+    "hosted_rust_run_id": "42394568202"
+  },
+  "harness_sha256": "7537421e7fe9bc5ef5d997c0fa615e4d13c979b95785c65f21127571013e04eb",
+  "protocol_sha256": "6de601e6be625c5ac7142e8c0d2fa722877e40373af3c327d05e5e9fefa2dbaf",
+  "performance_driver_sha256": "1b310f2ff44a98b1f47d3ab66fde0ae1c547a973882870a2320372e04d031947",
+  "qualification_harness_source_commit": "60e7532851ff77df9f5cfc90490891d9030de79b",
+  "protocol": {
+    "schema": "FEVC-WINDOWS-CMG-PROTOCOL-V1",
+    "status": "REGISTERED_060_SAME_ROUTE_POINT_COMPARISON_WITH_INFORMATIONAL_DEFAULT_SE",
+    "platform": {
+      "os": "Windows Server 2022",
+      "arch": "x86_64",
+      "stata": "19 MP",
+      "native_workers": [
+        1,
+        2
+      ]
+    },
+    "scope": "Same four corrected point targets, retained sample, deletion, nuisance, weights and projection within paired requests, all with inference(none). Both arms use supported full-CMG routes. Candidate default standard-error timing is recorded separately without a paired performance claim.",
+    "candidate_cmg": "e5613e81fb3b03c78de98658b372646fa802aabb",
+    "candidate_levels": 128,
+    "incumbent_package_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
+    "incumbent_build_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
+    "incumbent_windows_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+    "driver": "fevc/tests/stata/test_windows_cmg_performance.do",
+    "groups": [
+      "smoke",
+      "legacy",
+      "cmg_point",
+      "cmg_attachments",
+      "cmg_lifecycle",
+      "installation"
+    ],
+    "schedule": [
+      {
+        "block": 0,
+        "seed": 8675309,
+        "arms": [
+          "incumbent",
+          "candidate"
+        ]
+      },
+      {
+        "block": 1,
+        "seed": 8675311,
+        "arms": [
+          "candidate",
+          "incumbent"
+        ]
+      },
+      {
+        "block": 2,
+        "seed": 8675317,
+        "arms": [
+          "incumbent",
+          "candidate"
+        ]
+      },
+      {
+        "block": 3,
+        "seed": 8675323,
+        "arms": [
+          "candidate",
+          "incumbent"
+        ]
+      },
+      {
+        "block": 4,
+        "seed": 8675329,
+        "arms": [
+          "incumbent",
+          "candidate"
+        ]
+      },
+      {
+        "block": 5,
+        "seed": 8675333,
+        "arms": [
+          "candidate",
+          "incumbent"
+        ]
+      }
+    ],
+    "execution": {
+      "licensed_processes": 1,
+      "seconds_limit_per_group": 900,
+      "fresh_process_per_arm_block": true,
+      "warmup_commands_per_cell": 1,
+      "timed_complete_commands_per_cell": 1,
+      "cells_per_arm_block": 12,
+      "total_timed_commands": 144,
+      "resampling_or_exclusions": false
+    },
+    "cases": [
+      {
+        "case": 0,
+        "name": "automatic mover ring",
+        "rows": 2048,
+        "workers": 512,
+        "firms": 256,
+        "probes": 32,
+        "tolerance": 1e-10
+      },
+      {
+        "case": 1,
+        "name": "generic match",
+        "rows": 32000,
+        "workers": 4000,
+        "firms": 1000,
+        "probes": 32,
+        "tolerance": 1e-10
+      },
+      {
+        "case": 2,
+        "name": "generic observation",
+        "rows": 131072,
+        "workers": 16384,
+        "firms": 2048,
+        "probes": 32,
+        "tolerance": 1e-10
+      },
+      {
+        "case": 3,
+        "name": "controlled weighted mover-only observation",
+        "rows": 288,
+        "probes": 32,
+        "tolerance": 1e-10,
+        "stayers": "movers"
+      },
+      {
+        "case": 4,
+        "name": "firm projection",
+        "rows": 240,
+        "probes": 200,
+        "tolerance": 1e-12
+      },
+      {
+        "case": 5,
+        "name": "pooled weighted point estimates",
+        "rows": 512,
+        "probes": 200,
+        "tolerance": 1e-10
+      }
+    ],
+    "acceptance": {
+      "same_retained_sample": true,
+      "finite_results": true,
+      "complete_residual": "max(1e-11,10*effective_phase_tolerance)",
+      "four_target_equivalence": "max(1e-8*max(1,abs(incumbent),abs(candidate)),0.1*max(incumbent_mcse,candidate_mcse))",
+      "complete_command_time": "candidate median <= incumbent median + max(0.05*incumbent median,1 millisecond)",
+      "all_12_cells_required": true,
+      "all_18_group_receipts_required": true,
+      "retain_adverse_and_inconclusive_results": true
+    },
+    "qualification_limitations": [
+      "One/two native Windows workers; higher concurrency covered only by Rust tests.",
+      "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested.",
+      "Performance compares requests supported by both versions. Weighted observation deletion uses movers; broader observation/both capability is qualified by runtime/oracle tests without an incumbent Windows native timing comparison."
+    ],
+    "routes": {
+      "candidate": {
+        "case_0": "engine(auto) preconditioner(auto)",
+        "cases_1_to_5": "engine(generic) preconditioner(cmg)"
+      },
+      "incumbent": {
+        "case_0": "engine(auto) preconditioner(auto)",
+        "cases_1_to_5": "engine(generic) preconditioner(cmg)"
+      },
+      "batch": "auto",
+      "weighted_observation_population": "movers in both arms; identical generated data and retained sample",
+      "inference": "none in every paired case and arm"
+    },
+    "informational_default_se": {
+      "arm": "candidate",
+      "case": 5,
+      "native_workers": [
+        1,
+        2
+      ],
+      "request": "same case-5 request with inference(auto), using default inference options",
+      "warmup_commands_per_cell": 1,
+      "timed_complete_commands_per_cell": 1,
+      "blocks": 6,
+      "total_timed_commands": 12,
+      "paired": false,
+      "performance_acceptance_threshold": null,
+      "receipt_schema": "FEVC-WINDOWS-CHECKS-V5",
+      "receipt_field": "informational_measurements",
+      "row_columns": [
+        "case",
+        "native_workers",
+        "elapsed_ms",
+        "retained_N"
+      ]
+    },
+    "previous_release_evidence": "native/windows-cmg-20261107/; retained unchanged, including failed attempts"
+  },
+  "development_preflight": {
+    "scope": "Both exact driver arms passed on Mac; all 12 science cells agree; V5 writer/validator positive and negative checks pass. These are harness checks, not Windows timing or qualification. The first registered smoke group gates remaining Windows work.",
+    "powershell_preflight_sha256": "cc8efa580e3c30fb07d5f860bc772b173e507534a06e539ce6335793e86dbda1"
+  },
+  "previous_failed_confirmation": {
+    "campaign_sha256": "7960215be6dc9075cf45c8eacf27a930cf87a52e59f642f8e870f5691d71ba7d",
+    "source_commit": "e9c5f9698ced32044d3effea86d271280e645f28",
+    "failed_run": "win-20261115T171913Z-1cc8ee36",
+    "status": "FAIL",
+    "failure": "explicit Windows diagonal component inference dispatched to point-only helper",
+    "gates_changed": false
+  },
+  "dispatch_fix_development": {
+    "run_id": "win-20261115T181133Z-4c76e481",
+    "diagnostic_receipt_sha256": "40606b78e147297d6e31477bdd03e735f8618969eda7ef24712890b4052ff51e",
+    "patch_sha256": "3bb8e5e60cb8e3273774b1893930915d7d509aea9e26581633d201bda18f1e38",
+    "scope": "Complete component regression passed on declared patched Ado source with prior hosted binary; development only. New campaign uses rebuilt common-source binary."
+  }
+}

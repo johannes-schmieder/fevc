@@ -562,3 +562,24 @@ remain the owner's to carry out. The Windows binary needs, besides, an
 owner-approved change of the private runner's export list and a new
 campaign protocol against 0.5.2 before its licensed qualification can run.
 
+
+## 2026-11-15: Stata 15 and common-source 0.6.0 adoption
+
+The owner approved lowering the minimum to Stata 15, fixing compatibility
+defects without renewed permission and rebuilding/requalifying every platform.
+Common build `2082f209` supplies all five qualified binaries. The Windows
+explicit generic/diagonal dispatcher now carries requested inference through
+the existing diagonal executor. The failed first confirmation remains recorded;
+the new campaign uses unchanged gates and rebuilt binaries. The source review
+records changes to legacy runtime interfaces, exact eigensolver normalization
+and repeated-root direction selection, plus complete native diagnostic-table
+transport beyond Stata 15's matrix-write limit. Scientific gates are unchanged;
+all earlier failed attempts remain preserved.
+
+The owner separately authorized the private Windows export/collector update,
+new fixed 0.5.2 comparison protocol, one adoption commit, main push, tag, release
+and actual HTTP installation checks. The
+[adoption record](../../native/repeat-measurement-20261115/manifest.json) binds
+qualified bytes and platform scope. Earlier dated statements about pending
+rebuilds describe their original checkpoints; final publication is recorded
+separately.

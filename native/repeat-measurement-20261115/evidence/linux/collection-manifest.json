@@ -1,0 +1,331 @@
+{
+  "utc": "2026-11-15T19:12:36.047486+00:00",
+  "status": "PASS",
+  "scope": "Qualified Linux candidate for the common 0.6.0 Stata15-compatible build; no binary adoption yet.",
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "source_bundle_sha256": "e99f0120a27c141dd37cf2576feab96dec6f97b7acd3aedf984d4f65f905563c",
+  "job_id": 8632839,
+  "accounting": {
+    "failed": "0",
+    "exit_status": "0",
+    "ru_wallclock": "3000",
+    "maxvmem": "8.705G"
+  },
+  "candidate_sha256": "0b9b150f10b15df5cf63b3dea9b66b84dcc9b8f0747059daacc40d430a6b9dc2",
+  "artifact_files": [
+    {
+      "path": "artifacts/SANITIZED_EVIDENCE.txt",
+      "bytes": 133,
+      "sha256": "44e4e8d5a46c9ec4508c3484b373b05c0573285897142bad55dfbb0f3008c4cd"
+    },
+    {
+      "path": "artifacts/candidate/fevc_rust_linux_x64.plugin",
+      "bytes": 5377048,
+      "sha256": "0b9b150f10b15df5cf63b3dea9b66b84dcc9b8f0747059daacc40d430a6b9dc2"
+    },
+    {
+      "path": "artifacts/qualification-source.sha256",
+      "bytes": 274800,
+      "sha256": "d58613170dcaa19bcc59e2934b8b1bcff4dcb2567193e61c5236264ebef92991"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-centering-capability__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-centering-capability__fevc.log.sanitized.log",
+      "bytes": 746,
+      "sha256": "bc05911dc7d850338165bd0defc22930e297ff892e2741615bb03645ab3d8641"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-clean-install__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-clean-install__stata.log.sanitized.log",
+      "bytes": 508858,
+      "sha256": "a7a65a1706427b1aed248d188a5b51fcc2afdde57b5a08c36ad6f9e7e334be32"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-exact__fevc.log.sanitized.log",
+      "bytes": 18501,
+      "sha256": "28cd867e19a72e07fa36804cb197012b05fd1de26c7ab370ec439a320e15f2b0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-component-centering-native__fevc.log.sanitized.log",
+      "bytes": 24498,
+      "sha256": "a980b8406ce4a2fd625c53ccedab6cb635414f23c23d4d9b4c4eee12ef010bae"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-default-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-default-inference__fevc.log.sanitized.log",
+      "bytes": 7838,
+      "sha256": "147122b0a90d3927964791b2e1fadf39dc4bf8c217ab21433a2710cffb1d768e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-diagnostic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-diagnostic__fevc.log.sanitized.log",
+      "bytes": 3097,
+      "sha256": "10cb28770cf2b4f9ea049bdff6bde416f2f6a59994a826d4c97f5b717e85d3c5"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-environment__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-environment__environment.log.sanitized.log",
+      "bytes": 246,
+      "sha256": "1b349289d6bcb8be3c61d988c74f720b7f04f9f0fd43f73664142cd74c7b0fb0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-full-suite__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-full-suite__run_all.log.sanitized.log",
+      "bytes": 1502997,
+      "sha256": "2bc45154df5645086cf82640342b7b7b20adc441fab8ae46abf056c59dd6e262"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-capability__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-capability__f.log.sanitized.log",
+      "bytes": 741,
+      "sha256": "e9ea9360ff3b71a81e617e4535863ceeef4e595ac4573df43795016d32d50f06"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-exact__f rust.log.sanitized.log",
+      "bytes": 5971,
+      "sha256": "3028066fc2646d9be3ede06202abcc74014bff67f4918ea59a8a2e81680ec31d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-jla__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-jla__f rust.log.sanitized.log",
+      "bytes": 3589,
+      "sha256": "a701d7aab51024d3057966e5dfd5d079c6af237364c9083bf2154c5cb3688c07"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-mean__f rust.log.sanitized.log",
+      "bytes": 4391,
+      "sha256": "c2c5dda177890f34c58da6a9fff16c8b8589ce8d8cabfcfbeabfd79d31dac739"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-centering-options__f rust.log.sanitized.log",
+      "bytes": 7502,
+      "sha256": "ba52cde223a50a4928da9acb7f37d942979c209ee375b8f2ec9b5daf2a789c47"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-exact__f.log.sanitized.log",
+      "bytes": 18496,
+      "sha256": "ebcbc41c0193bc84263f78a4ac42c1c89b4b7d46f05e0830ac203ccd578cd908"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-component-centering-native__f.log.sanitized.log",
+      "bytes": 24493,
+      "sha256": "3e493383eff6808a47055b53bb381244fa2f75ce25a60007d57406f4eeed3be1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-mean-projection__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-mean-projection__f.log.sanitized.log",
+      "bytes": 5807,
+      "sha256": "279d5f0742757679d6d0309d11633b6261c2c96b660d4e40319c292592a883b5"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_common__f mata structured_common.log.sanitized.log",
+      "bytes": 11179,
+      "sha256": "08eb97159fa0b77e180301515a29a67269d4364da757152d96de17f535d0efd8"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-mata-structured_leverage__f mata structured_leverage.log.sanitized.log",
+      "bytes": 11186,
+      "sha256": "cc1be8c16f8b39661fc87d3b3788c58593e28564f96e9e4db98d32232f3fc91e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_common__f rust structured_common.log.sanitized.log",
+      "bytes": 11950,
+      "sha256": "0e4c517cfc142802601d462e437a13291cf61ce45fd0ef5c12d92e8d4bca272e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-installed-pooled-component-rust-structured_leverage__f rust structured_leverage.log.sanitized.log",
+      "bytes": 11957,
+      "sha256": "418f19e52b658bdee76f24a1e25910aa7017f31a34fd8768668219df9bbd3f6f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-lifecycle__fevc.log.sanitized.log",
+      "bytes": 4875,
+      "sha256": "f9626c0a83bab5677ab6b9efd11fc05f9c75293a7814826f9718111b088e6d1d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-mean-projection__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-mean-projection__fevc.log.sanitized.log",
+      "bytes": 5812,
+      "sha256": "98aeb195ad7162a0d12ee10741e579dd7641a148470f7d959fb6084471de1dbe"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_common__fevc mata structured_common.log.sanitized.log",
+      "bytes": 11184,
+      "sha256": "c047d9241789a08470c633e238f956f96db864d6168deaaf9526589c580659ac"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-mata-structured_leverage__fevc mata structured_leverage.log.sanitized.log",
+      "bytes": 11191,
+      "sha256": "52471ad3f392825e0d9989c5f88df07f7e4aab798e8dc9924a64ceb7275e63fd"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_common__fevc rust structured_common.log.sanitized.log",
+      "bytes": 11955,
+      "sha256": "8b4ea8e99fb21d29626c0203b697bd02139652719fcea47f50a80f075a14a330"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-pooled-component-rust-structured_leverage__fevc rust structured_leverage.log.sanitized.log",
+      "bytes": 11962,
+      "sha256": "ccdfb100d23517b0e5fd5c0082306ab9df96065d4813252daca5c96011a8859b"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-control-panel__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-control-panel__fevc rust.log.sanitized.log",
+      "bytes": 4582,
+      "sha256": "596e8f5c37a8c1a6eaaa017a8d15f4da435db62860b8598b16214eb9aeb89471"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-public-route__fevc.log.sanitized.log",
+      "bytes": 28723,
+      "sha256": "9138eee63787b525116196e10f47b808f6b1fb59af386cf0d7136e3d2fb1e17e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-shared-atoms__fevc.log.sanitized.log",
+      "bytes": 12213,
+      "sha256": "f715ec4f4c59b0327d6359fc7085b2c372208f28f4ef2f54c3f5ff1c34555c4b"
+    },
+    {
+      "path": "artifacts/stata-logs/test-root__run_all.log.sanitized.log",
+      "bytes": 1502997,
+      "sha256": "2bc45154df5645086cf82640342b7b7b20adc441fab8ae46abf056c59dd6e262"
+    }
+  ],
+  "receipts": {
+    "wrapper.txt": "acc920dcc730ffb8dc6f82eb4b47781e7665b2f9c562d5a5391e69ba7d79208b",
+    "linux-qualification.txt": "f5a321a743075b80c1dcc199aba7d7713d343d912224bab186e0555dbbba1fef"
+  }
+}

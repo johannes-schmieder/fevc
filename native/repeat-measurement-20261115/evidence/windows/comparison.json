@@ -1,0 +1,367 @@
+{
+  "status": "PASS",
+  "groups": 18,
+  "campaign_sha256": "cc6eb65232998ef3ef2bd85b9c71acf7fab8ac5fb6169febf9679e4aef0a8bdc",
+  "cells": [
+    {
+      "case": 0,
+      "workers": 1,
+      "incumbent_median_ms": 111.5,
+      "candidate_median_ms": 109.5,
+      "allowance_ms": 5.575,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        111,
+        116,
+        112,
+        112,
+        111,
+        110
+      ],
+      "candidate_ms": [
+        110,
+        109,
+        108,
+        119,
+        111,
+        107
+      ]
+    },
+    {
+      "case": 0,
+      "workers": 2,
+      "incumbent_median_ms": 115.0,
+      "candidate_median_ms": 113.5,
+      "allowance_ms": 5.75,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        114,
+        116,
+        113,
+        117,
+        116,
+        114
+      ],
+      "candidate_ms": [
+        130,
+        110,
+        109,
+        120,
+        117,
+        106
+      ]
+    },
+    {
+      "case": 1,
+      "workers": 1,
+      "incumbent_median_ms": 457.0,
+      "candidate_median_ms": 450.0,
+      "allowance_ms": 22.85,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        439,
+        458,
+        456,
+        455,
+        458,
+        461
+      ],
+      "candidate_ms": [
+        441,
+        450,
+        450,
+        482,
+        456,
+        444
+      ]
+    },
+    {
+      "case": 1,
+      "workers": 2,
+      "incumbent_median_ms": 427.0,
+      "candidate_median_ms": 424.0,
+      "allowance_ms": 21.35,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        406,
+        431,
+        428,
+        426,
+        419,
+        438
+      ],
+      "candidate_ms": [
+        414,
+        454,
+        426,
+        450,
+        422,
+        408
+      ]
+    },
+    {
+      "case": 2,
+      "workers": 1,
+      "incumbent_median_ms": 1635.0,
+      "candidate_median_ms": 1659.0,
+      "allowance_ms": 81.75,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        1566,
+        1645,
+        1615,
+        1653,
+        1625,
+        1694
+      ],
+      "candidate_ms": [
+        1614,
+        1666,
+        1652,
+        1708,
+        1700,
+        1610
+      ]
+    },
+    {
+      "case": 2,
+      "workers": 2,
+      "incumbent_median_ms": 1529.0,
+      "candidate_median_ms": 1557.0,
+      "allowance_ms": 76.45,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        1439,
+        1558,
+        1486,
+        1549,
+        1509,
+        1559
+      ],
+      "candidate_ms": [
+        1505,
+        1553,
+        1561,
+        1569,
+        1563,
+        1515
+      ]
+    },
+    {
+      "case": 3,
+      "workers": 1,
+      "incumbent_median_ms": 114.0,
+      "candidate_median_ms": 109.0,
+      "allowance_ms": 5.7,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        112,
+        118,
+        110,
+        114,
+        114,
+        119
+      ],
+      "candidate_ms": [
+        108,
+        110,
+        108,
+        112,
+        111,
+        107
+      ]
+    },
+    {
+      "case": 3,
+      "workers": 2,
+      "incumbent_median_ms": 116.0,
+      "candidate_median_ms": 113.0,
+      "allowance_ms": 5.800000000000001,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        109,
+        117,
+        114,
+        117,
+        115,
+        119
+      ],
+      "candidate_ms": [
+        108,
+        114,
+        112,
+        114,
+        114,
+        106
+      ]
+    },
+    {
+      "case": 4,
+      "workers": 1,
+      "incumbent_median_ms": 401.0,
+      "candidate_median_ms": 378.5,
+      "allowance_ms": 20.05,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        384,
+        407,
+        397,
+        405,
+        394,
+        407
+      ],
+      "candidate_ms": [
+        365,
+        377,
+        380,
+        384,
+        380,
+        371
+      ]
+    },
+    {
+      "case": 4,
+      "workers": 2,
+      "incumbent_median_ms": 407.5,
+      "candidate_median_ms": 377.5,
+      "allowance_ms": 20.375,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        391,
+        410,
+        400,
+        416,
+        405,
+        411
+      ],
+      "candidate_ms": [
+        379,
+        376,
+        375,
+        386,
+        386,
+        369
+      ]
+    },
+    {
+      "case": 5,
+      "workers": 1,
+      "incumbent_median_ms": 415.5,
+      "candidate_median_ms": 389.0,
+      "allowance_ms": 20.775000000000002,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        397,
+        419,
+        408,
+        417,
+        414,
+        423
+      ],
+      "candidate_ms": [
+        384,
+        386,
+        389,
+        399,
+        394,
+        389
+      ]
+    },
+    {
+      "case": 5,
+      "workers": 2,
+      "incumbent_median_ms": 428.0,
+      "candidate_median_ms": 396.0,
+      "allowance_ms": 21.400000000000002,
+      "performance": "PASS",
+      "science": "PASS",
+      "largest_difference_over_scientific_bound": 0.0,
+      "incumbent_ms": [
+        404,
+        435,
+        417,
+        428,
+        430,
+        428
+      ],
+      "candidate_ms": [
+        393,
+        398,
+        394,
+        408,
+        411,
+        388
+      ]
+    }
+  ],
+  "comparison": "six fixed paired blocks; common-draw registered scientific bound; complete-command medians",
+  "retries_or_exclusions": 0,
+  "informational_default_se": [
+    {
+      "case": 5,
+      "workers": 1,
+      "candidate_ms": [
+        490,
+        493,
+        484,
+        508,
+        502,
+        479
+      ],
+      "candidate_median_ms": 491.5,
+      "retained_N": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "paired": false
+    },
+    {
+      "case": 5,
+      "workers": 2,
+      "candidate_ms": [
+        497,
+        498,
+        493,
+        524,
+        499,
+        489
+      ],
+      "candidate_median_ms": 497.5,
+      "retained_N": [
+        512,
+        512,
+        512,
+        512,
+        512,
+        512
+      ],
+      "paired": false
+    }
+  ]
+}

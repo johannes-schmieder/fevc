@@ -1,5 +1,22 @@
 # Native package provenance
 
+## Current 0.6.0 adoption
+
+All five 0.6.0 plugins are built from `2082f209` with unmodified common
+CMG `e5613e81` and the explicit 128-level limit. They include repeat-measurement
+component standard errors and normal/q=1 intervals on the supported routes.
+Mac arm64 and Rosetta thin/universal/installed, SCC Linux full/native/installed,
+and all 18 private Windows groups pass. Stata 15.1 also passes the full suite
+and installed-native tests on Intel/Rosetta; focused Stata 18/19 tests pass.
+Windows qualification uses Stata 19 and one/two workers. Native Intel hardware
+and Stata 16/17 runtime execution are not claimed.
+The [adoption manifest](repeat-measurement-20261115/manifest.json) binds the
+qualified files, source archive and receipts. All 144 paired point-command
+timings are retained; candidate default-SE timings are separate information.
+Final publication and actual HTTP installation checks are recorded separately.
+
+## Previous 0.5.2 release
+
 Version [0.5.2](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
 adds full-CMG Windows support while retaining the common unmodified CMG 0.2.0
 revision `e5613e81fb3b03c78de98658b372646fa802aabb` and explicit 128-level limit.

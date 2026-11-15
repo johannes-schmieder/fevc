@@ -1,22 +1,24 @@
 # Windows full-CMG qualification
 
-The 0.5.2 source enables the existing public full-CMG point, automatic-routing,
-projection and component-inference interfaces on Windows x86-64. Exact and
-explicit diagonal Stata routing keep their existing behavior. There is no ABI
-layout change. CMG remains the unmodified common revision
+The 0.6.0 release includes repeat-measurement component standard errors and
+retains shared full-CMG point, projection and supported inference routes.
+CMG remains the unmodified common revision
 `e5613e81fb3b03c78de98658b372646fa802aabb`, with 128 levels explicitly configured.
 
-**Native qualification passes.** All 18 source-bound private Windows groups
-and all 12 registered scientific/performance cells pass for the adopted 0.5.2
-DLL. See `native/windows-cmg-20261107/manifest.json` for exact identities and
-platform limitations. Published installation checks are recorded separately.
+All 18 private Windows groups and all 12 paired scientific/performance cells
+pass for the exact common-build plugin. The adoption manifest is
+`native/repeat-measurement-20261115/manifest.json`; runtime scope is Stata 19
+with one/two workers. Published installation checks are separate.
 
 ## Fixed campaign
 
 `windows-campaign-protocol.json` freezes the scope, incumbent, fixtures, seeds,
 worker counts, schedule and acceptance rules before confirmation measurement.
 The six cases cover automatic compressed routing, generic match and observation,
-weighted controls, projection and pooled component inference. Each arm/block
+weighted controls, projection and pooled weighted point estimation. Both
+0.5.2 and 0.6.0 use full CMG and `inference(none)` in the paired comparison.
+The candidate also records twelve separate default-SE timing observations,
+which do not enter paired acceptance statistics. Each arm/block
 uses a fresh licensed process and one warm-up plus one timed complete command
 per case/worker cell. All 144 timed commands are retained. Compare the six-block
 medians using `max(5%, 1 ms)`; require the registered common-draw scientific

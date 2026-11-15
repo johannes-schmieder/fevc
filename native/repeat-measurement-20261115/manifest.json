@@ -1,0 +1,584 @@
+{
+  "schema": "FEVC-CMG-ADOPTION-V1",
+  "status": "QUALIFIED_LOCAL_PACKAGE_NOT_PUBLISHED",
+  "version": "0.6.0",
+  "owner_authorization": "Finish the release, including runner/protocol updates, qualification, adoption, pushing main, tagging and publishing; subsequently approved Stata 15 compatibility, fixes and all-platform rebuilding.",
+  "owner_authorization_date": "2026-11-15",
+  "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "qualification_harness_source_commit": "60e7532851ff77df9f5cfc90490891d9030de79b",
+  "cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "features": [
+    "repeat-measurement-component-standard-errors",
+    "default-component-intervals",
+    "stata-15-compatibility",
+    "cmg-full-v2",
+    "windows-full-cmg",
+    "explicit-128-level-limit"
+  ],
+  "binaries": [
+    {
+      "name": "fevc_rust_linux_x64.plugin",
+      "sha256": "0b9b150f10b15df5cf63b3dea9b66b84dcc9b8f0747059daacc40d430a6b9dc2",
+      "bytes": 5377048,
+      "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+      "runtime_qualification": "PASS",
+      "limitation": "",
+      "replaces_sha256": "703420dfed173d983c7adb3638bc4151edfe6e15a636220f736b0f0155fba99b"
+    },
+    {
+      "name": "fevc_rust_macos.plugin",
+      "sha256": "c892c6e29f231e9b36b90fdd5826c4775e23873f9a8a9b83df61e984989416bf",
+      "bytes": 9375472,
+      "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta",
+      "replaces_sha256": "a39807df6d649033764a9871a1d2192c34019e4e4fc34c9c0cd7dcd133e200d8"
+    },
+    {
+      "name": "fevc_rust_macos_arm64.plugin",
+      "sha256": "4a6ad2c30dfc58f034011ef1e434d351a6082b33c962cf52cd401b3262425639",
+      "bytes": 4263664,
+      "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+      "runtime_qualification": "PASS",
+      "limitation": "",
+      "replaces_sha256": "c33c3eae146d7cd46fc5a1665e3ea1af20fe201ad15e22c029629cf9e881319b"
+    },
+    {
+      "name": "fevc_rust_macos_x86_64.plugin",
+      "sha256": "c01d68b9af514b551035c2cd69ab0f49e470cd44a117bdc7061e9e8ad415f09f",
+      "bytes": 5089904,
+      "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+      "runtime_qualification": "PASS",
+      "limitation": "x86-64 runtime uses Rosetta",
+      "replaces_sha256": "de18230d5ab00df0a6030119a649fecaefbbeaf78c38128317465872a0623809"
+    },
+    {
+      "name": "fevc_rust_windows_x64.plugin",
+      "sha256": "e27fd9ad34b7484423f5178563aed36385a5619d4f52a5b66c5e70f080c309a5",
+      "bytes": 5891072,
+      "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+      "runtime_qualification": "PASS",
+      "limitation": "Windows one/two native workers",
+      "replaces_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8"
+    }
+  ],
+  "corresponding_source": {
+    "path": "fevc-corresponding-source-2082f209.tar.gz",
+    "sha256": "e99f0120a27c141dd37cf2576feab96dec6f97b7acd3aedf984d4f65f905563c"
+  },
+  "evidence": [
+    {
+      "path": "evidence/hosted/build-receipt.json",
+      "sha256": "dcd0ebbaf99ac79046404402f1bfd8eec7fbf2c4ab4a6877b5f543741b64348c"
+    },
+    {
+      "path": "evidence/hosted/download-verification.json",
+      "sha256": "561dd727560e3f9089a38ab0ba58b4b9a31b5990a424783e18b149c9b8253f83"
+    },
+    {
+      "path": "evidence/hosted/runs.json",
+      "sha256": "ebf8a962a2ed0aabd58c21c42f51870562f20c682f7fbc664eb0245506989ef0"
+    },
+    {
+      "path": "evidence/linux/collection-manifest.json",
+      "sha256": "353bec8818d39af893476b993944710edaea8b40ee4a0656860f5f9b4968b3aa"
+    },
+    {
+      "path": "evidence/linux/qacct.txt",
+      "sha256": "da49a02b005fc4433fcb9bf3e7654b5677e29774a4657d2396cfad8508fc5496"
+    },
+    {
+      "path": "evidence/linux/qualification.txt",
+      "sha256": "f5a321a743075b80c1dcc199aba7d7713d343d912224bab186e0555dbbba1fef"
+    },
+    {
+      "path": "evidence/linux/wrapper.txt",
+      "sha256": "acc920dcc730ffb8dc6f82eb4b47781e7665b2f9c562d5a5391e69ba7d79208b"
+    },
+    {
+      "path": "evidence/macos/artifact-inventory.json",
+      "sha256": "f9b8b2780fedf1cddc215793105670fde03061bec2be72c4e714322365653717"
+    },
+    {
+      "path": "evidence/macos/execution.json",
+      "sha256": "69b93316112d803bf7bd42e82269a803ab33dda3d22951f0d15d6e95efe603cf"
+    },
+    {
+      "path": "evidence/macos/qualification-source.sha256",
+      "sha256": "35a24176c4c63f54467b52ee47a6b270ff7296d74119e55edeea9ce3559af441"
+    },
+    {
+      "path": "evidence/macos/qualification.txt",
+      "sha256": "63483e36045a94b1a6355a9c6281492ddff186a33afd4621cc5e1450ed9ac646"
+    },
+    {
+      "path": "evidence/source/archive-verification.json",
+      "sha256": "56ff69d5f00139c609437cac5d12e98451f26cc3aa238f3741f4bf0eaa7b497f"
+    },
+    {
+      "path": "evidence/source/common-build-dispatch.json",
+      "sha256": "ecb2293eedc5f94e0d9a8c383a5a10289e05e4f14121022d6f6271e4f127b733"
+    },
+    {
+      "path": "evidence/source/deferred-qualification-overlay.json",
+      "sha256": "c57183873f31b86450ce1d382e9260fc2609fc3c806a05c8e73b2d05133dd2b9"
+    },
+    {
+      "path": "evidence/source/stata15-compatibility-review.json",
+      "sha256": "7934b703dba07269e249f17a6a97334f39ca8abfae4e366cf0f89ebfc16c36e3"
+    },
+    {
+      "path": "evidence/source/windows-dispatch-fix.json",
+      "sha256": "bf7f5883d6f80a802aa051269f63cb6f0bbe13eaa6e4f606d40eb52d9d6e45f1"
+    },
+    {
+      "path": "evidence/stata15/default-command.json",
+      "sha256": "2842f3550bc86d112fa9de7d7bd9affded068d44da88c668bd0ef30cc6cc4297"
+    },
+    {
+      "path": "evidence/stata15/full-process.json",
+      "sha256": "b8334dc30d388fe8f28aa86ac37f88bde42b60da70f5fcc7b3c12cabcf183844"
+    },
+    {
+      "path": "evidence/stata15/full.status",
+      "sha256": "f0774fb43fab7ea73488935d65695e9adb26fd96c98720e69b966d7ac8ba7cfa"
+    },
+    {
+      "path": "evidence/stata15/installation-process.json",
+      "sha256": "d896bc997b88ccf004a49b45018c5d94687715b58ae93d633c7bd8dd2038fe97"
+    },
+    {
+      "path": "evidence/stata15/qualification.json",
+      "sha256": "a3f97a810659184d298ff4813ffd8b6f8d0d95176b79f4b92dcc06a4ba4a0f0c"
+    },
+    {
+      "path": "evidence/windows/adoption-index.json",
+      "sha256": "bb3be3da19a7e3eeccc4c459abb773a525bd855a6e9976d2a7e2c8cfaaef62d9"
+    },
+    {
+      "path": "evidence/windows/backend-acceptance.json",
+      "sha256": "5deef3cb0b8cde827bd13456b0885de75397934938d496cccd34667425725896"
+    },
+    {
+      "path": "evidence/windows/campaign.json",
+      "sha256": "cc6eb65232998ef3ef2bd85b9c71acf7fab8ac5fb6169febf9679e4aef0a8bdc"
+    },
+    {
+      "path": "evidence/windows/cmg_attachments-candidate-0-attempt1/receipt.json",
+      "sha256": "5ad14af528868e03ebf8b929a485e094d17eadc3b5bd579b3eb4bc0e595298c3"
+    },
+    {
+      "path": "evidence/windows/cmg_attachments-candidate-0-attempt1/runtime.json",
+      "sha256": "184bb1f91ee40f8c53ed361345a0b75ece812b2b57ffe3188b61c4865edb07a9"
+    },
+    {
+      "path": "evidence/windows/cmg_attachments-candidate-0-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/cmg_attachments-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "aa88f78d59834e61c3049a72ea1ad8eeb3262ec2cad87c08a59f84c07a10510c"
+    },
+    {
+      "path": "evidence/windows/cmg_attachments-candidate-0-attempt1/wrapper.json",
+      "sha256": "b584305c504390b8b3d1bd714ee759eee93252aa8eb4b0afb1d4d70f608ae59f"
+    },
+    {
+      "path": "evidence/windows/cmg_lifecycle-candidate-0-attempt1/receipt.json",
+      "sha256": "b219d39512da9c5e1e863d757e6418c6982e0a60f768540211faa8ba7eeee481"
+    },
+    {
+      "path": "evidence/windows/cmg_lifecycle-candidate-0-attempt1/runtime.json",
+      "sha256": "6ef4383cff6f8c6cb2de20d3ff15077c26db66e756dcd09b29e10d855d1d588c"
+    },
+    {
+      "path": "evidence/windows/cmg_lifecycle-candidate-0-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/cmg_lifecycle-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "c1f596833f7de6096610b3b252e9c52f40dba59cf0eab582660ce16ee4fdf3e4"
+    },
+    {
+      "path": "evidence/windows/cmg_lifecycle-candidate-0-attempt1/wrapper.json",
+      "sha256": "573459a20b8afec73299a63e20860e9842a80ef4b9a265c2ee8d2b0d0bbbeed1"
+    },
+    {
+      "path": "evidence/windows/cmg_point-candidate-0-attempt1/receipt.json",
+      "sha256": "523a92db2527a3e24ca739e61c0b56b80700a10f07f573606f1c590c0b40e857"
+    },
+    {
+      "path": "evidence/windows/cmg_point-candidate-0-attempt1/runtime.json",
+      "sha256": "aed275aca9d7203e06e7ac8b77ceb62a2a1679fa2f23ea9a390df43b5408fee7"
+    },
+    {
+      "path": "evidence/windows/cmg_point-candidate-0-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/cmg_point-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "e48676e5819090d7adfd80278e8932b96cacca538473d819aa940b9848a6d741"
+    },
+    {
+      "path": "evidence/windows/cmg_point-candidate-0-attempt1/wrapper.json",
+      "sha256": "7a7fa863e49ce02e1bbbbd49055b39798abfe992312d46a1263962233f294a13"
+    },
+    {
+      "path": "evidence/windows/comparison.json",
+      "sha256": "aacc412407192f6044b76c828035acd25b02592cf1abae7ab9f125ba6fb9b83d"
+    },
+    {
+      "path": "evidence/windows/installation-candidate-0-attempt1/receipt.json",
+      "sha256": "8d64d23d256e61282706d846bee02934682da0332db180d19dae20f2fa3e259c"
+    },
+    {
+      "path": "evidence/windows/installation-candidate-0-attempt1/runtime.json",
+      "sha256": "a53e2c4fd4b4a1b6906111c66afb8a4de6f3f291d47ff2d2fc5fdcb2edba95e3"
+    },
+    {
+      "path": "evidence/windows/installation-candidate-0-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/installation-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "a7fa04eb6ad486834e9bffaba5c8ee8622f553b2d5ccf9cef50725caff026ae8"
+    },
+    {
+      "path": "evidence/windows/installation-candidate-0-attempt1/wrapper.json",
+      "sha256": "3789bb23fdc3b091e8b3b9549b927c679b6774f28cc68080c342fe8b8327243c"
+    },
+    {
+      "path": "evidence/windows/legacy-candidate-0-attempt1/receipt.json",
+      "sha256": "1fbc0564399cedc941b329e150b3ea598d51bc80df952bbaba59a984e6cfe665"
+    },
+    {
+      "path": "evidence/windows/legacy-candidate-0-attempt1/runtime.json",
+      "sha256": "02991b470b11df5952015ff75b7748927d3777f24d84c1091a845d48d4394bdc"
+    },
+    {
+      "path": "evidence/windows/legacy-candidate-0-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/legacy-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "13636f02b4a8e4016cc740b4c5a065b5061e19213f4f352936fd893a3d0b8807"
+    },
+    {
+      "path": "evidence/windows/legacy-candidate-0-attempt1/wrapper.json",
+      "sha256": "1516150b094556ec930591299ffcbd8c56ce363045defb4f36aba16571bba583"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-0-attempt1/receipt.json",
+      "sha256": "d6a9edafe9de992b5d3d2f8eaa48446456e08a7a155042218b1c8ae4481fe3d3"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-0-attempt1/runtime.json",
+      "sha256": "aa6b6887af27d4d86aa391b4732fefbbf8967ff978eddd9c199d738522bbc2e3"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-0-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "07e8bc2da17f1bfd16534e800b9b64f04ac627a40cb93c6148f5f64f62482dd2"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-0-attempt1/wrapper.json",
+      "sha256": "485fe1a6cd2e7251368ad482ca757bec83de5dd57176afc21fc0575141b0ea32"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-1-attempt1/receipt.json",
+      "sha256": "05d42fdb9d71a3b3eba3323ad4e41aa1a37f0e30b67a257b5949b5ead97a53d9"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-1-attempt1/runtime.json",
+      "sha256": "9443b86df996439f26135ed7ce0c85cc6dda157b4f0474fc2b1f27d60a4332a7"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-1-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-1-attempt1/windows-project-checks.json",
+      "sha256": "d7e557426c53ed1ff62255cfb13dd412e3dbc73ef20c2ec5830700907fab976e"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-1-attempt1/wrapper.json",
+      "sha256": "70270cbfbf500a75bb4431f954afe39e26d05c733dd17b47ac14ad5096bd29c2"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-2-attempt1/receipt.json",
+      "sha256": "0a039e0320979319f6485e879038212c9fa593373d78feef5565cd0827aa8882"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-2-attempt1/runtime.json",
+      "sha256": "a9b4d906f99b19a07e2ff61c2a212ee3f3142371f18fa2b09ecd05494ad9310e"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-2-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-2-attempt1/windows-project-checks.json",
+      "sha256": "ce154f05c3cdac4f03e41873d4152ea8624ca9a8e3dc4b33ba7ee584e782fef2"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-2-attempt1/wrapper.json",
+      "sha256": "46e22eee1ea006880eb28ff6e815a5f719d5392e7f193596a45d400fff59e00b"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-3-attempt1/receipt.json",
+      "sha256": "4843606543e3589e085fb8f4ebdbbe4b6062fa7d5cb861765d2209c50aab6562"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-3-attempt1/runtime.json",
+      "sha256": "0b08e4a0cca3bffe1da608d624346b552db956c7aff289e67b83f9b10574944d"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-3-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-3-attempt1/windows-project-checks.json",
+      "sha256": "558a6e32d64348226b05bedc5b566fe42923f78f1e6a8843f3aa5ea53729d23a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-3-attempt1/wrapper.json",
+      "sha256": "d31f406133dfed7119c4c715495c81a9142aa703eed18bf1462213457d70ada5"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-4-attempt1/receipt.json",
+      "sha256": "1465a3cfa37137dcabc0b50f557b4d22de94880b3554daeba8d661f4baf85704"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-4-attempt1/runtime.json",
+      "sha256": "eaa364cc5740e3af7795607d7e25920c7f2101b877e573a1ed0c377410f96661"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-4-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-4-attempt1/windows-project-checks.json",
+      "sha256": "e3f52de3b2ebdc7691e91ad55a1edabd7294f13197a5ae5b8e6c00c87b7107de"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-4-attempt1/wrapper.json",
+      "sha256": "70a4121baba7ca530575864e10fd75a7860e1e0ba69db42d5b004807012077c3"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-5-attempt1/receipt.json",
+      "sha256": "9184c095c9011fe5f265377f5f6eebb9207e332fa02d9edb23794aa7cebb09ee"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-5-attempt1/runtime.json",
+      "sha256": "b5d37c437e123f9c2ef5555d413c7b5ca1a74d3fcf18c33fc8ffe131b7554931"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-5-attempt1/windows-build.json",
+      "sha256": "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-5-attempt1/windows-project-checks.json",
+      "sha256": "f05d260bce0fec6fbd80b5e98500b11ff108bfcab50c0dccfd3e93fec37ca9b2"
+    },
+    {
+      "path": "evidence/windows/performance-candidate-5-attempt1/wrapper.json",
+      "sha256": "ffaa484e248258f716e0d91bf65b067bfca13e268352b3b1e4743c094528ee78"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-0-attempt1/receipt.json",
+      "sha256": "53fda7d83b926e15b21c3ca13942855da67cebc7ea7570f20637907ada22be66"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-0-attempt1/runtime.json",
+      "sha256": "4d84973c4fd75a9d7059136830d8f1c58e87cccc71d1de5df7075dc3d17cd18c"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-0-attempt1/windows-build.json",
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-0-attempt1/windows-project-checks.json",
+      "sha256": "b32980bee0a928498171fa1b201dd756a91de81e1f33d3f260bb5c1d97b8b1fa"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-0-attempt1/wrapper.json",
+      "sha256": "5089acefde3132bd3322689ee444007c4eeb9537c4b9c9366b233ebecace1acf"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-1-attempt1/receipt.json",
+      "sha256": "6215375877baab71188c49012f13cc13c339376707ba9677fb36ea3155270f20"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-1-attempt1/runtime.json",
+      "sha256": "c0e91154a1b00aaed1419244a288f79c21f1efca19be48fe54262b38a79cce41"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-1-attempt1/windows-build.json",
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-1-attempt1/windows-project-checks.json",
+      "sha256": "986ec7e183d3959e1260cb20fba479f045c45853fe448465cff97b94b3248e80"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-1-attempt1/wrapper.json",
+      "sha256": "156ec07be021d17515f31ab80cb775ac4aa3fb00855ca4359a320c33faa68cdf"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-2-attempt1/receipt.json",
+      "sha256": "b74349e0e3352a1695ce99c998b9469b05645b2edd687beb01c0af0efaa7b168"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-2-attempt1/runtime.json",
+      "sha256": "5913a2550b896c632abf9831a139840fad7dc7ae19638b68226f18e016c1e4d4"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-2-attempt1/windows-build.json",
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-2-attempt1/windows-project-checks.json",
+      "sha256": "64ec35b3f6a81c4a3933bd78f3de3cd93dc87ae85116b9de06005c51fd92fdbe"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-2-attempt1/wrapper.json",
+      "sha256": "e3d69ccd98437d0bb76f9b4aeb7b4ca5ef59fc087f64eaa304066bcbb465482b"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-3-attempt1/receipt.json",
+      "sha256": "ddb0164064b2be56b0003cacc739d313ed4bb1dee6e5c6a5689e0a807da7f29c"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-3-attempt1/runtime.json",
+      "sha256": "88359689596694712d7d9b1699638d9cc29b33f15c8155486a834d031f932c54"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-3-attempt1/windows-build.json",
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-3-attempt1/windows-project-checks.json",
+      "sha256": "b532518e0529b4653acf5bdf7309b0e4206164f6edb3200b263b4fe6b977ed85"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-3-attempt1/wrapper.json",
+      "sha256": "4d7c05380d7e3cc5857c7240bf22cd253a85f7df8da2bbad392071ebcb403c64"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-4-attempt1/receipt.json",
+      "sha256": "fd876f66c8c21a7f8a2d65b1746cfd8a373f3babf4c7b556f0663b6cf5b76080"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-4-attempt1/runtime.json",
+      "sha256": "fd2d9e983db6f33aa6e8de48728fb5bff85fec330c688b0cc053a8bca18465de"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-4-attempt1/windows-build.json",
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-4-attempt1/windows-project-checks.json",
+      "sha256": "a2539a8d017000a6afe1b7831a4724aa867f1b513c444709b058c828a63b801e"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-4-attempt1/wrapper.json",
+      "sha256": "a1d0b7809753a75f7e6a761b8b518ac520184b83c9f95f3fac8dac2cf5897040"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-5-attempt1/receipt.json",
+      "sha256": "575765313efe15ea66f6cf2a2639b4353f0fd23dd257912a4c50102f0f05624e"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-5-attempt1/runtime.json",
+      "sha256": "4c0139bbe4640a8c2f2b15e00d8212219970b8fb4e0fe8e1d88863807c032a5c"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-5-attempt1/windows-build.json",
+      "sha256": "2007b09f8536add719030670aebf9ee06e1de75f8a0271b2e32a26510f693401"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-5-attempt1/windows-project-checks.json",
+      "sha256": "b6545c0408c0e7d12ba2a22ae96eb80089467cacecf6ee84a82f415812dfaeb6"
+    },
+    {
+      "path": "evidence/windows/performance-incumbent-5-attempt1/wrapper.json",
+      "sha256": "0902d182f61d074200138d2f4debe95ac6c315297185ea5d95b4d302da6a284b"
+    },
+    {
+      "path": "evidence/windows/prior-failed-legacy-receipt.json",
+      "sha256": "210d93ef37aba9893730cd1576325a193810b06cae139eee06e311d7d5aad109"
+    },
+    {
+      "path": "evidence/windows/prior-failed-legacy.json",
+      "sha256": "7fae2939fd5832754cc76d2a2a8f27d6af830509a431fa363585fcaa31da7381"
+    },
+    {
+      "path": "evidence/windows/smoke-candidate-0-attempt1/receipt.json",
+      "sha256": "28f25e868d078d12777bb11e09200e5f65f82f1206c27f0356fa143dece6832f"
+    },
+    {
+      "path": "evidence/windows/smoke-candidate-0-attempt1/runtime.json",
+      "sha256": "dc103fc7bdbf54770f1ca535c458eebe5b7c723c12f75090ab8ba8d4626c78fb"
+    },
+    {
+      "path": "evidence/windows/smoke-candidate-0-attempt1/windows-build.json",
+      "sha256": "a4939bd4ee1dd1c499f09abd5c760ed3d4a7eb9a704a9a451b8e30147dd4385a"
+    },
+    {
+      "path": "evidence/windows/smoke-candidate-0-attempt1/windows-project-checks.json",
+      "sha256": "990107724f3c0bbe59626bad3993a1ed7fc6bc79a7f78ba5b6e1885be7f2f541"
+    },
+    {
+      "path": "evidence/windows/smoke-candidate-0-attempt1/wrapper.json",
+      "sha256": "ad047caabdee5b021a156ba606ff920ec75381805bd170bbaf5b719e3f09ac93"
+    },
+    {
+      "path": "evidence/packaging/preparation-failure.json",
+      "sha256": "03bfc223b401a9e2cd5e5696026351b8d772ab4628f9e810b30ba9b822bced2c"
+    },
+    {
+      "path": "evidence/packaging/python-staged-attempt2.txt",
+      "sha256": "de77b28095d4f4bf117f3c19e8d4382c56aa30ae68ac16baa3aa30c6765b4eef"
+    },
+    {
+      "path": "evidence/packaging/python-unstaged-attempt1.txt",
+      "sha256": "9279295369352c7c9b617f9ccf8297939d4fab42f29a8ccd56f14fd4e63c579b"
+    },
+    {
+      "path": "evidence/packaging/source-compatibility.json",
+      "sha256": "f365112f1a535a29b573bc3715c7168ff801897f57486773f0f2615955bc31d8"
+    },
+    {
+      "path": "evidence/packaging/static-checks.json",
+      "sha256": "820c5bfd2ad883fbe8c954d107ad72b0cc0d79ba24af87fc2afa64d53e31b2f8"
+    },
+    {
+      "path": "evidence/packaging/unchanged-source.json",
+      "sha256": "b99f07a2302c83a37f4a1c22b4c996faf56a25df3e2466c5b411e840f30d08f0"
+    }
+  ],
+  "windows_cmg_campaign": {
+    "path": "evidence/windows/adoption-index.json",
+    "sha256": "bb3be3da19a7e3eeccc4c459abb773a525bd855a6e9976d2a7e2c8cfaaef62d9"
+  },
+  "windows_qualification": {
+    "path": "evidence/windows/adoption-index.json",
+    "sha256": "bb3be3da19a7e3eeccc4c459abb773a525bd855a6e9976d2a7e2c8cfaaef62d9"
+  },
+  "source_checks": [
+    "1019 Python checks at the common build",
+    "CMG assembly, parity, public identity, license and portable packaging checks",
+    "Hosted source, MSRV/stable Mac/Linux/Windows Rust and SPI checks"
+  ],
+  "qualification_scope": "All five exact plugins share the common build. Mac arm64 and Rosetta thin/universal/installed, SCC Linux full/native/installed, private Windows 18 registered groups, plus Stata 15.1 full suite and isolated installed-native checks on Intel/Rosetta. Publication and final package checks are recorded separately.",
+  "limitations": [
+    "One/two native Windows workers; higher concurrency covered only by Rust tests.",
+    "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested.",
+    "Performance compares requests supported by both versions. Weighted observation deletion uses movers; broader observation/both capability is qualified by runtime/oracle tests without an incumbent Windows native timing comparison.",
+    "Stata 16 was not installed; Stata 17 license was expired. Actual local compatibility executions cover Stata 15.1, 18 and 19.",
+    "Bounded scientific and performance tests do not establish general coverage or representative-scale performance. Default-SE timing observations are informational."
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "command_executable": "/Applications/Stata 15/StataMP.app/Contents/MacOS/stata-mp",
+  "completed_at": "2026-11-15T19:27:04.304805Z",
+  "duration_seconds": 185.887,
+  "launch_error": null,
+  "pid": 10367,
+  "process_rc": 0,
+  "schema_version": 1,
+  "started_at": "2026-11-15T19:23:58.418164Z",
+  "timed_out": false
+}

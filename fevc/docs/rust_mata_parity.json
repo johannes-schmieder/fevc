@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "updated": "2026-11-07",
-  "release_target": "0.5.2",
-  "qualification_scope": "All five plugins are built from ec5e1e0e with unmodified common CMG e5613e81 and explicit 128 levels. Mac arm64/Rosetta, SCC Linux 8502097, and all 18 private Windows runtime/installation/frozen performance groups pass. Windows now supports shared full-CMG automatic/explicit point estimation and supported projection/component routes. Exact hashes, corresponding source and evidence are in native/windows-cmg-20261107/manifest.json. Windows runtime qualification covers one/two workers; no native Intel hardware or general coverage claim. Historical records retain their original source and scope; final published-install evidence is separate.",
+  "updated": "2026-11-15",
+  "release_target": "0.6.0",
+  "qualification_scope": "All five plugins share build source 2082f209 and unmodified common CMG e5613e81 with explicit 128 levels. Native Mac arm64/Rosetta thin/universal/installed, SCC Linux full/native/installed and all 18 registered private Windows groups pass. Stata 15.1 full and installed-native tests pass on Mac Intel/Rosetta. Windows tests use Stata 19 and one/two native workers. Exact identities and receipts: native/repeat-measurement-20261115/manifest.json. No native Intel hardware, Stata 16/17 runtime, representative-scale or general coverage claim. Historical results retain their original sources and limits; final published-install evidence is separate.",
   "statuses": [
     "qualified",
     "implemented",
@@ -10,6 +10,22 @@
     "deferred"
   ],
   "rows": [
+    {
+      "id": "repeat-measurement-se",
+      "surface": "Default repeat-measurement component standard errors and normal/q=1 intervals",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": false,
+      "evidence": "Independent dense/literal-expansion, leading-direction, control, weighting, caller-state and native receipt checks pass on supported routes. Stata 15.1 full and installed-native checks pass; exact five-platform artifact evidence is in native/repeat-measurement-20261115/manifest.json. INFERENCE.md describes route exclusions and inferential limits. Historical simulation evidence is reused only within the recorded source compatibility scope; it is not a new general coverage claim."
+    },
+    {
+      "id": "stata15-compatibility",
+      "surface": "Stata 15 compatibility and complete native diagnostic tables",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": false,
+      "evidence": "Stata 15.1 on Mac Intel/Rosetta passes the full suite and installed native checks at 2082f209, including legacy sort restoration, matrix boundaries, exact eigenvalue/direction oracles and diagnostic ledgers beyond 11000 rows. Focused Stata 18/19 checks also pass; Stata 16 is absent and the Stata 17 license is expired. native/repeat-measurement-20261115/manifest.json."
+    },
     {
       "id": "pooled-match-component",
       "surface": "Pooled mover–stayer structured match q0/q1 (removed in 0.6.0)",
@@ -168,7 +184,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean ec5e1e0e native arm64 and Rosetta x86-64 thin/universal full native and installed checks pass. Exact three hashes and receipts: native/windows-cmg-20261107/manifest.json. No native Intel hardware claim; historical receipts keep their original scope."
+      "evidence": "Clean 2082f209 thin/universal native and installed qualification passes on arm64 and x86-64 under Rosetta; Stata 15.1 compatibility has its separate full/installed receipt. native/repeat-measurement-20261115/manifest.json. No native Intel hardware claim."
     },
     {
       "id": "linux-scc",
@@ -176,7 +192,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean ec5e1e0e SCC smoke 8502096 and full 8502097 pass, including native and installed checks; failed=0 and exit_status=0. The collected evidence and binary inventory are hash-verified. Exact plugin and receipts: native/windows-cmg-20261107/manifest.json."
+      "evidence": "Clean 2082f209 SCC job 8632839 passes full/native/installed qualification; failed=0, exit_status=0, 62 collected hashes verified. native/repeat-measurement-20261115/manifest.json."
     },
     {
       "id": "windows",
@@ -184,7 +200,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Clean ec5e1e0e hosted static-CRT artifact passes all 18 private Windows runtime, installation and fixed performance groups, including shared full-CMG point, controls, projection, pooled component inference, cancellation and memory policy at one/two workers. All 12 registered scientific/performance cells pass. Exact binary, source and receipts: native/windows-cmg-20261107/manifest.json. Earlier failed registrations, the failed confirmation and development pilots remain separate."
+      "evidence": "Exact hosted 2082f209 static-CRT plugin passes all 18 private Windows groups, all 12 scientific/timing cells and replacement installation with one/two workers. Paired requests use inference(none) and full CMG in both 0.5.2/0.6.0 arms; 12 default-SE timings are separate information. native/repeat-measurement-20261115/manifest.json."
     },
     {
       "id": "all-point-probe-numerical-mcse",

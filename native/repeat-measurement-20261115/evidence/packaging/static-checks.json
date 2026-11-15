@@ -1,0 +1,59 @@
+[
+  {
+    "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+    "chunk_id": "c434ef",
+    "wall_time_seconds": 0.145380542,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": ""
+  },
+  {
+    "command": "./.venv/bin/python fevc/tools/check_cmg_vendor.py",
+    "chunk_id": "2b6cb3",
+    "wall_time_seconds": 0.052888667,
+    "exit_code": 0,
+    "original_token_count": 6,
+    "output": "CMG_VENDOR_CHECK=PASS\n"
+  },
+  {
+    "command": "./.venv/bin/python fevc/tools/check_fevc_public_identity.py",
+    "chunk_id": "42454b",
+    "wall_time_seconds": 8.042e-06,
+    "original_token_count": 8,
+    "output": "FEVC PUBLIC-IDENTITY AUDIT PASS\n",
+    "exit_code": 0
+  },
+  {
+    "command": "./.venv/bin/python fevc/tools/license_audit.py",
+    "chunk_id": "963120",
+    "wall_time_seconds": 0.104595375,
+    "exit_code": 0,
+    "original_token_count": 24,
+    "output": "LICENSE_AUDIT=PASS\nMIT_SHA256=47100fd2c51004029814aa82abe009e48e19d1b4596ee33b09433c1b70dff8a9\n"
+  },
+  {
+    "command": "./.venv/bin/python fevc/tools/render_rust_mata_parity.py --check",
+    "chunk_id": "a4930d",
+    "wall_time_seconds": 0.021711542,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": ""
+  },
+  {
+    "command": "./.venv/bin/python fevc/tools/build_release_artifact.py --check",
+    "chunk_id": "875e5c",
+    "wall_time_seconds": 0.396600167,
+    "exit_code": 0,
+    "original_token_count": 32,
+    "output": "FEVC_RELEASE_ARTIFACT_CHECK_PASS version=0.6.0 files=63 sha256=ecba251fedc068791329f24bc62e5c3703f0933502d6ff4c5032e5ea1fae7989\n"
+  },
+  {
+    "command": "./.venv/bin/python fevc/tools/build_github_release.py --adoption-manifest native/repeat-measurement-20261115/manifest.json --check",
+    "chunk_id": "021b8d",
+    "wall_time_seconds": 1.0167e-05,
+    "exit_code": 0,
+    "original_token_count": 32,
+    "output": "FEVC_GITHUB_PACKAGE_CHECK_PASS version=0.6.0 files=68 sha256=36c3c33f4a050201dfa2f71f02b90b2b129052c4eb4a616e8143554d6d8b4166\n",
+    "prior_invocation": "final-static-dispatch-attempt1.json retains missing-required-argument exit2; this is the corrected invocation, no gate changed"
+  }
+]

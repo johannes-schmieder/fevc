@@ -1,0 +1,33 @@
+{
+  "schema": "FEVC-STATA15-COMPATIBILITY-QUALIFICATION-V1",
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "started_utc": "2026-11-15T18:57:53.149204+00:00",
+  "status": "PASS",
+  "stage": "/private/tmp/fevc15-frozen-2082f209",
+  "macos_plugins": {
+    "fevc_rust_macos_x86_64.plugin": "c01d68b9af514b551035c2cd69ab0f49e470cd44a117bdc7061e9e8ad415f09f",
+    "fevc_rust_macos.plugin": "c892c6e29f231e9b36b90fdd5826c4775e23873f9a8a9b83df61e984989416bf",
+    "fevc_rust_macos_arm64.plugin": "4a6ad2c30dfc58f034011ef1e434d351a6082b33c962cf52cd401b3262425639"
+  },
+  "external_plus": {
+    "name": "_/_gnvals.ado",
+    "sha256": "e014435760c9eeb2a96cbf732f12129d402341e8baca58bce2b404f1872097f9"
+  },
+  "full_timeout_seconds": 13800,
+  "failed_attempts_retained": "stata15-compatibility-20261115/numerical-fix-development/",
+  "full": "PASS",
+  "runtime": {
+    "schema_version": "1",
+    "profile": "full",
+    "stata_rc": "0",
+    "stata_version": "15.1",
+    "stata_edition": "MP",
+    "stata_os": "Unix",
+    "stata_machine_type": "Macintosh (Intel 64-bit)",
+    "stata_processors": "4",
+    "stata_born_date": "03 Feb 2020",
+    "completed": "1"
+  },
+  "installed_native": "PASS",
+  "completed_utc": "2026-11-15T19:27:04.310516+00:00"
+}

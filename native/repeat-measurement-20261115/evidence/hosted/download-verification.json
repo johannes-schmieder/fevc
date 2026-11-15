@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "artifact_id": 14173998596,
+  "run_id": 43746190747,
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "artifact_sha256": "a129855ea34ec0e8879d58b26d16e4ad5e2a8ead9782a02f7b818a26dd420fdf",
+  "candidate_sha256": "e27fd9ad34b7484423f5178563aed36385a5619d4f52a5b66c5e70f080c309a5",
+  "receipt_sha256": "dcd0ebbaf99ac79046404402f1bfd8eec7fbf2c4ab4a6877b5f543741b64348c",
+  "local_pe_audit": "PASS",
+  "required_export_count": 149,
+  "static_crt": true,
+  "runtime_qualification": "PENDING"
+}

@@ -57,7 +57,7 @@ Stata after updating a loaded native plugin. See
 
 After installing or updating the package and restarting Stata, you can
 check which features the loaded plugin supports. With the plugins included
-in version 0.5.2, all of the following assertions should hold, and the
+in version 0.6.0, all of the following assertions should hold, and the
 example should run on the Rust backend. This has been verified on macOS,
 Linux, and Windows.
 
@@ -68,6 +68,8 @@ assert r(centering_api) == 1
 assert r(projection_centering_api) == 1
 assert r(component_centering_api) == 1
 assert r(component_mixed_api) == 1
+assert r(component_residual_api) == 1
+assert r(component_repeat_api) == 1
 fevc_run exact_controls using fevc.sthlp
 assert "`e(backend_selected)'" == "rust"
 ```
@@ -75,28 +77,28 @@ assert "`e(backend_selected)'" == "rust"
 The probe values correspond to live progress reporting, outcome centering,
 mean-centered projections, and two capabilities that the standard errors
 of the components need on the native backend (mean centering, and units
-that pool movers and stayers). The 0.5.2 plugins predate the standard
-errors of version 0.6.0, which also need `r(component_residual_api) == 1`
-and `r(component_repeat_api) == 1`; with them the default reports point
-estimates and says why, or uses Mata when you select `backend(mata)`.
+that pool movers and stayers). The 0.6.0 plugins also provide the residual and repeat-measurement
+capabilities used by the default standard errors. Unsupported requests still
+return point estimates with an explanation under `inference(auto)`; see
+[inference support and limitations](fevc/docs/INFERENCE.md).
 
 ## Installing a specific release
 
 To install the tagged
-[0.5.2 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
+[0.6.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0)
 from GitHub:
 
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.2/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.6.0/")
 ```
 
 Restart Stata after updating to load the new programs and native plugin.
 
 ## Release ZIP and offline installation
 
-Download `fevc-0.5.2.zip` from the
-[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2).
+Download `fevc-0.6.0.zip` from the
+[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0).
 The ZIP contains only the installation files, programs, help, license
 notices, and five native plugins; it does not include tests, development
 tools, or benchmark data. Extract it and run:

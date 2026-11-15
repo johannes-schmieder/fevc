@@ -1,6 +1,20 @@
 # Native backend
 
-## Current Windows full-CMG binaries
+## Current 0.6.0 binaries
+
+All five 0.6.0 plugins are built from `2082f209` with unmodified common
+CMG `e5613e81` and the explicit 128-level limit. They include repeat-measurement
+component standard errors and normal/q=1 intervals on the supported routes.
+Mac arm64 and Rosetta thin/universal/installed, SCC Linux full/native/installed,
+and all 18 private Windows groups pass. Stata 15.1 also passes the full suite
+and installed-native tests on Intel/Rosetta; focused Stata 18/19 tests pass.
+Windows qualification uses Stata 19 and one/two workers. Native Intel hardware
+and Stata 16/17 runtime execution are not claimed.
+The [adoption manifest](../native/repeat-measurement-20261115/manifest.json) binds all exact bytes,
+corresponding source and qualification evidence. Publication/HTTP install
+checks follow separately. Historical checkpoints below retain their scope.
+
+## 0.5.2 Windows full-CMG binaries
 
 All five 0.5.2 plugins share build source `ec5e1e0e` and the unmodified common
 CMG revision `e5613e81`. Native Mac arm64/Rosetta, SCC Linux and all 18 private
@@ -10,7 +24,7 @@ exact binaries, corresponding source and evidence. Windows scope is one/two
 workers; Mac x86-64 runtime tests use Rosetta. Published installation checks
 are recorded separately. Historical evidence below retains its original scope.
 
-## November 13 repeat-measurement standard errors (source only)
+## November 13 implementation checkpoint (historical)
 
 `vckss-core::residual_noise::repeat` adds a second standard error on the
 leave-out residual pass, for match and for observation units. Units that
@@ -29,9 +43,8 @@ routing, admission, probe accounting and the pseudo-noise solves are shared.
 The public ABI reports it as variance source 4 behind additive capability
 bit 19, with fit code 4 in the V5 result receipt and its own diagnostic
 export, `vckss_rust_engine_repeat_measurement_diagnostic_v1`. The
-registered variance-source enumeration is unchanged. No distributed binary
-contains it; the native route passes the Stata regression with a plugin
-built from this source.
+registered variance-source enumeration is unchanged. At that checkpoint no distributed binary contained it; source-local native
+regressions passed. The 0.6.0 adoption above supersedes that binary status.
 
 With the `q1` reference the same pass also computes the leading direction of
 each of the four reported targets and the `q = 1` decomposition along it
@@ -42,7 +55,7 @@ leave through `vckss_rust_engine_repeat_measurement_leading_v1` (872 bytes,
 four targets of 208 bytes). Their solves are planned at the cap of the search
 and receipted as used.
 
-## November 10 leave-out residual standard errors (source only)
+## November 10 implementation checkpoint (historical)
 
 `vckss-core::residual_noise` adds sampling standard errors for the four
 components from squared residuals and pseudo-noise, attached to generic JLA
@@ -57,8 +70,8 @@ worker-firm solver for the fixed-offset unit geometry; a mover-only request
 without controls selects the generic engine when the attachment is present.
 Its memory forecast is a dedicated lifetime tally, and
 `vckss_rust_engine_leaveout_residual_diagnostic_v1` exports the working-variance
-fit, offset-pass solves, effective ranks and model-based covariance. No
-distributed binary contains it yet. See
+fit, offset-pass solves, effective ranks and model-based covariance. At that checkpoint no distributed binary contained it; the 0.6.0 payload
+now includes the machinery, while its former public variance model is removed. See
 `fevc/docs/standard_errors/standard_errors.tex`.
 
 ## October 10 pooled component inference binaries

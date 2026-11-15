@@ -1,0 +1,46 @@
+{
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "utc": "2026-11-15T18:37:30.861335+00:00",
+  "runs": [
+    {
+      "conclusion": "success",
+      "databaseId": 43746340092,
+      "headSha": "2082f20974d6437814905c351f13509ff934d04e",
+      "status": "completed",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43746340092",
+      "workflowName": "Source checks"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 43746340289,
+      "headSha": "2082f20974d6437814905c351f13509ff934d04e",
+      "status": "completed",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43746340289",
+      "workflowName": "Rust backend"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 43746196017,
+      "headSha": "2082f20974d6437814905c351f13509ff934d04e",
+      "status": "completed",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43746196017",
+      "workflowName": "Rust Stata SPI build candidates"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 43746193470,
+      "headSha": "2082f20974d6437814905c351f13509ff934d04e",
+      "status": "completed",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43746193470",
+      "workflowName": "Rust backend"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 43746190747,
+      "headSha": "2082f20974d6437814905c351f13509ff934d04e",
+      "status": "completed",
+      "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43746190747",
+      "workflowName": "Windows test package"
+    }
+  ]
+}

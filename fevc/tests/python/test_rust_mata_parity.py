@@ -31,7 +31,7 @@ def test_every_alpha_gap_is_explicit() -> None:
     assert gaps == set()
     windows = next(row for row in rows if row["id"] == "windows")
     assert windows["mata"] == windows["rust"] == "qualified"
-    record = "native/windows-cmg-20261107/manifest.json"
+    record = "native/repeat-measurement-20261115/manifest.json"
     assert record in windows["evidence"]
     manifest_path = REPO_ROOT / record
     adoption = json.loads(manifest_path.read_text(encoding="utf-8"))

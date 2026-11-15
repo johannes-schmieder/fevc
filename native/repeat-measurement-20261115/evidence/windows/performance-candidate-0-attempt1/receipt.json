@@ -1,0 +1,44 @@
+{
+    "schema_version":  3,
+    "run_id":  "win-20261115T200329Z-2e9cdcc3",
+    "project":  "fevc",
+    "profile":  "stata-do",
+    "source_revision":  "commit-6c47ef00330718b96c9219111be2e2ab4771c6ad",
+    "source_sha256":  "4fe5f0cf0307a5896705c263a824103984fed93afd9e8e019172c14429b5ab5b",
+    "windows_target":  "x86_64",
+    "execution_identity":  "SYSTEM",
+    "status":  "PASS",
+    "error_code":  null,
+    "checks":  {
+                   "execution_identity":  true,
+                   "source_hash":  true,
+                   "archive_paths":  true,
+                   "source_manifest":  true,
+                   "shutdown_backstop":  true,
+                   "stata":  true,
+                   "project_test":  true
+               },
+    "completed_at_utc":  "2026-11-15T20:08:44.4915102Z",
+    "controller_sha256":  "473762e2210f82b905b6e7edde058efbe0e25dedaf07a6b679885f5808692265",
+    "artifact_guard_sha256":  "6449968d1c09f02d4a5996089cd3d5fc2a11862340ee7d2839a1479d69cbcc2f",
+    "artifacts":  [
+                      {
+                          "bytes":  5891072,
+                          "name":  "fevc_rust_windows_x64.plugin",
+                          "sha256":  "e27fd9ad34b7484423f5178563aed36385a5619d4f52a5b66c5e70f080c309a5"
+                      },
+                      {
+                          "bytes":  7011,
+                          "name":  "windows-build.json",
+                          "sha256":  "cb977aa771ed8f476cc36fe7fa92ac466f42ee2502fcce9e5f03b9a4383cd51a"
+                      },
+                      {
+                          "bytes":  3370,
+                          "name":  "windows-project-checks.json",
+                          "sha256":  "07e8bc2da17f1bfd16534e800b9b64f04ac627a40cb93c6148f5f64f62482dd2"
+                      }
+                  ],
+    "failure_stage":  "complete",
+    "stata_rc":  null,
+    "input_identity_sha256":  "b754d8e7f4149217171e2842d09342d2cb325d25c7cca9fad80ee0991762956b"
+}

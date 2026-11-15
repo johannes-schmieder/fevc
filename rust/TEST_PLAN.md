@@ -1,6 +1,20 @@
 # Rust backend test plan
 
-## Current Windows full-CMG binaries
+## Current 0.6.0 binaries
+
+All five 0.6.0 plugins are built from `2082f209` with unmodified common
+CMG `e5613e81` and the explicit 128-level limit. They include repeat-measurement
+component standard errors and normal/q=1 intervals on the supported routes.
+Mac arm64 and Rosetta thin/universal/installed, SCC Linux full/native/installed,
+and all 18 private Windows groups pass. Stata 15.1 also passes the full suite
+and installed-native tests on Intel/Rosetta; focused Stata 18/19 tests pass.
+Windows qualification uses Stata 19 and one/two workers. Native Intel hardware
+and Stata 16/17 runtime execution are not claimed.
+The [adoption manifest](../native/repeat-measurement-20261115/manifest.json) binds all exact bytes,
+corresponding source and qualification evidence. Publication/HTTP install
+checks follow separately. Historical checkpoints below retain their scope.
+
+## 0.5.2 Windows full-CMG binaries
 
 All five 0.5.2 plugins share build source `ec5e1e0e` and the unmodified common
 CMG revision `e5613e81`. Native Mac arm64/Rosetta, SCC Linux and all 18 private
@@ -10,7 +24,7 @@ exact binaries, corresponding source and evidence. Windows scope is one/two
 workers; Mac x86-64 runtime tests use Rosetta. Published installation checks
 are recorded separately. Historical evidence below retains its original scope.
 
-## November 13 repeat-measurement standard errors (source only)
+## November 13 implementation checkpoint (historical)
 
 Focused gates: `cargo test -p vckss-core residual_noise` now also runs the
 unit tests of `residual_noise::repeat` (stayers' sample variances and the
@@ -54,7 +68,7 @@ platform gate; no distributed binary has been rebuilt. The
 memory forecast of the shared pass is not separately checked against the heap
 for this variant.
 
-## November 10 leave-out residual standard errors (source only)
+## November 10 implementation checkpoint (historical)
 
 Focused gates: `cargo test -p vckss-core residual_noise` (unit tests and the
 `generic_jla::residual_noise` dense-oracle tests for pooled fixed-offset match

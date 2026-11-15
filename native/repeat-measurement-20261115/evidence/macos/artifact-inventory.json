@@ -1,0 +1,1560 @@
+{
+  "status": "PASS",
+  "source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "qualification_receipt_sha256": "63483e36045a94b1a6355a9c6281492ddff186a33afd4621cc5e1450ed9ac646",
+  "verified_current_source_files": 298,
+  "default_command_logs": [
+    "artifacts/stata-logs/stata-arm64-default-inference__test-package.log.sanitized.log",
+    "artifacts/stata-logs/stata-arm64-universal-default-inference__test-package-universal.log.sanitized.log",
+    "artifacts/stata-logs/stata-x86_64-default-inference__test-package.log.sanitized.log",
+    "artifacts/stata-logs/stata-x86_64-universal-default-inference__test-package-universal.log.sanitized.log"
+  ],
+  "artifact_files": [
+    {
+      "path": "artifacts/SANITIZED_EVIDENCE.txt",
+      "bytes": 120,
+      "sha256": "178ec3d0cce3bc0aa4f3550fdce4540681025f04eb20b4dba92def6eb1f05d39"
+    },
+    {
+      "path": "artifacts/candidates/fevc_rust_macos.plugin",
+      "bytes": 9375472,
+      "sha256": "c892c6e29f231e9b36b90fdd5826c4775e23873f9a8a9b83df61e984989416bf"
+    },
+    {
+      "path": "artifacts/candidates/fevc_rust_macos_arm64.plugin",
+      "bytes": 4263664,
+      "sha256": "4a6ad2c30dfc58f034011ef1e434d351a6082b33c962cf52cd401b3262425639"
+    },
+    {
+      "path": "artifacts/candidates/fevc_rust_macos_x86_64.plugin",
+      "bytes": 5089904,
+      "sha256": "c01d68b9af514b551035c2cd69ab0f49e470cd44a117bdc7061e9e8ad415f09f"
+    },
+    {
+      "path": "artifacts/source-manifest.sha256",
+      "bytes": 31982,
+      "sha256": "35a24176c4c63f54467b52ee47a6b270ff7296d74119e55edeea9ce3559af441"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-backend-routing__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-backend-routing__test-package.log.sanitized.log",
+      "bytes": 39038,
+      "sha256": "f77c73d41649e616e45cb266ef093ad55f7b6c050de88dbf64b1ed399f747b42"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-canonical-install-unavailable__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-canonical-install-unavailable__install-unavailable-arm64 unavailable.log.sanitized.log",
+      "bytes": 8679,
+      "sha256": "97ae7c2549f6854bee8e238e77d45776c8c168b618305f22c052ef13340453e1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-clean-install__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-clean-install__stata.log.sanitized.log",
+      "bytes": 512125,
+      "sha256": "6e8b134addb0611d0cc7f7f03884606fffdfa358dddc968ce7908cd81bc75548"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-component-centering-exact__test-package.log.sanitized.log",
+      "bytes": 18794,
+      "sha256": "3b63aaf42750dc296f09492bfddec4782e1c59fe9009df0c1d8365b25bd12ed3"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-component-centering-native__test-package.log.sanitized.log",
+      "bytes": 24792,
+      "sha256": "9a3e3c5654afbc4d215f3109ff9a507841625a2a03b5ea39097aa8a819544640"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-default-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-default-inference__test-package.log.sanitized.log",
+      "bytes": 8123,
+      "sha256": "40e0f00fbf7c4037df5e6efec35510218a18ed5a380c890b9cae32f551f77f33"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-diagnostic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-diagnostic__test-package.log.sanitized.log",
+      "bytes": 3385,
+      "sha256": "5b66217437dedaf670619bbf63e691e544ad3fbb5897a6e48f380c178d881ecf"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-environment__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-environment__stata_environment.log.sanitized.log",
+      "bytes": 355,
+      "sha256": "ba86798a595bbafbd80d697458eeb32ce9db9b46b8c578e9ef0f840293d9a5ed"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-exact-controls__test-package.log.sanitized.log",
+      "bytes": 7746,
+      "sha256": "5d9ba72c489573a817163148db1a553ef84d8854164542dd1daac51c57d7a031"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-lifecycle__test-package.log.sanitized.log",
+      "bytes": 5155,
+      "sha256": "e1c1b3a7c6c171b5ff53968dae88a8ed0412d64b1e369525ae4786ec7108c46c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-attachments-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-attachments-thin__test-package.log.sanitized.log",
+      "bytes": 11419,
+      "sha256": "5136b77f58696fb725204c0b03aeb315ca3458807cdec6ce668fc5c1713ff961"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-attachments-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-attachments-universal__test-package-universal.log.sanitized.log",
+      "bytes": 11439,
+      "sha256": "46cfb3e2441df167bbedc2cb534d994a102ac436e93eb878d8dabe07c942a67c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-modes-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-modes-thin__test-package.log.sanitized.log",
+      "bytes": 9082,
+      "sha256": "1be5e8d27d770d7f9967de10cf729db5a56fd6f18b9d7308bd8de00565125e89"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-modes-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-mcse-modes-universal__test-package-universal.log.sanitized.log",
+      "bytes": 9102,
+      "sha256": "f7d8e8de846f283a85c2dfb0dc6769976111eea0662184176a91a2df797c6503"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-numerical-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-numerical-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 4465,
+      "sha256": "6d3d988d415b2dee548e25901aef1a6bd94f73cc94cc97ba053838b8cea0131d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-numerical-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-numerical-thin__test-package.log.sanitized.log",
+      "bytes": 10038,
+      "sha256": "1db71c09e4f120c2f1092613c0f2801f07ddcc23c198d5f1f551fabddfc24860"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-numerical-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-numerical-universal__test-package-universal.log.sanitized.log",
+      "bytes": 10058,
+      "sha256": "1b6c82190380f1f0dee839d2f69e7e3379e28751167eb6574ccd735f895f0df6"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-mata-structured_common__test-package mata structured_common.log.sanitized.log",
+      "bytes": 11501,
+      "sha256": "cc45a725b0305ad6d27a218b45a21245051a1bf3592f7c1b1faccbcb6f75fa95"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-mata-structured_leverage__test-package mata structured_leverage.log.sanitized.log",
+      "bytes": 11510,
+      "sha256": "bc5365bb72e9945840a98be069530254dbdee9aad91d8b555a8aa54857bd8e29"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-rust-structured_common__test-package rust structured_common.log.sanitized.log",
+      "bytes": 12272,
+      "sha256": "3c7e31bdb5a5e08e6b3d07d4fc0674bb1f0b4d20a37591e313ea5ed40432fa05"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-pooled-component-rust-structured_leverage__test-package rust structured_leverage.log.sanitized.log",
+      "bytes": 12281,
+      "sha256": "e05ef108e886dcae06467c665fe2229003941c9056d9c0e9ae105e73e8844b9f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-private-generic__test-package.log.sanitized.log",
+      "bytes": 30306,
+      "sha256": "159268cd9b90621b1714feebd7886d4349f829b6b17cf052ba9620f7a090e0a6"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-private-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 11872,
+      "sha256": "52e5e8e5d196c013602ba8396bdcf03f4ac92026249fae6aef2b91ca50cc6fa0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-private-planned-v4__test-package.log.sanitized.log",
+      "bytes": 23465,
+      "sha256": "db8e049b48ee212a871e3661245143622c88b3287f830b8820fa2af99a3c34dd"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-component-inference__test-package.log.sanitized.log",
+      "bytes": 36063,
+      "sha256": "953924027acbee787352be685910386845561425f60d596f8f91434d43656561"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-control-panel__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-control-panel__test-package rust.log.sanitized.log",
+      "bytes": 4885,
+      "sha256": "22cd12cc16e092787a4def723bd1fdf50d38cea2c675a86bb1dcc761a074e1a8"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-controlled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 8349,
+      "sha256": "638eec7ee8349bd9c0262fa179b7c8ec6350868a717fb8a48d68c44ef2755fd1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-exact__test-package.log.sanitized.log",
+      "bytes": 16795,
+      "sha256": "35d6ec5a39b3e314731bb724b2c4817805dd970b7dc2e11af0483604b63ba356"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-full-cmg__test-package.log.sanitized.log",
+      "bytes": 11989,
+      "sha256": "74e3113efc529cd23f4909d7455e510cf9c1fcdb3ebcafe518cbaf342cbafd9b"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-generic-execution__test-package.log.sanitized.log",
+      "bytes": 42425,
+      "sha256": "fbead5d67738f5f10e5ef70dfcfb66159e91d58028da39f1b5cabab37709c72f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-generic__test-package.log.sanitized.log",
+      "bytes": 81369,
+      "sha256": "dbdd6873a2cd3f29674b7d41b52959ffc81a985c014b92fbf792894d6cb645a1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-individual-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-individual-inference__test-package.log.sanitized.log",
+      "bytes": 46131,
+      "sha256": "7b68585af4b7902008b3de71afa71e62f101d8089f4f15ca02a951721d717770"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-match-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-match-component-inference__test-package.log.sanitized.log",
+      "bytes": 17691,
+      "sha256": "3ee3fb8c9dc5ecfc8c743447f61f8d0a9b725af24e86883dcbd65b2548731e86"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-observation-full-cmg__test-package.log.sanitized.log",
+      "bytes": 5927,
+      "sha256": "576bdc2b0aa8a91dd35c0c55f23e0d485a724ccef357851cd1888285aeb38897"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 34793,
+      "sha256": "faac32cf0f8ff7cabed8de40e7c48c49ffca53dc2f147a2b39676d54284b42f9"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-point-routes-full-cmg__test-package.log.sanitized.log",
+      "bytes": 7593,
+      "sha256": "6479a7a90b0eccdd34f9ee5483e0d8109d2a8be741db3c86feae1dff35f00b8e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-pooled-deletion__test-package.log.sanitized.log",
+      "bytes": 30983,
+      "sha256": "0e91c3c3bc5f69e072685acfc33217ec7ba54cb285b6b3ba217248e4e79ba24d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-pooled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 6467,
+      "sha256": "a70ea5bb6e42a262b4e67723c8e407c6dbf5edb3f630fd686fd134383663279f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-projection-mean__test-package.log.sanitized.log",
+      "bytes": 6102,
+      "sha256": "2198518e2bcfb71bf8c93288381a59853dbaa0525422b40649963efcc9a91454"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-route__test-package.log.sanitized.log",
+      "bytes": 29002,
+      "sha256": "9c94416e1ca7fc2a10a659ec9cdca6748d7a9ec63a65c91480db5ce5b2e88e76"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-runtime-reporting__test-package.log.sanitized.log",
+      "bytes": 120848,
+      "sha256": "7b344c1f40c36776b8c8cac3d187da6e2a821cd31ffe8c72817c15157b43dd54"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-stayer-hybrid__test-package.log.sanitized.log",
+      "bytes": 36187,
+      "sha256": "bcdd2fc81327a564f6b7c2ee615b9e4562216ff80a77c6dd32146fea267ead34"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-stayer-options__test-package.log.sanitized.log",
+      "bytes": 16747,
+      "sha256": "b893b08d144718983a7f9d194052e231f6b5b9bbae7b10264f718ee727d6d67f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-subsample__test-package.log.sanitized.log",
+      "bytes": 17727,
+      "sha256": "84c941ced4e55c66bd43d037ce956c77949d9682091ff9ded07d98a94f65ba76"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-public-timer-ownership__test-package.log.sanitized.log",
+      "bytes": 7188,
+      "sha256": "0a0f42a30904bfd190375b847047892cb51a7789af57bc2bd8fd43dbd27d8b83"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-repeat-measurement-se__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-repeat-measurement-se__test-package.log.sanitized.log",
+      "bytes": 73903,
+      "sha256": "439384f3f2d5d9eea9e7561c8cb18a474c68357160ef2b118e836c3393c5c9ec"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 12503,
+      "sha256": "8a9df21e29733764fab6f73d50fffe60ec948c66e1f626dc2c8cfde3997bd520"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-component-centering-exact__test-package-universal.log.sanitized.log",
+      "bytes": 18814,
+      "sha256": "c1960e1b62e65671763b490863af1349443f85f6cec7fab8990f226f9018bb46"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-component-centering-native__test-package-universal.log.sanitized.log",
+      "bytes": 24812,
+      "sha256": "27eace4b273059ae43b5019c6e63942d4bf769234e8ebf7c312507822287b873"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-default-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-default-inference__test-package-universal.log.sanitized.log",
+      "bytes": 8143,
+      "sha256": "474c1d6f7abae50b3bfe215249028f820d693858b944214d8f96e1eafacdd723"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-exact-controls__test-package-universal.log.sanitized.log",
+      "bytes": 7766,
+      "sha256": "cc6168cd4630dab79d683e652f7902915d2f34cbcbb8076354aa0ee248004320"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-lifecycle__test-package-universal.log.sanitized.log",
+      "bytes": 5175,
+      "sha256": "5ea248abe48ef7d76bdb4733a08e2001c45b6c8892289c45a83d3972acbf6a52"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-mata-structured_common__test-package-universal mata structured_common.log.sanitized.log",
+      "bytes": 11521,
+      "sha256": "cb982cb94f701db6850eef49af48f6780c8dbee027e018d7530f2a6f66741a0d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-mata-structured_leverage__test-package-universal mata structured_leverage.log.sanitized.log",
+      "bytes": 11530,
+      "sha256": "3302fc2a13cf158cf92f1c2836cbb686cbe406dbd0751dbcbcd4b81826a01595"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-rust-structured_common__test-package-universal rust structured_common.log.sanitized.log",
+      "bytes": 12292,
+      "sha256": "0d82f7cdf3ad43816976fa6bd45dc657e9f98607d5ec05d0c9927fc47f503146"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-pooled-component-rust-structured_leverage__test-package-universal rust structured_leverage.log.sanitized.log",
+      "bytes": 12301,
+      "sha256": "985589df74120c62f439f63f08db4645e5c078969e21fdb63269e615e9373189"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-private-generic__test-package-universal.log.sanitized.log",
+      "bytes": 30326,
+      "sha256": "54d15808e6827fb48228f4377622543930b9059245d59609cb9ab92c2a65aa3e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-private-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 11892,
+      "sha256": "c0f3c79b0eb2663cd959cd69b9ff705c3d1590669a43cd4de8047d820080d694"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-private-planned-v4__test-package-universal.log.sanitized.log",
+      "bytes": 23485,
+      "sha256": "ec125787946f7ca9581a4c8e7f1b4f72bf698096b8ba16d21059bb54dcc9a636"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-controlled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 8369,
+      "sha256": "34e4c48616a53e5dbdb28eea8d8cd53e48b002edd7bbde712f07c8fb07f2d714"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-exact__test-package-universal.log.sanitized.log",
+      "bytes": 16815,
+      "sha256": "f552b304b5fe443273c922cea9e53df70f10e0d748152fb92c252a791629c0df"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 12009,
+      "sha256": "e712a43bdc10deaae3d86bbe6b0845e46bf326fc2b814f128e9fb0d35907c79f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-generic-execution__test-package-universal.log.sanitized.log",
+      "bytes": 42445,
+      "sha256": "369235c4bc64474d2f1274362962cc234ea3d786019a1f5a7a6885470f512268"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-generic__test-package-universal.log.sanitized.log",
+      "bytes": 81389,
+      "sha256": "1a06bd8b7aa8a1b26e57695d3c4a56c8542793c4ad3bc0d46bc43631a8b8d180"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-observation-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 5947,
+      "sha256": "989a89fe04b77f1188cb0231a11cbf8f668033b516897a80079de04c2109237f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 34813,
+      "sha256": "8e526d487ebb488ad4931131d3f709820d8091364576f845143650992a3619cd"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-point-routes-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 7613,
+      "sha256": "54bf825088aa2a87df30566011dbb82241da800f48b7f9d5c08afbfbd7b25891"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-pooled-deletion__test-package-universal.log.sanitized.log",
+      "bytes": 31003,
+      "sha256": "54cda900d003055df515ffa39043e064c4a7da5f0d62011b917b44127b6715c2"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-pooled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 6487,
+      "sha256": "b0cbd0033c09a4734aec07e68c660be1575d7dad81b514c5b18337f44d789ec0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-projection-mean__test-package-universal.log.sanitized.log",
+      "bytes": 6122,
+      "sha256": "61b5d69375d5180bbb7deac0adb534389c4ac564b45b3a51bbcc3284ca74dc76"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-route__test-package-universal.log.sanitized.log",
+      "bytes": 29022,
+      "sha256": "41cb0befa53487be94ca3f570cbc52d78498bfa645b791b5fe0586643714e10c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-runtime-reporting__test-package-universal.log.sanitized.log",
+      "bytes": 120868,
+      "sha256": "a87d6afaf73ee35cd6d63b0cd4ccb105a3959c8b94f06d503efb76f3a056e78f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-stayer-hybrid__test-package-universal.log.sanitized.log",
+      "bytes": 36207,
+      "sha256": "fcbe27f82204b6e5a6f0f6d2f70ec969638f89a9daa5b19b6410e1cfd6187f2c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-stayer-options__test-package-universal.log.sanitized.log",
+      "bytes": 16767,
+      "sha256": "d96ba45423c6d49b2a0e3ea7a75f22302ab9fc0bb1edec61e08a26787d314d00"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-subsample__test-package-universal.log.sanitized.log",
+      "bytes": 17747,
+      "sha256": "9898452bb780a3fee46f8d0b7c3e8b351dd0ead328a8acc0d8b4e341cb4e7729"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-arm64-universal-public-timer-ownership__test-package-universal.log.sanitized.log",
+      "bytes": 7208,
+      "sha256": "876b408bac8e03ed16e42efabfce659c3181ed0b0850459b7f1e463d770d47b5"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-backend-routing__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-backend-routing__test-package.log.sanitized.log",
+      "bytes": 39038,
+      "sha256": "f77c73d41649e616e45cb266ef093ad55f7b6c050de88dbf64b1ed399f747b42"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-canonical-install-unavailable__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-canonical-install-unavailable__install-unavailable-x86_64 unavailable.log.sanitized.log",
+      "bytes": 8680,
+      "sha256": "43a88a70c1eb4e97fd6982512b6778b7e30aece452dd25040c9426c69eb85207"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-clean-install__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-clean-install__stata.log.sanitized.log",
+      "bytes": 512165,
+      "sha256": "ee5da7d582052a42e3efe7ebc8fbdaaaf11483d6c8c1e971390c1e6baa3b59fb"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-component-centering-exact__test-package.log.sanitized.log",
+      "bytes": 18794,
+      "sha256": "3b63aaf42750dc296f09492bfddec4782e1c59fe9009df0c1d8365b25bd12ed3"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-component-centering-native__test-package.log.sanitized.log",
+      "bytes": 24792,
+      "sha256": "9a3e3c5654afbc4d215f3109ff9a507841625a2a03b5ea39097aa8a819544640"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-default-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-default-inference__test-package.log.sanitized.log",
+      "bytes": 8123,
+      "sha256": "40e0f00fbf7c4037df5e6efec35510218a18ed5a380c890b9cae32f551f77f33"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-diagnostic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-diagnostic__test-package.log.sanitized.log",
+      "bytes": 3385,
+      "sha256": "5b66217437dedaf670619bbf63e691e544ad3fbb5897a6e48f380c178d881ecf"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-environment__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-environment__stata_environment.log.sanitized.log",
+      "bytes": 360,
+      "sha256": "f08c1b49787d473182f2bf2140413dec3662ebc5c1c14d262e4e5bff1e307282"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-exact-controls__test-package.log.sanitized.log",
+      "bytes": 7746,
+      "sha256": "5d9ba72c489573a817163148db1a553ef84d8854164542dd1daac51c57d7a031"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-lifecycle__test-package.log.sanitized.log",
+      "bytes": 5160,
+      "sha256": "1dfd9bdd427c4a031c3f7569932d3ded2f05a4f4d82bb951cd73c05bcedfa858"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-attachments-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-attachments-thin__test-package.log.sanitized.log",
+      "bytes": 11419,
+      "sha256": "5136b77f58696fb725204c0b03aeb315ca3458807cdec6ce668fc5c1713ff961"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-attachments-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-attachments-universal__test-package-universal.log.sanitized.log",
+      "bytes": 11439,
+      "sha256": "46cfb3e2441df167bbedc2cb534d994a102ac436e93eb878d8dabe07c942a67c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-modes-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-modes-thin__test-package.log.sanitized.log",
+      "bytes": 9082,
+      "sha256": "1be5e8d27d770d7f9967de10cf729db5a56fd6f18b9d7308bd8de00565125e89"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-modes-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-mcse-modes-universal__test-package-universal.log.sanitized.log",
+      "bytes": 9102,
+      "sha256": "f7d8e8de846f283a85c2dfb0dc6769976111eea0662184176a91a2df797c6503"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-numerical-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-numerical-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 4465,
+      "sha256": "6d3d988d415b2dee548e25901aef1a6bd94f73cc94cc97ba053838b8cea0131d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-numerical-thin__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-numerical-thin__test-package.log.sanitized.log",
+      "bytes": 10038,
+      "sha256": "c2db34f4e287e5dea3bd1d7223ed48dae134ab0c163ad71b2e8459c43305bf5d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-numerical-universal__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-numerical-universal__test-package-universal.log.sanitized.log",
+      "bytes": 10058,
+      "sha256": "29ad6c61cef60aa635c805bea3b05f48d7898c21676e5d47a073f7ea48213181"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-mata-structured_common__test-package mata structured_common.log.sanitized.log",
+      "bytes": 11501,
+      "sha256": "cc45a725b0305ad6d27a218b45a21245051a1bf3592f7c1b1faccbcb6f75fa95"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-mata-structured_leverage__test-package mata structured_leverage.log.sanitized.log",
+      "bytes": 11510,
+      "sha256": "bc5365bb72e9945840a98be069530254dbdee9aad91d8b555a8aa54857bd8e29"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-rust-structured_common__test-package rust structured_common.log.sanitized.log",
+      "bytes": 12272,
+      "sha256": "3c7e31bdb5a5e08e6b3d07d4fc0674bb1f0b4d20a37591e313ea5ed40432fa05"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-pooled-component-rust-structured_leverage__test-package rust structured_leverage.log.sanitized.log",
+      "bytes": 12281,
+      "sha256": "e05ef108e886dcae06467c665fe2229003941c9056d9c0e9ae105e73e8844b9f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-private-generic__test-package.log.sanitized.log",
+      "bytes": 30306,
+      "sha256": "159268cd9b90621b1714feebd7886d4349f829b6b17cf052ba9620f7a090e0a6"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-private-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 11872,
+      "sha256": "52e5e8e5d196c013602ba8396bdcf03f4ac92026249fae6aef2b91ca50cc6fa0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-private-planned-v4__test-package.log.sanitized.log",
+      "bytes": 23465,
+      "sha256": "db8e049b48ee212a871e3661245143622c88b3287f830b8820fa2af99a3c34dd"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-component-inference__test-package.log.sanitized.log",
+      "bytes": 36063,
+      "sha256": "cd26115abd15bb3502b61ab54252caae2205856b904a55a0530b51ab66d01958"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-control-panel__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-control-panel__test-package rust.log.sanitized.log",
+      "bytes": 4885,
+      "sha256": "22cd12cc16e092787a4def723bd1fdf50d38cea2c675a86bb1dcc761a074e1a8"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-controlled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 8349,
+      "sha256": "638eec7ee8349bd9c0262fa179b7c8ec6350868a717fb8a48d68c44ef2755fd1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-exact__test-package.log.sanitized.log",
+      "bytes": 16795,
+      "sha256": "35d6ec5a39b3e314731bb724b2c4817805dd970b7dc2e11af0483604b63ba356"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-full-cmg__test-package.log.sanitized.log",
+      "bytes": 11989,
+      "sha256": "74e3113efc529cd23f4909d7455e510cf9c1fcdb3ebcafe518cbaf342cbafd9b"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-generic-execution__test-package.log.sanitized.log",
+      "bytes": 42425,
+      "sha256": "fbead5d67738f5f10e5ef70dfcfb66159e91d58028da39f1b5cabab37709c72f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-generic__test-package.log.sanitized.log",
+      "bytes": 81369,
+      "sha256": "dbdd6873a2cd3f29674b7d41b52959ffc81a985c014b92fbf792894d6cb645a1"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-individual-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-individual-inference__test-package.log.sanitized.log",
+      "bytes": 46131,
+      "sha256": "7c2297a757738674eaf508c77ab8ef0b99a6769b33c4f91ccf96c662cefb8e90"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-match-component-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-match-component-inference__test-package.log.sanitized.log",
+      "bytes": 17691,
+      "sha256": "3ee3fb8c9dc5ecfc8c743447f61f8d0a9b725af24e86883dcbd65b2548731e86"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-observation-full-cmg__test-package.log.sanitized.log",
+      "bytes": 5927,
+      "sha256": "576bdc2b0aa8a91dd35c0c55f23e0d485a724ccef357851cd1888285aeb38897"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-planned-compressed__test-package.log.sanitized.log",
+      "bytes": 34793,
+      "sha256": "faac32cf0f8ff7cabed8de40e7c48c49ffca53dc2f147a2b39676d54284b42f9"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-point-routes-full-cmg__test-package.log.sanitized.log",
+      "bytes": 7593,
+      "sha256": "6479a7a90b0eccdd34f9ee5483e0d8109d2a8be741db3c86feae1dff35f00b8e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-pooled-deletion__test-package.log.sanitized.log",
+      "bytes": 30983,
+      "sha256": "9f3d62cb3e4f9e5b5bb7a6c2db3bd9f7aaf0ad2c54197e4281cf629daa576de0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-pooled-full-cmg__test-package.log.sanitized.log",
+      "bytes": 6467,
+      "sha256": "a70ea5bb6e42a262b4e67723c8e407c6dbf5edb3f630fd686fd134383663279f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-projection-mean__test-package.log.sanitized.log",
+      "bytes": 6102,
+      "sha256": "2198518e2bcfb71bf8c93288381a59853dbaa0525422b40649963efcc9a91454"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-route__test-package.log.sanitized.log",
+      "bytes": 29002,
+      "sha256": "9c94416e1ca7fc2a10a659ec9cdca6748d7a9ec63a65c91480db5ce5b2e88e76"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-runtime-reporting__test-package.log.sanitized.log",
+      "bytes": 120848,
+      "sha256": "8ccbd48dadae10da1a9b97175f09ae7d1be63cd626b021dedbe800f58025ca2a"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-stayer-hybrid__test-package.log.sanitized.log",
+      "bytes": 36187,
+      "sha256": "bcdd2fc81327a564f6b7c2ee615b9e4562216ff80a77c6dd32146fea267ead34"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-stayer-options__test-package.log.sanitized.log",
+      "bytes": 16747,
+      "sha256": "941087cadbbd89376fcb0d48690c41ef6a398d0810d55330a70e0b9210aad435"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-subsample__test-package.log.sanitized.log",
+      "bytes": 17727,
+      "sha256": "84c941ced4e55c66bd43d037ce956c77949d9682091ff9ded07d98a94f65ba76"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-public-timer-ownership__test-package.log.sanitized.log",
+      "bytes": 7188,
+      "sha256": "0a0f42a30904bfd190375b847047892cb51a7789af57bc2bd8fd43dbd27d8b83"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-repeat-measurement-se__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-repeat-measurement-se__test-package.log.sanitized.log",
+      "bytes": 73903,
+      "sha256": "439384f3f2d5d9eea9e7561c8cb18a474c68357160ef2b118e836c3393c5c9ec"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-shared-atoms__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-shared-atoms__test-package.log.sanitized.log",
+      "bytes": 12503,
+      "sha256": "8a9df21e29733764fab6f73d50fffe60ec948c66e1f626dc2c8cfde3997bd520"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-component-centering-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-component-centering-exact__test-package-universal.log.sanitized.log",
+      "bytes": 18814,
+      "sha256": "c1960e1b62e65671763b490863af1349443f85f6cec7fab8990f226f9018bb46"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-component-centering-native__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-component-centering-native__test-package-universal.log.sanitized.log",
+      "bytes": 24812,
+      "sha256": "27eace4b273059ae43b5019c6e63942d4bf769234e8ebf7c312507822287b873"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-default-inference__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-default-inference__test-package-universal.log.sanitized.log",
+      "bytes": 8143,
+      "sha256": "474c1d6f7abae50b3bfe215249028f820d693858b944214d8f96e1eafacdd723"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-exact-controls__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-exact-controls__test-package-universal.log.sanitized.log",
+      "bytes": 7766,
+      "sha256": "cc6168cd4630dab79d683e652f7902915d2f34cbcbb8076354aa0ee248004320"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-lifecycle__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-lifecycle__test-package-universal.log.sanitized.log",
+      "bytes": 5180,
+      "sha256": "d76ca526be2ce72af006ef3266bc92b2437b3105067ba5c5af6d948f57b427ba"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-mata-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-mata-structured_common__test-package-universal mata structured_common.log.sanitized.log",
+      "bytes": 11521,
+      "sha256": "cb982cb94f701db6850eef49af48f6780c8dbee027e018d7530f2a6f66741a0d"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-mata-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-mata-structured_leverage__test-package-universal mata structured_leverage.log.sanitized.log",
+      "bytes": 11530,
+      "sha256": "3302fc2a13cf158cf92f1c2836cbb686cbe406dbd0751dbcbcd4b81826a01595"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-rust-structured_common__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-rust-structured_common__test-package-universal rust structured_common.log.sanitized.log",
+      "bytes": 12292,
+      "sha256": "0d82f7cdf3ad43816976fa6bd45dc657e9f98607d5ec05d0c9927fc47f503146"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-rust-structured_leverage__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-pooled-component-rust-structured_leverage__test-package-universal rust structured_leverage.log.sanitized.log",
+      "bytes": 12301,
+      "sha256": "985589df74120c62f439f63f08db4645e5c078969e21fdb63269e615e9373189"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-private-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-private-generic__test-package-universal.log.sanitized.log",
+      "bytes": 30326,
+      "sha256": "54d15808e6827fb48228f4377622543930b9059245d59609cb9ab92c2a65aa3e"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-private-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-private-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 11892,
+      "sha256": "c0f3c79b0eb2663cd959cd69b9ff705c3d1590669a43cd4de8047d820080d694"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-private-planned-v4__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-private-planned-v4__test-package-universal.log.sanitized.log",
+      "bytes": 23485,
+      "sha256": "ec125787946f7ca9581a4c8e7f1b4f72bf698096b8ba16d21059bb54dcc9a636"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-controlled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-controlled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 8369,
+      "sha256": "34e4c48616a53e5dbdb28eea8d8cd53e48b002edd7bbde712f07c8fb07f2d714"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-exact__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-exact__test-package-universal.log.sanitized.log",
+      "bytes": 16815,
+      "sha256": "f552b304b5fe443273c922cea9e53df70f10e0d748152fb92c252a791629c0df"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 12009,
+      "sha256": "e712a43bdc10deaae3d86bbe6b0845e46bf326fc2b814f128e9fb0d35907c79f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-generic-execution__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-generic-execution__test-package-universal.log.sanitized.log",
+      "bytes": 42445,
+      "sha256": "369235c4bc64474d2f1274362962cc234ea3d786019a1f5a7a6885470f512268"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-generic__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-generic__test-package-universal.log.sanitized.log",
+      "bytes": 81389,
+      "sha256": "1a06bd8b7aa8a1b26e57695d3c4a56c8542793c4ad3bc0d46bc43631a8b8d180"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-observation-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-observation-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 5947,
+      "sha256": "989a89fe04b77f1188cb0231a11cbf8f668033b516897a80079de04c2109237f"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-planned-compressed__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-planned-compressed__test-package-universal.log.sanitized.log",
+      "bytes": 34813,
+      "sha256": "8e526d487ebb488ad4931131d3f709820d8091364576f845143650992a3619cd"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-point-routes-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-point-routes-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 7613,
+      "sha256": "54bf825088aa2a87df30566011dbb82241da800f48b7f9d5c08afbfbd7b25891"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-pooled-deletion__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-pooled-deletion__test-package-universal.log.sanitized.log",
+      "bytes": 31003,
+      "sha256": "8c464d99270cb02f36323168561f82e6cfc0c3b24eedad67b6417a56f6d931da"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-pooled-full-cmg__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-pooled-full-cmg__test-package-universal.log.sanitized.log",
+      "bytes": 6487,
+      "sha256": "b0cbd0033c09a4734aec07e68c660be1575d7dad81b514c5b18337f44d789ec0"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-projection-mean__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-projection-mean__test-package-universal.log.sanitized.log",
+      "bytes": 6122,
+      "sha256": "61b5d69375d5180bbb7deac0adb534389c4ac564b45b3a51bbcc3284ca74dc76"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-route__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-route__test-package-universal.log.sanitized.log",
+      "bytes": 29022,
+      "sha256": "41cb0befa53487be94ca3f570cbc52d78498bfa645b791b5fe0586643714e10c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-runtime-reporting__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-runtime-reporting__test-package-universal.log.sanitized.log",
+      "bytes": 120868,
+      "sha256": "4d599a65ec2f5531be8522b8ad687525479205cbc4752d5cf74ce333f3cb3a07"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-stayer-hybrid__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-stayer-hybrid__test-package-universal.log.sanitized.log",
+      "bytes": 36207,
+      "sha256": "fcbe27f82204b6e5a6f0f6d2f70ec969638f89a9daa5b19b6410e1cfd6187f2c"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-stayer-options__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-stayer-options__test-package-universal.log.sanitized.log",
+      "bytes": 16767,
+      "sha256": "d620a838f113db2926a0dfc29697eb130ef139a5f94ad6a9da12cb07599ab439"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-subsample__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-subsample__test-package-universal.log.sanitized.log",
+      "bytes": 17747,
+      "sha256": "9898452bb780a3fee46f8d0b7c3e8b351dd0ead328a8acc0d8b4e341cb4e7729"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-timer-ownership__console.txt.sanitized.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/stata-logs/stata-x86_64-universal-public-timer-ownership__test-package-universal.log.sanitized.log",
+      "bytes": 7208,
+      "sha256": "876b408bac8e03ed16e42efabfce659c3181ed0b0850459b7f1e463d770d47b5"
+    }
+  ],
+  "utc": "2026-11-15T18:57:52.362671+00:00"
+}

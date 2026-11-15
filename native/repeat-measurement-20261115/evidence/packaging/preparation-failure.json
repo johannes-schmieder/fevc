@@ -1,0 +1,6 @@
+{
+  "status": "FAILED_PREPARATION_RETAINED",
+  "reason": "Dirty-source archive guard rejected the new unstaged native evidence directory. Staged only the reviewed authorized adoption files; no code, fixture, threshold or qualified binary changed.",
+  "result": "1 failed, 1032 passed",
+  "correction": "Stage reviewed adoption files, then run required final package checks on that index/worktree identity."
+}

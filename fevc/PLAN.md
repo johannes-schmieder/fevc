@@ -1,31 +1,22 @@
-# 0.6.0 Windows dispatch repair and new common build — November 15, 2026
+# 0.6.0 adoption — November 15, 2026
 
-The owner authorized investigation and fixes after the first Windows campaign
-failed its observation-component regression. Explicit generic JLA with a diagonal
-preconditioner on Windows reached the old point-only helper and dropped requested
-repeat-measurement inference. The narrow dispatcher fix admits only an already
-supported generic tuple to the inference-capable helper, retaining the Windows
-legacy diagonal executor, backend and solver. Point-only requests are unchanged.
-The strict regression and added automatic-inference check pass in a bounded
-Windows development run; this is not qualification. The failed confirmation and
-all diagnostic attempts remain preserved.
+All five qualified plugins share common source `2082f209`, including the
+approved Stata 15 compatibility changes and repeat-measurement standard errors.
+The [manifest](../native/repeat-measurement-20261115/manifest.json) binds exact
+bytes, corresponding source and receipts. Mac arm64/Rosetta thin/universal and
+installed, SCC Linux job `8632839`, all hosted gates and all 18 private Windows
+groups pass. Stata 15.1 full and installed-native checks also pass.
 
-The production change supersedes build `e9c5f969`: rebuild and qualify all five
-binaries from one new common commit. That earlier build passed macOS, Linux and
-Stata 15.1 full/installed/default checks. The accepted private Windows runner
-supports the new 149-export/checks-V5 boundary. Its unchanged 0.6.0 qualification
-protocol and harness are preserved at `60e75328` as an exact overlay, to be adopted
-with the new binaries and manifest. Until adoption the checkout retains the
-0.5.2 payload's matching release-harness files, so source tests validate the
-actually distributed artifacts. No threshold, seed, group or failure is changed.
+The Windows paired comparison retains 144 commands across 12 cells and all
+registered scientific/timing gates. Twelve default-SE timings are informational.
+All earlier failed attempts remain preserved. Runtime limitations: Mac Intel
+uses Rosetta; Windows uses Stata 19 and one/two workers; no Stata 16/17 runtime,
+representative-scale or general coverage claim.
 
-Next: pass source gates, freeze the common build, rebuild/requalify macOS, SCC
-Linux and Stata 15, then run a newly registered 18-group Windows campaign against
-0.5.2. Make one adoption commit including the qualified binaries, preserved
-qualification harness, manifest, documentation and repointed tests; check/build
-release assets, push/tag/publish, verify HTTP installs and close PR #8. Stop on
-required authentication or a new formal qualification failure. Publication and
-code fixes are already authorized.
+The owner authorized adoption and publication. Next: complete the single
+adoption commit and clean-commit release builder checks, push main, tag and
+publish 0.6.0, verify eight actual HTTP/ZIP installation cases, record evidence
+and close PR #8. No publication is claimed by this adoption checkpoint.
 
 ## Previous checkpoint
 

@@ -1,0 +1,10 @@
+schema_version=1
+profile=full
+stata_rc=0
+stata_version=15.1
+stata_edition=MP
+stata_os=Unix
+stata_machine_type=Macintosh (Intel 64-bit)
+stata_processors=4
+stata_born_date=03 Feb 2020
+completed=1

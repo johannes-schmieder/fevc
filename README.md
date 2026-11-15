@@ -69,12 +69,12 @@ ssc install fevc, replace
 ```
 
 To install the tagged
-[0.5.2 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.2)
+[0.6.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0)
 directly from GitHub using Stata's built-in installer:
 
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.5.2/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.6.0/")
 ```
 
 Alternatively, use the community-contributed

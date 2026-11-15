@@ -1,0 +1,49 @@
+{
+  "schema": "FEVC-QUALIFICATION-OVERLAY-DEFERRED-V1",
+  "created_at": "2026-11-15T18:17:25.315832+00:00",
+  "overlay_commit": "60e7532851ff77df9f5cfc90490891d9030de79b",
+  "prior_common_build": "e9c5f9698ced32044d3effea86d271280e645f28",
+  "reason": "Keep the still-distributed 0.5.2 payload and its manifest-bound source test coherent at the new common build. Preserve the authorized 0.6.0 protocol/collector/validator changes as an exact qualification overlay; restore these same bytes with the new manifest and binaries in the adoption commit. No registered gate changed or skipped.",
+  "paths": {
+    "fevc/tests/python/test_github_release.py": {
+      "build_gate_sha256": "480971657009e930674aa6ddd9c0425077c40dc49a77aa2dc8e9404076e49cf8",
+      "qualification_overlay_sha256": "dcd23800d88983af56765a0876a787f8de5bae248ab0532e01c5ec4d0f267501"
+    },
+    "fevc/tests/python/test_windows_ci.py": {
+      "build_gate_sha256": "7d09e7c1f0f9a88ecec3f1a85b3555542d15428606c48d174d9cabd59ec5499a",
+      "qualification_overlay_sha256": "95799729b1ab67154658e26c154d667551b23679403570ddc350c13704c7e92a"
+    },
+    "fevc/tests/python/test_windows_qualification.py": {
+      "build_gate_sha256": "49401cb31fdda35583e48757bc3703783a5d88cae6722a7476bed56cd89a925c",
+      "qualification_overlay_sha256": "55198e9773e697dd6401ce28d825dad90bc3db339190febfdd74c04e77d7cc82"
+    },
+    "fevc/tests/stata/test_windows_cmg_performance.do": {
+      "build_gate_sha256": "ea38ae19d388e304c3f3d83619e996abbec5f3833c1d19224edcb87719645f6f",
+      "qualification_overlay_sha256": "1b310f2ff44a98b1f47d3ab66fde0ae1c547a973882870a2320372e04d031947"
+    },
+    "fevc/tools/build_github_release.py": {
+      "build_gate_sha256": "507dbef59315bd051306b11fea59056377bb467d9ad223a1d81871b4419ae6df",
+      "qualification_overlay_sha256": "de75572ce7ebaa30e9c5366190a5490c9d22299bd8aad109d31e2d23bed84325"
+    },
+    "rust/stata_backend/audit_windows_plugin.ps1": {
+      "build_gate_sha256": "eb4a8504c4bc47162a627790219b21d91ff8a7b5f7d704c029aedcfd6f770c68",
+      "qualification_overlay_sha256": "d79d4f5100ed7d78ba1713bd6c4f17963aba7a4aaf40aefe4ed3e77bfa1ecfa3"
+    },
+    "rust/stata_backend/build_windows_ci.ps1": {
+      "build_gate_sha256": "93359b3558ebf221f6d93065ec75abb4522f63ecb301dc85e587b9455ad97a36",
+      "qualification_overlay_sha256": "381a2d98b76036e9a9b5f1a827a4683b119824125a331730b87ce84086c968da"
+    },
+    "rust/stata_backend/windows-campaign-protocol.json": {
+      "build_gate_sha256": "6fefefd8cb689fb0ba56117721b34ec7e99b4ef86182e042c025db75d1381cca",
+      "qualification_overlay_sha256": "6de601e6be625c5ac7142e8c0d2fa722877e40373af3c327d05e5e9fefa2dbaf"
+    },
+    "rust/stata_backend/windows_qualification.py": {
+      "build_gate_sha256": "44e9eb2803a72e2a2df3f7dbb51b00bafba995ed16c1e96180d94696b61654d0",
+      "qualification_overlay_sha256": "8a561b9407505306e7e367b8e4f6f29468afccda4edce22ea383fe8053d99dfe"
+    },
+    "rust/stata_backend/write_windows_checks.ps1": {
+      "build_gate_sha256": "5855e83f9fb0f995e8b835cef654e576cc5d7a40bf9c0f2cdf344bfbf337e31b",
+      "qualification_overlay_sha256": "c148df9dcac1856ee756faaeeb52163e160851799e0ebd41bada2867814ec871"
+    }
+  }
+}

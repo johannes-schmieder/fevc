@@ -1,0 +1,40 @@
+{
+  "all_started_wrappers_terminal": true,
+  "backend_acceptance_sha256": "5deef3cb0b8cde827bd13456b0885de75397934938d496cccd34667425725896",
+  "campaign_sha256": "7960215be6dc9075cf45c8eacf27a930cf87a52e59f642f8e870f5691d71ba7d",
+  "cleanup_verified": true,
+  "failure": "group_failed",
+  "identity_cleanup": {
+    "source": "unchanged_clean_transport_no_overlay",
+    "status": "PASS"
+  },
+  "input_identity_sha256": "6dc1000b34bd3ec7bf989949b992f22333cfffcd3d76c8a28d7d88ffbab825a3",
+  "production_commit": "e9c5f9698ced32044d3effea86d271280e645f28",
+  "proposal_manifest_sha256": "67209a7d1266fccffd2c39ec2494f310227732296d3c153fc17f9e84b07c4e47",
+  "run": {
+    "artifacts": [],
+    "error_code": "STATA_DRIVER_FAILED",
+    "failure_stage": "observation_component",
+    "input_identity_sha256": "6dc1000b34bd3ec7bf989949b992f22333cfffcd3d76c8a28d7d88ffbab825a3",
+    "receipt_sha256": "210d93ef37aba9893730cd1576325a193810b06cae139eee06e311d7d5aad109",
+    "run_id": "win-20261115T171913Z-1cc8ee36",
+    "source_archive_sha256": "6e5f2b4c64f959f4ce7c4f9d3efcaf7a6ed31cae5b0b3c7ad3eb6b4687b6c50c",
+    "source_revision": "commit-65e3f70115f24140488542bfa9850eef95d3e7c4",
+    "stata_rc": 9,
+    "status": "FAIL",
+    "wrapper_exit": 51
+  },
+  "schema": "FEVC-WINDOWS-CMG-GROUP-RUN-V1",
+  "selection": {
+    "campaign_sha256": "7960215be6dc9075cf45c8eacf27a930cf87a52e59f642f8e870f5691d71ba7d",
+    "candidate_sha256": "b64cd7f1d3c3f4321353885d06d36d11b27befd51dcd275e2e28ac538a8baf35",
+    "hosted_build_run_id": "43728954921",
+    "hosted_rust_run_id": "43728957322",
+    "performance_arm": "candidate",
+    "performance_block": 0,
+    "production_commit": "e9c5f9698ced32044d3effea86d271280e645f28",
+    "qualification_group": "legacy"
+  },
+  "status": "FAIL",
+  "transport_commit": "65e3f70115f24140488542bfa9850eef95d3e7c4"
+}
