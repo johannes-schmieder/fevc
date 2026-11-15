@@ -1,3 +1,24 @@
+# 0.6.0 published — November 15, 2026
+
+Release [v0.6.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0)
+points to the single adoption commit `b861a368`. All five native binaries
+remain built from common source `2082f209`, with Stata 15 compatibility and
+repeat-measurement standard errors by default. The [publication audit](../native/repeat-measurement-20261115/final-audit.json)
+records all eight real tag/main/GitHub/downloaded-ZIP fresh/replacement installs,
+66 exact files per case, native/default inference and caller-state checks on
+Mac arm64. Other platforms retain their exact common-build qualification.
+
+All 18 Windows groups pass with unchanged scientific/timing gates and cleanup.
+Mac, Linux job `8632839`, hosted builds and Stata 15 full/installed/default all pass.
+The final package suite passes 1,033 tests and seven static/package gates;
+adoption-commit Source checks and all Rust backend jobs pass. Earlier failed
+attempts remain preserved, including the unstaged-evidence packaging failure.
+The immutable adoption manifest and all installed payloads remain unchanged
+in this publication evidence update. Native Intel hardware, Stata 16/17 runtime,
+representative-scale performance and general coverage are not claimed.
+
+## Previous adoption checkpoint
+
 # 0.6.0 adoption — November 15, 2026
 
 All five qualified plugins share common source `2082f209`, including the

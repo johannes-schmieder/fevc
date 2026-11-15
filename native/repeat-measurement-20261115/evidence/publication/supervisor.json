@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "started_utc": "2026-11-15T21:25:13.120543+00:00",
+  "package_commit": "b861a368026fab4291757035d9969cd25a8b6dc3",
+  "build_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "default_override": false,
+  "stata": "19.0.115 arm64",
+  "returncode": 0,
+  "ended_utc": "2026-11-15T22:01:13.425139+00:00"
+}

@@ -14,5 +14,11 @@ default-SE timing observations. Earlier failed development attempts remain in
 the private release archive; the source compatibility review states the limits
 of reused simulation evidence. No general coverage claim is made.
 
-The adoption checkpoint precedes publication. Final package checks, release
-assets and eight actual published installation cases will be recorded here.
+Version [0.6.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0)
+is published at adoption commit `b861a368`. The [publication audit](final-audit.json)
+verifies all eight public tag/main/GitHub/downloaded-ZIP fresh and replacement
+installations, with 66 exact installed files and all five plugin hashes in each.
+Actual-default/native inference and caller-state checks pass on Mac arm64;
+other platform runtime claims retain the separate common-build receipts.
+The initial unstaged-evidence packaging failure remains recorded alongside
+the subsequent 1,033-test pass. The adoption manifest remains unchanged.

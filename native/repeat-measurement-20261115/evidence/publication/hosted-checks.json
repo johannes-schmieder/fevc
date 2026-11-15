@@ -1,0 +1,718 @@
+[
+  {
+    "conclusion": "success",
+    "databaseId": 43763515530,
+    "headSha": "b861a368026fab4291757035d9969cd25a8b6dc3",
+    "jobs": [
+      {
+        "completedAt": "2026-11-15T21:26:09Z",
+        "conclusion": "success",
+        "databaseId": 132963361016,
+        "name": "test",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:33Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:42Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:45Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:48Z",
+            "conclusion": "success",
+            "name": "Create repository environment",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:45Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:00Z",
+            "conclusion": "success",
+            "name": "Install development dependencies",
+            "number": 5,
+            "startedAt": "2026-11-15T21:24:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:26:07Z",
+            "conclusion": "success",
+            "name": "Run Python tests",
+            "number": 6,
+            "startedAt": "2026-11-15T21:25:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:26:07Z",
+            "conclusion": "success",
+            "name": "Check generated CMG source",
+            "number": 7,
+            "startedAt": "2026-11-15T21:26:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:26:08Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1",
+            "number": 13,
+            "startedAt": "2026-11-15T21:26:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:26:08Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 14,
+            "startedAt": "2026-11-15T21:26:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:26:08Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 15,
+            "startedAt": "2026-11-15T21:26:08Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515530/job/132963361016"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515530",
+    "workflowName": "Source checks"
+  },
+  {
+    "conclusion": "success",
+    "databaseId": 43763515543,
+    "headSha": "b861a368026fab4291757035d9969cd25a8b6dc3",
+    "jobs": [
+      {
+        "completedAt": "2026-11-15T21:24:49Z",
+        "conclusion": "success",
+        "databaseId": 132963361125,
+        "name": "Standalone dependency policy",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:32Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:39Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:47Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:48Z",
+            "conclusion": "success",
+            "name": "Verify lockfile and dependency tree",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:48Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 8,
+            "startedAt": "2026-11-15T21:24:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:48Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 9,
+            "startedAt": "2026-11-15T21:24:48Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361125"
+      },
+      {
+        "completedAt": "2026-11-15T21:37:36Z",
+        "conclusion": "success",
+        "databaseId": 132963361292,
+        "name": "ubuntu-latest / Rust 1.85.1",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:32Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:39Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:46Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:39Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:46Z",
+            "conclusion": "success",
+            "name": "Report selected toolchain",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:46Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:48Z",
+            "conclusion": "success",
+            "name": "Check formatting",
+            "number": 5,
+            "startedAt": "2026-11-15T21:24:46Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:00Z",
+            "conclusion": "success",
+            "name": "Clippy",
+            "number": 6,
+            "startedAt": "2026-11-15T21:24:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:31Z",
+            "conclusion": "success",
+            "name": "Test",
+            "number": 7,
+            "startedAt": "2026-11-15T21:25:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:35Z",
+            "conclusion": "success",
+            "name": "Documentation",
+            "number": 8,
+            "startedAt": "2026-11-15T21:37:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:35Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 16,
+            "startedAt": "2026-11-15T21:37:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:35Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-11-15T21:37:35Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361292"
+      },
+      {
+        "completedAt": "2026-11-15T21:37:19Z",
+        "conclusion": "success",
+        "databaseId": 132963361313,
+        "name": "windows-latest / Rust stable",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:32Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:42Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:02Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:03Z",
+            "conclusion": "success",
+            "name": "Report selected toolchain",
+            "number": 4,
+            "startedAt": "2026-11-15T21:25:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:07Z",
+            "conclusion": "success",
+            "name": "Check formatting",
+            "number": 5,
+            "startedAt": "2026-11-15T21:25:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:24Z",
+            "conclusion": "success",
+            "name": "Clippy",
+            "number": 6,
+            "startedAt": "2026-11-15T21:25:07Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:09Z",
+            "conclusion": "success",
+            "name": "Test",
+            "number": 7,
+            "startedAt": "2026-11-15T21:25:24Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:15Z",
+            "conclusion": "success",
+            "name": "Documentation",
+            "number": 8,
+            "startedAt": "2026-11-15T21:37:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:18Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 16,
+            "startedAt": "2026-11-15T21:37:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:37:18Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-11-15T21:37:18Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361313"
+      },
+      {
+        "completedAt": "2026-11-15T21:34:36Z",
+        "conclusion": "success",
+        "databaseId": 132963361359,
+        "name": "ubuntu-latest / Rust stable",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:32Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:38Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:47Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:38Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:47Z",
+            "conclusion": "success",
+            "name": "Report selected toolchain",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:48Z",
+            "conclusion": "success",
+            "name": "Check formatting",
+            "number": 5,
+            "startedAt": "2026-11-15T21:24:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:55Z",
+            "conclusion": "success",
+            "name": "Clippy",
+            "number": 6,
+            "startedAt": "2026-11-15T21:24:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:34:31Z",
+            "conclusion": "success",
+            "name": "Test",
+            "number": 7,
+            "startedAt": "2026-11-15T21:24:55Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:34:34Z",
+            "conclusion": "success",
+            "name": "Documentation",
+            "number": 8,
+            "startedAt": "2026-11-15T21:34:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:34:34Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 16,
+            "startedAt": "2026-11-15T21:34:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:34:34Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-11-15T21:34:34Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361359"
+      },
+      {
+        "completedAt": "2026-11-15T21:36:14Z",
+        "conclusion": "success",
+        "databaseId": 132963361366,
+        "name": "macos-latest / Rust 1.85.1",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:33Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:42Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:50Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:50Z",
+            "conclusion": "success",
+            "name": "Report selected toolchain",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:52Z",
+            "conclusion": "success",
+            "name": "Check formatting",
+            "number": 5,
+            "startedAt": "2026-11-15T21:24:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:15Z",
+            "conclusion": "success",
+            "name": "Clippy",
+            "number": 6,
+            "startedAt": "2026-11-15T21:24:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:36:04Z",
+            "conclusion": "success",
+            "name": "Test",
+            "number": 7,
+            "startedAt": "2026-11-15T21:25:15Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:36:10Z",
+            "conclusion": "success",
+            "name": "Documentation",
+            "number": 8,
+            "startedAt": "2026-11-15T21:36:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:36:11Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 16,
+            "startedAt": "2026-11-15T21:36:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:36:13Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-11-15T21:36:11Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361366"
+      },
+      {
+        "completedAt": "2026-11-15T21:42:16Z",
+        "conclusion": "success",
+        "databaseId": 132963361378,
+        "name": "windows-latest / Rust 1.85.1",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:32Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:42Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:55Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:56Z",
+            "conclusion": "success",
+            "name": "Report selected toolchain",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:55Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:00Z",
+            "conclusion": "success",
+            "name": "Check formatting",
+            "number": 5,
+            "startedAt": "2026-11-15T21:24:56Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:24Z",
+            "conclusion": "success",
+            "name": "Clippy",
+            "number": 6,
+            "startedAt": "2026-11-15T21:25:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:42:04Z",
+            "conclusion": "success",
+            "name": "Test",
+            "number": 7,
+            "startedAt": "2026-11-15T21:25:24Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:42:12Z",
+            "conclusion": "success",
+            "name": "Documentation",
+            "number": 8,
+            "startedAt": "2026-11-15T21:42:04Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:42:15Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 16,
+            "startedAt": "2026-11-15T21:42:12Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:42:15Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-11-15T21:42:15Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361378"
+      },
+      {
+        "completedAt": "2026-11-15T21:35:05Z",
+        "conclusion": "success",
+        "databaseId": 132963361458,
+        "name": "macos-latest / Rust stable",
+        "startedAt": "2026-11-15T21:24:31Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-11-15T21:24:32Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-11-15T21:24:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:44Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 2,
+            "startedAt": "2026-11-15T21:24:32Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:52Z",
+            "conclusion": "success",
+            "name": "Run dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772",
+            "number": 3,
+            "startedAt": "2026-11-15T21:24:44Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:52Z",
+            "conclusion": "success",
+            "name": "Report selected toolchain",
+            "number": 4,
+            "startedAt": "2026-11-15T21:24:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:24:54Z",
+            "conclusion": "success",
+            "name": "Check formatting",
+            "number": 5,
+            "startedAt": "2026-11-15T21:24:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:25:09Z",
+            "conclusion": "success",
+            "name": "Clippy",
+            "number": 6,
+            "startedAt": "2026-11-15T21:24:54Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:34:51Z",
+            "conclusion": "success",
+            "name": "Test",
+            "number": 7,
+            "startedAt": "2026-11-15T21:25:09Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:35:01Z",
+            "conclusion": "success",
+            "name": "Documentation",
+            "number": 8,
+            "startedAt": "2026-11-15T21:34:51Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:35:02Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+            "number": 16,
+            "startedAt": "2026-11-15T21:35:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-11-15T21:35:04Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-11-15T21:35:02Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543/job/132963361458"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/johannes-schmieder/fevc/actions/runs/43763515543",
+    "workflowName": "Rust backend"
+  }
+]

@@ -11,8 +11,10 @@ and installed-native tests on Intel/Rosetta; focused Stata 18/19 tests pass.
 Windows qualification uses Stata 19 and one/two workers. Native Intel hardware
 and Stata 16/17 runtime execution are not claimed.
 The [adoption manifest](../../native/repeat-measurement-20261115/manifest.json) binds all exact bytes,
-corresponding source and qualification evidence. Publication/HTTP install
-checks follow separately. Historical checkpoints below retain their scope.
+corresponding source and qualification evidence. Release `v0.6.0` points to
+adoption commit `b861a368`; the [publication audit](../../native/repeat-measurement-20261115/final-audit.json)
+verifies all eight actual public fresh/replacement installation cases and all
+66 installed files per case. Historical checkpoints below retain their scope.
 
 Version [0.5.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.5.0)
 is the first public GitHub release. It includes the existing October 10 native

@@ -1,6 +1,6 @@
 # Native package provenance
 
-## Current 0.6.0 adoption
+## Current 0.6.0 release
 
 All five 0.6.0 plugins are built from `2082f209` with unmodified common
 CMG `e5613e81` and the explicit 128-level limit. They include repeat-measurement
@@ -13,7 +13,11 @@ and Stata 16/17 runtime execution are not claimed.
 The [adoption manifest](repeat-measurement-20261115/manifest.json) binds the
 qualified files, source archive and receipts. All 144 paired point-command
 timings are retained; candidate default-SE timings are separate information.
-Final publication and actual HTTP installation checks are recorded separately.
+Version [0.6.0](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0)
+is published at `b861a368`. The [publication audit](repeat-measurement-20261115/final-audit.json)
+records eight actual public tag/main/GitHub/ZIP fresh and replacement installs,
+each with 66 exact installed files, on Mac arm64. The build source remains
+`2082f209`; the later publication record does not create new binary claims.
 
 ## Previous 0.5.2 release
 

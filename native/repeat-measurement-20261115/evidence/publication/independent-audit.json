@@ -1,0 +1,74 @@
+{
+  "status": "PASS",
+  "checked_utc": "2026-11-15T22:04:16.220289+00:00",
+  "case_count": 8,
+  "cases": [
+    {
+      "channel": "tag",
+      "case": "net-fresh",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "c6dfae0f4acb6dfa7c152b8a1d6dff2c73b9cd8460dd62881d79dd530cb699b2"
+    },
+    {
+      "channel": "tag",
+      "case": "net-replace",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "8f969a6fe132915af5e498e0165ddf13227aa98019baba8f4dd75d6b4ce3d07d"
+    },
+    {
+      "channel": "public",
+      "case": "net-fresh",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "2126e271abd0b7a0d80143c46c2205dec9b8a0af40e987153e2d0cb75705914c"
+    },
+    {
+      "channel": "public",
+      "case": "net-replace",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "5a41d214762e5ada7430b0dff279ef289b8de230ee00d282331042a7233d4ea4"
+    },
+    {
+      "channel": "public",
+      "case": "github-fresh",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "b67bbe23c06744e1814db250ae0ec636f6318ed8d1f1fd35f22bafb25869415c"
+    },
+    {
+      "channel": "public",
+      "case": "github-replace",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "a935c933a9a20b24b18e4fefa1738ebbc819a1efd530713fb81416541afdaa58"
+    },
+    {
+      "channel": "zip",
+      "case": "net-fresh",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "4f1f41a8803cde43f1cb6a10687e0840732cc914c7115fe09bbcd1edb09adb83"
+    },
+    {
+      "channel": "zip",
+      "case": "net-replace",
+      "status": "PASS",
+      "file_count": 66,
+      "plugin_count": 5,
+      "transcript_sha256": "73075fa7369bb568ade404912166150758898498d431db2db5eca7a86afed9bf"
+    }
+  ],
+  "asset_count": 4,
+  "all_processes_zero": true,
+  "actual_default_native_and_caller_state_markers": true
+}

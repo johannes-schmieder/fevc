@@ -1,0 +1,56 @@
+{
+  "schema": "FEVC-PUBLISHED-INSTALL-AUDIT-V1",
+  "status": "PASS",
+  "version": "0.6.0",
+  "release_url": "https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0",
+  "package_source_commit": "b861a368026fab4291757035d9969cd25a8b6dc3",
+  "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "cmg_revision": "e5613e81fb3b03c78de98658b372646fa802aabb",
+  "cmg_max_levels": 128,
+  "assets": [
+    {
+      "name": "SHA256SUMS",
+      "sha256": "a6b723254741d958db0e4bf2ea8bf4a54eeb64ed3b5031b6f16b723b0fc18877",
+      "bytes": 277
+    },
+    {
+      "name": "fevc-0.6.0.zip",
+      "sha256": "36c3c33f4a050201dfa2f71f02b90b2b129052c4eb4a616e8143554d6d8b4166",
+      "bytes": 12479030
+    },
+    {
+      "name": "fevc-corresponding-source-2082f209.tar.gz",
+      "sha256": "e99f0120a27c141dd37cf2576feab96dec6f97b7acd3aedf984d4f65f905563c",
+      "bytes": 8295909
+    },
+    {
+      "name": "release-manifest.json",
+      "sha256": "fb5ec3e7180f800fd2808139f16c3d1f7bcf364b6937ac0ce55140d07d89b67d",
+      "bytes": 14616
+    }
+  ],
+  "installations": [
+    {
+      "channel": "tag",
+      "receipt": "tag/verification.json",
+      "sha256": "0272e82442797fb9c0e4d2696a3384adc217f66877870493c8ec3333ccf4a351",
+      "cases": 2
+    },
+    {
+      "channel": "public",
+      "receipt": "public/verification.json",
+      "sha256": "5840209758a5caf1e82ee6c43d63cb117b634bbd077d5f114a77bd12ce7501bf",
+      "cases": 4
+    },
+    {
+      "channel": "zip",
+      "receipt": "zip/verification.json",
+      "sha256": "5d3eb27af3d9f67a1e5aec230940b026270d4a2fe6f6bef327acedae59a2ea68",
+      "cases": 2
+    }
+  ],
+  "installation_cases": 8,
+  "installed_files_each": 66,
+  "runtime_platform": "Mac arm64",
+  "scope": "Actual tag/main/GitHub/downloaded-ZIP fresh and replacement installations; each installed file and all five plugin hashes, native component/pooled inference and caller-state checks. Other runtime claims retain their exact common-build qualification receipts."
+}
