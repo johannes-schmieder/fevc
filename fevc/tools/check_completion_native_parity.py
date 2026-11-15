@@ -36,7 +36,7 @@ def check(replay, plugin, output):
         deletion = 'deletion(observation)' if observation else 'deletion(match) deletionid(deletion) nuisance(fixedoffset)'
         weight = '' if observation else '[fw=frequency]'
         reference = 'q1' if q1 else 'highrank'
-        lines = ['version 18.0', 'clear all', 'set more off', 'set type double', 'set processors 1',
+        lines = ['version 15.0', 'clear all', 'set more off', 'set type double', 'set processors 1',
             f'adopath ++ "{ROOT}/fevc"', f'adopath ++ "{plugin}"', f'quietly run "{ROOT}/fevc/fevc.ado"',
             f'import delimited using "{source}/fixture.csv", clear asdouble',
             f'quietly fevc outcome {weight}, worker(worker) firm(firm) {deletion} stayers(movers) backend(rust) engine(generic) rng(counter_v1) algorithm(jla) preconditioner(diagonal) batch(16) targetweight(target) centering(none) inferencemodel(structured_common) inference({reference})',

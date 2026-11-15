@@ -1,3 +1,47 @@
+# 0.6.0 Stata 15 compatibility and release — November 15, 2026
+
+The owner authorized the complete release, private Windows runner/protocol
+updates and publication, then lowering the minimum to Stata 15 and fixing
+compatibility defects without renewed approval. Work is on local `main`,
+fast-forwarded to `80e163c2`. The compatibility edits supersede the original
+`d4b2d942` build: freeze a new common source after source gates, then rebuild
+and qualify all five binaries before adoption. Old receipts remain immutable.
+
+Current development checks: repeat-measurement intervals, actual default native
+commands, lifecycle and RNG restoration pass on Stata 15 and 19. Stata 18
+passes focused compatibility/load/RNG/default checks; the installed Stata 17
+license is expired, so no Stata 17 execution is claimed. Symmetric target
+normalization and a canonical direction within repeated eigenspaces repair
+the old runtime's eigensolve and literal-expansion equivalence. Native RHS
+diagnostics use Mata transport to preserve complete ledgers beyond Stata 15's
+11,000-row matrix-write boundary. Independent row checks and the original
+4,096/8,192-probe pooled oracles pass. The full Stata 15 development attempt
+passed all 256 pooled Monte Carlo fits, then stopped on a fixture version
+declaration. After its repair, every remaining full-suite test passes. Clean
+portable installation, both helper migrations, CMG and benchmark harness checks
+pass; 1,019 Python tests pass. A single full Stata 15 run with the newly built
+Intel plugin remains required.
+All development failures and incomplete attempts are retained privately.
+
+SCC access is restored. The original Linux qualification job `8622690`
+passed scheduler accounting, the full suite and clean install; its collected
+artifacts remain bound to `d4b2d942`. A new frozen-source run remains required.
+Windows preparation is local: the proposed 0.5.2 comparison keeps 18 groups,
+144 paired point-only commands, seeds and all scientific/timing thresholds;
+default-SE timings are separate information. The export/collector changes and
+runner reacceptance remain pending after Linux. Offline maintenance tests pass;
+the owner-maintenance browser session returned AUTH_REQUIRED and needs renewal.
+No new binary is adopted,
+no tag is created and no release is published.
+
+Next: freeze the checked common source, qualify Linux/macOS and
+Windows under the authorized order, make one adoption commit, build/check
+release assets, push/tag/publish, verify HTTP installs, record evidence and
+close PR #8. Stop for required authentication; preserve failed qualification
+and keep registered gates unchanged.
+
+## Previous checkpoint
+
 # 0.6.0 release candidate: standard errors by default — November 14, 2026
 
 Branch `repeat-measurement-se` (draft pull request #8), not released. The

@@ -1,7 +1,7 @@
 *! Posts control-basis certification diagnostics after a native failure.
 
 program define fevc__control_failure_post, eclass
-    version 18.0
+    version 15.0
     args detail
     if regexm(`"`detail'"', "^[A-Z_]+ \[([^]]+)\]") {
         ereturn local native_failure_phase = regexs(1)

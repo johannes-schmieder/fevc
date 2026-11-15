@@ -2,7 +2,7 @@
 *! residual standard errors, replacing the structured-variance metadata.
 
 program define fevc__residual_se_post, eclass
-    version 18.0
+    version 15.0
     // Repeat-measurement standard errors with leading directions decide the
     // reported interval of every component before anything is posted; the
     // decision lives in this file and is reached through these two actions.
@@ -160,7 +160,7 @@ end
 // Repeat-measurement standard errors share the pass above and replace the
 // description of the variances, the assumptions, and the status.
 program define _fevc_repeat_se_post, eclass
-    version 18.0
+    version 15.0
     args route
     ereturn local inference_variance_fit "repeat_measurement"
     ereturn local inference_method                              ///
@@ -253,7 +253,7 @@ end
 //  10 variance_share  11 curvature  12 critical_value  13 eigen_share
 //  14 max_weight_sq   15 converged  16 q1_status
 program define _fevc_se_regime_decide
-    version 18.0
+    version 15.0
     args V b level
     local share_threshold .1
     global VCKSS_SE_ANY_Q1 0
@@ -336,7 +336,7 @@ program define _fevc_se_regime_decide
 end
 
 program define _fevc_se_regime_post, eclass
-    version 18.0
+    version 15.0
     capture confirm matrix __fevc_se_intervals
     if _rc exit
     tempname table leading

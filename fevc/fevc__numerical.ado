@@ -2,7 +2,7 @@
 *! for point estimates, and clears their command-local working state.
 
 program define fevc__numerical, eclass
-    version 18.0
+    version 15.0
     gettoken action 0 : 0
     macro shift
     if "`action'" == "init" {
@@ -235,7 +235,7 @@ program define fevc__numerical, eclass
 end
 
 program define _fevc_post_mcse, eclass
-    version 18.0
+    version 15.0
     tempname se raw usable map results legacy hybrid
     local targets worker_variance firm_variance worker_firm_covariance total_variance
     matrix `se'=J(1,4,.)
@@ -295,7 +295,7 @@ program define _fevc_post_mcse, eclass
 end
 
 program define _fevc_numerical_failure
-    version 18.0
+    version 15.0
     args status detail
     global VCKSS_NMC_ERR `status'
     global VCKSS_NMC_DETAIL `"`detail'"'

@@ -1,7 +1,7 @@
 *! Forecasts command allocations and computational work and selects
 *! resource-aware plans under the requested budget policy.
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

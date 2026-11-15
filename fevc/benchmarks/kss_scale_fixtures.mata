@@ -1,6 +1,6 @@
 *! KSS-STREAMLINE-1 deterministic diagnostic fixtures 17aug2026
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

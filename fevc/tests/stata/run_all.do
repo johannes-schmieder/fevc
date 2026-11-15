@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -31,6 +31,7 @@ else local pkgroot `"`c(pwd)'/fevc"'
 adopath ++ `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_all_probe_preflight.do"'
 do `"`pkgroot'/tests/stata/test_simulate_data.do"'
+do `"`pkgroot'/tests/stata/test_stata_compatibility.do"' `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_load.do"'
 do `"`pkgroot'/tests/stata/test_all_probe_reductions.do"'
 do `"`pkgroot'/tests/stata/test_all_probe_math.do"'

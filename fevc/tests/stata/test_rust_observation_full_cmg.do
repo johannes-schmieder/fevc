@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -14,7 +14,12 @@ generate int firm = mod(worker-1+3*floor(slot/2),256)+1
 generate double y = .3*worker-.2*firm+.1*slot+mod(17*key,29)/101
 sort worker firm key
 local state `"`c(rngstate)'"'
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 quietly _datasignature
 local signature `"`r(datasignature)'"'
 foreach deletion in observation match {
@@ -35,7 +40,7 @@ foreach deletion in observation match {
         assert e(cmg_threads_requested) == `threads'
         assert e(leverage_batch) == min(33,max(32,8*`threads'))
         assert e(target_batch) == min(33,max(32,4*`threads'))
-        assert e(full_cmg_receipt)[1,45] == max(e(leverage_batch),2*e(target_batch))
+        assert el(e(full_cmg_receipt),1,45) == max(e(leverage_batch),2*e(target_batch))
         assert e(sample) == reference_sample
         matrix candidate = e(kss)
         forvalues column = 1/4 {
@@ -43,7 +48,12 @@ foreach deletion in observation match {
         }
         assert e(complete_residual_max) <= e(residual_acceptance_tolerance)
         assert `"`c(rngstate)'"' == `"`state'"'
-        assert `"`c(sortrngstate)'"' == `"`sortstate'"'
+        tempname sort_results
+        _return hold `sort_results'
+        quietly query sortseed
+        local test_sort_state `"`r(sortseed)'"'
+        _return restore `sort_results'
+        assert `"`test_sort_state'"' == `"`sortstate'"'
         quietly fevc_rust snapshot
         assert r(state) == 0 & r(handle) == 0
     }
@@ -56,10 +66,10 @@ quietly fevc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(auto) preconditioner(auto) batch(auto) probes(33) seed(81227) nodisplay
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
-assert e(full_cmg_receipt)[1,18] == 1e-10
-assert e(full_cmg_receipt)[1,19] == 1e-6
-assert e(rust_rhs_receipts)[1,13] == 1e-9
-assert e(rust_rhs_receipts)[2,13] == max(1e-11,10*1e-6)
+assert el(e(full_cmg_receipt),1,18) == 1e-10
+assert el(e(full_cmg_receipt),1,19) == 1e-6
+assert el(e(rust_rhs_receipts),1,13) == 1e-9
+assert el(e(rust_rhs_receipts),2,13) == max(1e-11,10*1e-6)
 assert e(memory_budget_supplied) == 0
 capture noisily fevc y, worker(worker) firm(firm) deletion(observation) ///
     nuisance(joint) stayers(movers) probeorder(key) backend(auto) rng(auto) ///

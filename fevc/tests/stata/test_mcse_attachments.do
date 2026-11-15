@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -6,7 +6,12 @@ args pkgroot
 if `"`pkgroot'"'=="" local pkgroot `"`c(pwd)'/fevc"'
 adopath ++ `"`pkgroot'"'
 local state `"`c(rngstate)'"'
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 quietly fevc_rust probe
 assert r(numerical_api)==2
 local solvers diagonal
@@ -40,11 +45,16 @@ foreach backend in rust {
         assert "`e(preconditioner_selected)'"=="`selected'"
         assert e(mc_replay_rhs)==200
         if `execution' {
-            assert e(rust_execution_receipt)[1,"projection"]==2
-            assert e(rust_execution_receipt)[1,"logical"]==604
+            assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"projection"))==2
+            assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"logical"))==604
         }
         assert `"`c(rngstate)'"'==`"`state'"'
-        assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+        tempname sort_results
+        _return hold `sort_results'
+        quietly query sortseed
+        local test_sort_state `"`r(sortseed)'"'
+        _return restore `sort_results'
+        assert `"`test_sort_state'"'==`"`sortstate'"'
     }
 }
 clear
@@ -92,20 +102,20 @@ foreach deletion in observation match {
             if `queue' {
                 foreach field in mode threads workers cmg_concurrency capacity leverage target ///
                     fit rank point projection component gram logical queued cmg refinement {
-                    assert e(rust_execution_receipt)[1,"`field'"]==work[1,"`field'"]
+                    assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"`field'"))==el(work,1,colnumb(work,"`field'"))
                 }
                 // How many queue workers took a task depends on scheduling;
                 // the direct CMG executor reports none.
-                if "`solver'"=="diagonal" assert inrange(e(rust_execution_receipt)[1,"active"],1,work[1,"threads"])
-                else assert e(rust_execution_receipt)[1,"active"]==0 & work[1,"active"]==0
-                assert work[1,"gram"]==0
-                assert work[1,"component"]==e(component_inference_receipt)[1,"solver_columns"]
-                assert e(rust_execution_receipt)[1,"residual"]<=e(residual_acceptance_tolerance)
-                assert e(rust_execution_receipt)[1,"peak"]>=work[1,"peak"]
+                if "`solver'"=="diagonal" assert inrange(el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"active")),1,el(work,1,colnumb(work,"threads")))
+                else assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"active"))==0 & el(work,1,colnumb(work,"active"))==0
+                assert el(work,1,colnumb(work,"gram"))==0
+                assert el(work,1,colnumb(work,"component"))==el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"solver_columns"))
+                assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"residual"))<=e(residual_acceptance_tolerance)
+                assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"peak"))>=el(work,1,colnumb(work,"peak"))
                 foreach field in policy reason declared_component declared_gram component gram cap threads capacity {
-                    assert e(rust_component_batch_receipt)[1,"`field'"]==widths[1,"`field'"]
+                    assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"`field'"))==el(widths,1,colnumb(widths,"`field'"))
                 }
-                assert widths[1,"declared_gram"]==0 & widths[1,"gram"]==0
+                assert el(widths,1,colnumb(widths,"declared_gram"))==0 & el(widths,1,colnumb(widths,"gram"))==0
             }
             assert e(inference_joint_available)==`joint' & e(inference_computed_targets)==`computed'
             if "`reference'"=="q1" {
@@ -114,7 +124,12 @@ foreach deletion in observation match {
             }
             assert e(mc_replay_rhs)==200
             assert `"`c(rngstate)'"'==`"`state'"'
-            assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+            tempname sort_results
+            _return hold `sort_results'
+            quietly query sortseed
+            local test_sort_state `"`r(sortseed)'"'
+            _return restore `sort_results'
+            assert `"`test_sort_state'"'==`"`sortstate'"'
         }
     }
 }
@@ -130,5 +145,10 @@ foreach option in inferencesimulations(129) inferencegramprobes(513) {
     assert _rc==198 & "`e(withholding_status)'"=="INFERENCE_OPTION_REMOVED"
 }
 assert `"`c(rngstate)'"'==`"`state'"'
-assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`sortstate'"'
 di as result "PASS test_mcse_attachments.do"

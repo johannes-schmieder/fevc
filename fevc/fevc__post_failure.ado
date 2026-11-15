@@ -2,7 +2,7 @@
 *! routing metadata into e().
 
 program define fevc__post_failure, eclass
-    version 18.0
+    version 15.0
     args failure_status failure_detail
     quietly fevc__failure_guidance "`failure_status'"
     local failure_reason `"`r(reason)'"'

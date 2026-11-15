@@ -2,7 +2,7 @@
 *! sample selection, computation, and inference diagnostics.
 
 program define fevc_estat, rclass
-    version 18.0
+    version 15.0
     if "`e(cmd)'" != "fevc" |                                ///
         inlist("`e(status)'", "WITHHELD", "ALPHA", "RELEASED") {
         error 301
@@ -36,14 +36,14 @@ program define fevc_estat, rclass
 end
 
 program define _fevc_estat_decomposition
-    version 18.0
+    version 15.0
     syntax [, FULL]
     if "`full'" != "" fevc__display, decompositiononly full
     else fevc__display, decompositiononly
 end
 
 program define _fevc_estat_sample
-    version 18.0
+    version 15.0
     if strtrim(`"`0'"') != "" {
         di as err "estat sample does not allow options"
         exit 198
@@ -143,7 +143,7 @@ program define _fevc_estat_sample
 end
 
 program define _fevc_estat_computation
-    version 18.0
+    version 15.0
     if strtrim(`"`0'"') != "" {
         di as err "estat computation does not allow options"
         exit 198
@@ -205,7 +205,7 @@ program define _fevc_estat_computation
 end
 
 program define _fevc_estat_diagnostics
-    version 18.0
+    version 15.0
     if strtrim(`"`0'"') != "" {
         di as err "estat diagnostics does not allow options"
         exit 198

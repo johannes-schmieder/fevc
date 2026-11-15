@@ -2,7 +2,7 @@
 *! their dimensions, numerical diagnostics, and execution receipts.
 
 program define fevc__rust_component_fetch, rclass
-    version 18.0
+    version 15.0
     args handle reference model simulations memorylimit posted level      ///
         outprimitive outcovariance outmcse outspectrum outq1raw           ///
         outsummaries outfolds outcv outreceipt outresults outq1results      ///

@@ -1,7 +1,7 @@
 *! Bridges Stata calls to cached compressed Mata designs and results,
 *! including explicit reset and release of command state.
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

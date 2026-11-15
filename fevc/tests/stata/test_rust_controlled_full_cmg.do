@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -21,7 +21,12 @@ generate double mass = .7+mod(13*key,11)/7
 generate long unit = key
 sort worker firm key
 local state `"`c(rngstate)'"'
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 quietly _datasignature
 local signature `"`r(datasignature)'"'
 foreach deletion in match observation {
@@ -48,23 +53,28 @@ foreach deletion in match observation {
                 assert e(sample)==reference_sample
                 assert e(cmg_threads_used)==`test_threads'
                 assert e(memory_budget_supplied)==0
-                assert e(full_cmg_receipt)[1,18]==1e-10
-                assert e(full_cmg_receipt)[1,19]==1e-10
+                assert el(e(full_cmg_receipt),1,18)==1e-10
+                assert el(e(full_cmg_receipt),1,19)==1e-10
                 assert `"`e(full_cmg_model_schema)'"'=="CMG-FULL-MODEL-V1"
-                assert e(full_cmg_model_receipt)[1,1]==2
-                assert e(full_cmg_model_receipt)[1,3]==30+("`nuisance'"=="fixedoffset")
-                assert e(full_cmg_model_receipt)[1,4]==2
-                assert e(full_cmg_model_receipt)[1,5]==cond("`nuisance'"=="joint",19,1)
-                assert e(full_cmg_receipt)[1,25]==e(full_cmg_model_receipt)[1,3]+e(full_cmg_model_receipt)[1,6]
-                assert e(rust_rhs_receipts)[1,13]==1e-11
-                assert e(rust_rhs_receipts)[2,13]==1e-11
+                assert el(e(full_cmg_model_receipt),1,1)==2
+                assert el(e(full_cmg_model_receipt),1,3)==30+("`nuisance'"=="fixedoffset")
+                assert el(e(full_cmg_model_receipt),1,4)==2
+                assert el(e(full_cmg_model_receipt),1,5)==cond("`nuisance'"=="joint",19,1)
+                assert el(e(full_cmg_receipt),1,25)==el(e(full_cmg_model_receipt),1,3)+el(e(full_cmg_model_receipt),1,6)
+                assert el(e(rust_rhs_receipts),1,13)==1e-11
+                assert el(e(rust_rhs_receipts),2,13)==1e-11
                 assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
                 matrix actual = e(kss)
                 forvalues col=1/4 {
                     assert abs(actual[1,`col']-reference[1,`col'])<=1e-8*max(1,abs(reference[1,`col']))
                 }
                 assert `"`c(rngstate)'"'==`"`state'"'
-                assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+                tempname sort_results
+                _return hold `sort_results'
+                quietly query sortseed
+                local test_sort_state `"`r(sortseed)'"'
+                _return restore `sort_results'
+                assert `"`test_sort_state'"'==`"`sortstate'"'
                 quietly fevc_rust snapshot
                 assert r(state)==0 & r(handle)==0
             }
@@ -79,15 +89,15 @@ foreach deletion in match observation {
         nuisance(fixedoffset) algorithm(jla) backend(rust) rng(counter_v1) ///
         probeorder(key) probes(9) seed(81227) mcse(conditional) nodisplay
     assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
-    assert e(full_cmg_model_receipt)[1,1]==0
-    assert e(full_cmg_model_receipt)[1,3]==28
-    assert e(full_cmg_receipt)[1,19]==1e-6
+    assert el(e(full_cmg_model_receipt),1,1)==0
+    assert el(e(full_cmg_model_receipt),1,3)==28
+    assert el(e(full_cmg_receipt),1,19)==1e-6
 }
 // Controlled admission does not borrow the relaxed no-control probe default.
 quietly fevc y x z [fw=copies], worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) backend(rust) rng(counter_v1) probes(33) seed(81227) ///
     tolerance(1e-12) targetweight(mass) mcse(conditional) nodisplay
-assert e(full_cmg_receipt)[1,19]==1e-12
+assert el(e(full_cmg_receipt),1,19)==1e-12
 assert e(leverage_batch)==32 & e(target_batch)==32
 // Explicit strict budgets fail closed and leave the caller and registry reusable.
 capture noisily fevc y x z [fw=copies], worker(worker) firm(firm) deletion(observation) ///
@@ -95,7 +105,12 @@ capture noisily fevc y x z [fw=copies], worker(worker) firm(firm) deletion(obser
     targetweight(mass) memory_gib(.000001) memorycheck(error) mcse(conditional) nodisplay
 assert _rc!=0
 assert `"`c(rngstate)'"'==`"`state'"'
-assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`sortstate'"'
 quietly fevc_rust snapshot
 assert r(state)==0 & r(handle)==0
 quietly fevc y x z [fw=copies], worker(worker) firm(firm) deletion(observation) ///
@@ -106,7 +121,12 @@ assert e(memory_budget_supplied)==1
 quietly _datasignature
 assert `"`r(datasignature)'"'==`"`signature'"'
 assert `"`c(rngstate)'"'==`"`state'"'
-assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`sortstate'"'
 quietly fevc_rust snapshot
 assert r(state)==0 & r(handle)==0
 display "PASS test_rust_controlled_full_cmg.do"

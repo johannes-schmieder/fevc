@@ -25,6 +25,8 @@ def test_rng_module_exposes_both_unselected_candidates() -> None:
 
 def test_production_contract_is_runtime_versioned_and_fail_closed() -> None:
     source = MODULE.read_text(encoding="utf-8")
+    for version in (15, 16, 17):
+        assert f"KSS-MT64S-DOMAIN-CURSOR-V3-STATA{version}" in source
     assert "KSS-MT64S-DOMAIN-CURSOR-V3-STATA18" in source
     assert "KSS-MT64S-DOMAIN-CURSOR-V3-STATA19" in source
     production = source.split(

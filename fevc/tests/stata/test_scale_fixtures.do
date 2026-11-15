@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -45,10 +45,10 @@ assert reldif(r(connector_meta_conductance),2/3) < 1e-14
 assert reldif(r(connector_meta_lambda2),4/3) < 1e-14
 assert reldif(r(connector_meta_condition_proxy),1) < 1e-14
 matrix well_diagnostic = r(fixture_diagnostics)
-assert well_diagnostic[1,"cells"] == 40
-assert well_diagnostic[1,"deletion_units"] == 44
-assert well_diagnostic[1,"components"] == 1
-assert well_diagnostic[1,"bridge_units"] == 0
+assert el(well_diagnostic,1,colnumb(well_diagnostic,"cells")) == 40
+assert el(well_diagnostic,1,colnumb(well_diagnostic,"deletion_units")) == 44
+assert el(well_diagnostic,1,colnumb(well_diagnostic,"components")) == 1
+assert el(well_diagnostic,1,colnumb(well_diagnostic,"bridge_units")) == 0
 quietly count if connector == 0
 assert r(N) == 24
 quietly count if connector == 1
@@ -98,8 +98,8 @@ assert reldif(r(connector_meta_lambda2),1) < 1e-14
 assert reldif(r(connector_meta_lambda_max),2) < 1e-14
 assert reldif(r(connector_meta_condition_proxy),2) < 1e-14
 matrix ring_diagnostic = r(fixture_diagnostics)
-assert ring_diagnostic[1,"components"] == 1
-assert ring_diagnostic[1,"bridge_units"] == 0
+assert el(ring_diagnostic,1,colnumb(ring_diagnostic,"components")) == 1
+assert el(ring_diagnostic,1,colnumb(ring_diagnostic,"bridge_units")) == 0
 
 // Unweighted production inputs still need a complete unit-frequency vector
 // after connector rows are appended. The former name remains an input alias.
@@ -119,8 +119,8 @@ assert r(expected_firms) == 4
 assert r(expected_cells) == 12
 assert r(expected_deletion_units) == 14
 matrix unweighted_diagnostic = r(fixture_diagnostics)
-assert unweighted_diagnostic[1,"components"] == 1
-assert unweighted_diagnostic[1,"bridge_units"] == 0
+assert el(unweighted_diagnostic,1,colnumb(unweighted_diagnostic,"components")) == 1
+assert el(unweighted_diagnostic,1,colnumb(unweighted_diagnostic,"bridge_units")) == 0
 
 // A deletion unit spanning coefficient cells is rejected before replication.
 clear

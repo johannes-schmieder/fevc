@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -64,7 +64,10 @@ assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
 assert "`e(inference_model)'"=="repeat_measurement"
 assert "`e(inference_variance_fit)'"=="repeat_measurement"
 assert "`e(stayers)'"=="both"
-assert mreldif(point,e(b))<1e-9
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(point,`compat_assert_b')<1e-9
+matrix drop `compat_assert_b'
 assert `"`rng0'"'==`"`c(rngstate)'"'
 // Match deletion: one unit per mover match and per physical stayer
 // observation, frequency copies included; observation deletion: one unit
@@ -90,7 +93,10 @@ matrix basepoint=e(b)
 matrix baseinterval=e(component_inference)
 matrix baseV=e(V)
 fevc shifted control `weight', `common' `inference' inference(highrank)
-assert mreldif(basepoint,e(b))<1e-9
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(basepoint,`compat_assert_b')<1e-9
+matrix drop `compat_assert_b'
 assert mreldif(baseinterval,e(component_inference))<1e-8
 fevc y control `weight', `common' `inference' inference(q1)
 if "`backend'"=="rust" & "`solver'"=="cmg" {
@@ -140,7 +146,10 @@ if "`backend'"=="rust" {
     local alternate : subinstr local common "preconditioner(diagonal)" "preconditioner(cmg)"
     fevc y control `weight', `alternate' `inference' inference(highrank) batch(16) nativethreads(2)
     assert "`e(inference_solver_selected)'"=="CMG"
-    assert mreldif(basepoint,e(b))<1e-8
+    tempname compat_assert_b
+    matrix `compat_assert_b' = e(b)
+    assert mreldif(basepoint,`compat_assert_b')<1e-8
+    matrix drop `compat_assert_b'
     assert mreldif(baseinterval,e(component_inference))<1e-8
     restore
     // Old transports must fail before preparation or RNG even on valid data.
@@ -167,8 +176,14 @@ if "`backend'"=="mata" {
     expand fw
     replace fw=1
     fevc y control [fw=fw], `common' `inference' inference(highrank)
-    assert mreldif(basepoint,e(b))<1e-9
+    tempname compat_assert_b
+    matrix `compat_assert_b' = e(b)
+    assert mreldif(basepoint,`compat_assert_b')<1e-9
+    matrix drop `compat_assert_b'
     assert mreldif(baseinterval,e(component_inference))<1e-8
-    assert mreldif(baseV,e(V))<1e-8
+    tempname compat_assert_V
+    matrix `compat_assert_V' = e(V)
+    assert mreldif(baseV,`compat_assert_V')<1e-8
+    matrix drop `compat_assert_V'
 }
 display as result "FEVC POOLED COMPONENT INFERENCE PASS: `backend'"

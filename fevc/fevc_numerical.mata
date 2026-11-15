@@ -1,7 +1,7 @@
 *! Computes point-estimate numerical Monte Carlo error contributions and
 *! validates numerical diagnostics returned by the native backend.
 
-version 18.0
+version 15.0
 mata:
 real scalar vckss_nmc__center_mean(real colvector y,real colvector frequency)
 {

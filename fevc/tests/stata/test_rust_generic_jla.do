@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 
@@ -183,7 +183,7 @@ local signature_lo = r(request_signature_lo)
 
 capture program drop fevc__rust_plugin_call
 program define fevc__rust_plugin_call
-    version 18.0
+    version 15.0
     gettoken plugin 0 : 0
     local native_arguments `"`0'"'
     local parsed = strtrim(subinstr(`"`0'"', ",", "", 1))

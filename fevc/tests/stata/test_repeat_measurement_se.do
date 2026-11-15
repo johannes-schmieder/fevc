@@ -6,7 +6,7 @@
 * dense calculation in Python on the same deterministic panels (exact trace
 * term); the command simulates that term, so standard errors agree to its
 * Monte Carlo error. Every fevc call names inference().
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -272,7 +272,10 @@ quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) inference(highrank) inferencemodel(repeat_measurement) ///
     inferencedraws(64) nodisplay
 _rm_check 64 150
-assert mreldif(b512,e(b))<1e-12
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(b512,`compat_assert_b')<1e-12
+matrix drop `compat_assert_b'
 matrix ci = e(component_inference)
 forvalues j = 1/4 {
     * At most 1.1 per cent over five seeds.
@@ -433,9 +436,9 @@ if `native' {
                     cond("`solver'"=="diagonal","diagonal_queue","direct_attachments")
                 assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
                 matrix batch = e(rust_component_batch_receipt)
-                assert batch[1,"policy"]==1 & batch[1,"declared_component"]==1
-                assert batch[1,"declared_gram"]==0 & batch[1,"gram"]==0
-                assert inrange(batch[1,"component"],1,batch[1,"cap"])
+                assert el(batch,1,colnumb(batch,"policy"))==1 & el(batch,1,colnumb(batch,"declared_component"))==1
+                assert el(batch,1,colnumb(batch,"declared_gram"))==0 & el(batch,1,colnumb(batch,"gram"))==0
+                assert inrange(el(batch,1,colnumb(batch,"component")),1,el(batch,1,colnumb(batch,"cap")))
                 quietly fevc_rust snapshot
                 assert r(state)==0 & r(handle)==0
                 local automatic_status "`e(status)'"
@@ -449,7 +452,12 @@ if `native' {
                 assert _rc
                 assert mreldif(e(component_inference),automatic_ci)<1e-8
                 assert e(inference_joint_posted)==`automatic_joint'
-                if `automatic_joint' assert mreldif(e(V),automatic_V)<1e-8
+                if `automatic_joint' {
+                    tempname compat_assert_V
+                    matrix `compat_assert_V' = e(V)
+                    assert mreldif(`compat_assert_V',automatic_V)<1e-8
+                    matrix drop `compat_assert_V'
+                }
                 if "`inference'"=="auto" assert mreldif(e(inference_intervals),automatic_table)<1e-8
                 assert mreldif(automatic_ci,generic_ci)<1e-8
             }
@@ -466,7 +474,7 @@ if `native' {
     * that does not exist.
     capture program drop fevc__rust_public_call
     program define fevc__rust_public_call, rclass
-        version 18.0
+        version 15.0
         gettoken command rest : 0
         if "`command'"=="result" & !strpos(`"`rest'"',"componentinference(") {
             global RM_POSTER_RESULTS = $RM_POSTER_RESULTS + 1
@@ -554,6 +562,43 @@ else {
         assert _rc==498 & "`e(withholding_status)'"=="REPEAT_MEASUREMENT_TUPLE_REQUIRED"
     }
 }
+
+* Closed-form spectra test eigensolver scaling and a repeated leading root.
+* The repeated worker root spans (1,1,0) and (0,0,1); its canonical axis is
+* (0,0,1), independently of the eigenbasis returned by the Stata runtime.
+mata:
+void _rm_exact_spectrum_check()
+{
+    struct vckss_rse_leading scalar lead
+    struct vckss_target_matrices scalar target
+    real colvector u, v
+    real matrix expected, action
+    real rowvector roots
+    real scalar scale, exponent, t
+    u = (1\1\0):/sqrt(2)
+    v = (0\0\1)
+    expected = (v,u,v,u)
+    roots = (4,2,-3,6)
+    for (exponent=-12; exponent<=12; exponent=exponent+12) {
+        scale = 10^exponent
+        target.worker = scale*4*(u*u'+v*v')
+        target.firm = scale*(2*u*u'+v*v')
+        target.covariance = -scale*3*v*v'
+        vckss_rse__lead_exact(lead,I(3),I(3),target)
+        assert(!hasmissing(lead.mode) & !hasmissing(lead.lambda))
+        assert(max(abs(lead.lambda:/scale-roots))<1e-12)
+        for (t=1; t<=4; t++) {
+            assert(abs(abs(quadcross(expected[.,t],lead.mode[.,t]))-1)<1e-12)
+            if (t==1) action = target.worker
+            else if (t==2) action = target.firm
+            else if (t==3) action = target.covariance
+            else action = target.worker+target.firm+2*target.covariance
+            assert(max(abs(action*lead.mode[.,t]-lead.lambda[t]*lead.mode[.,t]))/scale<1e-12)
+        }
+    }
+}
+_rm_exact_spectrum_check()
+end
 
 * --- observation deletion ----------------------------------------------------
 * Every physical observation is a unit. The panel gets matches of one, two

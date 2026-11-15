@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -64,14 +64,20 @@ matrix off_point = e(b)
 quietly fevc y [fw=frequency], `common'
 scalar all_peak = e(resource_peak_bytes)
 assert all_peak > off_peak
-assert mreldif(off_point,e(b)) == 0
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(off_point,`compat_assert_b') == 0
+matrix drop `compat_assert_b'
 local between_gib = (off_peak + all_peak)/2/1024^3
 capture noisily fevc y [fw=frequency], `common' memory_gib(`between_gib') memorycheck(error)
 assert _rc == 498
 assert `"`c(rngstate)'"' == `"`rng_before'"'
 quietly fevc y [fw=frequency], `common' mcse(off) memory_gib(`between_gib') memorycheck(error)
 assert e(resource_peak_bytes) <= e(resource_hard_mem_bytes)
-assert mreldif(off_point,e(b)) == 0
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(off_point,`compat_assert_b') == 0
+matrix drop `compat_assert_b'
 assert `"`c(rngstate)'"' == `"`rng_before'"'
 
 di as result "PASS test_batch_memory_limit.do"

@@ -2,7 +2,7 @@
 *! and protects existing data unless clear is explicitly requested.
 
 program define fevc__simulate_data, rclass
-    version 18.0
+    version 15.0
     syntax , SIMULATE_data(string) [SEED(string) CLEAR]
     local example = lower(strtrim("`simulate_data'"))
     if !inlist("`example'", "ex1", "ex2", "ex3", "ex4", "ex5") {
@@ -41,7 +41,18 @@ program define fevc__simulate_data, rclass
     preserve
     local caller_rng = c(rng)
     local caller_state = c(rngstate)
-    local caller_sortstate = c(sortrngstate)
+    local sort_command sortrngstate
+    if c(stata_version)>=17 {
+        local caller_sortstate = c(sortrngstate)
+    }
+    else {
+        tempname held_results
+        _return hold `held_results'
+        quietly query sortseed
+        local caller_sortstate `"`r(sortseed)'"'
+        _return restore `held_results'
+        local sort_command sortseed
+    }
     quietly set rng mt64
     local mt64_state = c(rngstate)
     capture noisily fevc__simulate_build, example(`example') seed(`seed')
@@ -50,14 +61,14 @@ program define fevc__simulate_data, rclass
     quietly set rngstate `mt64_state'
     quietly set rng `caller_rng'
     quietly set rngstate `caller_state'
-    quietly set sortrngstate `caller_sortstate'
+    quietly set `sort_command' `caller_sortstate'
     if `rc' exit `rc'
     return add
     restore, not
 end
 
 program define fevc__simulate_build, rclass
-    version 18.0
+    version 15.0
     syntax , EXAMPLE(string) SEED(integer)
     quietly {
         clear

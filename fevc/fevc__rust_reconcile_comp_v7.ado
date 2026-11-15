@@ -2,7 +2,7 @@
 *! sample, numerical settings, and resource policy before posting results.
 
 program define fevc__rust_reconcile_comp_v7, rclass
-    version 18.0
+    version 15.0
     args probes_expected seed_expected maxiter tolerance workers firms      ///
         rank_tolerance block_tolerance algorithm_requested nuisance_code route_requested        ///
         fallback_allowed batch_mode leverage_batch_requested                ///

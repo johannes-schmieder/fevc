@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 // Native preflight must validate with the small module and leave the FE runtime unloaded.
 local oldstate `"`c(rngstate)'"'

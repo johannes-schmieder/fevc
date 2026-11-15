@@ -9,7 +9,7 @@
 *! Block projections require an explicit request.
 
 program define fevc, eclass
-    version 18.0
+    version 15.0
     // Example data generation does not initialize the estimator or native runtime.
     if regexm(strtrim(`"`0'"'), "^,") & ///
         regexm(lower(`"`0'"'), "(^|[ ,])simulate_data([ (]|$)") {
@@ -91,7 +91,7 @@ program define fevc, eclass
 end
 
 program define _fevc_command, eclass
-    version 18.0
+    version 15.0
 
     if lower(strtrim(`"`0'"')) == ", version" {
         _vckss_impl `0'
@@ -123,7 +123,7 @@ program define _fevc_command, eclass
     local rng_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rng__api_level() == 4 &              ///
         vckss_rng__build_id() ==                                   ///
-        "vckss-rng-numeric-ranks-v4")
+        "vckss-rng-numeric-ranks-v5-stata15")
     if _rc {
         if `rng_runtime_loaded' {
             quietly _vckss_post_failure "STALE_RNG_RUNTIME"
@@ -141,7 +141,7 @@ program define _fevc_command, eclass
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss_rng__api_level() == 4 &          ///
             vckss_rng__build_id() ==                               ///
-            "vckss-rng-numeric-ranks-v4")
+            "vckss-rng-numeric-ranks-v5-stata15")
         if _rc {
             quietly _vckss_post_failure "INVALID_RNG_RUNTIME"
             di as error "the installed KSS RNG runtime is incompatible with this command"
@@ -268,7 +268,7 @@ program define _fevc_command, eclass
 end
 
 program define _fevc_rust_generic, eclass sortpreserve
-    version 18.0
+    version 15.0
     args depvar worker firm deletionvar frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance    ///
         maxiter memorygib enginerequested backendsupplied rngsupplied ///
@@ -1000,23 +1000,7 @@ program define _fevc_rust_generic, eclass sortpreserve
 
     tempname rhs_public graph_receipt memory_receipt preparation_receipt
     tempname capability_receipt generic_receipt control_rank_receipt
-    matrix `rhs_public' = J(`expected_rhs_rows',6,.)
-    forvalues row = 1/`expected_rhs_rows' {
-        local phase = `rhs_native'[`row',1]
-        local probe = `rhs_native'[`row',2]
-        local side = `rhs_native'[`row',3]
-        local stage = cond(`phase'==5,1,cond(`phase'==1,2,         ///
-            cond(`phase'==4,3,cond(`phase'==2,4,5))))
-        local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,      ///
-            2*`probe'+`side',`probe'+1))
-        local batch_start = cond(`probe'<0,1,floor(`probe'/`batch')*`batch'+1)
-        matrix `rhs_public'[`row',1] = `stage'
-        matrix `rhs_public'[`row',2] = `batch_start'
-        matrix `rhs_public'[`row',3] = `logical_rhs'
-        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
-        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
-        matrix `rhs_public'[`row',6] = inlist(`rhs_native'[`row',9],1,2)
-    }
+    fevc__rust_rhs_diagnostics `rhs_native' `rhs_public' `batch' `batch' 1 0 0 0
     matrix colnames `rhs_public' = stage batch_start rhs iterations ///
         relative_residual converged
     matrix `graph_receipt' = (`g_input_rows',`g_keep_rows',`g_input_mass', ///
@@ -1298,7 +1282,7 @@ program define _fevc_rust_generic, eclass sortpreserve
 end
 
 program define _vckss_proj_result_ok, rclass
-    version 18.0
+    version 15.0
     args projection_b projection_V projection_V_naive             ///
         projection_columns prr_schema prr_columns prr_effect       ///
         prr_weight pr_effect pr_weight prr_cov_min prr_cov_max     ///
@@ -1354,7 +1338,7 @@ program define _vckss_proj_result_ok, rclass
 end
 
 program define _fevc_rust_generic_planned, eclass sortpreserve
-    version 18.0
+    version 15.0
     args depvar worker firm deletionvar frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance    ///
         maxiter memorygib algorithm_requested enginerequested       ///
@@ -2374,9 +2358,10 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     matrix colnames `rust_phase_profile' = ingest canonicalize graph ///
         compress plan stayer_augmentation solve native_total
 
-    tempname component_point_snapshot
+    tempname component_b
     if `component_requested' {
-        matrix `component_point_snapshot' = r(result)[3,1..4]
+        matrix `component_b' = r(result)
+        matrix `component_b' = `component_b'[3,1..4]
     }
     // Auxiliary receipt getters replace r(), but the solved generation is
     // immutable. Move its already validated export aside while fetching those
@@ -2432,7 +2417,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if `component_requested' {
         capture noisily fevc__rust_component_fetch `handle'             ///
             `component_reference' `component_model' `inferencesimulations' ///
-            `p_mem_limit' `component_point_snapshot' `level'              ///
+            `p_mem_limit' `component_b' `level'              ///
             `component_V_primitive' `component_V' `component_trace_mcse'  ///
             `component_spectrum' `component_q1_raw'                       ///
             `component_variance_summary' `component_fold_diagnostics'     ///
@@ -3696,26 +3681,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname rhs_public graph_receipt memory_receipt preparation_receipt
     tempname capability_receipt generic_receipt control_rank_receipt
     tempname route_diagnostics
-    matrix `rhs_public' = J(`expected_rhs_rows',6,.)
-    forvalues row = 1/`expected_rhs_rows' {
-        local phase = `rhs_native'[`row',1]
-        local probe = `rhs_native'[`row',2]
-        local side = `rhs_native'[`row',3]
-        local stage = cond(`phase'==5,1,cond(`phase'==1,2,         ///
-            cond(`phase'==4,3,cond(`phase'==2,4,                 ///
-            cond(`phase'==6,6,5)))))
-        local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,      ///
-            2*`probe'+`side',`probe'+1))
-        local active_batch = cond(`phase'==2,`r_lev_batch',`r_tgt_batch')
-        local batch_start = cond(`probe'<0,1,                       ///
-            floor(`probe'/`active_batch')*`active_batch'+1)
-        matrix `rhs_public'[`row',1] = `stage'
-        matrix `rhs_public'[`row',2] = `batch_start'
-        matrix `rhs_public'[`row',3] = `logical_rhs'
-        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
-        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
-        matrix `rhs_public'[`row',6] = inlist(`rhs_native'[`row',9],1,2)
-    }
+    fevc__rust_rhs_diagnostics `rhs_native' `rhs_public' `r_lev_batch' `r_tgt_batch' 2 0 0 0
     matrix colnames `rhs_public' = stage batch_start rhs iterations ///
         relative_residual converged
     matrix `graph_receipt' = (`g_input_rows',`g_keep_rows',`g_input_mass', ///
@@ -4261,7 +4227,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
 end
 
 program define _vckss_descriptive_variances, rclass
-    version 18.0
+    version 15.0
     args depvar frequency target touse physical
     foreach variable in `depvar' `frequency' `target' `touse' {
         confirm numeric variable `variable'
@@ -4297,7 +4263,7 @@ program define _vckss_descriptive_variances, rclass
 end
 
 program define _vckss_mata_stayer_hybrid, rclass sortpreserve
-    version 18.0
+    version 15.0
     args depvar worker firm controls frequency target deletion stayer ///
         touse nuisance ranktol blocktol exactlimit blocklimit probeorder
     tempname raw diagnostics source
@@ -4337,7 +4303,7 @@ program define _vckss_mata_stayer_hybrid, rclass sortpreserve
 end
 
 program define _vckss_impl, eclass sortpreserve
-    version 18.0
+    version 15.0
     local cmdline `"fevc `0'"'
 
     if lower(strtrim(`"`0'"')) == ", version" {
@@ -6436,7 +6402,7 @@ program define _vckss_impl, eclass sortpreserve
         local rng_runtime_loaded = (_rc == 0)
         capture mata: assert(vckss_rng__api_level() == 4 &         ///
             vckss_rng__build_id() ==                              ///
-            "vckss-rng-numeric-ranks-v4")
+            "vckss-rng-numeric-ranks-v5-stata15")
         if _rc {
             if `rng_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_RNG_RUNTIME"
@@ -6452,7 +6418,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_rng__api_level() == 4 &     ///
                 vckss_rng__build_id() ==                          ///
-                "vckss-rng-numeric-ranks-v4")
+                "vckss-rng-numeric-ranks-v5-stata15")
             if _rc {
                 quietly _vckss_post_failure "INVALID_RNG_RUNTIME"
                 di as error "the installed RNG runtime is incompatible with this command"
@@ -6613,22 +6579,30 @@ program define _vckss_impl, eclass sortpreserve
                 exit 498
             }
 
-            local caller_max_preservemem = c(max_preservemem)
-            local old_preservemem_text : display %21.0f ///
-                `caller_max_preservemem'
-            local old_preservemem_text = strtrim("`old_preservemem_text'")
+            // Stata 15 preserve is already disk-backed.
+            local old_preservemem_text
+            if c(stata_version)>=16 {
+                local caller_max_preservemem = c(max_preservemem)
+                local old_preservemem_text : display %21.0f ///
+                    `caller_max_preservemem'
+                local old_preservemem_text = strtrim("`old_preservemem_text'")
+            }
             local transition_rc = 0
             local preserve_active = 0
             quietly mata: vckss_timer__on(`transition_timer')
-            capture quietly set max_preservemem 0
-            if _rc local transition_rc = _rc
+            if c(stata_version)>=16 {
+                capture quietly set max_preservemem 0
+                if _rc local transition_rc = _rc
+            }
             if !`transition_rc' {
                 capture quietly preserve
                 if _rc local transition_rc = _rc
                 else local preserve_active = 1
             }
-            capture quietly set max_preservemem `old_preservemem_text'
-            if _rc & !`transition_rc' local transition_rc = _rc
+            if c(stata_version)>=16 {
+                capture quietly set max_preservemem `old_preservemem_text'
+                if _rc & !`transition_rc' local transition_rc = _rc
+            }
             if !`transition_rc' {
                 capture quietly clear
                 if _rc local transition_rc = _rc
@@ -7876,7 +7850,7 @@ program define _vckss_impl, eclass sortpreserve
 end
 
 program define _fevc_rust_finally
-    version 18.0
+    version 15.0
 
     local active_handle = 0
     capture quietly fevc_rust snapshot
@@ -7891,7 +7865,7 @@ program define _fevc_rust_finally
 end
 
 program define _vckss_request_signature, rclass
-    version 18.0
+    version 15.0
     args request_schema algorithm_code deletion_code nuisance_code ///
         route_code rng_code controls_count frequency_code engine_code ///
         batch_code stayers_code target_code deletionsource_code       ///
@@ -7965,7 +7939,7 @@ program define _vckss_request_signature, rclass
 end
 
 program define _vckss_rexact, eclass sortpreserve
-    version 18.0
+    version 15.0
     args depvar worker firm deletionvar frequency target touse nscope   ///
         ncomplete nstayers nstayerrows probesrequested batchnumeric   ///
         seedrequested tolerancerequested maxiterrequested memorygib   ///
@@ -8751,7 +8725,7 @@ program define _vckss_rexact, eclass sortpreserve
 end
 
 program define _fevc_rust_public, eclass sortpreserve
-    version 18.0
+    version 15.0
     args depvar worker firm deletion frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance ///
         maxiter memorygib enginerequested backendsupplied          ///
@@ -9294,32 +9268,8 @@ program define _fevc_rust_public, eclass sortpreserve
         plugin_share_worker_firm corrected_share_worker_firm
 
     tempname rhs_public graph_receipt memory_receipt preparation_receipt
-    matrix `rhs_public' = J(`r_rhs_rows',6,.)
-    forvalues row = 1/`r_rhs_rows' {
-        local native_phase = `rhs_native'[`row',1]
-        local probe_zero = `rhs_native'[`row',2]
-        local public_stage = cond(`native_phase'==1,2,cond(`native_phase'==2,4,5))
-        local logical_rhs = cond(`probe_zero'<0,1,             ///
-            cond(`native_phase'==3,2*`probe_zero'+             ///
-                `rhs_native'[`row',3],`probe_zero'+1))
-        local batch_start = cond(`probe_zero'<0,1,             ///
-            floor(`probe_zero'/`batch')*`batch'+1)
-        matrix `rhs_public'[`row',1] = `public_stage'
-        matrix `rhs_public'[`row',2] = `batch_start'
-        matrix `rhs_public'[`row',3] = `logical_rhs'
-        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
-        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
-        local rhs_converged =                                 ///
-            `rhs_native'[`row',4] == 2 &                     ///
-            `rhs_native'[`row',5] >= 0 &                     ///
-            `rhs_native'[`row',5] <= `maxiter' &             ///
-            `rhs_native'[`row',6] >= 0 &                     ///
-            `rhs_native'[`row',6] <= `tolerance' &           ///
-            `rhs_native'[`row',7] >= 0 &                     ///
-            `rhs_native'[`row',7] <= `r_full_tol' &          ///
-            inlist(`rhs_native'[`row',8],0,1)
-        matrix `rhs_public'[`row',6] = `rhs_converged'
-    }
+    fevc__rust_rhs_diagnostics `rhs_native' `rhs_public' `batch' `batch' 3 ///
+        `maxiter' `tolerance' `r_full_tol'
     matrix colnames `rhs_public' = stage batch_start rhs iterations ///
         relative_residual converged
     matrix `graph_receipt' = (`g_input_rows', `g_keep_rows',      ///
@@ -9513,7 +9463,7 @@ program define _fevc_rust_public, eclass sortpreserve
 end
 
 program define _fevc_native_threads, eclass
-    version 18.0
+    version 15.0
     args requested
     capture noisily fevc__native_threads `"`requested'"' context
     if _rc {
@@ -9527,7 +9477,7 @@ end
 // ado-files can reach it (a program defined after the first one of an
 // ado-file is private to that file); this file keeps its private name.
 program define _vckss_post_failure, eclass
-    version 18.0
+    version 15.0
     fevc__post_failure `0'
 end
 
@@ -9535,7 +9485,7 @@ end
 // failures the caller used to post inline. Kept out of the estimator program
 // to respect Stata's compiled-program size limit.
 program define _fevc_inference_runtime_load
-    version 18.0
+    version 15.0
     local inference_runtime_loaded = 0
     capture mata: vckss_inference__api_level()
     if !_rc local inference_runtime_loaded = 1
@@ -9573,7 +9523,7 @@ end
 // exact match requests, linear solves otherwise. The Mata routines report
 // through locals of the calling program, which are passed back here.
 program define _fevc_residual_se_mata
-    version 18.0
+    version 15.0
     args depvar id_worker id_firm controlvars frequency target deletion_id ///
         touse hybrid_worker hybrid_firm hybrid_deletion hybrid_stayer     ///
         hybrid_touse deletion stayers nuisance selected_algorithm         ///
@@ -9594,7 +9544,7 @@ program define _fevc_residual_se_mata
     capture mata: vckss_rse__api_level()
     local runtime_loaded = (_rc == 0)
     capture mata: assert(vckss_rse__api_level() == 1 &            ///
-        vckss_rse__build_id() == "vckss-residual-se-api6" &       ///
+        vckss_rse__build_id() == "vckss-residual-se-api7" &       ///
         vckss_rse__loaded() == 1)
     if _rc & `runtime_loaded' {
         c_local inference_status "STALE_INFERENCE_RUNTIME"
@@ -9610,7 +9560,7 @@ program define _fevc_residual_se_mata
         }
         capture quietly do `"`r(fn)'"'
         capture mata: assert(vckss_rse__api_level() == 1 &        ///
-            vckss_rse__build_id() == "vckss-residual-se-api6" &   ///
+            vckss_rse__build_id() == "vckss-residual-se-api7" &   ///
             vckss_rse__loaded() == 1)
         if _rc {
             c_local inference_status "INVALID_INFERENCE_RUNTIME"
@@ -9691,7 +9641,7 @@ program define _fevc_residual_se_mata
 end
 
 program define _vckss_route_context_clear
-    version 18.0
+    version 15.0
     foreach route_global in VCKSS_ROUTE_METADATA_READY          ///
         VCKSS_ROUTE_BACKEND_REQUESTED VCKSS_ROUTE_BACKEND_SELECTED ///
         VCKSS_ROUTE_BACKEND_REASON VCKSS_ROUTE_BACKEND_SUPPLIED ///
@@ -9711,7 +9661,7 @@ program define _vckss_route_context_clear
 end
 
 program define _vckss_display_failure
-    version 18.0
+    version 15.0
     noisily di as error _newline "fevc could not compute the requested decomposition."
     noisily di as error "Reason: " as error `"`e(withholding_reason)'"'
     if `"`e(withholding_detail)'"' != `"`e(withholding_reason)'"' {
@@ -9724,13 +9674,13 @@ program define _vckss_display_failure
 end
 
 program define _vckss_stage_timer_ids, rclass
-    version 18.0
+    version 15.0
     return scalar selection_timer = 31
     return scalar validation_timer = 32
 end
 
 program define _vckss_centering, eclass
-    version 18
+    version 15.0
     capture macro drop VCKSS_CENTER_ERROR
     capture noisily fevc__centering `0'
     local rc=_rc

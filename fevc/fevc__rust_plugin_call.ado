@@ -2,7 +2,7 @@
 *! macro scope and routing eligible calls through progress reporting.
 
 program define fevc__rust_plugin_call, rclass
-    version 18.0
+    version 15.0
     gettoken plugin 0 : 0, parse(" ,")
     local parsed = strtrim(subinstr(`"`0'"', ",", "", 1))
     gettoken subcommand rest : parsed

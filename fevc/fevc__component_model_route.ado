@@ -2,7 +2,7 @@
 *! capabilities. Normalized options and route flags are returned in caller locals.
 
 program define fevc__component_model_route, rclass
-    version 18.0
+    version 15.0
     // fevc 0.6.0 computes the standard errors of the components by one
     // method, the repeat-measurement model. Requests for the variance models
     // it replaced, and for their tuning options, stop before every other
@@ -303,7 +303,7 @@ end
 
 // The caller owns e() and the private failure-posting routine in fevc.ado.
 program define _fevc_component_route_failure
-    version 18.0
+    version 15.0
     args status detail
     global VCKSS_INFERENCE_ERROR "`status'"
     global VCKSS_INFERENCE_DETAIL `"`detail'"'

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -22,8 +22,8 @@ foreach solver in diagonal cmg {
         algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
         probes(200) tolerance(1e-12) centering(none) project(z) projecteffect(firm) nodisplay
     if "`solver'"=="cmg" {
-        assert e(rust_execution_receipt)[1,"projection"]==2
-        assert e(rust_execution_receipt)[1,"logical"]==604
+        assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"projection"))==2
+        assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"logical"))==604
     }
     if "`solver'"=="diagonal" {
         matrix projected = e(projection_b)
@@ -32,7 +32,7 @@ foreach solver in diagonal cmg {
     else {
         assert "`e(rust_execution_mode)'"=="direct_attachments"
         assert "`e(full_cmg_model_schema)'"==""
-        assert e(full_cmg_receipt)[1,"probe_tolerance"]==1e-12
+        assert el(e(full_cmg_receipt),1,colnumb(e(full_cmg_receipt),"probe_tolerance"))==1e-12
         assert mreldif(e(projection_b),projected)<1e-8
         assert mreldif(e(projection_V),projected_V)<1e-8
     }
@@ -67,24 +67,24 @@ foreach deletion in observation match {
         // The diagonal queue reports its work on macOS and Linux only.
         capture confirm matrix e(rust_execution_receipt)
         if !_rc {
-            assert e(rust_execution_receipt)[1,"threads"]==`test_threads'
-            assert e(rust_execution_receipt)[1,"component"]== ///
-                e(component_inference_receipt)[1,"solver_columns"]
+            assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"threads"))==`test_threads'
+            assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"component"))== ///
+                el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"solver_columns"))
         }
         if "`solver'"=="cmg" {
             matrix work = e(rust_execution_receipt)
             matrix inference_batch = e(rust_component_batch_receipt)
             assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
-            assert inference_batch[1,"policy"]==1
-            assert inference_batch[1,"declared_component"]==1
-            assert inference_batch[1,"declared_gram"]==0 & inference_batch[1,"gram"]==0
-            assert inference_batch[1,"component"]==`inference_cap'
-            assert inference_batch[1,"cap"]==`inference_cap'
-            assert inference_batch[1,"threads"]==`test_threads'
-            assert inference_batch[1,"capacity"]==work[1,"capacity"]
-            assert work[1,"gram"]==0
-            assert work[1,"logical"]==work[1,"fit"]+1+600+work[1,"component"]
-            assert work[1,"residual"]<=e(residual_acceptance_tolerance)
+            assert el(inference_batch,1,colnumb(inference_batch,"policy"))==1
+            assert el(inference_batch,1,colnumb(inference_batch,"declared_component"))==1
+            assert el(inference_batch,1,colnumb(inference_batch,"declared_gram"))==0 & el(inference_batch,1,colnumb(inference_batch,"gram"))==0
+            assert el(inference_batch,1,colnumb(inference_batch,"component"))==`inference_cap'
+            assert el(inference_batch,1,colnumb(inference_batch,"cap"))==`inference_cap'
+            assert el(inference_batch,1,colnumb(inference_batch,"threads"))==`test_threads'
+            assert el(inference_batch,1,colnumb(inference_batch,"capacity"))==el(work,1,colnumb(work,"capacity"))
+            assert el(work,1,colnumb(work,"gram"))==0
+            assert el(work,1,colnumb(work,"logical"))==el(work,1,colnumb(work,"fit"))+1+600+el(work,1,colnumb(work,"component"))
+            assert el(work,1,colnumb(work,"residual"))<=e(residual_acceptance_tolerance)
         }
         if "`solver'"=="diagonal" {
             matrix point = e(kss)
@@ -92,8 +92,8 @@ foreach deletion in observation match {
         }
         else {
             assert "`e(rust_execution_mode)'"=="direct_attachments"
-            assert work[1,"logical"]+work[1,"refinement"]==work[1,"cmg"]
-            assert e(full_cmg_receipt)[1,"probe_tolerance"]==1e-10
+            assert el(work,1,colnumb(work,"logical"))+el(work,1,colnumb(work,"refinement"))==el(work,1,colnumb(work,"cmg"))
+            assert el(e(full_cmg_receipt),1,colnumb(e(full_cmg_receipt),"probe_tolerance"))==1e-10
             assert mreldif(point,e(kss))<1e-8
             assert mreldif(component,e(component_inference))<1e-8
         }

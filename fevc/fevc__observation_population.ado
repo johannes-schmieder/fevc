@@ -2,7 +2,7 @@
 *! and returns sample and routing information to the caller.
 
 program define fevc__observation_population
-    version 18.0
+    version 15.0
     args deletion population touse original_stayer worker firm ///
         dense_worker dense_firm complete implicit_match pair_first unit_count ///
         worker_tag sort_calls deletionid rust_public rust_strict core_flags

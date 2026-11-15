@@ -2,7 +2,7 @@
 *! batch choices, allocation forecasts, and inference work.
 
 program define fevc__rust_plan_receipt, rclass
-    version 18.0
+    version 15.0
 
     args component_inference component_probes component_gram_probes execution ///
         exact_execution exact_threads exact_work exact_handle

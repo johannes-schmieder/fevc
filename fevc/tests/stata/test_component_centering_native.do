@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -46,7 +46,12 @@ assert abs(mean_match-mean_observation)>1e-3
 sort rowid
 set seed 721946
 local caller_rng `"`c(rngstate)'"'
-local caller_sort_rng `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sort_rng `"`test_sort_state'"'
 local caller_algorithm `"`c(rng)'"'
 local caller_stream = c(rngstream)
 quietly datasignature
@@ -184,7 +189,12 @@ foreach deletion in observation match {
                 assert mreldif(base_status,e(q0_status))==0
                 assert mreldif(base_intervals,e(component_inference))<1e-8
                 if `joint' assert mreldif(base_primitive,e(V_primitive))<1e-8
-                if "`reference'"=="highrank" & `joint' assert mreldif(base_V,e(V))<1e-8
+                if "`reference'"=="highrank" & `joint' {
+                    tempname compat_assert_V
+                    matrix `compat_assert_V' = e(V)
+                    assert mreldif(base_V,`compat_assert_V')<1e-8
+                    matrix drop `compat_assert_V'
+                }
                 if "`reference'"=="q1" {
                     assert e(inference_q1_components)==`q1count'
                     matrix candidate_table = e(inference_intervals)
@@ -196,7 +206,12 @@ foreach deletion in observation match {
             assert e(inference_mean_omitted)==0
             assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
             assert `"`c(rngstate)'"'==`"`caller_rng'"'
-            assert `"`c(sortrngstate)'"'==`"`caller_sort_rng'"'
+            tempname sort_results
+            _return hold `sort_results'
+            quietly query sortseed
+            local test_sort_state `"`r(sortseed)'"'
+            _return restore `sort_results'
+            assert `"`test_sort_state'"'==`"`caller_sort_rng'"'
             assert `"`c(rng)'"'==`"`caller_algorithm'"'
             assert c(rngstream)==`caller_stream'
             assert rowid==_n
@@ -255,7 +270,10 @@ replace copies = 1
 quietly fevc outcome control, `copies_options'
 assert e(inference_independent_units)==400
 assert mreldif(compressed_results,e(results))<1e-8
-assert mreldif(compressed_V,e(V))<1e-8
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert mreldif(compressed_V,`compat_assert_V')<1e-8
+matrix drop `compat_assert_V'
 restore
 
 // Standard errors of the components and project() are separate calls; the
@@ -278,7 +296,10 @@ matrix projection_point = e(b)
 matrix projection_only = e(projection_b)
 quietly fevc outcome control, `combined' inference(auto)
 assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""
-assert mreldif(projection_point,e(b))<1e-12
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(projection_point,`compat_assert_b')<1e-12
+matrix drop `compat_assert_b'
 assert mreldif(projection_only,e(projection_b))<1e-12
 capture confirm matrix e(V)
 assert _rc
@@ -304,7 +325,12 @@ foreach request in "inferencemodel(structured_common)" "inferencemodel(structure
     }
 }
 assert `cells'==4
-assert `"`c(sortrngstate)'"'==`"`caller_sort_rng'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`caller_sort_rng'"'
 quietly datasignature
 assert `"`r(datasignature)'"'==`"`caller_data'"'
 assert "$VCKSS_CENTERING"==""

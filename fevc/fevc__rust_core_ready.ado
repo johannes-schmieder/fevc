@@ -2,7 +2,7 @@
 *! features required by the selected execution route.
 
 program define fevc__rust_core_ready, rclass
-    version 18.0
+    version 15.0
     args flags platform fullcmg execution componentauto resolved project autoexact exactstayer ///
         algorithm stayers executionapi
     local ok = mod(floor(`flags'/1),2)==1

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -128,9 +128,9 @@ if `"`install_mode'"' == "qualified" {
     assert rowsof(e(rust_phase_profile)) == 1
     assert colsof(e(rust_phase_profile)) == 8
     forvalues phase = 1/8 {
-        assert e(rust_phase_profile)[1,`phase'] >= 0
+        assert el(e(rust_phase_profile),1,`phase') >= 0
     }
-    assert e(rust_phase_profile)[1,8] >= e(rust_phase_profile)[1,7]
+    assert el(e(rust_phase_profile),1,8) >= el(e(rust_phase_profile),1,7)
     assert e(rust_plan_resolved) == 1 & e(rust_plan_frozen) == 1
     assert e(probes) == 0 & e(seed) == 0 & e(batch) == 0
     assert e(rust_counter_plan_complete) == 1

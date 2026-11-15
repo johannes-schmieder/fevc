@@ -2,7 +2,7 @@
 *! Source-informed Mata port and modifications Copyright (c) 2026 Johannes Schmieder
 *! SPDX-License-Identifier: MIT
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

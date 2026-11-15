@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 
 // The previous API 23 token must not masquerade as a current API 24 runtime.
 mata: assert(vckss__api_level() == 24)

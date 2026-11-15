@@ -345,6 +345,7 @@ source_inputs=(
   "${package_dir}/fevc__rust_reconcile_comp_v7.ado"
   "${package_dir}/fevc__rust_reconcile_exact_v7.ado"
   "${package_dir}/fevc__rust_post_comp_v7.ado"
+  "${package_dir}/fevc__rust_rhs_diagnostics.ado"
   "${package_dir}/fevc__rust_post_exact_v7.ado"
   "${package_dir}/fevc__rust_capture_stayers.ado"
   "${package_dir}/fevc__rust_post_stayer_hybrid.ado"

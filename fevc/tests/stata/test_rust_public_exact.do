@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -99,8 +99,8 @@ foreach nuisance in joint fixedoffset {
             assert e(rust_cap_reason_code) == 0
             assert e(rust_cap_profile_code) == 1
             assert e(rust_cap_schema) == 1
-            assert e(rust_request_capability_receipt)[1,12] == 1
-            assert e(rust_request_capability_receipt)[1,13] == 0
+            assert el(e(rust_request_capability_receipt),1,12) == 1
+            assert el(e(rust_request_capability_receipt),1,13) == 0
             assert e(rust_exact_diagnostic_flags) == 511
             assert e(rust_full_fit_complete_residual) <=              ///
                 e(residual_acceptance_tolerance)
@@ -116,12 +116,12 @@ foreach nuisance in joint fixedoffset {
             assert e(rust_deletion_rank_gap) > e(rust_block_tolerance)
             assert e(rust_firm_zero_sum_residual) >= 0
             assert e(rust_actual_accounting_residual) <= 1e-10
-            assert e(rust_exact_memory_receipt)[1,3] == max(          ///
-                e(rust_exact_memory_receipt)[1,1],                    ///
-                e(rust_exact_memory_receipt)[1,2])
+            assert el(e(rust_exact_memory_receipt),1,3) == max(          ///
+                el(e(rust_exact_memory_receipt),1,1),                    ///
+                el(e(rust_exact_memory_receipt),1,2))
             assert e(memory_budget_supplied)==0 & missing(e(memory_gib))
-            assert e(rust_exact_memory_receipt)[1,5]>0 & ///
-                e(rust_exact_memory_receipt)[1,6]==0
+            assert el(e(rust_exact_memory_receipt),1,5)>0 & ///
+                el(e(rust_exact_memory_receipt),1,6)==0
             assert e(parameters) == cond("`nuisance'" == "joint",4,3)
             assert e(full_parameters) == 4
             assert e(correction_parameters) ==                       ///
@@ -156,7 +156,7 @@ matrix `mata_factor' = e(results)
 quietly fevc y i.category, worker(worker) firm(firm)           ///
     deletion(match) deletionid(deletion_id) algorithm(exact)         ///
     backend(rust) engine(generic) stayers(movers) nodisplay
-assert e(rust_request_capability_receipt)[1,12] == 1
+assert el(e(rust_request_capability_receipt),1,12) == 1
 assert mreldif(e(results),`mata_factor') <= 1e-10
 
 // Observation deletion counts literal physical copies and keeps target mass
@@ -192,7 +192,7 @@ foreach nuisance in joint fixedoffset {
     assert e(rust_inverse_sqrt_relres) == 0
     assert e(rust_maker_relres) == 0
     assert e(correction_reciprocal_residual) == 0
-    assert e(rust_request_capability_receipt)[1,13] == 1
+    assert el(e(rust_request_capability_receipt),1,13) == 1
     assert mreldif(e(results),`mata_observation') <= 1e-10
 }
 
@@ -242,7 +242,7 @@ assert mreldif(e(results),`rust_order') <= 1e-10
 // and before any failure is posted; cleanup still leaves the engine idle.
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     gettoken rust_subcommand rust_rest : 0, parse(" ,")
     fevc_rust `0'
     return add
@@ -273,7 +273,7 @@ quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     fevc_rust `0'
     return add
 end

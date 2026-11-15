@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 // The ordinary uncentered reference/oracle in this test requires centering(none).
 clear
 set more off
@@ -101,7 +101,10 @@ assert mreldif(mover_results,e(mover_results)) < 2e-9
 assert mreldif(mover_plugin,e(mover_plugin)) < 2e-9
 assert mreldif(mover_correction,e(mover_correction)) < 2e-9
 assert mreldif(e(results),e(stayer_hybrid_results)) < 2e-12
-assert mreldif(e(b),e(stayer_hybrid_kss)) < 2e-12
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(`compat_assert_b',e(stayer_hybrid_kss)) < 2e-12
+matrix drop `compat_assert_b'
 generate byte both_sample = e(sample)
 assert both_sample == (_n<=28)
 assert mover_sample <= both_sample

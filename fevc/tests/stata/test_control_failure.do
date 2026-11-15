@@ -1,4 +1,4 @@
-version 18
+version 15.0
 clear all
 set more off
 set processors 4
@@ -12,14 +12,14 @@ assert "`e(native_failure_phase)'"=="control_span_deletion"
 assert "`e(control_certificate_schema)'"=="FEVC_CONTROL_CERT_V1"
 assert "`e(control_certificate_population)'"=="combined"
 assert "`e(control_certificate_selected)'"=="span_residual"
-assert e(control_certificate_failure)[1,"N"]==359402
-assert e(control_certificate_failure)[1,"controls"]==13
-assert e(control_certificate_failure)[1,"units"]==42276
-assert e(control_certificate_failure)[1,"bound"]==2e-10
-assert e(control_certificate_failure)[1,"propagated"]==1.6e-7
-assert e(control_certificate_failure)[1,"ceiling"]==1e-8
-assert e(control_certificate_failure)[1,"original_residual"]==2e-12
-assert e(control_certificate_failure)[1,"inconclusive"]==1
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"N"))==359402
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"controls"))==13
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"units"))==42276
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"bound"))==2e-10
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"propagated"))==1.6e-7
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"ceiling"))==1e-8
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"original_residual"))==2e-12
+assert el(e(control_certificate_failure),1,colnumb(e(control_certificate_failure),"inconclusive"))==1
 set obs 8
 gen byte w=1+mod(floor((_n-1)/4),2)
 gen byte f=1+mod(floor((_n-1)/2),2)

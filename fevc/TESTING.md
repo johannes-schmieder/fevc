@@ -127,6 +127,45 @@ movers, missing excluded inputs, eligible stayers, and graph exclusions. It
 also preserves the typed failure for missing inputs inside requested matches.
 The test runs in both source profiles and qualified installed-package checks.
 
+## Stata 15 compatibility
+
+The exact Mata leading-direction calculation scales each symmetric target to
+unit magnitude for the eigensolve and rescales its eigenvalues. This avoids
+missing eigensystem results observed on Stata 15 with finite, rank-deficient
+targets. For a repeated leading eigenvalue, a coordinate projection into its
+eigenspace selects a reproducible direction instead of the solver's arbitrary
+basis. A closed-form spectrum checks the direction and eigenvalue at scales
+1e-12, 1 and 1e12; the independent dense oracle and literal frequency-expansion
+regression retain their original tolerances.
+
+Native RHS diagnostic tables are allocated through Mata on all runtimes.
+Stata 15's `st_matrix()` export ignores `matsize`; its diagnostic row ceiling
+is kept at 65,534 for MP, or the edition's `max_matsize` otherwise. Projection
+expressions still respect the caller's legacy `matsize`. The unchanged
+4,096-probe literal-deletion oracle tests receipt transport beyond 11,000 rows.
+
+The Stata 15 compatibility regression also checks all four native diagnostic
+row formats against literal expected rows, including a table longer than
+11,000 rows. The pooled-deletion oracle retains its 4,096/8,192-probe settings
+and checks complete native/public tables across the legacy subscript boundary.
+
+Use the installed older executable with its installation root explicitly set:
+
+```bash
+SYSDIR_STATA="/Applications/Stata 15/" \
+STATA_BIN="/Applications/Stata 15/StataMP.app/Contents/MacOS/stata-mp" \
+./ci/run_stata_ci.sh full
+```
+
+Run the default-inference regression separately without the point-only suite
+switch. `test_stata_compatibility.do` checks sort-state replay and preservation
+of the caller's returned results, the runtime-specific RNG identity and native
+matrix-dimension admission. The existing simulation, RNG, lifecycle, restoration,
+inference and installed-package tests must also pass. On this Apple Silicon
+Mac, Stata 15.1 executes the Intel plugin under Rosetta. Stata 16 is not installed;
+the installed Stata 17 license is expired. Neither version has runtime-test
+evidence from this compatibility work.
+
 ## Focused outcome-centering checks
 
 The small implementation is covered by `test_centering_mean.do` (fixed-mean

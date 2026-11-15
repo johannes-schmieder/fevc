@@ -1,7 +1,7 @@
 *! Maps failure statuses to explanations and suggested checks for users.
 
 program define fevc__failure_guidance, rclass
-    version 18.0
+    version 15.0
     args failure_status
 
     local reason "The requested calculation did not pass a registered validation gate."
@@ -109,7 +109,7 @@ program define fevc__failure_guidance, rclass
     else if inlist("`failure_status'", "RNG_RUNTIME_UNREGISTERED", ///
         "RNG_SETUP_FAILED", "RNG_GUARD_FAILED", "RNG_RESTORE_FAILED") {
         local reason "The randomized estimator could not establish or restore its registered Stata RNG contract."
-        local suggestion "Use a supported Stata 18 or 19 runtime for JLA, or use algorithm(exact) when feasible; restart Stata if caller RNG restoration failed."
+        local suggestion "Use a supported Stata 15 through 19 runtime for JLA, or use algorithm(exact) when feasible; restart Stata if caller RNG restoration failed."
     }
     else if strpos("`failure_status'", "STALE_") == 1 |         ///
         strpos("`failure_status'", "RUNTIME") > 0 |              ///

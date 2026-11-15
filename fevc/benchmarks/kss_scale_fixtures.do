@@ -1,10 +1,10 @@
 *! KSS-STREAMLINE-1 deterministic diagnostic fixture wrapper 17aug2026
 
-version 18.0
+version 15.0
 
 capture program drop vckss_scale_fixture
 program define vckss_scale_fixture, rclass
-    version 18.0
+    version 15.0
     syntax , DESIGN(string) COPIES(integer) WORKER(varname numeric) ///
         FIRM(varname numeric) DELETIONid(varname numeric) ///
         OUTCOME(varname numeric) [FREQuency(varname numeric) ///

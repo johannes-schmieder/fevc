@@ -2,7 +2,7 @@
 *! and execution diagnostics into e().
 
 program define fevc__rust_post_comp_v7, eclass sortpreserve
-    version 18.0
+    version 15.0
     args handle depvar frequency target touse nscope ncomplete nstayers  ///
         nstayerrows tolerance maxiter memorygib engine_requested       ///
         backendsupplied rngsupplied deletionidsupplied enginesupplied  ///
@@ -345,25 +345,7 @@ program define fevc__rust_post_comp_v7, eclass sortpreserve
     tempname route_diagnostics
     matrix colnames `rhs_native' = phase probe side route iterations   ///
         reduced_residual complete_residual zero_rhs
-    matrix `rhs_public' = J(`h_rows',6,.)
-    forvalues row = 1/`h_rows' {
-        local phase = `rhs_native'[`row',1]
-        local probe = `rhs_native'[`row',2]
-        local side = `rhs_native'[`row',3]
-        local stage = cond(`phase'==1,2,cond(`phase'==2,4,5))
-        local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,          ///
-            2*`probe'+`side',`probe'+1))
-        local active_batch = cond(`phase'==2,`h_levbatch',            ///
-            cond(`phase'==3,`h_tgtbatch',1))
-        local batch_start = cond(`probe'<0,1,                         ///
-            floor(`probe'/`active_batch')*`active_batch'+1)
-        matrix `rhs_public'[`row',1] = `stage'
-        matrix `rhs_public'[`row',2] = `batch_start'
-        matrix `rhs_public'[`row',3] = `logical_rhs'
-        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
-        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
-        matrix `rhs_public'[`row',6] = 1
-    }
+    fevc__rust_rhs_diagnostics `rhs_native' `rhs_public' `h_levbatch' `h_tgtbatch' 4 0 0 0
     matrix colnames `rhs_public' = stage batch_start rhs iterations  ///
         relative_residual converged
 

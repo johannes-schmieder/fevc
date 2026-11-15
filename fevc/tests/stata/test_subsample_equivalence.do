@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -16,13 +16,23 @@ program define _fevc_subsample_pair
     local qualifier if wanted
     if "`filter'"=="in" local qualifier in 1/106
     local caller_rng `"`c(rngstate)'"'
-    local caller_sort_rng `"`c(sortrngstate)'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    local caller_sort_rng `"`test_sort_state'"'
     quietly datasignature
     local caller_data `"`r(datasignature)'"'
     quietly fevc `model' `qualifier', `options'
     assert rowid==_n
     assert `"`c(rngstate)'"'==`"`caller_rng'"'
-    assert `"`c(sortrngstate)'"'==`"`caller_sort_rng'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'==`"`caller_sort_rng'"'
     quietly datasignature
     assert `"`r(datasignature)'"'==`"`caller_data'"'
     tempvar chosen

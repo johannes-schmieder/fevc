@@ -4,7 +4,7 @@
 // Its own ado-file: the native helper ado-files call it too, and a program
 // defined after the first one of an ado-file is private to that file.
 program define fevc__rust_abort, eclass
-    version 18.0
+    version 15.0
     syntax , RC(integer) [HANDLE(real 0) PHASE(string) NORELEASE]
 
     if `rc' == 1 {

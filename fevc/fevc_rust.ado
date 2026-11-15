@@ -3,7 +3,7 @@
 
 capture program drop _fevc_rust_release_idle
 program define _fevc_rust_release_idle, rclass
-    version 18.0
+    version 15.0
     args plugin handle
     capture fevc__rust_plugin_call `plugin', release `handle'
     local release_rc = _rc
@@ -22,7 +22,20 @@ program define _fevc_rust_release_idle, rclass
 end
 
 program define fevc_rust, rclass
-    version 18.0
+    version 15.0
+
+    // Projection expressions use the caller's legacy matsize. Diagnostic
+    // tables use Mata export, which Stata 15 documents as independent of it;
+    // retain the modern edition's bounded dimension ceiling for those tables.
+    if c(stata_version)>=16 {
+        local matrix_limit = cond(c(MP),65534,cond(c(SE),11000,800))
+        capture local matrix_limit = c(max_matdim)
+        local receipt_limit = `matrix_limit'
+    }
+    else {
+        local matrix_limit = c(matsize)
+        local receipt_limit = cond(c(MP),65534,c(max_matsize))
+    }
 
     gettoken subcommand 0 : 0, parse(" ,")
     local subcommand = lower(strtrim("`subcommand'"))
@@ -656,8 +669,8 @@ program define fevc_rust, rclass
             exit 198
         }
         syntax, COLUMNS(integer)
-        if `columns' <= 0 | `columns' > c(max_matdim) {
-            di as err "columns() must be in [1,c(max_matdim)]"
+        if `columns' <= 0 | `columns' > `matrix_limit' {
+            di as err "columns() must be in [1,`matrix_limit'] for this Stata session"
             exit 198
         }
         tempname coefficients covariance naive_covariance
@@ -1049,7 +1062,7 @@ program define fevc_rust, rclass
         local projection_peak = scalar(__vckss_rust_proj_peak)
         if missing(`rhs_rows') | `rhs_rows' < 0 |               ///
             `rhs_rows' != floor(`rhs_rows') |                   ///
-            `rhs_rows' > c(max_matdim) {
+            `rhs_rows' > `receipt_limit' {
             quietly _fevc_rust_release_idle `plugin' `handle'
             local cleanup_certified = r(certified)
             di as err "Rust returned an invalid RHS receipt row count"
@@ -1075,7 +1088,7 @@ program define fevc_rust, rclass
         }
         if missing(`projection_columns') | `projection_columns' < 0 |    ///
             `projection_columns' != floor(`projection_columns') |        ///
-            `projection_columns' > c(max_matdim) |                       ///
+            `projection_columns' > `matrix_limit' |                       ///
             missing(`projection_peak') | `projection_peak' < 0 |         ///
             `projection_peak' != floor(`projection_peak') |              ///
             (`projection_columns' == 0 & `projection_peak' != 0) |       ///
@@ -1087,7 +1100,7 @@ program define fevc_rust, rclass
         tempname rhs_receipts
         if `rhs_rows' > 0 {
             local rhs_columns = cond(`rhs_schema' == 2, 15, 8)
-            capture matrix `rhs_receipts' = J(`rhs_rows',`rhs_columns',.)
+            capture mata: st_matrix("`rhs_receipts'",J(`rhs_rows',`rhs_columns',.))
             local rhs_allocation_rc = _rc
             if `rhs_allocation_rc' {
                 quietly _fevc_rust_release_idle `plugin' `handle'

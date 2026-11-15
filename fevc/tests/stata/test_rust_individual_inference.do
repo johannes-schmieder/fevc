@@ -3,7 +3,7 @@
 // when it is admissible, pseudo-noise draws as their own numerical domain,
 // the removed Gram option, and transport faults injected into a real solved
 // result.
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -39,9 +39,9 @@ foreach deletion in observation match {
         noisily fevc outcome control, `common' `options' centering(none) inference(`reference')
         assert e(probes)==200
         assert e(inference_draws)==8 & e(inference_simulations)==4*8
-        assert e(component_inference_receipt)[1,"schema"]==5
-        assert e(component_inference_receipt)[1,"model"]==4
-        assert e(component_inference_receipt)[1,"ordering"]==0
+        assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"schema"))==5
+        assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"model"))==4
+        assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"ordering"))==0
         assert inlist(e(inference_joint_status),0,1,2,3)
         assert e(inference_computed_targets)>=0 & e(inference_computed_targets)<=4
         assert rowsof(e(q0_status))==4
@@ -56,9 +56,9 @@ foreach deletion in observation match {
         assert e(inference_nuisance_omitted)==0
         if "`deletion'"=="match" {
             assert strpos("`e(inference_variance_response)'", "sample variance")>0
-            assert e(component_unit_receipt)[1,"deletion"]==1
+            assert el(e(component_unit_receipt),1,colnumb(e(component_unit_receipt),"deletion"))==1
         }
-        else assert e(component_unit_receipt)[1,"deletion"]==2
+        else assert el(e(component_unit_receipt),1,colnumb(e(component_unit_receipt),"deletion"))==2
         // The pass is the high-rank one; no critical-value simulation.
         assert e(inference_critical_draws)==0
         if "`reference'"=="q1" {
@@ -97,7 +97,10 @@ foreach deletion in observation match {
     foreach count in 8 4 16 {
         quietly fevc outcome control, `common' `options' centering(none) inference(highrank) inferencedraws(`count')
         assert e(inference_draws)==`count' & e(inference_simulations)==4*`count'
-        assert mreldif(e(b),default_b)==0
+        tempname compat_assert_b
+        matrix `compat_assert_b' = e(b)
+        assert mreldif(`compat_assert_b',default_b)==0
+        matrix drop `compat_assert_b'
         assert e(inference_solver_columns)==default_columns+4*(`count'-8)
         if `count'==8 assert mreldif(e(component_inference),default_ci)==0
         assert `"`c(rngstate)'"'==`"`rng_before'"'
@@ -129,7 +132,7 @@ foreach options in "" "inference(highrank) algorithm(exact)" "project(control) p
 // regression, not a claim that this fixture has an indefinite joint matrix.
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     gettoken command rest : 0
     tempname target spectrum
     fevc_rust `command' `rest'
@@ -175,8 +178,8 @@ foreach reference in highrank q1 {
     local returned_matrices : e(matrices)
     assert !strpos(" `returned_matrices' "," V ")
     assert !strpos(" `returned_matrices' "," V_primitive ")
-    if "`reference'"=="highrank" assert e(component_inference)[1,"se"]>0
-    else assert e(inference_intervals)[1,"lb"]<e(inference_intervals)[1,"ub"]
+    if "`reference'"=="highrank" assert el(e(component_inference),1,colnumb(e(component_inference),"se"))>0
+    else assert el(e(inference_intervals),1,colnumb(e(inference_intervals),"lb"))<el(e(inference_intervals),1,colnumb(e(inference_intervals),"ub"))
 }
 foreach fault in count gram gramcount target spectrum version {
     display "INDIVIDUAL RECEIPT FAULT: `fault'"
@@ -214,7 +217,7 @@ foreach solver in diagonal cmg {
     assert "`e(inference_variance_fit)'"=="repeat_measurement"
     assert e(inference_computed_targets)==4
     forvalues target_index=1/4 {
-        assert e(q0_status)[`target_index',1]==0
+        assert el(e(q0_status),`target_index',1)==0
     }
     quietly fevc_rust snapshot
     assert r(state)==0

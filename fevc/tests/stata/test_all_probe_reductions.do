@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 
 /* Independent quad oracle for the bounded panel kernel. The panels include
    unequal widths, a subset/permutation of input rows, and severe cancellation. */

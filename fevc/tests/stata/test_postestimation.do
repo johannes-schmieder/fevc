@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -31,7 +31,10 @@ assert "`e(mcse_mode)'"=="all" & e(mcse_available)==1
 assert "`e(mcse_method)'"=="exact" & "`e(mcse_status)'"=="exact_zero"
 
 estat decomposition
-assert mreldif(b_before,e(b)) == 0
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(b_before,`compat_assert_b') == 0
+matrix drop `compat_assert_b'
 estat decomposition, full
 assert mreldif(decomposition_before,e(decomposition)) == 0
 estat sample

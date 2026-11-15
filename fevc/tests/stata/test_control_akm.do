@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set seed 12345

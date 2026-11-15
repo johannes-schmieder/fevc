@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 
@@ -45,13 +45,22 @@ assert "`e(version)'" == "0.6.0"
 assert "`e(inference)'" == "highrank"
 assert "`e(inference_model)'" == "repeat_measurement"
 assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
-assert mreldif(point,e(b)) < 2e-12
-assert rowsof(e(V)) == 4 & colsof(e(V)) == 4
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(point,`compat_assert_b') < 2e-12
+matrix drop `compat_assert_b'
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert rowsof(`compat_assert_V') == 4 & colsof(`compat_assert_V') == 4
+matrix drop `compat_assert_V'
 assert rowsof(e(V_primitive)) == 3 & colsof(e(V_primitive)) == 3
-assert reldif(el(e(V),4,4), el(e(V_primitive),1,1) + ///
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert reldif(el(`compat_assert_V',4,4), el(e(V_primitive),1,1) + ///
     el(e(V_primitive),2,2) + 4*el(e(V_primitive),3,3) + ///
     2*el(e(V_primitive),1,2) + 4*el(e(V_primitive),1,3) + ///
     4*el(e(V_primitive),2,3)) < 1e-10
+matrix drop `compat_assert_V'
 assert rowsof(e(component_inference)) == 4
 assert colsof(e(component_inference)) == 4
 matrix highrank_V = e(V)
@@ -59,7 +68,10 @@ matrix highrank_V = e(V)
 fevc y c1 c2, worker(worker) firm(firm) `exact' ///
     deletion(observation) centering(none) inference(highrank) ///
     inferenceseed(42) targetweight(target) nodisplay
-assert mreldif(highrank_V,e(V)) == 0
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert mreldif(highrank_V,`compat_assert_V') == 0
+matrix drop `compat_assert_V'
 
 // inference(q1): the q = 1 interval of every component that has one, from
 // the leading direction of the component.

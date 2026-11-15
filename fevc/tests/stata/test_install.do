@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -166,7 +166,10 @@ fevc y c1 c2, worker(worker) firm(firm) ///
     inferenceseed(42) nodisplay
 assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
 assert "`e(inference_model)'" == "repeat_measurement"
-assert rowsof(e(V)) == 4
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert rowsof(`compat_assert_V') == 4
+matrix drop `compat_assert_V'
 assert "`e(inference_centering)'" == "uncentered"
 assert e(inference_mean_omitted) == 0
 // Pseudo-noise is centred as the estimate is, so the observed mean is not

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -21,7 +21,12 @@ generate double mass = .7+mod(13*key,11)/7
 generate long unit = key
 sort worker firm key
 local caller_state `"`c(rngstate)'"'
-local caller_sort `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sort `"`test_sort_state'"'
 local caller_order : sortedby
 quietly _datasignature
 local signature `"`r(datasignature)'"'
@@ -60,14 +65,19 @@ foreach deletion in match observation {
                 assert e(cmg_threads_used)==`test_threads'
                 assert e(rust_probeorder_supplied)==0
                 assert e(memory_budget_supplied)==0
-                assert e(full_cmg_receipt)[1,25]==1+3*e(probes)
+                assert el(e(full_cmg_receipt),1,25)==1+3*e(probes)
                 assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
                 matrix actual = e(kss)
                 forvalues column=1/4 {
                     assert abs(actual[1,`column']-reference[1,`column'])<=1e-8*max(1,abs(reference[1,`column']))
                 }
                 assert `"`c(rngstate)'"'==`"`caller_state'"'
-                assert `"`c(sortrngstate)'"'==`"`caller_sort'"'
+                tempname sort_results
+                _return hold `sort_results'
+                quietly query sortseed
+                local test_sort_state `"`r(sortseed)'"'
+                _return restore `sort_results'
+                assert `"`test_sort_state'"'==`"`caller_sort'"'
                 quietly fevc_rust snapshot
                 assert r(state)==0 & r(handle)==0
             }
@@ -89,8 +99,8 @@ quietly fevc y [fw=copies], worker(worker) firm(firm) deletion(observation) ///
     preconditioner(cmg) batch(auto) probes(33) seed(81227) ///
     targetweight(mass) mcse(conditional) nodisplay
 assert `"`e(cmg_backend)'"'=="CMG_FULL_V2"
-assert e(full_cmg_receipt)[1,18]==1e-10
-assert e(full_cmg_receipt)[1,19]==1e-6
+assert el(e(full_cmg_receipt),1,18)==1e-10
+assert el(e(full_cmg_receipt),1,19)==1e-6
 assert e(leverage_batch)==32 & e(target_batch)==32
 assert e(memory_budget_supplied)==0
 assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
@@ -112,5 +122,10 @@ assert `"`r(datasignature)'"'==`"`signature'"'
 local restored_order : sortedby
 assert `"`restored_order'"'==`"`caller_order'"'
 assert `"`c(rngstate)'"'==`"`caller_state'"'
-assert `"`c(sortrngstate)'"'==`"`caller_sort'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`caller_sort'"'
 display "PASS test_rust_point_routes_full_cmg.do"

@@ -2,7 +2,7 @@
 *! with its simulation, batching, and memory settings.
 
 program define fevc__rust_component_attach, rclass
-    version 18.0
+    version 15.0
     args handle rows resident memorylimit model reference simulations batch ///
         inferenceseed level ranktol receiptout deletion gramprobes batchauto
     if "`batchauto'"=="" local batchauto = 0

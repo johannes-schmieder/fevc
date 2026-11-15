@@ -1,7 +1,7 @@
 *! Displays fevc estimates, inference, and numerical diagnostics from e().
 
 program define fevc__display
-    version 18.0
+    version 15.0
     syntax [, DECOMPOSITIONonly FULL INFERENCEdiagnosticsonly NUMERICALdiagnosticsonly]
 
     quietly fevc__stayer_population_post
@@ -116,7 +116,7 @@ program define fevc__display
 end
 
 program define _fevc_display_decomp
-    version 18.0
+    version 15.0
     tempname decomposition
     matrix `decomposition' = e(decomposition)
 
@@ -148,11 +148,12 @@ program define _fevc_display_decomp
 end
 
 program define _fevc_display_full
-    version 18.0
+    version 15.0
     tempname levels decomposition shares
     matrix `levels' = (e(plugin)' , e(correction)' , e(kss)')
     matrix `decomposition' = e(decomposition)
-    matrix `shares' = 100*e(decomposition)[1..4,4..7]
+    matrix `shares' = e(decomposition)
+    matrix `shares' = 100*`shares'[1..4,4..7]
 
     di as txt _newline "Full variance-component accounting"
     di as txt _newline "Quadratic-form targets (raw covariance)"
@@ -210,7 +211,7 @@ program define _fevc_display_full
     di as txt "Target-weighted Var(Y): " as result               ///
         %13.7g e(target_outcome_variance)
     di as txt "KSS-corrected worker-firm total: " as result      ///
-        %13.7g e(kss)[1,4]
+        %13.7g el(e(kss),1,4)
     di as txt "Frequency-weighted Var(Y): " as result            ///
         %13.7g e(regression_outcome_variance)
     di as txt "Full-model explained variance (includes controls): " ///
@@ -220,7 +221,7 @@ program define _fevc_display_full
 end
 
 program define _fevc_display_inference
-    version 18.0
+    version 15.0
     tempname component_inference q1_inference projection_inference
 
     // Repeat-measurement standard errors with leading directions report one
@@ -342,7 +343,7 @@ end
 // One interval per component: the normal interval with its standard error,
 // or the q = 1 interval, which has none.
 program define _fevc_display_intervals
-    version 18.0
+    version 15.0
     tempname table
     matrix `table' = e(inference_intervals)
     di as txt _newline "Component inference (" as result %4.1f e(level) ///
@@ -374,7 +375,7 @@ end
 
 // What the intervals above mean and why each component got the one it has.
 program define _fevc_display_interval_notes
-    version 18.0
+    version 15.0
     tempname table
     matrix `table' = e(inference_intervals)
     local q1_components = e(inference_q1_components)
@@ -440,7 +441,7 @@ end
 // Leave-out residual standard errors: what was computed, what it assumes,
 // and the diagnostics that say when the normal interval is doubtful.
 program define _fevc_display_residual_se
-    version 18.0
+    version 15.0
     tempname rank
     matrix `rank' = e(inference_effective_rank)
     local repeat = ("`e(inference_variance_fit)'"=="repeat_measurement")
@@ -488,7 +489,7 @@ program define _fevc_display_residual_se
 end
 
 program define _fevc_display_structured
-    version 18.0
+    version 15.0
     if !inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
         exit
     }
@@ -596,7 +597,7 @@ program define _fevc_display_structured
 end
 
 program define _fevc_display_numerical
-    version 18.0
+    version 15.0
     args showoff
     tempname mcse
     if "`e(mcse_status)'"=="unavailable_capability" {

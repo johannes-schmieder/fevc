@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -91,7 +91,12 @@ generate byte copies = 1+mod(key,3)
 generate double mass = .7+mod(13*key,11)/7
 sort worker firm key
 local state `"`c(rngstate)'"'
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 quietly _datasignature
 local signature `"`r(datasignature)'"'
 tempfile transcript
@@ -135,7 +140,12 @@ foreach deletion in observation match {
             assert e(sample)==retained
             assert `"`e(algorithm)'|`e(engine_selected)'|`e(preconditioner_selected)'"'==`"`selected'"'
             assert `"`c(rngstate)'"'==`"`state'"'
-            assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+            tempname sort_results
+            _return hold `sort_results'
+            quietly query sortseed
+            local test_sort_state `"`r(sortseed)'"'
+            _return restore `sort_results'
+            assert `"`test_sort_state'"'==`"`sortstate'"'
             assert "$VCKSS_REPORT_LEVEL$VCKSS_REPORT_API$VCKSS_REPORT_NOTICE$VCKSS_REPORT_ALLOWED$VCKSS_REPORT_TIMER"==""
             quietly _progress_read_log `"`transcript'"'
             if inlist("`output'","default","verbose") {
@@ -238,19 +248,24 @@ foreach deletion in observation match {
             assert mreldif(e(kss),reference)<1e-12
             assert mreldif(e(component_inference),inference)<1e-12
             assert e(inference_joint_posted)==`posted'
-            if `posted' assert mreldif(e(V),covariance)<1e-12
+            if `posted' {
+                tempname compat_assert_V
+                matrix `compat_assert_V' = e(V)
+                assert mreldif(`compat_assert_V',covariance)<1e-12
+                matrix drop `compat_assert_V'
+            }
             if "`reference'"=="q1" assert mreldif(e(inference_intervals),table)<1e-12
             assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
             capture confirm matrix e(rust_execution_receipt)
             if !_rc {
-                assert e(rust_execution_receipt)[1,"gram"]==0
-                assert e(rust_execution_receipt)[1,"component"]== ///
-                    e(component_inference_receipt)[1,"solver_columns"]
+                assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"gram"))==0
+                assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"component"))== ///
+                    el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"solver_columns"))
             }
             if "`route'"=="generic" {
                 assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
-                assert e(rust_component_batch_receipt)[1,"policy"]==1
-                assert e(rust_component_batch_receipt)[1,"gram"]==0
+                assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"policy"))==1
+                assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"gram"))==0
             }
         }
     }

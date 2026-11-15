@@ -1,7 +1,7 @@
 *! Builds compressed coefficient-cell and target-stratum representations
 *! while retaining the distinction between cells and deletion units.
 
-version 18.0
+version 15.0
 quietly fevc__timer load
 
 mata:

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 // The ordinary uncentered reference/oracle in this test requires centering(none).
 clear
 set obs 24

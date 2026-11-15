@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -23,7 +23,12 @@ set sortseed 20260826
 local caller_rng `"`c(rng)'"'
 local caller_stream = c(rngstream)
 local caller_state `"`c(rngstate)'"'
-local caller_sort_state `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sort_state `"`test_sort_state'"'
 local caller_sortedby : sortedby
 quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
@@ -41,13 +46,18 @@ foreach policy in error warn off {
     quietly fevc_rust snapshot
     assert r(state)==0 & r(handle)==0
     assert `"`c(rngstate)'"'==`"`caller_state'"'
-    assert `"`c(sortrngstate)'"'==`"`caller_sort_state'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'==`"`caller_sort_state'"'
 }
 // Inject transport corruption and r(1) at the public boundary. Native callback
 // cancellation and worker retirement are tested separately by the FFI suite.
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     gettoken command rest : 0
     if "`command'"=="solve" & "$FEVC_CMG_FAULT"=="break" exit 1
     fevc_rust `command' `rest'
@@ -74,7 +84,12 @@ foreach fault in source threads break {
     assert `"`c(rng)'"'==`"`caller_rng'"'
     assert c(rngstream)==`caller_stream'
     assert `"`c(rngstate)'"'==`"`caller_state'"'
-    assert `"`c(sortrngstate)'"'==`"`caller_sort_state'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'==`"`caller_sort_state'"'
     local restored_sortedby : sortedby
     assert `"`restored_sortedby'"'==`"`caller_sortedby'"'
     quietly _datasignature
@@ -83,7 +98,7 @@ foreach fault in source threads break {
 macro drop FEVC_CMG_FAULT
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     fevc_rust `0'
     return add
 end

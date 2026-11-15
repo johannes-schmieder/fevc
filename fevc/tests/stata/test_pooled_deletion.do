@@ -1,4 +1,4 @@
-version 18
+version 15.0
 clear
 set more off
 args package_dir profile plugindir
@@ -163,7 +163,12 @@ generate byte wanted_movers=_n<=40
 generate byte wanted_both=_n<=43
 generate byte true_stayer=worker==100
 local state `"`c(rngstate)'"'
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 quietly datasignature
 local signature `"`r(datasignature)'"'
 foreach nuisance in joint fixedoffset {
@@ -183,9 +188,14 @@ foreach nuisance in joint fixedoffset {
         matrix exact=e(kss)
         matrix plug=e(plugin)
         matrix correction=e(correction)
-        assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+        tempname sort_results
+        _return hold `sort_results'
+        quietly query sortseed
+        local test_sort_state `"`r(sortseed)'"'
+        _return restore `sort_results'
+        assert `"`test_sort_state'"'==`"`sortstate'"'
         mata: st_matrix("literal",pooled_oracle("x","`nuisance'","wanted_`population'","match","true_stayer"))
-        quietly set sortrngstate `sortstate'
+        quietly set sortseed `sortstate'
         display "ORACLE_GAP " mreldif(exact,literal)
         assert mreldif(exact,literal)<1e-8
         display "PLUGIN_GAP " mreldif(plug,literal_plugin) " CORRECTION_GAP " mreldif(correction,literal_correction)
@@ -193,7 +203,12 @@ foreach nuisance in joint fixedoffset {
         assert mreldif(correction,literal_correction)<1e-8
         assert rowid==_n
         assert `"`c(rngstate)'"'==`"`state'"'
-        assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+        tempname sort_results
+        _return hold `sort_results'
+        quietly query sortseed
+        local test_sort_state `"`r(sortseed)'"'
+        _return restore `sort_results'
+        assert `"`test_sort_state'"'==`"`sortstate'"'
         quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
             deletionid(match) targetweight(target) stayers(`population') ///
             nuisance(`nuisance') algorithm(jla) engine(generic) ///
@@ -209,7 +224,12 @@ foreach nuisance in joint fixedoffset {
 quietly datasignature
 assert `"`r(datasignature)'"'==`"`signature'"'
 assert `"`c(rngstate)'"'==`"`state'"'
-assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`sortstate'"'
 
 // Default match IDs still mean worker-firm matches; observation movers still
 // mean more than one model firm. Neither counts augmented observation IDs.
@@ -239,7 +259,12 @@ assert e(sample)==wanted_both
 assert rowid==53-_n
 assert mreldif(reference,e(kss))<1e-8
 sort rowid
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 
 capture quietly fevc_rust probe
 local native_present = (_rc==0)
@@ -249,7 +274,7 @@ if `native_units' {
     foreach nuisance in joint fixedoffset {
         foreach population in movers both {
             mata: st_matrix("literal",pooled_oracle("x","`nuisance'","wanted_`population'","match","true_stayer"))
-            quietly set sortrngstate `sortstate'
+            quietly set sortseed `sortstate'
             foreach backend in rust auto {
                 quietly fevc y x [fw=frequency], centering(none) worker(worker) firm(firm) ///
                     deletionid(match) targetweight(target) stayers(`population') ///
@@ -275,6 +300,19 @@ if `native_units' {
                     assert abs(jla[1,`j']-literal[1,`j'])<=max(1e-8*max(1,abs(literal[1,`j'])),6*mcse[1,`j'])
                 }
                 assert "`e(backend_selected)'"=="rust"
+                // Retain every diagnostic row across Stata 15's 11,000-row
+                // subscript-write boundary, including the final probe.
+                tempname native_rhs public_rhs
+                matrix `native_rhs'=e(rust_rhs_receipts)
+                matrix `public_rhs'=e(solver_rhs_diagnostics)
+                assert rowsof(`public_rhs')==rowsof(`native_rhs')
+                assert rowsof(`public_rhs')>11000
+                assert colsof(`public_rhs')==6
+                foreach row in 1 11000 11001 `=rowsof(`public_rhs')' {
+                    assert `public_rhs'[`row',4]==`native_rhs'[`row',5]
+                    assert `public_rhs'[`row',5]==`native_rhs'[`row',7]
+                    assert `public_rhs'[`row',6]==1
+                }
                 quietly fevc_rust snapshot
                 assert r(state)==0 & r(handle)==0
             }
@@ -335,7 +373,12 @@ assert _rc==498
 assert "`e(withholding_status)'"=="SINGULAR_INFORMATION"
 assert rowid==_n
 assert `"`c(rngstate)'"'==`"`state'"'
-assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`sortstate'"'
 display "PASS pooled weighted oracle, routing and failures"
 
 // Q=0 exercises the compressed implementation with exactly the same blocks.
@@ -459,7 +502,12 @@ if "`profile'"=="full" {
     st_matrix("truth",truth)
     end
     local mc_rng `"`c(rngstate)'"'
-    local mc_sort `"`c(sortrngstate)'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    local mc_sort `"`test_sort_state'"'
     set seed 9252026
     tempfile mc_results
     tempname mcpost
@@ -484,7 +532,7 @@ if "`profile'"=="full" {
     }
     postclose `mcpost'
     quietly set rngstate `mc_rng'
-    quietly set sortrngstate `mc_sort'
+    quietly set sortseed `mc_sort'
     use `mc_results', clear
     isid replication
     assert _N==256

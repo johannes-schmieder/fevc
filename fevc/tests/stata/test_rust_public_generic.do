@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 
@@ -105,7 +105,7 @@ assert `initial_control_rank'[1,1] > `initial_control_rank'[1,8]
 assert `initial_control_rank'[1,4] >= 0
 assert `initial_control_rank'[1,5] >= 0 & `initial_control_rank'[1,5] < .25
 assert `initial_control_rank'[1,6] > 0
-assert `initial_control_rank'[1,7] == e(rust_rhs_receipts)[1,7]
+assert `initial_control_rank'[1,7] == el(e(rust_rhs_receipts),1,7)
 assert `initial_control_rank'[1,7] <= `initial_control_rank'[1,10]
 assert `initial_control_rank'[1,8] == max(e(rust_rank_tolerance),1e-12)
 assert `initial_control_rank'[1,9] == 1e-13
@@ -347,7 +347,7 @@ assert `"`e(preconditioner_requested)'"' == "auto"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(rust_execution_mode)'"' == "diagonal_queue"
 assert e(rust_execution_threads) == c(processors)
-assert e(rust_execution_queued_rhs) + e(rust_execution_receipt)[1,"fit"] == ///
+assert e(rust_execution_queued_rhs) + el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"fit")) == ///
     e(rust_plan_rhs)
 assert e(rust_execution_cmg_rhs) == 0
 assert e(rust_requested_algorithm_code) == 0
@@ -405,7 +405,7 @@ assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(rust_execution_mode)'"' == "diagonal_queue"
 assert e(rust_execution_threads) == c(processors)
 assert e(rust_execution_active_workers) >= 1
-assert e(rust_execution_queued_rhs) + e(rust_execution_receipt)[1,"fit"] == ///
+assert e(rust_execution_queued_rhs) + el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"fit")) == ///
     e(rust_plan_rhs)
 assert e(rust_execution_cmg_rhs) == 0
 quietly fevc_rust snapshot
@@ -1320,7 +1320,7 @@ assert r(state) == 0 & r(handle) == 0
 // echo fails after result export and still releases to idle.
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     gettoken subcommand rest : 0, parse(" ,")
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "prepare" {

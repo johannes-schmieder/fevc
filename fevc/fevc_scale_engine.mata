@@ -1,7 +1,7 @@
 *! Computes the no-control, match-deletion compressed estimator from a
 *! prepared design and an explicitly supplied random-probe provider.
 
-version 18.0
+version 15.0
 quietly fevc__timer load
 
 mata:

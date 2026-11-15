@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear
 input double(y worker firm match)
 1.0 1 1 11

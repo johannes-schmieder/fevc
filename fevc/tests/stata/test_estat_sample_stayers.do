@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 // estat sample separates original one-unit stayer histories (e(N_stayers),
 // e(N_stayer_rows)) from the stayers actually included in the hybrid target.
 clear all

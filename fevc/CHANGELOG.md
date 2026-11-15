@@ -6,6 +6,14 @@ No unreleased changes.
 
 ## 0.6.0 — 2026-11-14
 
+- Support Stata 15 diagnostic tables beyond its legacy matrix-write limit,
+  retaining every native RHS receipt on generic and compressed routes.
+
+- Lower the minimum runtime to Stata 15, with compatibility for sort-state
+  restoration, matrix limits and data preservation; retain runtime-specific
+  Mata RNG identities. Scale exact symmetric eigensolves and select a
+  reproducible direction for repeated eigenvalues.
+
 - Report standard errors for the four components by default
   (`inference(auto)`); 0.5.2 reported point estimates only unless component
   inference was requested. They come from one method, the

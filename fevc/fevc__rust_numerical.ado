@@ -2,7 +2,7 @@
 *! interface and clears temporary transport state after the call.
 
 program define fevc__rust_numerical, rclass
-    version 18.0
+    version 15.0
     capture noisily _fevc_rust_nmc_fetch `0'
     local rc = _rc
     if !`rc' return add
@@ -13,7 +13,7 @@ program define fevc__rust_numerical, rclass
 end
 
 program define _fevc_rust_nmc_fetch, rclass
-    version 18.0
+    version 15.0
     gettoken plugin 0 : 0
     gettoken handle 0 : 0, parse(" ,")
     syntax, PROBES(integer)

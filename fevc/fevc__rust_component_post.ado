@@ -2,7 +2,7 @@
 *! into e(), with covariance availability determined by the returned checks.
 
 program define fevc__rust_component_post, eclass
-    version 18.0
+    version 15.0
     args model inference simulations inferenceseed level primitive results ///
         mcse spectrum summaries folds cv receipt augmentation q1results q1raw ///
         units deletion
@@ -61,8 +61,8 @@ program define fevc__rust_component_post, eclass
     ereturn scalar inference_simulations = `simulations'
     ereturn scalar inference_seed = `inferenceseed'
     ereturn scalar inference_model_option_supplied = 1
-    ereturn scalar inference_spectrum_probes = e(component_spectrum)[1,13]
-    ereturn scalar inference_spectrum_iterations = e(component_spectrum)[1,14]
+    ereturn scalar inference_spectrum_probes = el(e(component_spectrum),1,13)
+    ereturn scalar inference_spectrum_iterations = el(e(component_spectrum),1,14)
     local inference_solver_columns = `receipt'[1,22]
     ereturn scalar inference_solver_columns = `inference_solver_columns'
     ereturn scalar inference_critical_draws = `receipt'[1,23]

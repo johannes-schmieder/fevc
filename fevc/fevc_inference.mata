@@ -1,7 +1,7 @@
 *! Computes exact-Mata projection and component inference and transfers
 *! results, model-fit diagnostics, and availability statuses to Stata.
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

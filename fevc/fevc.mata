@@ -1,7 +1,7 @@
 *! Mata estimation runtime for fevc. Implements exact and randomized
 *! leave-out calculations, target construction, and numerical safeguards.
 
-version 18.0
+version 15.0
 quietly fevc__timer load
 
 /* Replay snapshots use the package's registered stream-state representation. */

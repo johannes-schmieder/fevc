@@ -1,14 +1,14 @@
 *! generated MIT source-informed CMG Mata core; do not edit
 *! generator_api 5
 *! namespace vckss_cmg
-*! canonical_template_sha256 6c80cd8a3572ae86892decd82145dbfaead8cd8a1dfdef8cde9f20c435d137fd
-*! generated_section_sha256 5ee0a14db385041f1de03a1ac71e941edc79eca4c8d17437af7fc8b92786ba5d
+*! canonical_template_sha256 e707bda55b2ecdafb56f06e954792bf00fd1e6ea62aac9615e5e71dab9bc9ce5
+*! generated_section_sha256 250f164dfa97c4e2f2fbfb20b7e7a770ca899865af31d985fa813bac19b4faea
 
 *! CMG, Copyright (c) 2008-2010 Ioannis Koutis and Gary Miller
 *! Source-informed Mata port and modifications Copyright (c) 2026 Johannes Schmieder
 *! SPDX-License-Identifier: MIT
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

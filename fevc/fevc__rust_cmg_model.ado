@@ -2,7 +2,7 @@
 *! the fixed-effect receipt layout.
 
 program define fevc__rust_cmg_model, rclass
-    version 18.0
+    version 15.0
     args handle controls nuisance probes cmg_rhs numerical executed
     // Separate additive model accounting from the frozen 46-field FE receipt.
     if "`numerical'"=="" local numerical = 0

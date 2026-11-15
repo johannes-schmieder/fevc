@@ -1,6 +1,6 @@
 # Installing fevc
 
-`fevc` requires Stata 18 or 19. The package includes precompiled native plugins
+`fevc` requires Stata 15 or newer (through Stata 19). The package includes precompiled native plugins
 for macOS (Apple silicon and Intel), Linux x86-64, and Windows x86-64. No
 compiler, Rust installation, or separate plugin download is needed. The macOS
 and Linux plugins have been tested inside Stata (the Intel macOS plugin under

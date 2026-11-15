@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 
 // Each deletion ID is an edge.  The two parallel deletion units at (1,1)
 // protect one another; only deletion unit 3 is a bridge.

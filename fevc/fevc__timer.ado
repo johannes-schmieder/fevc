@@ -2,7 +2,7 @@
 *! caller results and keeping timer availability outside estimation gates.
 
 program define fevc__timer, rclass
-    version 18.0
+    version 15.0
     gettoken action slot : 0
     if "`action'"=="profiles" {
         _fevc_timer_profiles `slot'
@@ -39,7 +39,7 @@ program define fevc__timer, rclass
 end
 
 program define _fevc_timer_profiles
-    version 18.0
+    version 15.0
     syntax namelist(min=2 max=2), SELECTION(real) GRAPH(real) ///
         SEMANTIC(real) COMPRESSION(real) TRANSITION(real) RESTORE(real) ///
         MARK(real) GROUP(real) RUNTIME(real) GRAPHIO(real) MAP(real)

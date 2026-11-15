@@ -5,7 +5,7 @@
 // state, named Stata matrices, and scalars survive clear and may carry the
 // numerical inputs and outputs.
 program define fevc__lifecycle, rclass
-    version 18.0
+    version 15.0
     quietly fevc__timer begin
     capture noisily _fevc_lifecycle_impl `0'
     local rc = _rc
@@ -18,7 +18,7 @@ program define fevc__lifecycle, rclass
 end
 
 program define _fevc_lifecycle_impl, rclass
-    version 18.0
+    version 15.0
     syntax, METHOD(string) SAMPLE(varname numeric) CALLBACK(name) [ ///
         CALLBACKOptions(string asis) CERTIFY FORCEDISK ]
 
@@ -58,7 +58,8 @@ program define _fevc_lifecycle_impl, rclass
     local stata_version `"`c(stata_version)'"'
     local env_statatmp : environment STATATMP
     local env_tmpdir : environment TMPDIR
-    local caller_max_preservemem = c(max_preservemem)
+    local caller_max_preservemem = .
+    if c(stata_version)>=16 local caller_max_preservemem = c(max_preservemem)
 
     quietly _fevc_lifecycle_memory, stage(before)
     foreach quantity in data_used data_alloc mata_alloc total_alloc {
@@ -83,8 +84,10 @@ program define _fevc_lifecycle_impl, rclass
     quietly mata: vckss_timer__on(`transition_timer')
     if "`method'" == "preserve" {
         local reset_preservemem = 0
-        if "`forcedisk'" != "" & !missing(c(max_preservemem)) {
-            local old_preservemem_text : display %21.0f c(max_preservemem)
+        // Stata 15 preserve already uses a temporary file; there is no memory cap.
+        if c(stata_version)<16 & "`forcedisk'"!="" local preserve_forced_disk = 1
+        if "`forcedisk'" != "" & !missing(`caller_max_preservemem') {
+            local old_preservemem_text : display %21.0f `caller_max_preservemem'
             local old_preservemem_text = strtrim("`old_preservemem_text'")
             capture quietly set max_preservemem 0
             if _rc {
@@ -281,7 +284,7 @@ end
 // r() names produced by memory may change, so these are lifecycle diagnostics,
 // never substitutes for process RSS or qacct maxvmem.
 program define _fevc_lifecycle_memory, rclass
-    version 18.0
+    version 15.0
     syntax [, STAGE(string)]
 
     quietly memory
@@ -320,7 +323,7 @@ end
 
 // Logical slots are shared with the public compressed-command boundary.
 program define _fevc_lifecycle_timer_ids, rclass
-    version 18.0
+    version 15.0
     return scalar transition_timer = 51
     return scalar work_timer = 52
     return scalar restore_timer = 53
@@ -328,7 +331,7 @@ end
 
 
 program define _fevc_lifecycle_release_timers
-    version 18.0
+    version 15.0
     syntax, TIMERS(numlist integer min=3 max=3)
     foreach timer of numlist `timers' {
         capture quietly mata: vckss_timer__off(`timer')
@@ -344,7 +347,7 @@ end
 // Stata file I/O and never consumes estimator RNG state.  Evidence samplers
 // must tolerate a transient unreadable marker while replace is in progress.
 program define _fevc_lifecycle_phase, rclass
-    version 18.0
+    version 15.0
     syntax, PHASE(string)
 
     local phase_file : environment KSS_PHASE_FILE
@@ -363,7 +366,7 @@ end
 // Explicit-path worker retained for focused tests.  Production code calls
 // only _fevc_lifecycle_phase, which obtains the path from the environment.
 program define _fevc_lifecycle_phase_write, rclass
-    version 18.0
+    version 15.0
     syntax, PHASE(string) PHASEFILE(string asis)
 
     local phase = lower(strtrim("`phase'"))

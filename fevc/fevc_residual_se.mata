@@ -6,7 +6,7 @@
 *! closed-form term for the pairs of rows of one stayer.
 *! See docs/standard_errors/standard_errors.tex for the methods.
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on
@@ -19,7 +19,7 @@ real scalar vckss_rse__api_level()
 
 string scalar vckss_rse__build_id()
 {
-    return("vckss-residual-se-api6")
+    return("vckss-residual-se-api7")
 }
 
 // Subtract the mass-weighted mean of every column in unit space. For one row
@@ -618,10 +618,10 @@ void vckss_rse__lead_exact(
     real matrix inverse,
     struct vckss_target_matrices scalar targets)
 {
-    real matrix basis, root_inverse, vectors, target
+    real matrix basis, root_inverse, vectors, target, tied_basis
     real rowvector values, magnitude
-    real colvector permutation
-    real scalar t
+    real colvector permutation, tied, direction, mass, anchors
+    real scalar t, scale, roundoff
 
     symeigensystem(inverse,basis,values)
     root_inverse = (basis:*sqrt(colmax((values\J(1,cols(values),0)))))*basis'
@@ -630,12 +630,31 @@ void vckss_rse__lead_exact(
     lead.converged = J(1,4,1)
     for (t=1; t<=4; t++) {
         target = root_inverse*vckss_rse__lead_target(targets,t)*root_inverse
+        // Stata 15's eigensolver can fail on small, rank-deficient targets.
+        // Unit scaling preserves the eigenvectors and original eigenvalues.
+        scale = max(abs(target))
+        if (scale > 0 & !missing(scale)) target = target:/scale
+        else scale = 1
         symeigensystem((target+target'):/2,vectors,values)
+        values = values:*scale
         magnitude = abs(values)
         permutation = order(magnitude',-1)
         lead.lambda[t] = values[permutation[1]]
         lead.second[t] = cols(values) > 1 ? values[permutation[2]] : 0
-        lead.mode[.,t] = design*(root_inverse*vectors[.,permutation[1]])
+        direction = vectors[.,permutation[1]]
+        // A repeated eigenvalue identifies a subspace, not an eigenvector.
+        // Project a coordinate axis into that space so equivalent frequency
+        // representations do not depend on the solver's arbitrary basis.
+        roundoff = 8*epsilon(1)*cols(values)*max(magnitude)
+        tied = selectindex((abs(values:-lead.lambda[t]):<=roundoff)')
+        if (rows(tied) > 1) {
+            tied_basis = vectors[.,tied']
+            mass = rowsum(tied_basis:^2)
+            anchors = selectindex(mass:>=max(mass)-8*epsilon(1)*rows(mass))
+            direction = tied_basis*tied_basis[anchors[1],.]'
+            direction = direction:/sqrt(quadcross(direction,direction))
+        }
+        lead.mode[.,t] = design*(root_inverse*direction)
         lead.mode[.,t] = lead.mode[.,t]:/sqrt(quadcross(lead.mode[.,t],lead.mode[.,t]))
     }
 }

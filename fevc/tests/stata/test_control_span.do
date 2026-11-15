@@ -1,4 +1,4 @@
-version 18
+version 15.0
 clear all
 set more off
 set processors 4

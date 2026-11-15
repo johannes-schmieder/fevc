@@ -2,7 +2,7 @@
 *! numerical settings, and resource policy before posting results.
 
 program define fevc__rust_reconcile_exact_v7, rclass
-    version 18.0
+    version 15.0
     args algreq engreq delcode nuiscode workers firms controls ranktol ///
         blocktol tolerance exactlimit memlimit inputcopy preppeak resident ///
         sighi                                                            ///

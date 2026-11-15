@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 
 // Check the first example on its actual data: printed truth and estimator
 // describe the same retained population. The runner checks restoration below.
@@ -46,7 +46,10 @@ foreach example in exact_controls jla_controls weights_targets {
 fevc_run component_inference using fevc.sthlp
 assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
 assert "`e(inference_model)'" == "repeat_measurement"
-assert rowsof(e(V)) == 4 & colsof(e(V)) == 4
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert rowsof(`compat_assert_V') == 4 & colsof(`compat_assert_V') == 4
+matrix drop `compat_assert_V'
 assert rowsof(e(component_inference)) == 4
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'

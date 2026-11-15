@@ -32,6 +32,7 @@ f fevc/fevc__rust_plan_receipt.ado
 f fevc/fevc__rust_reconcile_comp_v7.ado
 f fevc/fevc__rust_reconcile_exact_v7.ado
 f fevc/fevc__rust_post_comp_v7.ado
+f fevc/fevc__rust_rhs_diagnostics.ado
 f fevc/fevc__rust_post_exact_v7.ado
 f fevc/fevc__rust_capture_stayers.ado
 f fevc/fevc__rust_post_stayer_hybrid.ado

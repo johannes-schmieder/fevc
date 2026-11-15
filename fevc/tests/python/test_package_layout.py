@@ -62,6 +62,7 @@ def test_package_manifest_is_complete() -> None:
         "fevc__rust_reconcile_comp_v7.ado",
         "fevc__rust_reconcile_exact_v7.ado",
         "fevc__rust_post_comp_v7.ado",
+        "fevc__rust_rhs_diagnostics.ado",
         "fevc__rust_post_exact_v7.ado",
         "fevc__rust_capture_stayers.ado",
         "fevc__rust_post_stayer_hybrid.ado",
@@ -191,7 +192,7 @@ def test_mata_api_guard_agrees() -> None:
     assert "vckss-resource-api12-control-scratch" in resource
     rng = (ROOT / "fevc_rng.mata").read_text(encoding="utf-8")
     assert "return(4)" in rng
-    assert "vckss-rng-numeric-ranks-v4" in rng
+    assert "vckss-rng-numeric-ranks-v5-stata15" in rng
     cmg = (ROOT / "fevc_cmg.mata").read_text(encoding="utf-8")
     assert "vckss_cmg__api_level()" in cmg
     assert "return(9)" in cmg

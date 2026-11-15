@@ -1,6 +1,6 @@
 *! Forced test-only KSS/CMG adapter; not part of the installed package
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

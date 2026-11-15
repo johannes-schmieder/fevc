@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -14,7 +14,12 @@ generate double x = (worker-.4*firm)*(mod(slot,2)+1)+mod(3*key,7)/17
 generate double y = .3*worker-.2*firm+.1*slot+mod(17*key,29)/101+.2*x
 sort key
 local caller_rng `"`c(rngstate)'"'
-local caller_sort_rng `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sort_rng `"`test_sort_state'"'
 quietly _datasignature
 local signature `"`r(datasignature)'"'
 local routes mata_exact mata_generic mata_compressed
@@ -62,7 +67,12 @@ foreach route of local routes {
         timer off 99
         mata: assert(timer_value(99)[1]>=.02 & timer_value(99)[2]==3)
         assert `"`c(rngstate)'"'==`"`caller_rng'"'
-        assert `"`c(sortrngstate)'"'==`"`caller_sort_rng'"'
+        tempname sort_results
+        _return hold `sort_results'
+        quietly query sortseed
+        local test_sort_state `"`r(sortseed)'"'
+        _return restore `sort_results'
+        assert `"`test_sort_state'"'==`"`caller_sort_rng'"'
         local sortedby : sortedby
         assert "`sortedby'"=="key"
         quietly _datasignature

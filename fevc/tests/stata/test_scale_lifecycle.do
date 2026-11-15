@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -26,7 +26,7 @@ assert strpos(lower(fileread(`"`pkgroot'/fevc__lifecycle.ado"')), ///
 
 capture program drop _kss_test_scale_lifecycle_work
 program define _kss_test_scale_lifecycle_work
-    version 18.0
+    version 15.0
     syntax [, FAIL]
     assert _N == 0
     assert c(k) == 0
@@ -184,8 +184,9 @@ assert r(N) == `caller_sample_N'
 
 // The tempfile alternative restores DTA contents, metadata, sort state,
 // changed state, and the exact sample marker using save/clear/use.  As Stata
-// documents, use changes c(filename); the prototype reports that fact so
-// this route cannot silently claim exact caller-state restoration.
+// documents, use changes c(filename). Stata 15's preserve, changed also
+// restores the filename; later runtimes retain the tempfile name. Certify
+// the receipt against the independently observed filename in either case.
 fevc__lifecycle, method(tempfile) sample(sample)                 ///
     callback(_kss_test_scale_lifecycle_work) certify
 local tempfile_method `"`r(method)'"'
@@ -194,7 +195,9 @@ scalar tempfile_changed_restored = r(changed_restored)
 scalar tempfile_sample_restored = r(sample_restored)
 scalar tempfile_data_restored = r(data_restored)
 assert "`tempfile_method'" == "tempfile"
-assert tempfile_filename_restored == 0
+assert tempfile_filename_restored == (`"`c(filename)'"' == `"`caller_filename'"')
+if c(stata_version)<16 assert tempfile_filename_restored == 1
+else assert tempfile_filename_restored == 0
 assert tempfile_changed_restored == 1
 assert tempfile_sample_restored == 1
 assert tempfile_data_restored == 1

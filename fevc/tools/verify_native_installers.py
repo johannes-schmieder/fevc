@@ -86,7 +86,7 @@ def verify(catalog, test_root, output, stata, url, methods):
                 bootstrap = ('net install github, replace from("https://haghish.github.io/github/")'
                              if method == 'github' and mode == 'fresh' else '')
                 driver = output / (label + '.do')
-                driver.write_text(f'''version 18.0
+                driver.write_text(f'''version 15.0
 clear all
 set more off
 set varabbrev off

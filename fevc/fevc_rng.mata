@@ -1,12 +1,12 @@
 *! Manages canonical probe generation and replay, with separate random
 *! domains and explicit capture and restoration of caller RNG state.
 
-version 18.0
+version 15.0
 
 // The main Mata module also consumes the registered snapshot types.
 // Reusing an already matching module avoids redeclaring those structures.
 capture mata: assert(vckss_rng__api_level() == 4 & ///
-    vckss_rng__build_id() == "vckss-rng-numeric-ranks-v4")
+    vckss_rng__build_id() == "vckss-rng-numeric-ranks-v5-stata15")
 if !_rc exit
 
 mata:
@@ -119,7 +119,7 @@ real scalar vckss_rng__api_level()
 
 string scalar vckss_rng__build_id()
 {
-    return("vckss-rng-numeric-ranks-v4")
+    return("vckss-rng-numeric-ranks-v5-stata15")
 }
 
 string scalar vckss_rng__invariant_version()
@@ -139,6 +139,15 @@ string scalar vckss_rng__production_contract()
     real scalar runtime
 
     runtime = st_numscalar("c(stata_version)")
+    if (!missing(runtime) & runtime >= 15 & runtime < 16) {
+        return("KSS-MT64S-DOMAIN-CURSOR-V3-STATA15")
+    }
+    if (!missing(runtime) & runtime >= 16 & runtime < 17) {
+        return("KSS-MT64S-DOMAIN-CURSOR-V3-STATA16")
+    }
+    if (!missing(runtime) & runtime >= 17 & runtime < 18) {
+        return("KSS-MT64S-DOMAIN-CURSOR-V3-STATA17")
+    }
     if (!missing(runtime) & runtime >= 18 & runtime < 19) {
         return("KSS-MT64S-DOMAIN-CURSOR-V3-STATA18")
     }
@@ -152,7 +161,7 @@ string scalar vckss_rng__production_contract()
 
 real scalar vckss_rng__max_binomial_trials()
 {
-    // Stata 18 documents rbinomial() on 1 <= n <= 1e+11.
+    // Stata 15--19 document rbinomial() on 1 <= n <= 1e+11.
     return(100000000000)
 }
 
@@ -196,7 +205,7 @@ real scalar vckss_rng__runtime_registered()
     real scalar runtime
 
     runtime = st_numscalar("c(stata_version)")
-    return(!missing(runtime) & runtime >= 18 & runtime < 20)
+    return(!missing(runtime) & runtime >= 15 & runtime < 20)
 }
 
 struct vckss_rng__snapshot scalar vckss_rng__capture()
@@ -284,6 +293,35 @@ real scalar vckss_rng__restore_streams(
     return(first_rc)
 }
 
+// Stata 15/16 expose the full sort state through query sortseed, not c().
+// Preserve r(): capturing caller state must not replace the caller's results.
+string scalar vckss_rng__sort_capture()
+{
+    string scalar held, state
+    real scalar rc, restore_rc
+
+    if (st_numscalar("c(stata_version)") >= 17) {
+        return(st_global("c(sortrngstate)"))
+    }
+    held = st_tempname()
+    rc = _stata("_return hold "+held,1,1)
+    if (rc) return("")
+    rc = _stata("quietly query sortseed",1,1)
+    state = rc ? "" : st_global("r(sortseed)")
+    restore_rc = _stata("_return restore "+held,1,1)
+    if (restore_rc) return("")
+    return(state)
+}
+
+real scalar vckss_rng__sort_restore(string scalar state)
+{
+    if (state == "") return(198)
+    if (st_numscalar("c(stata_version)") >= 17) {
+        return(_stata("set sortrngstate "+state,1,1))
+    }
+    return(_stata("set sortseed "+state,1,1))
+}
+
 struct vckss_rng__full_snapshot scalar vckss_rng__capture_full()
 {
     struct vckss_rng__full_snapshot scalar out
@@ -291,7 +329,7 @@ struct vckss_rng__full_snapshot scalar vckss_rng__capture_full()
 
     out.status = "INVALID"
     out.active = vckss_rng__capture()
-    out.sort_state = st_global("c(sortrngstate)")
+    out.sort_state = vckss_rng__sort_capture()
     out.mt64s_stream1_state = ""
     out.mt64s_stream2_state = ""
     out.mt64s_selected_stream_state = ""
@@ -331,7 +369,7 @@ real scalar vckss_rng__restore_full(
         strofreal(saved.active.stream,"%9.0f"),1,1)
     if (!rc) rngstate(saved.mt64s_selected_stream_state)
     if (!rc) rc = vckss_rng__restore(saved.active)
-    if (!rc) rc = _stata("set sortrngstate "+saved.sort_state,1,1)
+    if (!rc) rc = vckss_rng__sort_restore(saved.sort_state)
     return(rc)
 }
 

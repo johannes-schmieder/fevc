@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -8,7 +8,7 @@ adopath ++ `"`pkgroot'"'
 quietly run `"`pkgroot'/fevc.ado"'
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     gettoken selector rest : 0
     if "`selector'"=="result" global FEVC_CMG_RESULT_EXPORTS = $FEVC_CMG_RESULT_EXPORTS + 1
     fevc_rust `selector' `rest'
@@ -85,7 +85,7 @@ forvalues cell=3/5 {
             assert e(N_stayers)>0 & "`e(stayers)'"=="both"
             assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
             assert "`e(rust_execution_mode)'"=="direct_attachments"
-            assert e(rust_component_batch_receipt)[1,"gram"]==0
+            assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"gram"))==0
         }
         display "CMG_RESULT_EXPORTS case=`cell' count=$FEVC_CMG_RESULT_EXPORTS"
         assert $FEVC_CMG_RESULT_EXPORTS == 1
@@ -107,7 +107,7 @@ assert r(state)==0 & r(handle)==0
 macro drop FEVC_CMG_RESULT_EXPORTS
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     fevc_rust `0'
     return add
 end

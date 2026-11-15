@@ -28,7 +28,7 @@ def test_public_q0_spectral_budget_does_not_change_q1_or_probe_defaults():
     assert "local spectrum_tolerance .001" in override
     assert 'spectrumprobes(128)' in attach
     post = (ROOT / "fevc/fevc__rust_component_post.ado").read_text()
-    assert 'inference_spectrum_iterations = e(component_spectrum)[1,14]' in post
+    assert 'inference_spectrum_iterations = el(e(component_spectrum),1,14)' in post
     fetch = (ROOT / "fevc/fevc__rust_component_fetch.ado").read_text()
     assert '`spectrum\'[`row\',14]!=' in fetch
     registration = json.loads((ROOT / "fevc/docs/individual_inference_followup_v1.json").read_text())

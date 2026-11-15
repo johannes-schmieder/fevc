@@ -2,7 +2,7 @@
 *! centering metadata for point estimates and inference.
 
 program define fevc__centering, eclass
-    version 18
+    version 15.0
     gettoken action 0 : 0
     macro shift
     if "`action'"=="request" {

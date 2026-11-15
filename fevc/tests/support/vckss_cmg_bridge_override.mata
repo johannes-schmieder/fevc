@@ -1,6 +1,6 @@
 *! Test-only replacement for vckss__stata_jla(); load only after mata drop
 
-version 18.0
+version 15.0
 
 mata:
 mata set matastrict on

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -85,19 +85,19 @@ assert rowsof(e(rust_rhs_receipts)) == 19
 assert colsof(e(rust_rhs_receipts)) == 8
 assert rowsof(e(solver_rhs_diagnostics)) == 19
 assert colsof(e(solver_rhs_diagnostics)) == 6
-assert e(rust_rhs_receipts)[1,1] == 1
-assert e(rust_rhs_receipts)[1,2] == -1
-assert e(rust_rhs_receipts)[1,3] == 0
-assert e(rust_rhs_receipts)[2,1] == 2
-assert e(rust_rhs_receipts)[8,1] == 3
-assert e(rust_rhs_receipts)[8,3] == 1
-assert e(rust_rhs_receipts)[9,3] == 2
-assert e(solver_rhs_diagnostics)[2,3] == 1
-assert e(solver_rhs_diagnostics)[7,3] == 6
-assert e(solver_rhs_diagnostics)[8,3] == 1
-assert e(solver_rhs_diagnostics)[9,3] == 2
-assert e(solver_rhs_diagnostics)[18,3] == 11
-assert e(solver_rhs_diagnostics)[19,3] == 12
+assert el(e(rust_rhs_receipts),1,1) == 1
+assert el(e(rust_rhs_receipts),1,2) == -1
+assert el(e(rust_rhs_receipts),1,3) == 0
+assert el(e(rust_rhs_receipts),2,1) == 2
+assert el(e(rust_rhs_receipts),8,1) == 3
+assert el(e(rust_rhs_receipts),8,3) == 1
+assert el(e(rust_rhs_receipts),9,3) == 2
+assert el(e(solver_rhs_diagnostics),2,3) == 1
+assert el(e(solver_rhs_diagnostics),7,3) == 6
+assert el(e(solver_rhs_diagnostics),8,3) == 1
+assert el(e(solver_rhs_diagnostics),9,3) == 2
+assert el(e(solver_rhs_diagnostics),18,3) == 11
+assert el(e(solver_rhs_diagnostics),19,3) == 12
 mata: st_numscalar("__vckss_test_max_iterations", ///
     max(st_matrix("e(solver_rhs_diagnostics)")[.,4]))
 mata: st_numscalar("__vckss_test_max_complete", ///
@@ -109,38 +109,38 @@ mata: assert(all(st_matrix("e(solver_rhs_diagnostics)")[.,6] :== 1))
 scalar drop __vckss_test_max_iterations
 scalar drop __vckss_test_max_complete
 assert e(memory_budget_supplied)==0 & missing(e(memory_gib))
-assert e(rust_memory_receipt)[1,1]==0
-assert e(rust_memory_receipt)[1,3] == 19*14*8
-assert e(rust_memory_receipt)[1,11] == e(memory_forecast_bytes)
-assert e(rust_memory_receipt)[1,4] >= ///
-    e(rust_memory_receipt)[1,2] + e(rust_memory_receipt)[1,5]
-assert e(rust_memory_receipt)[1,6] > 0
-assert e(rust_memory_receipt)[1,7] > 0
-assert e(rust_memory_receipt)[1,8] > 0
-assert e(rust_memory_receipt)[1,9] >= e(rust_memory_receipt)[1,3]
-assert e(rust_memory_receipt)[1,10] >=                      ///
-    e(rust_memory_receipt)[1,5] + e(rust_memory_receipt)[1,6] + ///
-    e(rust_memory_receipt)[1,9] +                            ///
-    max(e(rust_memory_receipt)[1,7],e(rust_memory_receipt)[1,8])
-assert e(rust_preparation_receipt)[1,2] == e(N_retained)
-assert e(rust_preparation_receipt)[1,8] == e(target_weight_sum)
-assert e(rust_graph_receipt)[1,5] > 0
-assert e(rust_graph_receipt)[1,6] >= e(rust_graph_receipt)[1,5]
-assert e(rust_graph_receipt)[1,10] == e(deletion_units)
-assert e(rust_graph_receipt)[1,18] ==                         ///
-    e(rust_graph_receipt)[1,15] + e(rust_graph_receipt)[1,16] + ///
-    e(rust_graph_receipt)[1,17]
-assert abs(e(results)[1,4] -                              ///
-    (e(results)[1,1]+e(results)[1,2]+2*e(results)[1,3])) < 1e-10
-assert abs(e(results)[2,4] -                              ///
-    (e(results)[2,1]+e(results)[2,2]+2*e(results)[2,3])) < 1e-10
-assert abs(e(results)[3,4] -                              ///
-    (e(results)[3,1]+e(results)[3,2]+2*e(results)[3,3])) < 1e-10
+assert el(e(rust_memory_receipt),1,1)==0
+assert el(e(rust_memory_receipt),1,3) == 19*14*8
+assert el(e(rust_memory_receipt),1,11) == e(memory_forecast_bytes)
+assert el(e(rust_memory_receipt),1,4) >= ///
+    el(e(rust_memory_receipt),1,2) + el(e(rust_memory_receipt),1,5)
+assert el(e(rust_memory_receipt),1,6) > 0
+assert el(e(rust_memory_receipt),1,7) > 0
+assert el(e(rust_memory_receipt),1,8) > 0
+assert el(e(rust_memory_receipt),1,9) >= el(e(rust_memory_receipt),1,3)
+assert el(e(rust_memory_receipt),1,10) >=                      ///
+    el(e(rust_memory_receipt),1,5) + el(e(rust_memory_receipt),1,6) + ///
+    el(e(rust_memory_receipt),1,9) +                            ///
+    max(el(e(rust_memory_receipt),1,7),el(e(rust_memory_receipt),1,8))
+assert el(e(rust_preparation_receipt),1,2) == e(N_retained)
+assert el(e(rust_preparation_receipt),1,8) == e(target_weight_sum)
+assert el(e(rust_graph_receipt),1,5) > 0
+assert el(e(rust_graph_receipt),1,6) >= el(e(rust_graph_receipt),1,5)
+assert el(e(rust_graph_receipt),1,10) == e(deletion_units)
+assert el(e(rust_graph_receipt),1,18) ==                         ///
+    el(e(rust_graph_receipt),1,15) + el(e(rust_graph_receipt),1,16) + ///
+    el(e(rust_graph_receipt),1,17)
+assert abs(el(e(results),1,4) -                              ///
+    (el(e(results),1,1)+el(e(results),1,2)+2*el(e(results),1,3))) < 1e-10
+assert abs(el(e(results),2,4) -                              ///
+    (el(e(results),2,1)+el(e(results),2,2)+2*el(e(results),2,3))) < 1e-10
+assert abs(el(e(results),3,4) -                              ///
+    (el(e(results),3,1)+el(e(results),3,2)+2*el(e(results),3,3))) < 1e-10
 forvalues component = 1/4 {
-    assert abs(e(results)[1,`component']-e(results)[2,`component']- ///
-        e(results)[3,`component']) <= 4096*c(epsdouble)*           ///
-        max(1,abs(e(results)[1,`component']),                      ///
-            abs(e(results)[2,`component']),abs(e(results)[3,`component']))
+    assert abs(el(e(results),1,`component')-el(e(results),2,`component')- ///
+        el(e(results),3,`component')) <= 4096*c(epsdouble)*           ///
+        max(1,abs(el(e(results),1,`component')),                      ///
+            abs(el(e(results),2,`component')),abs(el(e(results),3,`component')))
 }
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_stream'
@@ -286,7 +286,7 @@ assert r(state) == 0
 // the outer finally guard.
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     local arguments `"`0'"'
     gettoken subcommand rest : 0, parse(" ,")
     local subcommand = lower(strtrim("`subcommand'"))
@@ -483,7 +483,7 @@ foreach corruption in raw_missing corrected_algebra solver_dimension ///
 
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     fevc_rust `0'
     return add
 end

@@ -2,7 +2,7 @@
 *! the pooled decomposition, sample counts, and numerical diagnostics.
 
 program define fevc__rust_post_stayer_hybrid, eclass sortpreserve
-    version 18.0
+    version 15.0
     args depvar frequency target hybridtouse nuisance nhystayers    ///
         nhystayerrows ///
         nsingleton nunattached augctx resultctx rawctx sourcectx nodisplay

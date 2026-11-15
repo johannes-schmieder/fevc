@@ -3,7 +3,7 @@
 * switch FEVC_DEFAULT_INFERENCE=none keeps the earlier point-only default for
 * suites written before it. A process started with the switch in its
 * environment cannot see the default; the final line says which was checked.
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -127,8 +127,8 @@ if `native' {
             quietly fevc log_wage x1, worker(worker_id) firm(firm_id) backend(rust) ///
                 engine(generic) preconditioner(`solver') deletion(`deletion') nodisplay
             _default_check rust
-            assert e(rust_component_batch_receipt)[1,"declared_gram"]==0
-            assert e(rust_component_batch_receipt)[1,"gram"]==0
+            assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"declared_gram"))==0
+            assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"gram"))==0
             quietly fevc_rust snapshot
             assert r(state)==0 & r(handle)==0
         }

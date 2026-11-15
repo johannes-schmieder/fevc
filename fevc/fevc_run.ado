@@ -3,7 +3,7 @@
 *! by Johannes F. Schmieder's cellgraph_run.ado.
 
 program define fevc_run
-    version 18.0
+    version 15.0
 
     syntax anything(name=example_name id="example name") using/
 
@@ -20,7 +20,7 @@ program define fevc_run
 end
 
 program define _vckss_run_example
-    version 18.0
+    version 15.0
 
     syntax anything(name=example_name id="example name") using/
 

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear
 set obs 24
 generate long worker = floor((_n-1)/4)

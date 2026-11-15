@@ -2,7 +2,7 @@
 *! are combined with the retained mover results.
 
 program define fevc__rust_capture_stayers, rclass
-    version 18.0
+    version 15.0
     args handle controls nuisance tolerance ranktol blocktol augctx
 
     tempname aug raw source receipt

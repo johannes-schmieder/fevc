@@ -1,7 +1,7 @@
 *! Manages private profiling timers without reserving caller-owned timers
 *! or making timing availability a condition for estimation.
 
-version 18.0
+version 15.0
 mata:
 mata set matastrict on
 

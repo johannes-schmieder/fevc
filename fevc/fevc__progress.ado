@@ -2,7 +2,7 @@
 *! and forwarding interrupt or failure status to the caller.
 
 program define fevc__progress, rclass
-    version 18.0
+    version 15.0
     gettoken level 0 : 0
     gettoken plugin 0 : 0, parse(" ,")
     local comma = strpos(`"`0'"', ",")

@@ -2,7 +2,7 @@
 *! and preserves returned work and failure diagnostics.
 
 program define fevc__rust_solve_v4, rclass
-    version 18.0
+    version 15.0
     args plugin handle seed probes leveragebatch targetbatch route tolerance_arg ///
         maxiter algorithm deletion nuisance exactlimit blocksizelimit            ///
         rank_tolerance_arg block_tolerance_arg engine batchmode stayers          ///

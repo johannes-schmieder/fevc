@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -16,7 +16,12 @@ foreach stayer_rows in 0 512 {
     replace firm = mod(worker-1,256)+1 if key>4096
     generate double y = .3*worker-.2*firm+.1*slot+mod(17*key,29)/101
     local state `"`c(rngstate)'"'
-    local sortstate `"`c(sortrngstate)'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    local sortstate `"`test_sort_state'"'
     quietly _datasignature
     local signature `"`r(datasignature)'"'
     quietly fevc y, worker(worker) firm(firm) deletion(match) stayers(both) ///
@@ -48,7 +53,12 @@ foreach stayer_rows in 0 512 {
             }
             assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
             assert `"`c(rngstate)'"'==`"`state'"'
-            assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+            tempname sort_results
+            _return hold `sort_results'
+            quietly query sortseed
+            local test_sort_state `"`r(sortseed)'"'
+            _return restore `sort_results'
+            assert `"`test_sort_state'"'==`"`sortstate'"'
             quietly fevc_rust snapshot
             assert r(state)==0 & r(handle)==0
         }

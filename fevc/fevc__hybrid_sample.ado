@@ -2,7 +2,7 @@
 *! eligible original stayers, keeping sample masks binary on every row.
 
 program define fevc__hybrid_sample
-    version 18.0
+    version 15.0
     args touse complete original_stayer worker firm frequency ///
         retained_firm_member stayer_physical_total hybrid_stayer hybrid_touse
 

@@ -119,6 +119,7 @@ fevc/fevc__rust_post_stayer_hybrid.ado
 fevc/fevc__rust_public_call.ado
 fevc/fevc__rust_reconcile_comp_v7.ado
 fevc/fevc__rust_reconcile_exact_v7.ado
+fevc/fevc__rust_rhs_diagnostics.ado
 fevc/fevc__rust_solve_v4.ado
 fevc/fevc__rust_solve_v5.ado
 fevc/fevc__rust_windows.ado

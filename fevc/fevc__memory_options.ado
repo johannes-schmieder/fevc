@@ -2,7 +2,7 @@
 *! warning or strict-admission policy.
 
 program define fevc__memory_options, rclass
-    version 18.0
+    version 15.0
     args memory_gib memorycheck
     local memory_present = strtrim("`memory_gib'") != ""
     if `memory_present' {

@@ -2,7 +2,7 @@
 *! and the availability of target-specific and joint covariance results.
 
 program define fevc__exact_inference_model_post, eclass
-    version 18.0
+    version 15.0
     gettoken action : 0
     if "`action'"=="results" {
         gettoken action 0 : 0
@@ -30,7 +30,7 @@ program define fevc__exact_inference_model_post, eclass
 end
 
 program define _fevc_exact_results_post, eclass
-    version 18.0
+    version 15.0
     args inference_requested inference_diagnostics level ///
         inference inferencesimulations inferenceseed ///
         inferencebins exact_structured_requested inference_joint_available ///

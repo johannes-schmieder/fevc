@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 
 /* Independent dense point expressions and derivatives. These tests do not
    equate Stata RNG seeds with the native Counter-V1 contract. */

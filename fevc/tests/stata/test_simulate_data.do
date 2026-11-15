@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 
 clear
 set obs 3
@@ -7,7 +7,12 @@ quietly _datasignature
 local original `"`r(datasignature)'"'
 local caller_rng = c(rng)
 local caller_state = c(rngstate)
-local caller_sortstate = c(sortrngstate)
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sortstate = `"`test_sort_state'"'
 foreach options in "simulate_data(ex1)" "simulate_data(missing) clear" ///
     "simulate_data(ex1) clear seed(-1)" "simulate_data(ex1) clear seed(1.5)" ///
     "simulate_data(ex1) clear seed(.)" "simulate_data(ex1) clear seed(2147483648)" ///
@@ -18,7 +23,12 @@ foreach options in "simulate_data(ex1)" "simulate_data(missing) clear" ///
     assert `"`r(datasignature)'"' == `"`original'"'
     assert c(rng)=="`caller_rng'"
     assert c(rngstate)=="`caller_state'"
-    assert c(sortrngstate)=="`caller_sortstate'"
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'=="`caller_sortstate'"
 }
 
 // The public branch must work before any estimator runtime is loaded.
@@ -29,13 +39,23 @@ foreach rng in mt64 kiss32 mt64s {
     set seed 142
     local before = c(rngstate)
     local stream = c(rngstream)
-    local sort_before = c(sortrngstate)
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    local sort_before = `"`test_sort_state'"'
     quietly fevc, simulate_data(ex2) clear
     assert r(N)==1200 & r(workers)==200 & r(firms)==61
     assert r(seed)==20260820
     assert c(rng)=="`rng'" & c(rngstream)==`stream'
     assert c(rngstate)=="`before'"
-    assert c(sortrngstate)=="`sort_before'"
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'=="`sort_before'"
     quietly _datasignature
     local signature `"`r(datasignature)'"'
     if "`rng'"=="mt64" local reference `"`signature'"'
@@ -47,7 +67,7 @@ if !`had_runtime' {
 }
 set rng `caller_rng'
 set rngstate `caller_state'
-set sortrngstate `caller_sortstate'
+set sortseed `caller_sortstate'
 
 foreach example in ex1 ex2 ex3 ex4 ex5 {
     quietly fevc, simulate_data(`example') clear
@@ -113,11 +133,21 @@ program define fevc__simulate_build, rclass
     exit 459
 end
 local before_state = c(rngstate)
-local before_sort = c(sortrngstate)
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local before_sort = `"`test_sort_state'"'
 capture noisily fevc, simulate_data(ex1) clear
 assert _rc==459
 assert c(rngstate)=="`before_state'"
-assert c(sortrngstate)=="`before_sort'"
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'=="`before_sort'"
 quietly _datasignature
 assert `"`r(datasignature)'"'==`"`before'"'
 program drop fevc__simulate_build

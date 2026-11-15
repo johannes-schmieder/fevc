@@ -3,7 +3,7 @@
 // invariance, the leading directions of inference(q1), the exact Mata route
 // on a small design, and the requests that stop before native work. The
 // removed variance models and their options stop with typed statuses.
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -75,8 +75,8 @@ assert e(inference_independent_units)==300
 // The native route keeps the control in the operator and adds the
 // first-order term of its estimation.
 assert e(inference_nuisance_omitted)==0
-assert e(component_unit_receipt)[1,"deletion"]==2
-assert e(component_unit_receipt)[1,"effective_matches"]==0
+assert el(e(component_unit_receipt),1,colnumb(e(component_unit_receipt),"deletion"))==2
+assert el(e(component_unit_receipt),1,colnumb(e(component_unit_receipt),"effective_matches"))==0
 assert `"`e(inference_population_requested)'"' == "both"
 assert `"`e(inference_population_selected)'"' == "both"
 assert `"`e(inference_model_requested)'"' == "repeat_measurement"
@@ -110,8 +110,8 @@ assert strpos(`"`e(inference_reference_guarantee)'"',"no dominant direction") > 
 assert rowsof(q0_V) == 4 & colsof(q0_V) == 4
 assert rowsof(q0_Vp) == 3 & colsof(q0_Vp) == 3
 assert rowsof(q0_spectrum) == 4 & colsof(q0_spectrum) == 15
-assert q0_spectrum[1,"max_influence_share"] > 0
-assert q0_spectrum[1,"max_influence_share"] <= 1
+assert el(q0_spectrum,1,colnumb(q0_spectrum,"max_influence_share")) > 0
+assert el(q0_spectrum,1,colnumb(q0_spectrum,"max_influence_share")) <= 1
 // No Gram fit and no structured variance model.
 local returned_matrices : e(matrices)
 foreach structured in residual_moment_diagnostics structured_variance_summary ///
@@ -121,12 +121,12 @@ foreach structured in residual_moment_diagnostics structured_variance_summary //
 assert "`e(inference_gram_method)'"=="not applicable"
 // Every match has two observations: 150 repeat-measurement sets.
 assert rowsof(q0_repeat)==1 & colsof(q0_repeat)==14
-assert e(inference_repeat_sets)==150 & q0_repeat[1,"sets"]==150
+assert e(inference_repeat_sets)==150 & el(q0_repeat,1,colnumb(q0_repeat,"sets"))==150
 assert colsof(e(component_inference_receipt))==78
-assert e(component_inference_receipt)[1,"schema"]==5
-assert e(component_inference_receipt)[1,"model"]==4
-assert e(component_inference_receipt)[1,"reference"]==0
-assert e(component_inference_receipt)[1,"gram_probes"]==0
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"schema"))==5
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"model"))==4
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"reference"))==0
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"gram_probes"))==0
 // Four solves per pseudo-noise draw, three for the kernel image of the
 // outcome, and under joint nuisance with a control two per point probe for
 // the fixed-offset pass.
@@ -152,13 +152,19 @@ assert abs(det(q0_V)) < 1e-10
 // independent of the solver batch width.
 quietly fevc outcome control, `common_options' batch(16)
 assert mreldif(q0_results,e(results)) == 0
-assert mreldif(q0_V,e(V)) == 0
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert mreldif(q0_V,`compat_assert_V') == 0
+matrix drop `compat_assert_V'
 assert mreldif(q0_spectrum,e(component_spectrum)) == 0
 assert mreldif(q0_repeat,e(inference_repeat)) == 0
 // The model's name is a no-op alias of the one method.
 quietly fevc outcome control, `common_options' batch(8) inferencemodel(REPEAT_MEASUREMENT)
 assert mreldif(q0_results,e(results)) == 0
-assert mreldif(q0_V,e(V)) == 0
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert mreldif(q0_V,`compat_assert_V') == 0
+matrix drop `compat_assert_V'
 assert mreldif(q0_ci,e(component_inference)) == 0
 
 // inference(q1): the same high-rank pass plus the leading direction of every
@@ -181,14 +187,14 @@ assert rowsof(q1_table)==4 & colsof(q1_table)==16
 assert rowsof(q1_lead)==4 & colsof(q1_lead)==28
 local q1_components = 0
 forvalues target = 1/4 {
-    assert inlist(q1_table[`target',"regime"],0,1)
+    assert inlist(el(q1_table,`target',colnumb(q1_table,"regime")),0,1)
     // Under inference(q1) a component that has the q = 1 interval reports it.
-    assert (q1_table[`target',"regime"]==1)==(q1_table[`target',"q1_status"]==0)
-    assert q1_table[`target',"lb"] < q1_table[`target',"estimate"]
-    assert q1_table[`target',"estimate"] < q1_table[`target',"ub"]
-    assert q1_lead[`target',"converged"]==1
-    assert q1_lead[`target',"eigen_share"]>=0 & q1_lead[`target',"eigen_share"]<=1
-    local q1_components = `q1_components'+(q1_table[`target',"regime"]==1)
+    assert (el(q1_table,`target',colnumb(q1_table,"regime"))==1)==(el(q1_table,`target',colnumb(q1_table,"q1_status"))==0)
+    assert el(q1_table,`target',colnumb(q1_table,"lb")) < el(q1_table,`target',colnumb(q1_table,"estimate"))
+    assert el(q1_table,`target',colnumb(q1_table,"estimate")) < el(q1_table,`target',colnumb(q1_table,"ub"))
+    assert el(q1_lead,`target',colnumb(q1_lead,"converged"))==1
+    assert el(q1_lead,`target',colnumb(q1_lead,"eigen_share"))>=0 & el(q1_lead,`target',colnumb(q1_lead,"eigen_share"))<=1
+    local q1_components = `q1_components'+(el(q1_table,`target',colnumb(q1_table,"regime"))==1)
 }
 assert e(inference_q1_components)==`q1_components'
 local returned_matrices : e(matrices)
@@ -196,17 +202,17 @@ assert (strpos(" `returned_matrices' "," V ")>0)==(`q1_components'==0)
 assert e(inference_joint_posted)==(`q1_components'==0)
 if `q1_components'>0 assert `"`e(status)'"' == "FEVC_REPEAT_MEASUREMENT_Q1"
 assert colsof(e(component_inference_receipt)) == 78
-assert e(component_inference_receipt)[1,"schema"] == 5
-assert e(component_inference_receipt)[1,"model"] == 4
-assert e(component_inference_receipt)[1,"reference"] == 0
-assert e(component_augmentation_receipt)[1,"schema"] == 1
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"schema")) == 5
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"model")) == 4
+assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"reference")) == 0
+assert el(e(component_augmentation_receipt),1,colnumb(e(component_augmentation_receipt),"schema")) == 1
 // The search, four remainder influences and four remainder kernels per
 // draw come on top of the high-rank pass.
 assert e(inference_solver_columns) == 4*8+3+2*160+e(inference_leading_steps)+4+4*8
 matrix q1_spectrum = e(component_spectrum)
 forvalues target = 1/4 {
-    assert q1_spectrum[`target',"leading_share"] >= 0
-    assert q1_spectrum[`target',"leading_share"] <= 1
+    assert el(q1_spectrum,`target',colnumb(q1_spectrum,"leading_share")) >= 0
+    assert el(q1_spectrum,`target',colnumb(q1_spectrum,"leading_share")) <= 1
 }
 matrix q1_results_before_estat = e(results)
 matrix q1_table_before_estat = e(inference_intervals)
@@ -296,14 +302,17 @@ quietly fevc outcome control, worker(worker) firm(firm)             ///
 assert `"`e(status)'"' == "FEVC_REPEAT_MEASUREMENT_SE"
 assert `"`e(inference_deletion_selected)'"' == "match"
 assert e(inference_independent_units)==150
-assert e(component_unit_receipt)[1,"deletion"]==1
+assert el(e(component_unit_receipt),1,colnumb(e(component_unit_receipt),"deletion"))==1
 
 // Explicit both is the same population and inference as the default above.
 fevc outcome control, `common_options' stayers(both) batch(8)
 assert "`e(stayers)'"=="both" & e(stayers_option_supplied)==1
 assert "`e(inference_population)'"=="both"
 assert mreldif(q0_results,e(results))<1e-8
-assert mreldif(q0_V,e(V))<1e-8
+tempname compat_assert_V
+matrix `compat_assert_V' = e(V)
+assert mreldif(q0_V,`compat_assert_V')<1e-8
+matrix drop `compat_assert_V'
 
 // A null outcome must be withheld atomically rather than regularized or
 // replaced by another estimator/reference family.

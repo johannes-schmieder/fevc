@@ -1,7 +1,7 @@
 *! Selects the retained worker-firm graph under the deletion rules and
 *! exports dense identifier maps aligned with the retained sample.
 
-version 18.0
+version 15.0
 quietly fevc__timer load
 
 mata:

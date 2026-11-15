@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear
 set obs 120
 gen long worker=ceil(_n/6)

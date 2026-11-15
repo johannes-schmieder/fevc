@@ -47,7 +47,7 @@ before reporting intervals.
 
 ## Requirements
 
-- Stata 18 or 19.
+- Stata 15 or newer (through Stata 19).
 - Precompiled native plugins for macOS (Apple silicon and Intel), Linux
   x86-64, and Windows x86-64 are included; no compiler or Rust installation
   is needed. The plugins pass native Stata qualification on macOS, Linux,

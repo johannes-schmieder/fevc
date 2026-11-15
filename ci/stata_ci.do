@@ -1,4 +1,4 @@
-version 18
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -10,7 +10,7 @@ log using `"`log_file'"', text replace name(stata_ci)
 
 display as text "STATA_CI_BEGIN profile=`profile'"
 display as text "STATA_CI_VERSION " c(stata_version)
-display as text "STATA_CI_EDITION " c(edition_real)
+display as text "STATA_CI_EDITION " cond(c(MP),"MP",cond(c(SE),"SE","IC"))
 display as text "STATA_CI_OS " c(os)
 display as text "STATA_CI_MACHINE " c(machine_type)
 
@@ -27,7 +27,7 @@ else {
 }
 local stata_rc = _rc
 local ci_stata_version = c(stata_version)
-local ci_stata_edition `"`c(edition_real)'"'
+local ci_stata_edition `"`=cond(c(MP),"MP",cond(c(SE),"SE","IC"))'"'
 local ci_stata_os `"`c(os)'"'
 local ci_stata_machine_type `"`c(machine_type)'"'
 local ci_stata_processors = c(processors)

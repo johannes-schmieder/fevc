@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 
@@ -69,9 +69,9 @@ assert `"`e(rust_phase_profile_units)'"' == "seconds"
 assert rowsof(e(rust_phase_profile)) == 1
 assert colsof(e(rust_phase_profile)) == 8
 forvalues phase = 1/8 {
-    assert e(rust_phase_profile)[1,`phase'] >= 0
+    assert el(e(rust_phase_profile),1,`phase') >= 0
 }
-assert e(rust_phase_profile)[1,8] >= e(rust_phase_profile)[1,7]
+assert el(e(rust_phase_profile),1,8) >= el(e(rust_phase_profile),1,7)
 assert `"`e(preconditioner_requested)'"' == "diagonal"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(deletion)'"' == "match"
@@ -669,9 +669,9 @@ assert `"`e(rust_phase_profile_units)'"' == "seconds"
 assert rowsof(e(rust_phase_profile)) == 1
 assert colsof(e(rust_phase_profile)) == 8
 forvalues phase = 1/8 {
-    assert e(rust_phase_profile)[1,`phase'] >= 0
+    assert el(e(rust_phase_profile),1,`phase') >= 0
 }
-assert e(rust_phase_profile)[1,8] >= e(rust_phase_profile)[1,7]
+assert el(e(rust_phase_profile),1,8) >= el(e(rust_phase_profile),1,7)
 assert e(backend_option_supplied) == 1
 assert e(rng_option_supplied) == 1
 assert e(algorithm_option_supplied) == 1
@@ -716,13 +716,13 @@ assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
 assert e(rust_actual_accounting_residual) <= 1e-10
 assert mreldif(e(results),`xresult') == 0
 forvalues row=1/3 {
-    assert abs(e(results)[`row',4]-e(results)[`row',1]-          ///
-        e(results)[`row',2]-2*e(results)[`row',3]) <= 1e-10
+    assert abs(el(e(results),`row',4)-el(e(results),`row',1)-          ///
+        el(e(results),`row',2)-2*el(e(results),`row',3)) <= 1e-10
 }
 forvalues col=1/4 {
-    assert e(results)[4,`col'] == 0
-    assert abs(e(results)[1,`col']-e(results)[2,`col']-          ///
-        e(results)[3,`col']) <= 1e-10
+    assert el(e(results),4,`col') == 0
+    assert abs(el(e(results),1,`col')-el(e(results),2,`col')-          ///
+        el(e(results),3,`col')) <= 1e-10
 }
 quietly count if e(sample)
 assert r(N) == e(N_retained)

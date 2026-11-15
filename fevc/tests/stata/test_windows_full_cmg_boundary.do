@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -29,7 +29,12 @@ set sortseed 20260826
 local caller_rng `"`c(rng)'"'
 local caller_stream = c(rngstream)
 local caller_state `"`c(rngstate)'"'
-local caller_sort_state `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sort_state `"`test_sort_state'"'
 local caller_sortedby : sortedby
 quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
@@ -53,15 +58,20 @@ assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(preconditioner_selected)'"' == "CMG"
 assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
 assert `"`e(cmg_source_commit)'"' == "e5613e81fb3b03c78de98658b372646fa802aabb"
-assert e(full_cmg_receipt)[1,2] == 3
-assert e(full_cmg_receipt)[1,3] == 2
+assert el(e(full_cmg_receipt),1,2) == 3
+assert el(e(full_cmg_receipt),1,3) == 2
 assert e(cmg_threads_requested) == `threads' & e(cmg_threads_used) == `threads'
 assert e(backend_fallback) == 0
 assert e(complete_residual_max) <= e(residual_acceptance_tolerance)
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_stream'
 assert `"`c(rngstate)'"' == `"`caller_state'"'
-assert `"`c(sortrngstate)'"' == `"`caller_sort_state'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"' == `"`caller_sort_state'"'
 local restored_sortedby : sortedby
 assert `"`restored_sortedby'"' == `"`caller_sortedby'"'
 quietly _datasignature

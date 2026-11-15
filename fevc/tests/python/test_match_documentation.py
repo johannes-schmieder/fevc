@@ -124,6 +124,7 @@ def test_catalog_preserves_match_install_inventory():
         "f fevc__stayer_population_post.ado",
         "f fevc__rust_cmg_model.ado",
         "f fevc__rust_comp_batch_receipt.ado",
+        "f fevc__rust_rhs_diagnostics.ado",
         "f fevc__rust_core_ready.ado",
         "f fevc__rust_abort.ado",
         "f fevc__post_failure.ado",

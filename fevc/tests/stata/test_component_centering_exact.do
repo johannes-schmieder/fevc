@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -137,7 +137,10 @@ foreach design in observation_none observation_joint match_none {
             // estimate and its standard errors unchanged.
             generate double manual_centered=y-oracle_mean
             quietly fevc manual_centered `covars', `common' inference(`reference') centering(mean)
-            assert mreldif(mean_b,e(b))<2e-11
+            tempname compat_assert_b
+            matrix `compat_assert_b' = e(b)
+            assert mreldif(mean_b,`compat_assert_b')<2e-11
+            matrix drop `compat_assert_b'
             assert mreldif(mean_results,e(component_inference))<2e-10
             if "`reference'"=="q1" {
                 matrix candidate=e(inference_intervals)
@@ -150,18 +153,32 @@ foreach design in observation_none observation_joint match_none {
             quietly fevc manual_centered `covars', `common' inference(`reference') centering(none)
             assert "`e(inference_centering)'"=="uncentered"
             assert e(inference_mean_omitted)==0
-            assert mreldif(mean_b,e(b))<2e-11
+            tempname compat_assert_b
+            matrix `compat_assert_b' = e(b)
+            assert mreldif(mean_b,`compat_assert_b')<2e-11
+            matrix drop `compat_assert_b'
             matrix candidate=e(component_inference)
             forvalues target=1/4 {
                 assert reldif(candidate[`target',2],mean_se[`target',1])<.005
             }
             quietly fevc y `covars', `common' inference(`reference') centering(mean)
-            assert mreldif(mean_b,e(b))<1e-13
+            tempname compat_assert_b
+            matrix `compat_assert_b' = e(b)
+            assert mreldif(mean_b,`compat_assert_b')<1e-13
+            matrix drop `compat_assert_b'
             assert mreldif(mean_results,e(component_inference))<1e-13
             quietly fevc shifted `covars', `common' inference(`reference')
-            assert mreldif(mean_b,e(b))<2e-9
+            tempname compat_assert_b
+            matrix `compat_assert_b' = e(b)
+            assert mreldif(mean_b,`compat_assert_b')<2e-9
+            matrix drop `compat_assert_b'
             assert mreldif(mean_results,e(component_inference))<2e-9
-            if `posted' assert mreldif(mean_V,e(V))<2e-9
+            if `posted' {
+                tempname compat_assert_V
+                matrix `compat_assert_V' = e(V)
+                assert mreldif(mean_V,`compat_assert_V')<2e-9
+                matrix drop `compat_assert_V'
+            }
             if "`reference'"=="q1" {
                 matrix candidate=e(inference_intervals)
                 matrix candidate=candidate[1..4,1..10]
@@ -224,7 +241,10 @@ quietly lincom worker_variance+firm_variance+2*worker_firm_covariance
 assert abs(r(estimate)-component_b[1,4])<2e-12
 assert abs(r(se)-sqrt(component_V[4,4]))<2e-12
 quietly fevc y c1 c2, `common' inference(none)
-assert mreldif(component_b,e(b))<2e-12
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(component_b,`compat_assert_b')<2e-12
+matrix drop `compat_assert_b'
 assert mreldif(component_mcse,e(mcse))<2e-12
 assert "`e(inference_centering)'"==""
 capture confirm scalar e(inference_mean_omitted)
@@ -238,7 +258,10 @@ matrix project_V=e(projection_V)
 matrix project_naive=e(projection_V_naive)
 quietly fevc y c1 c2, `common' inference(auto) project(projection) projecteffect(firm)
 assert e(inference_auto)==1 & "`e(inference_auto_reason)'"!=""
-assert mreldif(component_b,e(b))<2e-12
+tempname compat_assert_b
+matrix `compat_assert_b' = e(b)
+assert mreldif(component_b,`compat_assert_b')<2e-12
+matrix drop `compat_assert_b'
 assert mreldif(project_b,e(projection_b))<2e-12
 assert mreldif(project_V,e(projection_V))<2e-12
 assert mreldif(project_naive,e(projection_V_naive))<2e-12

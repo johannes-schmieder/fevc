@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -34,7 +34,12 @@ generate byte copies = 1+mod(key,3)
 generate double mass = .7+mod(13*key,11)/7
 sort worker firm key
 local state `"`c(rngstate)'"'
-local sortstate `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local sortstate `"`test_sort_state'"'
 quietly _datasignature
 local signature `"`r(datasignature)'"'
 foreach deletion in observation match {
@@ -58,15 +63,15 @@ foreach deletion in observation match {
                     assert "`e(rust_execution_mode)'"=="diagonal_queue"
                     assert "`e(rust_execution_schema)'"=="VCKSS-GENERIC-EXECUTION-V1"
                     matrix work = e(rust_execution_receipt)
-                    assert work[1,"threads"]==`threads'
-                    assert work[1,"mode"]==1 & work[1,"rank"]==1
-                    assert work[1,"point"]==99 & work[1,"projection"]==0
-                    assert work[1,"component"]==0 & work[1,"gram"]==0
-                    assert work[1,"fit"]==1+("`nuisance'"=="fixedoffset")
-                    assert work[1,"logical"]==work[1,"queued"]+work[1,"fit"]
-                    assert work[1,"active"]>=1 & work[1,"active"]<=`threads'
-                    assert work[1,"cmg"]==0 & work[1,"cmg_concurrency"]==0
-                    assert work[1,"residual"]<=e(residual_acceptance_tolerance)
+                    assert el(work,1,colnumb(work,"threads"))==`threads'
+                    assert el(work,1,colnumb(work,"mode"))==1 & el(work,1,colnumb(work,"rank"))==1
+                    assert el(work,1,colnumb(work,"point"))==99 & el(work,1,colnumb(work,"projection"))==0
+                    assert el(work,1,colnumb(work,"component"))==0 & el(work,1,colnumb(work,"gram"))==0
+                    assert el(work,1,colnumb(work,"fit"))==1+("`nuisance'"=="fixedoffset")
+                    assert el(work,1,colnumb(work,"logical"))==el(work,1,colnumb(work,"queued"))+el(work,1,colnumb(work,"fit"))
+                    assert el(work,1,colnumb(work,"active"))>=1 & el(work,1,colnumb(work,"active"))<=`threads'
+                    assert el(work,1,colnumb(work,"cmg"))==0 & el(work,1,colnumb(work,"cmg_concurrency"))==0
+                    assert el(work,1,colnumb(work,"residual"))<=e(residual_acceptance_tolerance)
                     if "`width'"=="auto" {
                         assert e(leverage_batch)==min(33,max(32,8*`threads'))
                         assert e(target_batch)==min(33,max(32,4*`threads'))
@@ -76,7 +81,12 @@ foreach deletion in observation match {
                     assert mreldif(e(kss),reference)<1e-8
                     assert e(memory_budget_supplied)==0
                     assert `"`c(rngstate)'"'==`"`state'"'
-                    assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+                    tempname sort_results
+                    _return hold `sort_results'
+                    quietly query sortseed
+                    local test_sort_state `"`r(sortseed)'"'
+                    _return restore `sort_results'
+                    assert `"`test_sort_state'"'==`"`sortstate'"'
                     quietly fevc_rust snapshot
                     assert r(state)==0 & r(handle)==0
                 }
@@ -102,13 +112,18 @@ foreach policy in error warn off {
 quietly _datasignature
 assert `"`r(datasignature)'"'==`"`signature'"'
 assert `"`c(rngstate)'"'==`"`state'"'
-assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+assert `"`test_sort_state'"'==`"`sortstate'"'
 
 // Corrupt every work-receipt field after native validation; the public layer
 // must still withhold and restore the prepared lifecycle and caller state.
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     gettoken command rest : 0
     tempname work
     if "`command'"=="solve" & "$FEVC_EXECUTION_FAULT"=="break" exit 1
@@ -130,14 +145,19 @@ foreach fault in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 bre
     quietly fevc_rust snapshot
     assert r(state)==0 & r(handle)==0
     assert `"`c(rngstate)'"'==`"`state'"'
-    assert `"`c(sortrngstate)'"'==`"`sortstate'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'==`"`sortstate'"'
     quietly _datasignature
     assert `"`r(datasignature)'"'==`"`signature'"'
 }
 macro drop FEVC_EXECUTION_FAULT
 capture program drop fevc__rust_public_call
 program define fevc__rust_public_call, rclass
-    version 18.0
+    version 15.0
     fevc_rust `0'
     return add
 end
@@ -160,8 +180,8 @@ foreach solver in diagonal cmg {
     quietly fevc y x, worker(worker) firm(firm) deletion(observation) stayers(movers) ///
         algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
         probes(200) tolerance(1e-12) centering(none) project(z) projecteffect(firm) nodisplay
-    assert e(rust_execution_receipt)[1,"projection"]==2
-    assert e(rust_execution_receipt)[1,"logical"]==604
+    assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"projection"))==2
+    assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"logical"))==604
     if "`solver'"=="diagonal" {
         matrix projected = e(projection_b)
         matrix projected_V = e(projection_V)
@@ -169,7 +189,7 @@ foreach solver in diagonal cmg {
     else {
         assert "`e(rust_execution_mode)'"=="direct_attachments"
         assert "`e(full_cmg_model_schema)'"==""
-        assert e(full_cmg_receipt)[1,"probe_tolerance"]==1e-12
+        assert el(e(full_cmg_receipt),1,colnumb(e(full_cmg_receipt),"probe_tolerance"))==1e-12
         assert mreldif(e(projection_b),projected)<1e-8
         assert mreldif(e(projection_V),projected_V)<1e-8
     }
@@ -206,40 +226,40 @@ foreach deletion in observation match {
             if `queue' {
                 assert "`e(rust_execution_mode)'"==cond("`solver'"=="diagonal","diagonal_queue","direct_attachments")
                 matrix work = e(rust_execution_receipt)
-                assert work[1,"threads"]==4 & work[1,"mode"]==1+("`solver'"=="cmg")
-                assert work[1,"gram"]==0 & work[1,"projection"]==0 & work[1,"point"]==600
+                assert el(work,1,colnumb(work,"threads"))==4 & el(work,1,colnumb(work,"mode"))==1+("`solver'"=="cmg")
+                assert el(work,1,colnumb(work,"gram"))==0 & el(work,1,colnumb(work,"projection"))==0 & el(work,1,colnumb(work,"point"))==600
                 // Four solves per pseudo-noise draw, three influence solves, and
                 // under joint nuisance the offset pass of two solves per probe.
-                assert work[1,"component"]==e(component_inference_receipt)[1,"solver_columns"]
-                assert work[1,"component"]==4*e(inference_draws)+3+e(inference_offset_pass_solves)
+                assert el(work,1,colnumb(work,"component"))==el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"solver_columns"))
+                assert el(work,1,colnumb(work,"component"))==4*e(inference_draws)+3+e(inference_offset_pass_solves)
                 assert e(inference_offset_pass_solves)==cond("`deletion'"=="observation",400,0)
-                assert work[1,"logical"]==work[1,"fit"]+1+600+work[1,"component"]
-                assert work[1,"residual"]<=e(residual_acceptance_tolerance)
+                assert el(work,1,colnumb(work,"logical"))==el(work,1,colnumb(work,"fit"))+1+600+el(work,1,colnumb(work,"component"))
+                assert el(work,1,colnumb(work,"residual"))<=e(residual_acceptance_tolerance)
             }
             if "`width'"=="auto" {
                 matrix inference_batch = e(rust_component_batch_receipt)
                 assert "`e(rust_component_batch_schema)'"=="VCKSS-COMPONENT-BATCH-V1"
-                assert inference_batch[1,"policy"]==1
-                assert inference_batch[1,"declared_component"]==1
+                assert el(inference_batch,1,colnumb(inference_batch,"policy"))==1
+                assert el(inference_batch,1,colnumb(inference_batch,"declared_component"))==1
                 // No Gram fit: no Gram width is declared or selected.
-                assert inference_batch[1,"declared_gram"]==0 & inference_batch[1,"gram"]==0
-                assert inference_batch[1,"component"]==32
-                assert inference_batch[1,"cap"]==32 & inference_batch[1,"threads"]==4
-                assert inference_batch[1,"capacity"]==work[1,"capacity"]
+                assert el(inference_batch,1,colnumb(inference_batch,"declared_gram"))==0 & el(inference_batch,1,colnumb(inference_batch,"gram"))==0
+                assert el(inference_batch,1,colnumb(inference_batch,"component"))==32
+                assert el(inference_batch,1,colnumb(inference_batch,"cap"))==32 & el(inference_batch,1,colnumb(inference_batch,"threads"))==4
+                assert el(inference_batch,1,colnumb(inference_batch,"capacity"))==el(work,1,colnumb(work,"capacity"))
             }
             else {
                 capture confirm matrix e(rust_component_batch_receipt)
                 assert _rc!=0
             }
             if "`solver'"=="diagonal" {
-                assert work[1,"leverage"]==cond("`width'"=="auto",32,8)
-                assert work[1,"target"]==cond("`width'"=="auto",32,8)
-                assert work[1,"logical"]==work[1,"queued"]+work[1,"fit"]
-                assert work[1,"cmg"]==0 & work[1,"cmg_concurrency"]==0
+                assert el(work,1,colnumb(work,"leverage"))==cond("`width'"=="auto",32,8)
+                assert el(work,1,colnumb(work,"target"))==cond("`width'"=="auto",32,8)
+                assert el(work,1,colnumb(work,"logical"))==el(work,1,colnumb(work,"queued"))+el(work,1,colnumb(work,"fit"))
+                assert el(work,1,colnumb(work,"cmg"))==0 & el(work,1,colnumb(work,"cmg_concurrency"))==0
             }
             else if "`width'"=="auto" {
-                assert work[1,"logical"]+work[1,"refinement"]==work[1,"cmg"]
-                assert e(full_cmg_receipt)[1,"probe_tolerance"]==1e-10
+                assert el(work,1,colnumb(work,"logical"))+el(work,1,colnumb(work,"refinement"))==el(work,1,colnumb(work,"cmg"))
+                assert el(e(full_cmg_receipt),1,colnumb(e(full_cmg_receipt),"probe_tolerance"))==1e-10
             }
             else {
                 assert "`e(preconditioner_selected)'"=="CMG"
@@ -255,7 +275,10 @@ foreach deletion in observation match {
             else {
                 assert mreldif(point,e(kss))<1e-8
                 assert mreldif(component,e(component_inference))<1e-8
-                assert mreldif(covariance,e(V))<1e-8
+                tempname compat_assert_V
+                matrix `compat_assert_V' = e(V)
+                assert mreldif(covariance,`compat_assert_V')<1e-8
+                matrix drop `compat_assert_V'
             }
             quietly fevc_rust snapshot
             assert r(state)==0 & r(handle)==0

@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -18,7 +18,12 @@ generate double target = 1+mod(_n,3)/5
 generate double z = cos(_n*.7)
 generate byte mover = worker<100
 local caller_rng `"`c(rngstate)'"'
-local caller_sort_rng `"`c(sortrngstate)'"'
+tempname sort_results
+_return hold `sort_results'
+quietly query sortseed
+local test_sort_state `"`r(sortseed)'"'
+_return restore `sort_results'
+local caller_sort_rng `"`test_sort_state'"'
 quietly datasignature
 local caller_data `"`r(datasignature)'"'
 
@@ -58,7 +63,12 @@ foreach route in mata_exact mata_jla rust_exact rust_generic rust_full auto_full
     assert e(N_stayer_option_dropped)==0
     assert original_order==_n
     assert `"`c(rngstate)'"'==`"`caller_rng'"'
-    assert `"`c(sortrngstate)'"'==`"`caller_sort_rng'"'
+    tempname sort_results
+    _return hold `sort_results'
+    quietly query sortseed
+    local test_sort_state `"`r(sortseed)'"'
+    _return restore `sort_results'
+    assert `"`test_sort_state'"'==`"`caller_sort_rng'"'
     quietly datasignature
     assert `"`r(datasignature)'"'==`"`caller_data'"'
 }

@@ -2,7 +2,7 @@
 *! thread settings for the selected backend.
 
 program define fevc__native_threads, rclass
-    version 18.0
+    version 15.0
     args requested context
     if "`requested'"=="post" & "`context'"=="" {
         fevc__native_threads_post
@@ -22,7 +22,7 @@ end
 
 *! Native execution budget; independent of the Stata/MP license.
 program define fevc__native_threads_compute, rclass
-    version 18.0
+    version 15.0
     args requested
     local supplied = (strtrim(`"`requested'"')!="")
     local threads = c(processors)
@@ -59,7 +59,7 @@ program define fevc__native_threads_compute, rclass
 end
 
 program define fevc__native_threads_post, eclass
-    version 18.0
+    version 15.0
     foreach key in requested selected supplied {
         local upper = upper("`key'")
         ereturn scalar native_threads_`key' = real("${VCKSS_NATIVE_`upper'}")
@@ -73,7 +73,7 @@ program define fevc__native_threads_post, eclass
         local active = 1
         capture confirm matrix e(rust_exact_execution)
         if !_rc {
-            local capacity = e(rust_exact_execution)[1,5]
+            local capacity = el(e(rust_exact_execution),1,5)
             local active = .
         }
         capture confirm scalar e(cmg_threads_used)
@@ -82,7 +82,7 @@ program define fevc__native_threads_post, eclass
             local active = .
             capture confirm matrix e(full_cmg_receipt)
             if !_rc {
-                if e(full_cmg_receipt)[1,7]>0 local active=e(full_cmg_receipt)[1,7]
+                if el(e(full_cmg_receipt),1,7)>0 local active=el(e(full_cmg_receipt),1,7)
             }
         }
         capture confirm scalar e(rust_execution_workers)

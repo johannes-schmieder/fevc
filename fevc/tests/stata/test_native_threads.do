@@ -1,4 +1,4 @@
-version 18
+version 15.0
 clear all
 set more off
 set processors 4
@@ -87,7 +87,7 @@ foreach solver in diagonal cmg {
   quietly fevc y x, worker(worker) firm(firm) deletion(observation) stayers(movers) ///
    algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
    probes(200) tolerance(1e-12) centering(none) project(z) projecteffect(firm) nodisplay nativethreads(`threads')
-  assert e(rust_execution_receipt)[1,"threads"]==`threads'
+  assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"threads"))==`threads'
   assert c(processors)==4
   if `threads'==4 matrix base=e(projection_b)
   else assert mreldif(base,e(projection_b))<1e-8
@@ -110,8 +110,8 @@ foreach solver in diagonal cmg {
    algorithm(jla) backend(rust) rng(counter_v1) engine(generic) preconditioner(`solver') ///
    probes(200) targetweight(target) centering(none) inference(highrank) nodisplay nativethreads(`threads')
   assert "`e(inference_model)'"=="repeat_measurement"
-  assert e(rust_execution_receipt)[1,"threads"]==`threads'
-  assert e(rust_component_batch_receipt)[1,"threads"]==`threads'
+  assert el(e(rust_execution_receipt),1,colnumb(e(rust_execution_receipt),"threads"))==`threads'
+  assert el(e(rust_component_batch_receipt),1,colnumb(e(rust_component_batch_receipt),"threads"))==`threads'
   assert e(native_threads_selected)==`threads'
   assert c(processors)==4
   if `threads'==4 {

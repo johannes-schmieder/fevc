@@ -24,6 +24,11 @@ For methodological details, see the {help fevc##reference:companion fevc paper}.
 {help fevc##centering:Outcome centering} |
 {help fevc##advanced:Advanced options} | {help fevc##examples:More examples}
 
+{pstd}
+Requires Stata 15 or newer (through Stata 19).
+On Stata 15, large native projection matrices may require increasing
+{cmd:set matsize} within the limits of your Stata edition.
+
 {marker quickstart}
 {title:Start with an example}
 

@@ -2,7 +2,7 @@
 *! execution diagnostics into e().
 
 program define fevc__rust_post_exact_v7, eclass sortpreserve
-    version 18.0
+    version 15.0
     args handle depvar frequency target touse nscope ncomplete nstayers ///
         nstayerrows probesrequested batchnumeric seedrequested         ///
         tolerancerequested maxiterrequested memorygib algorithmrequested ///

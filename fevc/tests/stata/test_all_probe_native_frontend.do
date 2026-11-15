@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 args package_dir
@@ -6,7 +6,7 @@ if `"`package_dir'"'=="" exit 198
 adopath ++ `"`package_dir'"'
 fevc_rust probe
 assert r(numerical_api)==2
-version 18.0
+version 15.0
 clear
 set obs 120
 gen long worker=ceil(_n/6)

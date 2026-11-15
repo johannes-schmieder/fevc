@@ -2,7 +2,7 @@
 *! sample exclusions after successful estimation.
 
 program define fevc__stayer_population_post, eclass
-    version 18.0
+    version 15.0
     if "${VCKSS_ROUTE_STAYERS_REQUESTED}"=="" | "`e(cmd)'"!="fevc" exit
     if inlist("`e(status)'","WITHHELD","ALPHA","RELEASED") exit
     ereturn local stayers "${VCKSS_ROUTE_STAYERS_REQUESTED}"

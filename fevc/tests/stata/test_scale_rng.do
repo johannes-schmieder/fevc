@@ -1,4 +1,4 @@
-version 18.0
+version 15.0
 clear all
 set more off
 set varabbrev off
@@ -18,7 +18,7 @@ quietly do `"`pkgroot'/fevc_rng.mata"'
 mata:
 assert(vckss_rng__api_level() == 4)
 assert(vckss_rng__build_id() ==
-    "vckss-rng-numeric-ranks-v4")
+    "vckss-rng-numeric-ranks-v5-stata15")
 assert(vckss_rng__invariant_version() == "KSS-RNG-K1-INVARIANT-V1")
 assert(vckss_rng__k1_recommendation() == "per_domain_stream_cursor")
 assert(vckss_rng__max_binomial_trials() == 100000000000)
@@ -26,7 +26,11 @@ assert(vckss_rng__maximum_exact_integer() == 2^53-1)
 assert(vckss_rng__domain_stream("leverage") == 1)
 assert(vckss_rng__domain_stream("target") == 2)
 runtime = st_numscalar("c(stata_version)")
-if (runtime >= 18 & runtime < 19) {
+if (runtime >= 15 & runtime < 18) {
+    assert(vckss_rng__production_contract() ==
+        "KSS-MT64S-DOMAIN-CURSOR-V3-STATA"+strofreal(floor(runtime),"%2.0f"))
+}
+else if (runtime >= 18 & runtime < 19) {
     assert(vckss_rng__production_contract() ==
         "KSS-MT64S-DOMAIN-CURSOR-V3-STATA18")
 }

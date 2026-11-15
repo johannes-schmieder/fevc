@@ -4,6 +4,8 @@
 worker–firm fixed-effects models. This guide describes version `0.6.0`.
 Start with [installation](../INSTALLATION.md) and `help fevc`.
 
+Requires Stata 15 or newer (through Stata 19).
+
 ## Basic use
 
 ```stata
