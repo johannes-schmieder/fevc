@@ -95,8 +95,7 @@ def require_windows_cmg_qualification(repo: Path, manifest_path: Path, adoption:
             campaign.get("performance_driver_sha256") != portable.sha256(driver.read_bytes())):
         raise ValueError("Windows CMG frozen protocol mismatch")
     checks = [contract.strict_json(evidence(item)) for item in index["checks"]]
-    result = contract.aggregate(checks, require_information=
-        "informational_default_se" in contract.strict_json(protocol.read_bytes()))
+    result = contract.aggregate(checks)
     if result["status"] != "PASS" or result["campaign_sha256"] != portable.sha256(campaign_data):
         raise ValueError("Windows CMG scientific/performance qualification failed")
     binary = next(row for row in adoption["binaries"] if row["name"] == "fevc_rust_windows_x64.plugin")

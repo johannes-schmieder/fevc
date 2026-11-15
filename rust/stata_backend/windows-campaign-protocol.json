@@ -1,6 +1,6 @@
 {
   "schema": "FEVC-WINDOWS-CMG-PROTOCOL-V1",
-  "status": "REGISTERED_060_SAME_ROUTE_POINT_COMPARISON_WITH_INFORMATIONAL_DEFAULT_SE",
+  "status": "FROZEN_UNCHANGED_COMPARISON_FOR_RESULT_EXPORT_FIX",
   "platform": {
     "os": "Windows Server 2022",
     "arch": "x86_64",
@@ -10,12 +10,12 @@
       2
     ]
   },
-  "scope": "Same four corrected point targets, retained sample, deletion, nuisance, weights and projection within paired requests, all with inference(none). Both arms use supported full-CMG routes. Candidate default standard-error timing is recorded separately without a paired performance claim.",
+  "scope": "Same four corrected targets, retained sample, deletion, nuisance, weights, projections and component inference within each paired request. Compare accepted 0.5.1 Windows automatic/diagonal routes with full shared CMG. Weighted observation deletion uses the mover population supported by both versions.",
   "candidate_cmg": "e5613e81fb3b03c78de98658b372646fa802aabb",
   "candidate_levels": 128,
-  "incumbent_package_commit": "3744dd68e808c8a7b7b5cede9cf364c27da3d22d",
-  "incumbent_build_commit": "ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4",
-  "incumbent_windows_sha256": "2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8",
+  "incumbent_package_commit": "117d09c5dc88165e785bc4c2a5132abc52f4bc32",
+  "incumbent_build_commit": "94d94999be54e9a2309497d5fbe9899e2822cd51",
+  "incumbent_windows_sha256": "abf780007376acd933a3621b5c642fed0bc7d358701c53a51e26f45406a54f19",
   "driver": "fevc/tests/stata/test_windows_cmg_performance.do",
   "groups": [
     "smoke",
@@ -130,10 +130,12 @@
     },
     {
       "case": 5,
-      "name": "pooled weighted point estimates",
+      "name": "pooled structured-common highrank inference",
       "rows": 512,
       "probes": 200,
-      "tolerance": 1e-10
+      "tolerance": 1e-10,
+      "inference_simulations": 100,
+      "inference_seed": 1791
     }
   ],
   "acceptance": {
@@ -158,34 +160,26 @@
     },
     "incumbent": {
       "case_0": "engine(auto) preconditioner(auto)",
-      "cases_1_to_5": "engine(generic) preconditioner(cmg)"
+      "cases_1_to_5": "engine(generic) preconditioner(diagonal)"
     },
     "batch": "auto",
-    "weighted_observation_population": "movers in both arms; identical generated data and retained sample",
-    "inference": "none in every paired case and arm"
+    "weighted_observation_population": "movers in both arms; identical generated data and retained sample"
   },
-  "informational_default_se": {
-    "arm": "candidate",
-    "case": 5,
-    "native_workers": [
-      1,
-      2
-    ],
-    "request": "same case-5 request with inference(auto), using default inference options",
-    "warmup_commands_per_cell": 1,
-    "timed_complete_commands_per_cell": 1,
-    "blocks": 6,
-    "total_timed_commands": 12,
-    "paired": false,
-    "performance_acceptance_threshold": null,
-    "receipt_schema": "FEVC-WINDOWS-CHECKS-V5",
-    "receipt_field": "informational_measurements",
-    "row_columns": [
-      "case",
-      "native_workers",
-      "elapsed_ms",
-      "retained_N"
-    ]
+  "previous_failed_registration": {
+    "campaign_sha256": "c1a8df4963a21ff8d7a743d4d14afcf5936e9092048dd5fe12054362d9c8de60",
+    "run_id": "win-20261107T133151Z-6316cc50",
+    "result": "First incumbent block failed with r(198); no candidate performance run started. Failed-run collection returns no artifacts, so partial measurements are unavailable and are not passing evidence.",
+    "diagnosis": "Local no-timing reproduction with Windows platform selection rejects case 1 forced generic CMG with UNSUPPORTED_FEATURE [engine_full_cmg_receipt]. All 12 corrected automatic/diagonal common-support requests pass the local diagnostic.",
+    "correction": "Use the accepted incumbent diagonal route for explicit generic comparisons. The weighted-observation performance request is mover-only in both arms; broader candidate observation/both support remains covered by native runtime qualification.",
+    "unchanged": "Candidate/CMG/source/binary, generated data, seeds, probes, worker counts, schedule, warmups, repetitions and acceptance thresholds."
   },
-  "previous_release_evidence": "native/windows-cmg-20261107/; retained unchanged, including failed attempts"
+  "previous_performance_failure": {
+    "campaign_sha256": "2edb4fc899ef6e13d8fe0e4f3717673d5ceee297f7c5dff30d5efabaf4bfabe7",
+    "production_commit": "7cc07a5658532e8dd5cc8716fcaa81aeabc3ec20",
+    "status": "FAIL",
+    "scientific_cells_passed": 12,
+    "timing_cells_failed": 6,
+    "evidence": "native/windows-cmg-20261107/confirmation-result.json",
+    "change": "Reuse the immutable validated Stata result across full-CMG auxiliary receipt getters. New exact candidate and artifacts required; every comparison input and acceptance rule stays fixed."
+  }
 }

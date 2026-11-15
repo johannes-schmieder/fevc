@@ -48,45 +48,12 @@ if ($group -eq 'performance') {
     }
     if ($measurements.Count -ne 12) { throw 'Incomplete measurements' }
 }
-$information = @()
-$informationPath = Join-Path $root 'windows-performance-info.csv'
-if ($group -eq 'performance' -and $identity.performance_arm -eq 'candidate') {
-    $item = Get-Item -LiteralPath $informationPath
-    if ($item.Length -gt 1024 -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Invalid informational file' }
-    $seenWorkers = @{}
-    foreach ($line in Get-Content -LiteralPath $informationPath) {
-        $fields = $line.Split(',')
-        if ($fields.Count -ne 4) { throw 'Invalid informational width' }
-        $row = @()
-        foreach ($field in $fields) {
-            $value = [double]::Parse($field, [Globalization.CultureInfo]::InvariantCulture)
-            if ([double]::IsNaN($value) -or [double]::IsInfinity($value)) { throw 'Nonfinite informational value' }
-            $row += $value
-        }
-        if ($row[0] -ne 5 -or $row[1] -notin @(1,2) -or $row[2] -lt 0 -or $row[2] -gt 900000 -or
-            $row[3] -le 0 -or $row[3] -ne [Math]::Truncate($row[3])) { throw 'Invalid informational value' }
-        $row[0] = [int]$row[0]; $row[1] = [int]$row[1]
-        if ($seenWorkers.ContainsKey($row[1])) { throw 'Duplicate informational worker' }
-        $seenWorkers[$row[1]] = $true
-        $pairedCount = 0
-        $pairedN = -1
-        foreach ($pairedRow in $measurements) {
-            if ($pairedRow[0] -eq 5 -and $pairedRow[1] -eq $row[1]) {
-                $pairedCount++
-                $pairedN = $pairedRow[13]
-            }
-        }
-        if ($pairedCount -ne 1 -or $pairedN -ne $row[3]) { throw 'Informational retained sample mismatch' }
-        $information += ,$row
-    }
-    if ($information.Count -ne 2) { throw 'Incomplete informational measurements' }
-} elseif (Test-Path -LiteralPath $informationPath) { throw 'Unexpected informational file' }
-$receipt = @{schema='FEVC-WINDOWS-CHECKS-V5'; gates=$gates; stata_version='19'; stata_flavor='MP';
+$receipt = @{schema='FEVC-WINDOWS-CHECKS-V4'; gates=$gates; stata_version='19'; stata_flavor='MP';
   runtime_profile=$build.runtime_profile; production_commit=$identity.production_commit;
   harness_sha256=$identity.harness_sha256; binary_sha256=$installedHash; status='PASS';
   qualification_group=$group; campaign_sha256=$identity.campaign_sha256;
   performance_arm=$identity.performance_arm; performance_block=$identity.performance_block;
-  completed_tests=$expected; measurements=$measurements; informational_measurements=$information}
+  completed_tests=$expected; measurements=$measurements}
 $json = $receipt | ConvertTo-Json -Depth 8 -Compress
 if ([Text.Encoding]::ASCII.GetByteCount($json) -gt 8190) { throw 'Project receipt exceeds collector bound' }
 $json | Set-Content -Encoding ASCII (Join-Path $root 'windows-project-checks.json')

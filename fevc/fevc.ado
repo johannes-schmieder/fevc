@@ -4805,7 +4805,12 @@ program define _vckss_impl, eclass sortpreserve
                     "`probeorder'"=="" & !`wallseconds_supplied'))) )
         // Already-supported explicit diagonal requests must reach the new
         // planned executor too; keep the legacy ABI available to direct callers.
-        if `rust_execution_eligible' & `rust_generic_supported' local rust_planned_generic_supported = 1
+        // Windows keeps the legacy diagonal executor inside this helper;
+        // an already-supported tuple must still carry its requested inference.
+        // Do not broaden native eligibility or change the point-only path.
+        if `rust_generic_supported' & ///
+            (`rust_execution_eligible' | `scalable_component_requested') ///
+            local rust_planned_generic_supported = 1
         if `rust_exec_resolve_ok' local rust_planned_generic_supported = 1
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///

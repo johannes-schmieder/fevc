@@ -92,23 +92,29 @@ forvalues cell=0/5 {
             generate double tw=fw*(1+mod(_n,7)/10)
             generate double x=sin(_n/7)+mod(_n,5)/3
             local controls x [fw=fw]
-            local extra stayers(both) nuisance(fixedoffset) targetweight(tw) centering(none)
+            local extra stayers(both) nuisance(fixedoffset) targetweight(tw) inference(highrank) inferencemodel(structured_common) inferencesimulations(100) inferenceseed(1791) centering(none)
             local probes 200
         }
-        // Both releases provide this CMG route. Paired timings keep the
-        // common point-estimate request; default SE timings follow separately.
+        // Windows 0.5.1 does not provide the full-CMG generic route. Compare
+        // the same estimator request through its supported diagonal solver.
         local route engine(generic) preconditioner(cmg)
+        if "`arm'"=="incumbent" local route engine(generic) preconditioner(diagonal)
         if `cell'==0 local route engine(auto) preconditioner(auto)
-        local options worker(worker) firm(firm) deletion(`deletion') backend(rust) rng(counter_v1) algorithm(jla) `route' batch(auto) probes(`probes') seed(`seed') tolerance(`tolerance') `extra' inference(none) nodisplay
+        local options worker(worker) firm(firm) deletion(`deletion') backend(rust) rng(counter_v1) algorithm(jla) `route' batch(auto) probes(`probes') seed(`seed') tolerance(`tolerance') `extra' nodisplay
         quietly fevc y `controls', `options'
         timer clear 97
         timer on 97
         quietly fevc y `controls', `options'
         timer off 97
-        assert "`e(cmg_backend)'"=="CMG_FULL_V2"
-        assert "`e(cmg_source_commit)'"=="e5613e81fb3b03c78de98658b372646fa802aabb"
-        assert e(cmg_threads_requested)==`threads' & e(cmg_threads_used)==`threads'
-        if "`arm'"=="incumbent" assert "`e(version)'"=="0.5.2"
+        if "`arm'"=="candidate" {
+            assert "`e(cmg_backend)'"=="CMG_FULL_V2"
+            assert "`e(cmg_source_commit)'"=="e5613e81fb3b03c78de98658b372646fa802aabb"
+            assert e(cmg_threads_requested)==`threads' & e(cmg_threads_used)==`threads'
+        }
+        else {
+            assert "`e(version)'"=="0.5.1"
+            if "`c(os)'"=="Windows" assert "`e(cmg_backend)'"==""
+        }
         matrix `result'=e(kss)
         matrix `mcse'=e(numerical_mcse)
         assert rowsof(`result')==1 & colsof(`result')==4
@@ -135,31 +141,4 @@ forvalues cell=0/5 {
     }
 }
 file close `output'
-// Run informational default-SE timings after all paired measurements, so
-// they do not alter the paired warmup/measurement sequence. Case 5 remains
-// in memory and the final options carry its identical point-estimate request.
-if "`arm'"=="candidate" {
-    tempname information
-    file open `information' using "windows-performance-info.csv", write text
-    local information_options : subinstr local options "inference(none)" "inference(auto)", all
-    foreach threads in 1 2 {
-        set processors `threads'
-        quietly fevc y `controls', `information_options'
-        timer clear 97
-        timer on 97
-        quietly fevc y `controls', `information_options'
-        timer off 97
-        assert "`e(inference_model)'"=="repeat_measurement"
-        assert e(inference_auto)==1
-        confirm matrix e(inference_intervals)
-        assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
-        local information_N=e(N_retained)
-        quietly timer list 97
-        local information_ms=1000*r(t97)
-        file write `information' "5," (`threads') "," %21.17g (`information_ms') "," (`information_N') _n
-        quietly fevc_rust snapshot
-        assert r(state)==0 & r(handle)==0
-    }
-    file close `information'
-}
 display as result "PASS test_windows_cmg_performance.do"

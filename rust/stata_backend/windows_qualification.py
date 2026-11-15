@@ -102,33 +102,6 @@ def validate_measurements(rows, group):
             raise ValueError("scientific measurement gate")
 
 
-def validate_information(rows, checks):
-    required = checks["qualification_group"] == "performance" and checks["performance_arm"] == "candidate"
-    if not required:
-        if rows != []:
-            raise ValueError("unexpected informational measurements")
-        return
-    if not isinstance(rows, list) or len(rows) != 2:
-        raise ValueError("informational measurement count")
-    paired = {(r[0], r[1]): r for r in checks["measurements"]}
-    seen = set()
-    for row in rows:
-        if not isinstance(row, list) or len(row) != 4:
-            raise ValueError("informational measurement width")
-        case, workers, elapsed, retained = row
-        if type(case) is not int or case != 5 or type(workers) is not int or workers not in (1, 2):
-            raise ValueError("informational measurement cell")
-        if workers in seen:
-            raise ValueError("duplicate informational measurement")
-        seen.add(workers)
-        if any(type(x) not in (int, float) or not math.isfinite(x) for x in row):
-            raise ValueError("nonfinite informational measurement")
-        if not 0 <= elapsed <= 900000 or retained <= 0 or retained != int(retained):
-            raise ValueError("informational measurement value")
-        if retained != paired[(case, workers)][13]:
-            raise ValueError("informational retained sample")
-
-
 def validate_checks(checks, identity, binary_sha256, rust_scope):
     group = validate_selection(identity)
     if not hex_value(identity.get("production_commit"), 40) or not hex_value(identity.get("harness_sha256")) or not hex_value(binary_sha256):
@@ -138,17 +111,13 @@ def validate_checks(checks, identity, binary_sha256, rust_scope):
         scopes.add("PRIVATE_BUILD_ONLY_SMOKE")
     if rust_scope not in scopes:
         raise ValueError("Rust qualification scope")
-    if not isinstance(checks, dict):
-        raise ValueError("checks schema")
-    information = checks.get("schema") == "FEVC-WINDOWS-CHECKS-V5"
-    expected_keys = CHECK_KEYS | {"informational_measurements"} if information else CHECK_KEYS
-    if set(checks) != expected_keys:
+    if not isinstance(checks, dict) or set(checks) != CHECK_KEYS:
         raise ValueError("checks schema")
     completed = list(COMMON + GROUPS[group])
     expected_gates = {name: "PASS" for name in completed}
     expected_gates.update({name: rust_scope for name in ("rust_workspace", "rust_backend")})
     expected = {
-        "schema": "FEVC-WINDOWS-CHECKS-V5" if information else "FEVC-WINDOWS-CHECKS-V4", "gates": expected_gates,
+        "schema": "FEVC-WINDOWS-CHECKS-V4", "gates": expected_gates,
         "stata_version": "19", "stata_flavor": "MP",
         "runtime_profile": identity["runtime_profile"],
         "production_commit": identity["production_commit"],
@@ -163,19 +132,14 @@ def validate_checks(checks, identity, binary_sha256, rust_scope):
     if any(checks[key] != value for key, value in expected.items()):
         raise ValueError("checks coverage/identity")
     validate_measurements(checks["measurements"], group)
-    if information:
-        validate_information(checks["informational_measurements"], checks)
     return checks
 
 
-def aggregate(records, *, require_information=False):
+def aggregate(records):
     if not records:
         raise ValueError("missing qualification")
     for record in records:
         validate_checks(record, record, record["binary_sha256"], record["gates"]["rust_workspace"])
-    schemas = {record["schema"] for record in records}
-    if len(schemas) != 1 or (require_information and schemas != {"FEVC-WINDOWS-CHECKS-V5"}):
-        raise ValueError("campaign receipt schema")
     if len({record["harness_sha256"] for record in records}) != 1:
         raise ValueError("mixed harnesses")
     campaigns = {record["campaign_sha256"] for record in records}
@@ -227,23 +191,10 @@ def aggregate(records, *, require_information=False):
                           "incumbent_ms": [pair[0][2] for pair in pairs],
                           "candidate_ms": [pair[1][2] for pair in pairs]})
     passed = all(cell["performance"] == cell["science"] == "PASS" for cell in cells)
-    result = {"status": "PASS" if passed else "FAIL", "groups": len(records),
+    return {"status": "PASS" if passed else "FAIL", "groups": len(records),
             "campaign_sha256": campaigns.pop(), "cells": cells,
             "comparison": "six fixed paired blocks; common-draw registered scientific bound; complete-command medians",
             "retries_or_exclusions": 0}
-    if schemas == {"FEVC-WINDOWS-CHECKS-V5"}:
-        selected = {r["performance_block"]: r for r in records
-                    if r["qualification_group"] == "performance" and r["performance_arm"] == "candidate"}
-        info = []
-        for workers in (1, 2):
-            rows = [next(row for row in selected[block]["informational_measurements"] if row[1] == workers)
-                    for block in range(6)]
-            info.append({"case": 5, "workers": workers,
-                         "candidate_ms": [row[2] for row in rows],
-                         "candidate_median_ms": median(row[2] for row in rows),
-                         "retained_N": [row[3] for row in rows], "paired": False})
-        result["informational_default_se"] = info
-    return result
 
 
 def main():

@@ -1,3 +1,34 @@
+# 0.6.0 Windows dispatch repair and new common build — November 15, 2026
+
+The owner authorized investigation and fixes after the first Windows campaign
+failed its observation-component regression. Explicit generic JLA with a diagonal
+preconditioner on Windows reached the old point-only helper and dropped requested
+repeat-measurement inference. The narrow dispatcher fix admits only an already
+supported generic tuple to the inference-capable helper, retaining the Windows
+legacy diagonal executor, backend and solver. Point-only requests are unchanged.
+The strict regression and added automatic-inference check pass in a bounded
+Windows development run; this is not qualification. The failed confirmation and
+all diagnostic attempts remain preserved.
+
+The production change supersedes build `e9c5f969`: rebuild and qualify all five
+binaries from one new common commit. That earlier build passed macOS, Linux and
+Stata 15.1 full/installed/default checks. The accepted private Windows runner
+supports the new 149-export/checks-V5 boundary. Its unchanged 0.6.0 qualification
+protocol and harness are preserved at `60e75328` as an exact overlay, to be adopted
+with the new binaries and manifest. Until adoption the checkout retains the
+0.5.2 payload's matching release-harness files, so source tests validate the
+actually distributed artifacts. No threshold, seed, group or failure is changed.
+
+Next: pass source gates, freeze the common build, rebuild/requalify macOS, SCC
+Linux and Stata 15, then run a newly registered 18-group Windows campaign against
+0.5.2. Make one adoption commit including the qualified binaries, preserved
+qualification harness, manifest, documentation and repointed tests; check/build
+release assets, push/tag/publish, verify HTTP installs and close PR #8. Stop on
+required authentication or a new formal qualification failure. Publication and
+code fixes are already authorized.
+
+## Previous checkpoint
+
 # 0.6.0 Stata 15 compatibility and release — November 15, 2026
 
 The owner authorized the complete release, private Windows runner/protocol

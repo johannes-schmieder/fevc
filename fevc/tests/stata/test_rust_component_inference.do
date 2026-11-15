@@ -314,6 +314,25 @@ matrix `compat_assert_V' = e(V)
 assert mreldif(q0_V,`compat_assert_V')<1e-8
 matrix drop `compat_assert_V'
 
+// Automatic inference must also reach the attachment on the explicit
+// diagonal tuple, including Windows' legacy executor. Its point estimate
+// and selected backend/solver must agree with the strict request above.
+quietly fevc outcome control, worker(worker) firm(firm)             ///
+    deletion(observation) algorithm(jla) engine(generic) backend(rust) ///
+    rng(counter_v1) preconditioner(diagonal) batch(8) probes(160)   ///
+    tolerance(1e-11) centering(none) inference(auto)                ///
+    inferenceseed(24681357) nodisplay
+assert inlist(`"`e(status)'"',"FEVC_REPEAT_MEASUREMENT_SE", ///
+    "FEVC_REPEAT_MEASUREMENT_Q1")
+assert e(inference_computed_targets)==4
+assert `"`e(inference_model)'"' == "repeat_measurement"
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(engine_selected)'"' == "generic"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
+assert `"`e(algorithm)'"' == "jla"
+assert mreldif(q0_results,e(results))<1e-8
+confirm matrix e(component_inference)
+
 // A null outcome must be withheld atomically rather than regularized or
 // replaced by another estimator/reference family.
 capture noisily fevc outcome_null control, worker(worker) firm(firm) ///

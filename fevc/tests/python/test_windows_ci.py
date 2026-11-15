@@ -42,8 +42,7 @@ def test_windows_smoke_keeps_full_profile_and_distinguishes_qualification():
     assert '"projection_mean"' in groups and '"point_mean"' in groups
     assert "windows-completed-tests.txt" in receipt
     assert "Incomplete or duplicate tests" in receipt
-    assert "FEVC-WINDOWS-CHECKS-V5" in receipt
-    assert "informational_measurements" in receipt
+    assert "FEVC-WINDOWS-CHECKS-V4" in receipt
     assert "8190" in receipt
 
 
