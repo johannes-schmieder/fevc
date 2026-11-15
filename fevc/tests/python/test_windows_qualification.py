@@ -153,3 +153,52 @@ def test_one_millisecond_allowance_is_a_complete_command_limit():
             for row in value["measurements"]:
                 row[2] = 11.0
     assert contract.aggregate(rows)["status"] == "PASS"
+
+
+def information_campaign():
+    rows = campaign()
+    for row in rows:
+        row["schema"] = "FEVC-WINDOWS-CHECKS-V5"
+        row["informational_measurements"] = ([[5, 1, 20., 200], [5, 2, 15., 200]]
+            if row["qualification_group"] == "performance" and row["performance_arm"] == "candidate" else [])
+    return rows
+
+
+def test_information_is_complete_bounded_and_separate_from_paired_acceptance():
+    rows = information_campaign()
+    before = contract.aggregate(campaign())
+    after = contract.aggregate(rows, require_information=True)
+    assert after["status"] == "PASS" and after["cells"] == before["cells"]
+    assert after["groups"] == 18 and len(after["informational_default_se"]) == 2
+    assert all(len(r["candidate_ms"]) == 6 and not r["paired"] for r in after["informational_default_se"])
+    for row in rows:
+        if row["informational_measurements"]:
+            row["informational_measurements"][0][2] = 899999
+    assert contract.aggregate(rows, require_information=True)["cells"] == before["cells"]
+    with pytest.raises(ValueError):
+        contract.aggregate(campaign(), require_information=True)
+    rows[0] = campaign()[0]
+    with pytest.raises(ValueError):
+        contract.aggregate(rows)
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda r: r.pop(), lambda r: r.append(r[0]), lambda r: r.__setitem__(1,r[0]),
+    lambda r: r[0].__setitem__(0,0), lambda r: r[0].__setitem__(1,True),
+    lambda r: r[0].__setitem__(2,float("inf")), lambda r: r[0].__setitem__(2,-1),
+    lambda r: r[0].__setitem__(2,900001), lambda r: r[0].__setitem__(3,201),
+    lambda r: r[0].__setitem__(3,200.5), lambda r: r[0].append("unbounded"),
+])
+def test_information_rejects_incomplete_invalid_duplicate_or_mismatched_rows(mutation):
+    row = next(r for r in information_campaign() if r["informational_measurements"])
+    mutation(row["informational_measurements"])
+    with pytest.raises(ValueError):
+        validate(row)
+
+
+def test_information_is_for_candidate_performance_only():
+    for row in information_campaign():
+        if not row["informational_measurements"]:
+            row["informational_measurements"] = [[5,1,20.,200],[5,2,15.,200]]
+            with pytest.raises(ValueError):
+                validate(row)

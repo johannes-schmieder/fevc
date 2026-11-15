@@ -81,7 +81,15 @@ foreach ($line in $environment) {
         [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
     }
 }
-$audit = & ./rust/stata_backend/audit_windows_plugin.ps1 -Binary $candidate
+$incumbent052 = $false
+if ($qualificationGroup -eq 'performance' -and $identity.performance_arm -eq 'incumbent') {
+    if ($identity.production_commit -ne 'ec5e1e0ec4428d7a4410c7ce4d2709df006a8da4' -or
+        $identity.candidate_sha256 -ne '2279846f19eaa065f6e8cc93002d058620773cc21e6b0c8e8b476b050dcf08c8') {
+        throw 'Comparison incumbent identity mismatch'
+    }
+    $incumbent052 = $true
+}
+$audit = & ./rust/stata_backend/audit_windows_plugin.ps1 -Binary $candidate -Incumbent052:$incumbent052
 if (-not $providedCandidate -and $runtimeProfile -eq 'full') {
     foreach ($test in @(@('rust_workspace','rust/Cargo.toml'), @('rust_backend','rust/stata_backend/Cargo.toml'))) {
         $test[0] | Set-Content -Encoding ASCII (Join-Path $projectRoot 'windows-ci.stage')

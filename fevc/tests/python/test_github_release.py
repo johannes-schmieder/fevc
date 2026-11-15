@@ -173,7 +173,7 @@ def windows_cmg_adopted(adopted):
         return {'path': name, 'sha256': portable.sha256(data)}
 
     row = save('campaign.json', campaign)
-    checks = fixture.campaign()
+    checks = fixture.information_campaign()
     for record in checks:
         record['campaign_sha256'] = row['sha256']
         if record['performance_arm'] == 'candidate':
@@ -193,7 +193,7 @@ def test_new_release_requires_complete_windows_cmg_evidence(adopted):
         release.require_windows_cmg_qualification(root, path, adoption)
 
 
-@pytest.mark.parametrize('change', ['missing', 'failed', 'binary', 'source', 'hash', 'cmg', 'protocol', 'development'])
+@pytest.mark.parametrize('change', ['missing', 'failed', 'binary', 'source', 'hash', 'cmg', 'protocol', 'development', 'information'])
 def test_new_release_rejects_unqualified_campaign(adopted, change):
     root, path, adoption = windows_cmg_adopted(adopted)
     index_path = path.parent / adoption['windows_cmg_campaign']['path']
@@ -206,6 +206,14 @@ def test_new_release_rejects_unqualified_campaign(adopted, change):
             check_path = path.parent / check_row['path']
             value = json.loads(check_path.read_bytes())
             value['measurements'][0][2] = 100000
+            check_path.write_text(json.dumps(value))
+            check_row['sha256'] = portable.sha256(check_path.read_bytes())
+    elif change == 'information':
+        for check_row in index['checks']:
+            check_path = path.parent / check_row['path']
+            value = json.loads(check_path.read_bytes())
+            value['schema'] = 'FEVC-WINDOWS-CHECKS-V4'
+            value.pop('informational_measurements')
             check_path.write_text(json.dumps(value))
             check_row['sha256'] = portable.sha256(check_path.read_bytes())
     elif change in ('binary', 'source'):
