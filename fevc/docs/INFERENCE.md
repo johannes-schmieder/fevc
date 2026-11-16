@@ -63,7 +63,10 @@ variance per set, whatever those variances are. With the fitted model it is
 as good as that model; estimated effects enter the profile, and centering
 is treated as described [below](#centering-routes-and-the-reported-covariance). Observation
 deletion needs joint nuisance and, natively, unit frequencies. The
-derivation is in a technical note maintained with the companion paper; the
+derivation is in the method note of November 13, 2026 and its control-term
+addendum of November 14, with the prototype's code and evidence, in
+[`fevc/docs/repeat_measurement/`](repeat_measurement/README.md), whose
+README lists where the command differs from the note; the
 simulation harness is `fevc/tools/default_interval/` and its evidence
 `fevc/docs/default_interval/`.
 

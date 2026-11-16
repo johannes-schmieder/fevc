@@ -50,6 +50,11 @@ status are in [native provenance](../../native/README.md).
 - [Accepted Mean component inference plan](MEAN_COMPONENT_INFERENCE_PLAN.md):
   implementation, independent algebra, bounded sampling assessment, companion
   technical note and exact-source platform qualification.
+- [Repeat-measurement standard errors: method note](repeat_measurement/README.md):
+  the note of November 13, 2026 that derived the method of
+  [INFERENCE.md](INFERENCE.md) for a prototype (LaTeX source and PDF), its
+  control-term addendum of November 14, the prototype's code, aggregate
+  results and development log, and where the command differs from the note.
 - [Standard errors: technical supplement](standard_errors/standard_errors.tex): the
   leave-out residual method, removed before release, whose pass (pseudo-noise
   trace, control term, cost and memory accounting) the repeat-measurement
