@@ -1,0 +1,770 @@
+q1.reps = 1,000
+q1.dev.draws = 200
+q1.acc.cells = 25
+q1.acc.n = 75
+q1.acc.min = 0.941
+q1.acc.max = 1.000
+q1.acc.mean = 0.978
+q1.normal.worst = 0.487
+q1.normal.acc.max = 0.964
+q1.acc.below93 = 0
+q1.acc.above97 = 55
+q1.sum.min = 0.936
+q1.sum.max = 0.968
+q1.sum.kappa.max = 0.003
+q1.fail.reps = 0
+q1.draws.total = 27,000
+q1.noint.acc = 0
+q1.mcse = 0.007
+q1.design.rows = 40,700
+q1.design.movers = 6,421 to 6,571
+q1.design.w2bridge = 96\% to 99\%
+q1.maxw2.none = 0.157 to 0.167
+q1.kappa.none.min = 0.04
+q1.kappa.none.max = 0.28
+q1.normal.none.min = 0.939
+q1.normal.none.max = 0.964
+q1.normal.none.mean = 0.948
+q1.q1.none.min = 0.941
+q1.q1.none.max = 0.970
+q1.q1.none.mean = 0.958
+q1.lo.none.min = 0.941
+q1.lo.none.max = 0.967
+q1.lo.none.mean = 0.955
+q1.fit.none.min = 0.940
+q1.fit.none.max = 0.970
+q1.fit.none.mean = 0.956
+q1.true.none.min = 0.945
+q1.true.none.max = 0.963
+q1.true.none.mean = 0.956
+q1.or.none.min = 0.948
+q1.or.none.max = 0.971
+q1.or.none.mean = 0.961
+q1.len.none.min = 1.02
+q1.len.none.max = 1.13
+q1.len.none.mean = 1.04
+q1.lentrue.none.min = 0.98
+q1.lentrue.none.max = 1.04
+q1.lentrue.none.mean = 1.01
+q1.lenlo.none.mean = 1.01
+q1.lenlo.none.max = 1.04
+q1.fitlarger.none.min = 58\%
+q1.fitlarger.none.max = 66\%
+q1.lononpos.none.max = 0.1\%
+q1.lonone.none.max = 0.1\%
+q1.noint.none.max = 0.0\%
+q1.steps.none = 17
+q1.cal.bb.none.min = 0.95
+q1.cal.bb.none.max = 1.01
+q1.cal.bbfit.none.min = 1.00
+q1.cal.bbfit.none.max = 1.07
+q1.cal.rr.none.min = 0.96
+q1.cal.rr.none.max = 1.01
+q1.cal.br.none.min = -0.00
+q1.cal.br.none.max = 0.00
+q1.cal.bbcv.none.min = 0.66
+q1.cal.bbcv.none.max = 0.79
+q1.cal.b1sd.none.min = 0.09
+q1.cal.b1sd.none.max = 0.70
+q1.sumnormal.none.min = 0.949
+q1.sumnormal.none.max = 0.954
+q1.maxw2.b100 = 0.010
+q1.kappa.b100.min = 0.29
+q1.kappa.b100.max = 1.42
+q1.normal.b100.min = 0.708
+q1.normal.b100.max = 0.956
+q1.normal.b100.mean = 0.914
+q1.q1.b100.min = 0.951
+q1.q1.b100.max = 0.986
+q1.q1.b100.mean = 0.972
+q1.lo.b100.min = 0.944
+q1.lo.b100.max = 0.984
+q1.lo.b100.mean = 0.967
+q1.fit.b100.min = 0.928
+q1.fit.b100.max = 0.984
+q1.fit.b100.mean = 0.963
+q1.true.b100.min = 0.953
+q1.true.b100.max = 0.982
+q1.true.b100.mean = 0.969
+q1.or.b100.min = 0.951
+q1.or.b100.max = 0.991
+q1.or.b100.mean = 0.975
+q1.len.b100.min = 1.11
+q1.len.b100.max = 1.86
+q1.len.b100.mean = 1.27
+q1.lentrue.b100.min = 0.99
+q1.lentrue.b100.max = 1.05
+q1.lentrue.b100.mean = 1.02
+q1.lenlo.b100.mean = 1.03
+q1.lenlo.b100.max = 1.05
+q1.fitlarger.b100.min = 19\%
+q1.fitlarger.b100.max = 57\%
+q1.lononpos.b100.max = 0.0\%
+q1.lonone.b100.max = 0.0\%
+q1.noint.b100.max = 0.0\%
+q1.steps.b100 = 6 to 7
+q1.cal.bb.b100.min = 0.99
+q1.cal.bb.b100.max = 1.01
+q1.cal.bbfit.b100.min = 0.77
+q1.cal.bbfit.b100.max = 1.02
+q1.cal.rr.b100.min = 0.95
+q1.cal.rr.b100.max = 1.03
+q1.cal.br.b100.min = -0.03
+q1.cal.br.b100.max = 0.02
+q1.cal.bbcv.b100.min = 0.20
+q1.cal.bbcv.b100.max = 0.27
+q1.cal.b1sd.b100.min = 0.20
+q1.cal.b1sd.b100.max = 16.65
+q1.sumnormal.b100.min = 0.936
+q1.sumnormal.b100.max = 0.959
+q1.maxw2.b30 = 0.031
+q1.kappa.b30.min = 0.94
+q1.kappa.b30.max = 5.09
+q1.normal.b30.min = 0.528
+q1.normal.b30.max = 0.935
+q1.normal.b30.mean = 0.802
+q1.q1.b30.min = 0.973
+q1.q1.b30.max = 0.993
+q1.q1.b30.mean = 0.984
+q1.lo.b30.min = 0.935
+q1.lo.b30.max = 0.986
+q1.lo.b30.mean = 0.966
+q1.fit.b30.min = 0.956
+q1.fit.b30.max = 0.993
+q1.fit.b30.mean = 0.977
+q1.true.b30.min = 0.966
+q1.true.b30.max = 0.990
+q1.true.b30.mean = 0.981
+q1.or.b30.min = 0.974
+q1.or.b30.max = 0.994
+q1.or.b30.mean = 0.986
+q1.len.b30.min = 1.24
+q1.len.b30.max = 1.88
+q1.len.b30.mean = 1.52
+q1.lentrue.b30.min = 1.03
+q1.lentrue.b30.max = 1.12
+q1.lentrue.b30.mean = 1.08
+q1.lenlo.b30.mean = 1.09
+q1.lenlo.b30.max = 1.12
+q1.fitlarger.b30.min = 37\%
+q1.fitlarger.b30.max = 56\%
+q1.lononpos.b30.max = 0.5\%
+q1.lonone.b30.max = 0.5\%
+q1.noint.b30.max = 0.0\%
+q1.steps.b30 = 5
+q1.cal.bb.b30.min = 1.00
+q1.cal.bb.b30.max = 1.01
+q1.cal.bbfit.b30.min = 0.79
+q1.cal.bbfit.b30.max = 1.02
+q1.cal.rr.b30.min = 0.97
+q1.cal.rr.b30.max = 1.02
+q1.cal.br.b30.min = -0.02
+q1.cal.br.b30.max = 0.01
+q1.cal.bbcv.b30.min = 0.36
+q1.cal.bbcv.b30.max = 0.49
+q1.cal.b1sd.b30.min = 0.22
+q1.cal.b1sd.b30.max = 9.26
+q1.sumnormal.b30.min = 0.938
+q1.sumnormal.b30.max = 0.958
+q1.maxw2.b10 = 0.090
+q1.kappa.b10.min = 2.73
+q1.kappa.b10.max = 12
+q1.normal.b10.min = 0.487
+q1.normal.b10.max = 0.937
+q1.normal.b10.mean = 0.725
+q1.q1.b10.min = 0.970
+q1.q1.b10.max = 1.000
+q1.q1.b10.mean = 0.986
+q1.lo.b10.min = 0.795
+q1.lo.b10.max = 0.911
+q1.lo.b10.mean = 0.844
+q1.fit.b10.min = 0.935
+q1.fit.b10.max = 0.999
+q1.fit.b10.mean = 0.978
+q1.true.b10.min = 0.971
+q1.true.b10.max = 0.996
+q1.true.b10.mean = 0.984
+q1.or.b10.min = 0.980
+q1.or.b10.max = 1.000
+q1.or.b10.mean = 0.990
+q1.len.b10.min = 1.35
+q1.len.b10.max = 2.10
+q1.len.b10.mean = 1.73
+q1.lentrue.b10.min = 1.07
+q1.lentrue.b10.max = 1.32
+q1.lentrue.b10.mean = 1.19
+q1.lenlo.b10.mean = 1.13
+q1.lenlo.b10.max = 1.27
+q1.fitlarger.b10.min = 39\%
+q1.fitlarger.b10.max = 68\%
+q1.lononpos.b10.max = 13.6\%
+q1.lonone.b10.max = 13.6\%
+q1.noint.b10.max = 0.0\%
+q1.steps.b10 = 5
+q1.cal.bb.b10.min = 0.97
+q1.cal.bb.b10.max = 1.05
+q1.cal.bbfit.b10.min = 0.67
+q1.cal.bbfit.b10.max = 1.21
+q1.cal.rr.b10.min = 0.95
+q1.cal.rr.b10.max = 1.01
+q1.cal.br.b10.min = -0.01
+q1.cal.br.b10.max = 0.01
+q1.cal.bbcv.b10.min = 0.74
+q1.cal.bbcv.b10.max = 0.95
+q1.cal.b1sd.b10.min = 0.09
+q1.cal.b1sd.b10.max = 5.44
+q1.sumnormal.b10.min = 0.939
+q1.sumnormal.b10.max = 0.957
+q1.maxw2.skew = 0.031 to 0.090
+q1.kappa.skew.min = 1.10
+q1.kappa.skew.max = 9.90
+q1.normal.skew.min = 0.743
+q1.normal.skew.max = 0.923
+q1.normal.skew.mean = 0.842
+q1.q1.skew.min = 0.972
+q1.q1.skew.max = 0.995
+q1.q1.skew.mean = 0.983
+q1.lo.skew.min = 0.812
+q1.lo.skew.max = 0.967
+q1.lo.skew.mean = 0.889
+q1.fit.skew.min = 0.933
+q1.fit.skew.max = 0.988
+q1.fit.skew.mean = 0.959
+q1.true.skew.min = 0.977
+q1.true.skew.max = 0.993
+q1.true.skew.mean = 0.984
+q1.or.skew.min = 0.988
+q1.or.skew.max = 0.998
+q1.or.skew.mean = 0.993
+q1.len.skew.min = 1.32
+q1.len.skew.max = 2.01
+q1.len.skew.mean = 1.57
+q1.lentrue.skew.min = 1.04
+q1.lentrue.skew.max = 1.13
+q1.lentrue.skew.mean = 1.08
+q1.lenlo.skew.mean = 1.06
+q1.lenlo.skew.max = 1.11
+q1.fitlarger.skew.min = 41\%
+q1.fitlarger.skew.max = 49\%
+q1.lononpos.skew.max = 12.6\%
+q1.lonone.skew.max = 12.7\%
+q1.noint.skew.max = 0.0\%
+q1.steps.skew = 5
+q1.cal.bb.skew.min = 1.01
+q1.cal.bb.skew.max = 1.04
+q1.cal.bbfit.skew.min = 0.62
+q1.cal.bbfit.skew.max = 0.87
+q1.cal.rr.skew.min = 0.95
+q1.cal.rr.skew.max = 1.17
+q1.cal.br.skew.min = -0.02
+q1.cal.br.skew.max = 0.01
+q1.cal.bbcv.skew.min = 0.82
+q1.cal.bbcv.skew.max = 1.06
+q1.cal.b1sd.skew.min = 1.15
+q1.cal.b1sd.skew.max = 7.87
+q1.sumnormal.skew.min = 0.961
+q1.sumnormal.skew.max = 0.968
+q1.maxw2.bridge = 0.031 to 0.090
+q1.kappa.bridge.min = 2.77
+q1.kappa.bridge.max = 24
+q1.normal.bridge.min = 0.629
+q1.normal.bridge.max = 0.727
+q1.normal.bridge.mean = 0.682
+q1.q1.bridge.min = 0.950
+q1.q1.bridge.max = 0.991
+q1.q1.bridge.mean = 0.974
+q1.lo.bridge.min = 0.921
+q1.lo.bridge.max = 0.991
+q1.lo.bridge.mean = 0.960
+q1.fit.bridge.min = 0.803
+q1.fit.bridge.max = 0.925
+q1.fit.bridge.mean = 0.855
+q1.true.bridge.min = 0.982
+q1.true.bridge.max = 0.996
+q1.true.bridge.mean = 0.989
+q1.or.bridge.min = 0.989
+q1.or.bridge.max = 0.998
+q1.or.bridge.mean = 0.993
+q1.len.bridge.min = 2.01
+q1.len.bridge.max = 2.48
+q1.len.bridge.mean = 2.20
+q1.lentrue.bridge.min = 0.99
+q1.lentrue.bridge.max = 1.01
+q1.lentrue.bridge.mean = 1.00
+q1.lenlo.bridge.mean = 1.00
+q1.lenlo.bridge.max = 1.01
+q1.fitlarger.bridge.min = 1\%
+q1.fitlarger.bridge.max = 13\%
+q1.lononpos.bridge.max = 2.0\%
+q1.lonone.bridge.max = 2.0\%
+q1.noint.bridge.max = 0.0\%
+q1.steps.bridge = 5
+q1.cal.bb.bridge.min = 1.02
+q1.cal.bb.bridge.max = 1.03
+q1.cal.bbfit.bridge.min = 0.34
+q1.cal.bbfit.bridge.max = 0.35
+q1.cal.rr.bridge.min = 0.99
+q1.cal.rr.bridge.max = 1.00
+q1.cal.br.bridge.min = -0.03
+q1.cal.br.bridge.max = 0.01
+q1.cal.bbcv.bridge.min = 0.34
+q1.cal.bbcv.bridge.max = 0.67
+q1.cal.b1sd.bridge.min = 0.76
+q1.cal.b1sd.bridge.max = 5.38
+q1.sumnormal.bridge.min = 0.950
+q1.sumnormal.bridge.max = 0.954
+q1.maxw2.b3 = 0.256
+q1.kappa.b3.min = 10.50
+q1.kappa.b3.max = 35
+q1.normal.b3.min = 0.713
+q1.normal.b3.max = 0.805
+q1.normal.b3.mean = 0.775
+q1.q1.b3.min = 0.940
+q1.q1.b3.max = 0.980
+q1.q1.b3.mean = 0.963
+q1.lo.b3.min = 0.710
+q1.lo.b3.max = 0.833
+q1.lo.b3.mean = 0.775
+q1.fit.b3.min = 0.891
+q1.fit.b3.max = 0.959
+q1.fit.b3.mean = 0.929
+q1.true.b3.min = 0.939
+q1.true.b3.max = 0.989
+q1.true.b3.mean = 0.977
+q1.or.b3.min = 0.975
+q1.or.b3.max = 0.995
+q1.or.b3.mean = 0.989
+q1.len.b3.min = 1.82
+q1.len.b3.max = 2.08
+q1.len.b3.mean = 1.99
+q1.lentrue.b3.min = 1.05
+q1.lentrue.b3.max = 1.15
+q1.lentrue.b3.mean = 1.11
+q1.lenlo.b3.mean = 1.00
+q1.lenlo.b3.max = 1.04
+q1.fitlarger.b3.min = 39\%
+q1.fitlarger.b3.max = 46\%
+q1.lononpos.b3.max = 20.8\%
+q1.lonone.b3.max = 20.9\%
+q1.noint.b3.max = 0.0\%
+q1.steps.b3 = 5
+q1.cal.bb.b3.min = 1.03
+q1.cal.bb.b3.max = 1.07
+q1.cal.bbfit.b3.min = 0.51
+q1.cal.bbfit.b3.max = 0.52
+q1.cal.rr.b3.min = 0.89
+q1.cal.rr.b3.max = 0.99
+q1.cal.br.b3.min = -0.01
+q1.cal.br.b3.max = 0.02
+q1.cal.bbcv.b3.min = 1.15
+q1.cal.bbcv.b3.max = 1.33
+q1.cal.b1sd.b3.min = 0.06
+q1.cal.b1sd.b3.max = 2.42
+q1.sumnormal.b3.min = 0.954
+q1.sumnormal.b3.max = 0.960
+q1.steps.bottleneck = 5 to 7
+q1.verdict = Not all tolerances were met: 1 of the checks failed.
+q1.nfail = 1
+FAILURE none_movers cov: q1 length 1.127 times the normal length without a bottleneck
+q1.fail.len = 12.7\%
+q1.fail.comp = cov
+q1.fail.cell = none-movers
+q1.fail.kappa = 0.28
+q1.fail.maxw2 = 0.16
+q1.fail.z = 2.07
+q1.fail.zpct = 5.6\%
+q1.fail.truelen = 8\%
+q1.fail.cover = 0.969
+q1.fail.normalcover = 0.949
+q1.none.len.others = 1.02 and 1.07
+q1.none.n = 9
+q1.true.acc.min = 0.945
+q1.true.acc.max = 0.996
+q1.se.bridge = 0.59 to 0.67
+q1.se.profilegap = 0.77 to 0.97
+q1.se.profilegap.n = 5
+q1.bbfit.profilegap = 12\% to 38\%
+q1.bbfit.bridge = 0.34 to 0.35
+q1.se.other = 0.90 to 1.12
+q1.se.sum = 0.99 to 1.07
+q1.lonone.b10all = 2\% to 14\%
+q1.lo.b10all = 0.795 to 0.955
+q1.lo.ge30 = 0.935 to 0.991
+q1.cal.bb.acc = 0.95 to 1.05
+q1.cal.rr.acc = 0.95 to 1.17
+q1.cal.br.acc = 0.03
+q1.mcvar.acc = 0.81 to 1.10
+q1.lentrue.all.b100 = 1.02
+q1.lentrue.all.b100.max = 1.05
+q1.bbcv.all.b100 = 0.20 to 0.27
+q1.lentrue.all.b30 = 1.07
+q1.lentrue.all.b30.max = 1.12
+q1.bbcv.all.b30 = 0.34 to 0.82
+q1.lentrue.all.b10 = 1.15
+q1.lentrue.all.b10.max = 1.32
+q1.bbcv.all.b10 = 0.67 to 1.06
+q1.lentrue.acc.max = 1.32
+q1.len.acc.max = 2.48
+q1.bykappa.0.n = 8
+q1.bykappa.0.normal = 0.939 to 0.964
+q1.bykappa.0.q1 = 0.941 to 0.970
+q1.bykappa.0p2.n = 13
+q1.bykappa.0p2.normal = 0.914 to 0.956
+q1.bykappa.0p2.q1 = 0.951 to 0.976
+q1.bykappa.0p6.n = 20
+q1.bykappa.0p6.normal = 0.681 to 0.935
+q1.bykappa.0p6.q1 = 0.973 to 0.989
+q1.bykappa.2.n = 23
+q1.bykappa.2.normal = 0.528 to 0.937
+q1.bykappa.2.q1 = 0.970 to 0.996
+q1.bykappa.6.n = 11
+q1.bykappa.6.normal = 0.487 to 0.743
+q1.bykappa.6.q1 = 0.950 to 1.000
+q1.screen.ratio.min = 0.04
+q1.screen.ratio.max = 1.19
+q1.kappahat.ratio.min = 0.71
+q1.kappahat.ratio.max = 1.31
+q1.screen.low.n = 6
+q1.screen.low.normal.min = 0.914
+q1.screen.high.n = 69
+q1.screen.high.normal.min = 0.487
+q1.rho.true.max = 0.05
+q1.rholo.above = 0.3\%
+q1.bench.srr = 0.2\%
+q1.bench.v = 3\%
+q1.vneg.max = 47.8\%
+q1.vneg.cases = 36
+q1.vneg.cases10 = 18
+q1.vneg.worst = 47.8\%
+q1.normal.worst.cond = 0.933
+q1.normal.cond.min = 0.658
+q1.vneg.sum = 0
+q1.vneg.lowkappa = 0.0\%
+q1.lentrue.acc.max = 1.33
+q1.len.acc.max = 2.65
+q1.none.len.others = 1.016 and 1.072
+q1.se.sum = 0.997 to 1.064
+q1.se.bridge = 0.594 to 0.667
+q1.cal.bb.acc = 0.945 to 1.053
+q1.cal.rr.acc = 0.948 to 1.168
+q1.cal.br.acc = 0.028
+q1.bbcv.all.b100 = 0.195 to 0.268
+q1.bbcv.all.b10 = 0.667 to 1.057
+q1.bbfit.bridge = 0.339 to 0.349
+q1.design.w2bridge = 96.9\% to 98.1\%
+q1.screen.ratio.min = 0.039
+q1.screen.ratio.max = 1.195
+q1.b1sd.gap0 = 0.0 to 2.3
+q1.b1sd.gap3 = 0.7 to 17
+q1.neff.b100 = 102
+q1.neff.b30 = 32
+q1.neff.b10 = 11
+q1.kappa.bridge.max = 23
+q1.real.six.rows = 4,063,732
+q1.real.six.seconds = 1706
+q1.real.six.solves.se = 68
+q1.real.six.person.share = 0.6\%
+q1.real.six.person.maxw2 = 0.321
+q1.real.six.person.steps = 90
+q1.real.six.person.converged = True
+q1.real.six.person.neff = 5
+q1.real.six.person.half = 3
+q1.real.six.person.kscreen = 0.022
+q1.real.six.person.solves = 85
+q1.real.six.person.b1se = 2.0
+q1.real.six.person.lo.nonpos = False
+q1.real.six.person.bbratio = 0.52
+q1.real.six.person.kappa = 0.022
+q1.real.six.person.z = 1.971
+q1.real.six.person.larger = fitted
+q1.real.six.person.q1 = [0.09654, 0.09740]
+q1.real.six.person.normal = [0.09654, 0.09740]
+q1.real.six.person.lenratio = 1.005
+q1.real.six.firm.share = 0.6\%
+q1.real.six.firm.maxw2 = 0.320
+q1.real.six.firm.steps = 126
+q1.real.six.firm.converged = True
+q1.real.six.firm.neff = 5
+q1.real.six.firm.half = 3
+q1.real.six.firm.kscreen = 0.025
+q1.real.six.firm.solves = 85
+q1.real.six.firm.b1se = -0.3
+q1.real.six.firm.lo.nonpos = False
+q1.real.six.firm.bbratio = 0.51
+q1.real.six.firm.kappa = 0.025
+q1.real.six.firm.z = 1.972
+q1.real.six.firm.larger = fitted
+q1.real.six.firm.q1 = [0.02570, 0.02647]
+q1.real.six.firm.normal = [0.02570, 0.02647]
+q1.real.six.firm.lenratio = 1.006
+q1.real.six.cov.share = 0.7\%
+q1.real.six.cov.maxw2 = 0.321
+q1.real.six.cov.steps = 109
+q1.real.six.cov.converged = True
+q1.real.six.cov.neff = 5
+q1.real.six.cov.half = 3
+q1.real.six.cov.kscreen = 0.051
+q1.real.six.cov.solves = 85
+q1.real.six.cov.b1se = -1.1
+q1.real.six.cov.lo.nonpos = False
+q1.real.six.cov.bbratio = 0.52
+q1.real.six.cov.kappa = 0.051
+q1.real.six.cov.z = 1.984
+q1.real.six.cov.larger = fitted
+q1.real.six.cov.q1 = [0.01326, 0.01364]
+q1.real.six.cov.normal = [0.01326, 0.01364]
+q1.real.six.cov.lenratio = 1.011
+q1.real.six.sum.share = 0.0\%
+q1.real.six.sum.maxw2 = 1.9e-05
+q1.real.six.sum.steps = 5
+q1.real.six.sum.converged = True
+q1.real.six.sum.neff = 983,420
+q1.real.six.sum.half = 423,506
+q1.real.six.sum.kscreen = 0.000
+q1.real.six.sum.solves = 85
+q1.real.six.sum.b1se = -78.9
+q1.real.six.sum.lo.nonpos = False
+q1.real.six.sum.bbratio = 1.05
+q1.real.six.sum.kappa = 0.000
+q1.real.six.sum.z = 1.960
+q1.real.six.sum.larger = leave-out
+q1.real.six.sum.q1 = [0.14976, 0.15013]
+q1.real.six.sum.normal = [0.14976, 0.15013]
+q1.real.six.sum.lenratio = 1.000
+q1.real.half.rows = 1,879,522
+q1.real.half.seconds = 375
+q1.real.half.solves.se = 68
+q1.real.half.person.share = 2.3\%
+q1.real.half.person.maxw2 = 0.403
+q1.real.half.person.steps = 19
+q1.real.half.person.converged = True
+q1.real.half.person.neff = 4
+q1.real.half.person.half = 2
+q1.real.half.person.kscreen = 0.117
+q1.real.half.person.solves = 85
+q1.real.half.person.b1se = -0.2
+q1.real.half.person.lo.nonpos = False
+q1.real.half.person.bbratio = 2.49
+q1.real.half.person.kappa = 0.117
+q1.real.half.person.z = 2.013
+q1.real.half.person.larger = leave-out
+q1.real.half.person.q1 = [0.09838, 0.09977]
+q1.real.half.person.normal = [0.09838, 0.09973]
+q1.real.half.person.lenratio = 1.025
+q1.real.half.firm.share = 2.4\%
+q1.real.half.firm.maxw2 = 0.405
+q1.real.half.firm.steps = 17
+q1.real.half.firm.converged = True
+q1.real.half.firm.neff = 4
+q1.real.half.firm.half = 2
+q1.real.half.firm.kscreen = 0.127
+q1.real.half.firm.solves = 85
+q1.real.half.firm.b1se = 0.6
+q1.real.half.firm.lo.nonpos = False
+q1.real.half.firm.bbratio = 2.50
+q1.real.half.firm.kappa = 0.128
+q1.real.half.firm.z = 2.017
+q1.real.half.firm.larger = leave-out
+q1.real.half.firm.q1 = [0.02533, 0.02662]
+q1.real.half.firm.normal = [0.02533, 0.02658]
+q1.real.half.firm.lenratio = 1.028
+q1.real.half.cov.share = 2.6\%
+q1.real.half.cov.maxw2 = 0.405
+q1.real.half.cov.steps = 15
+q1.real.half.cov.converged = True
+q1.real.half.cov.neff = 4
+q1.real.half.cov.half = 2
+q1.real.half.cov.kscreen = 0.254
+q1.real.half.cov.solves = 85
+q1.real.half.cov.b1se = -0.4
+q1.real.half.cov.lo.nonpos = False
+q1.real.half.cov.bbratio = 2.50
+q1.real.half.cov.kappa = 0.257
+q1.real.half.cov.z = 2.064
+q1.real.half.cov.larger = leave-out
+q1.real.half.cov.q1 = [0.01327, 0.01392]
+q1.real.half.cov.normal = [0.01331, 0.01393]
+q1.real.half.cov.lenratio = 1.046
+q1.real.half.sum.share = 0.0\%
+q1.real.half.sum.maxw2 = 4.6e-05
+q1.real.half.sum.steps = 5
+q1.real.half.sum.converged = True
+q1.real.half.sum.neff = 457,260
+q1.real.half.sum.half = 196,185
+q1.real.half.sum.kscreen = 0.000
+q1.real.half.sum.solves = 85
+q1.real.half.sum.b1se = 10.2
+q1.real.half.sum.lo.nonpos = False
+q1.real.half.sum.bbratio = 1.01
+q1.real.half.sum.kappa = 0.000
+q1.real.half.sum.z = 1.960
+q1.real.half.sum.larger = leave-out
+q1.real.half.sum.q1 = [0.15197, 0.15252]
+q1.real.half.sum.normal = [0.15197, 0.15252]
+q1.real.half.sum.lenratio = 1.000
+q1.real.y3.rows = 2,188,161
+q1.real.y3.seconds = 356
+q1.real.y3.solves.se = 68
+q1.real.y3.person.share = 1.3\%
+q1.real.y3.person.maxw2 = 0.115
+q1.real.y3.person.steps = 200
+q1.real.y3.person.converged = False
+q1.real.y3.person.neff = 13
+q1.real.y3.person.half = 5
+q1.real.y3.person.kscreen = 0.055
+q1.real.y3.person.solves = 85
+q1.real.y3.person.b1se = -3.7
+q1.real.y3.person.lo.nonpos = False
+q1.real.y3.person.bbratio = 0.52
+q1.real.y3.person.kappa = 0.056
+q1.real.y3.person.z = 1.986
+q1.real.y3.person.larger = fitted
+q1.real.y3.person.q1 = [0.11041, 0.11198]
+q1.real.y3.person.normal = [0.11041, 0.11197]
+q1.real.y3.person.lenratio = 1.010
+q1.real.y3.firm.share = 1.4\%
+q1.real.y3.firm.maxw2 = 0.116
+q1.real.y3.firm.steps = 166
+q1.real.y3.firm.converged = True
+q1.real.y3.firm.neff = 13
+q1.real.y3.firm.half = 5
+q1.real.y3.firm.kscreen = 0.062
+q1.real.y3.firm.solves = 85
+q1.real.y3.firm.b1se = 2.9
+q1.real.y3.firm.lo.nonpos = False
+q1.real.y3.firm.bbratio = 0.52
+q1.real.y3.firm.kappa = 0.062
+q1.real.y3.firm.z = 1.989
+q1.real.y3.firm.larger = fitted
+q1.real.y3.firm.q1 = [0.02259, 0.02399]
+q1.real.y3.firm.normal = [0.02259, 0.02398]
+q1.real.y3.firm.lenratio = 1.014
+q1.real.y3.cov.share = 1.4\%
+q1.real.y3.cov.maxw2 = 0.115
+q1.real.y3.cov.steps = 152
+q1.real.y3.cov.converged = True
+q1.real.y3.cov.neff = 13
+q1.real.y3.cov.half = 5
+q1.real.y3.cov.kscreen = 0.120
+q1.real.y3.cov.solves = 85
+q1.real.y3.cov.b1se = -0.4
+q1.real.y3.cov.lo.nonpos = False
+q1.real.y3.cov.bbratio = 0.52
+q1.real.y3.cov.kappa = 0.122
+q1.real.y3.cov.z = 2.015
+q1.real.y3.cov.larger = fitted
+q1.real.y3.cov.q1 = [0.01386, 0.01459]
+q1.real.y3.cov.normal = [0.01387, 0.01458]
+q1.real.y3.cov.lenratio = 1.018
+q1.real.y3.sum.share = 0.0\%
+q1.real.y3.sum.maxw2 = 1.6e-05
+q1.real.y3.sum.steps = 5
+q1.real.y3.sum.converged = True
+q1.real.y3.sum.neff = 696,241
+q1.real.y3.sum.half = 265,198
+q1.real.y3.sum.kscreen = 0.000
+q1.real.y3.sum.solves = 85
+q1.real.y3.sum.b1se = -93.8
+q1.real.y3.sum.lo.nonpos = False
+q1.real.y3.sum.bbratio = 1.01
+q1.real.y3.sum.kappa = 0.000
+q1.real.y3.sum.z = 1.960
+q1.real.y3.sum.larger = leave-out
+q1.real.y3.sum.q1 = [0.16273, 0.16312]
+q1.real.y3.sum.normal = [0.16273, 0.16312]
+q1.real.y3.sum.lenratio = 1.000
+q1.real.share = 0.55\% to 2.61\%
+q1.real.kappa = 0.02 to 0.26
+q1.real.maxw2 = 0.115 to 0.405
+q1.real.lenratio = 1.005 to 1.047
+q1.real.half = 2 to 5
+q1.real.steps = 15 to 200
+q1.real.bbratio = 0.51 to 2.50
+q1.real.fitted.n = 6
+q1.real.n = 9
+q1.real.unconverged = 1
+q1.real.power.seconds = 3 to 76
+q1.real.sum.share = below 0.001\%
+
+screening (cell, comp): median kappa-tilde, median kappa-hat, true kappa, share of draws kappa-tilde < 0.1, normal coverage
+b10_g0_flat person: 1.425 3.040 2.818 0.00 0.681
+b10_g0_flat firm: 1.316 2.876 2.739 0.00 0.696
+b10_g0_flat cov: 1.643 9.537 8.868 0.00 0.574
+b10_g0_profile person: 1.490 2.676 3.027 0.00 0.795
+b10_g0_profile firm: 1.509 3.068 3.533 0.00 0.758
+b10_g0_profile cov: 1.714 10.111 11.394 0.00 0.682
+b10_g0_movers person: 1.519 4.231 3.242 0.00 0.550
+b10_g0_movers firm: 1.425 4.134 3.273 0.00 0.550
+b10_g0_movers cov: 1.598 13.191 10.295 0.00 0.487
+b10_g3_flat person: 0.427 2.905 2.777 0.00 0.889
+b10_g3_flat firm: 0.211 2.850 2.743 0.00 0.937
+b10_g3_flat cov: 0.946 8.331 7.887 0.00 0.716
+b10_g3_profile person: 0.499 2.630 2.946 0.00 0.809
+b10_g3_profile firm: 0.257 3.157 3.466 0.00 0.845
+b10_g3_profile cov: 1.124 8.942 9.899 0.00 0.713
+b10_g3_movers person: 0.631 4.024 3.083 0.00 0.825
+b10_g3_movers firm: 0.324 4.042 3.164 0.00 0.909
+b10_g3_movers cov: 1.131 12.041 9.325 0.00 0.635
+b30_g0_flat person: 1.074 1.050 0.998 0.00 0.877
+b30_g0_flat firm: 0.722 0.995 0.948 0.00 0.893
+b30_g0_flat cov: 1.257 3.146 2.935 0.00 0.580
+b30_g0_profile person: 0.984 1.057 1.097 0.00 0.905
+b30_g0_profile firm: 0.896 1.216 1.280 0.00 0.871
+b30_g0_profile cov: 1.333 3.769 3.900 0.00 0.592
+b30_g0_movers person: 1.369 1.875 1.690 0.00 0.681
+b30_g0_movers firm: 1.108 1.845 1.711 0.00 0.707
+b30_g0_movers cov: 1.245 5.597 5.087 0.00 0.528
+b30_g3_flat person: 0.251 1.026 0.985 0.00 0.919
+b30_g3_flat firm: 0.118 0.998 0.949 0.14 0.935
+b30_g3_flat cov: 0.493 2.826 2.639 0.00 0.858
+b30_g3_profile person: 0.296 1.042 1.106 0.00 0.886
+b30_g3_profile firm: 0.137 1.224 1.296 0.05 0.909
+b30_g3_profile cov: 0.582 3.367 3.537 0.00 0.797
+b30_g3_movers person: 0.465 1.840 1.706 0.00 0.852
+b30_g3_movers firm: 0.215 1.858 1.747 0.00 0.930
+b30_g3_movers cov: 0.787 5.342 4.906 0.00 0.724
+b100_g0_flat person: 0.297 0.317 0.307 0.00 0.956
+b100_g0_flat firm: 0.263 0.305 0.295 0.00 0.953
+b100_g0_flat cov: 0.961 0.959 0.917 0.00 0.923
+b100_g0_profile person: 0.271 0.298 0.303 0.00 0.934
+b100_g0_profile firm: 0.293 0.350 0.362 0.00 0.952
+b100_g0_profile cov: 1.033 1.099 1.130 0.00 0.909
+b100_g0_movers person: 0.477 0.508 0.466 0.00 0.929
+b100_g0_movers firm: 0.433 0.501 0.468 0.00 0.928
+b100_g0_movers cov: 1.345 1.540 1.416 0.00 0.708
+b100_g3_flat person: 0.114 0.310 0.303 0.14 0.943
+b100_g3_flat firm: 0.061 0.304 0.295 1.00 0.951
+b100_g3_flat cov: 0.260 0.846 0.818 0.00 0.930
+b100_g3_profile person: 0.128 0.306 0.312 0.12 0.927
+b100_g3_profile firm: 0.073 0.363 0.375 0.88 0.914
+b100_g3_profile cov: 0.310 1.011 1.033 0.00 0.888
+b100_g3_movers person: 0.195 0.505 0.483 0.00 0.928
+b100_g3_movers firm: 0.107 0.507 0.490 0.29 0.933
+b100_g3_movers cov: 0.468 1.468 1.398 0.00 0.839
+none_flat person: 0.067 0.067 0.064 0.83 0.953
+none_flat firm: 0.064 0.064 0.060 0.85 0.940
+none_flat cov: 0.199 0.200 0.187 0.00 0.947
+none_profile person: 0.055 0.055 0.048 0.91 0.952
+none_profile firm: 0.065 0.065 0.055 0.87 0.939
+none_profile cov: 0.198 0.199 0.170 0.00 0.947
+none_movers person: 0.108 0.108 0.091 0.40 0.944
+none_movers firm: 0.108 0.108 0.092 0.40 0.964
+none_movers cov: 0.316 0.326 0.276 0.00 0.949
+b10_g3_profile_skew person: 0.455 2.256 2.946 0.00 0.808
+b10_g3_profile_skew firm: 0.235 2.909 3.466 0.00 0.870
+b10_g3_profile_skew cov: 1.108 8.422 9.899 0.00 0.743
+b10_g3_bridge person: 1.042 7.442 8.166 0.00 0.645
+b10_g3_bridge firm: 0.519 7.297 8.083 0.00 0.726
+b10_g3_bridge cov: 1.693 21.057 23.082 0.00 0.658
+b30_g3_profile_skew person: 0.291 0.989 1.106 0.00 0.894
+b30_g3_profile_skew firm: 0.131 1.265 1.296 0.03 0.923
+b30_g3_profile_skew cov: 0.532 3.508 3.537 0.00 0.815
+b30_g3_bridge person: 0.632 2.859 2.880 0.00 0.710
+b30_g3_bridge firm: 0.316 2.745 2.771 0.00 0.727
+b30_g3_bridge cov: 1.141 7.646 7.723 0.00 0.629
+b3_g0_profile person: 1.727 7.466 10.502 0.00 0.791
+b3_g0_profile firm: 1.608 8.653 12.179 0.00 0.805
+b3_g0_profile cov: 1.714 27.782 34.577 0.00 0.789
+b3_g3_profile person: 0.990 8.349 11.336 0.00 0.713
+b3_g3_profile firm: 0.518 9.963 13.254 0.00 0.774
+b3_g3_profile cov: 1.512 27.735 34.538 0.00 0.778

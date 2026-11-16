@@ -1,0 +1,25 @@
+\section{Controls and centring}\label{sec:controls}
+
+Both are handled as FEVC handles them for the point estimate.
+
+\paragraph{Controls.} With time-varying controls the model is $y_i=x_i'\beta+w_i'\gamma+\varepsilon_i$. If
+$\gamma$ is known, the two-way model holds for $y_i-w_i'\gamma$ and everything above applies to that
+outcome; in particular a stayer's adjusted wages are again repeat measurements of one mean. In practice
+$\gamma$ is estimated in a first step and the adjusted outcome $y_i-w_i'\hat\gamma$ is used, treating
+$\hat\gamma$ as known. The standard error then leaves out the uncertainty in $\hat\gamma$. This need not be
+negligible: on the Veneto panel, with year effects and two age terms removed in this way, accounting for it
+would raise the standard error of $\hat\sigma^2_{\alpha+\psi}$ by about \R{ctrl.sum} and change the other three
+by less than 1\%. (This was measured on the version of the panel that carries the age variable,
+\R{ctrl.n.py} million person-years after its own pruning, with 200 projections.) Controls estimated jointly with the worker and firm effects are outside this
+note, because a stayer's rows then no longer have identical regressors.
+
+\paragraph{Centring.} FEVC subtracts the mean wage before forming the bias correction. Subtracting a constant
+$c$ from every wage leaves $\hat\theta$ unbiased: with $h$ the vector with entries $\sqrt{F_i}$, the exact
+weights of the four components satisfy $h'C\mu=0$ and $h'Ch=0$, so
+$\E[(y-ch)'C(y-ch)]=\mu'C\mu=\theta$. All formulas of this note then hold with $y-ch$ in place of $y$, and
+with $m$ computed from the centred means. FEVC uses the sample mean $\bar y$ for $c$, and, as for the point
+estimate, we treat it as a constant. Strictly it is not one. Let $c_0=h'\mu/n_{\rm py}$ be the mean that $\bar y$ estimates. Centring at
+$\bar y$ instead of $c_0$ changes the estimate by $-2\,(\bar y-c_0)\,h'C\varepsilon$, whose mean is
+$-(2/n_{\rm py})\,h'\Sigma Ch$ with $\Sigma=\diag(\sigma_i^2)$. When the error variances are bounded and bounded
+away from zero this change is of the order of $\lambda_{\max}$, and therefore negligible relative to the
+standard error under condition (b) of Proposition~\ref{prop:conc}.

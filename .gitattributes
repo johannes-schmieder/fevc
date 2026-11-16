@@ -118,3 +118,9 @@ native/repeat-measurement-20261115/evidence/hosted/build-receipt.json -text whit
 native/repeat-measurement-20261115/evidence/windows/prior-failed-legacy-receipt.json -text whitespace=cr-at-eol
 native/repeat-measurement-20261115/evidence/linux/qacct.txt whitespace=-blank-at-eol
 native/repeat-measurement-20261115/evidence/packaging/python-unstaged-attempt1.txt whitespace=-blank-at-eol
+
+# The repeat-measurement method note and its prototype records are copied
+# byte-for-byte: Stata result files keep trailing spaces, a section source its
+# final blank line.
+fevc/docs/repeat_measurement/prototype_simulations/results/e2e-*/design*.txt whitespace=-blank-at-eol
+fevc/docs/repeat_measurement/note/a2_simdetails.tex whitespace=-blank-at-eof

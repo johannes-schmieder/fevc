@@ -1,0 +1,349 @@
+\section{Evidence: a six-year Veneto panel}\label{sec:evidence}
+
+\subsection{Data}
+
+The panel is drawn from the Veneto Worker History data that KSS use, for the years 1996 to 2001:
+\R{real.n.person_years} person-years of \R{real.n.workers} workers at \R{real.n.firms} firms, in the set of
+firms that remains connected when any one worker is left out. Log wages are net of year effects and two age
+terms, removed in a first step (Section~\ref{sec:controls}). \R{real.n.stayers} workers are stayers, observed for two
+to six years (\R{real.n.stayer_rows} person-years, \R{real.share.stayer_py} of the total); the \R{real.n.movers}
+movers have \R{real.n.mover_rows} matches. The design therefore has \R{real.n.rows} rows, \R{real.share.stayer_rows}
+of them stayers' person-years. The numbers below come from a prototype that follows FEVC's algorithm, with
+exact leverages for stayers and 1{,}600 projections for movers.
+
+\subsection{Estimates and standard errors}
+
+\begin{table}[H]
+\centering\small
+\caption{Six-year Veneto panel: estimates and standard errors}\label{tab:real}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & Plug-in & Leave-out & \multicolumn{2}{c}{Standard error} & First term, & Movers, \% \\
+\cmidrule(lr){4-5}
+Component & estimate & estimate $\hat\theta$ & $\times10^{-4}$ & \% of $\hat\theta$ & \% of $\hat\V[\hat\theta]$ & of first term \\
+\midrule
+\tabinput{gen/tab_real.tex}
+\bottomrule
+\multicolumn{7}{@{}p{0.94\textwidth}@{}}{\rule{0pt}{2.6ex}Plug-in: $\hat\beta'A\hat\beta$. Standard error: the square
+root of \eqref{eq:Vhat} with 16 draws for the double sum. ``First term'': $4\sum_i\hat m_i^{\,2}\st_i^2$; it
+exceeds 100\% because the double sum is subtracted. The last column is the share of movers' rows in that term.}
+\end{tabular}
+\end{table}
+
+Four things stand out. The standard errors are small, between \R{real.relse.min} and \R{real.relse.max} of the
+estimates: with five million person-years, sampling error is not the main uncertainty in these numbers.
+Movers' rows carry most of the first term: nearly all of it for $\sigma^2_\alpha$, $\sigma^2_\psi$ and
+$\sigma_{\alpha,\psi}$, and \R{real.share.movers.sum} for the variance of the sum, to which stayers contribute
+\R{real.share.stayers.sum}. Stayers' rows thus supply nearly a quarter of the first term for the sum, with
+variance estimates that need no model; the rest of that term, and nearly all of it for the other three
+components, rests on the model for movers. Two computational pieces are small: the adjustment for stayers is at
+most \R{real.adjust_max} of the variance estimate, and other sets of draws for the double sum, or
+a run with 64 draws, change no standard error by more than \R{real.run_maxdiff}. Finally, the tails of the
+wage distribution matter for this standard error: the \R{real.capped.movers} of movers' rows whose person effect
+lies beyond the winsorising limit carry \R{real.capped.first_term.sum} of the first term for the variance of the
+sum.
+
+\subsection{The model for movers in the data}
+
+\begin{figure}[H]
+\centering
+\input{gen/fig_profile.tex}
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1, horizontal sep=1.3cm}, width=0.5\textwidth, height=0.36\textwidth,
+  ymin=0, ymax=20, xmin=-2.4, xmax=2.4, ymajorgrids, grid style={gray!20},
+  xlabel style={font=\footnotesize}, ylabel style={font=\footnotesize}, ticklabel style={font=\footnotesize},
+  title style={font=\footnotesize}, legend style={font=\footnotesize, draw=none, fill=none, legend cell align=left}]
+\nextgroupplot[title={By estimated person effect}, xlabel={standardised person effect (decile means)},
+  ylabel={variance of a mover's row ($\times100$)}, legend style={at={(0.98,0.97)}, anchor=north east}]
+\addlegendimage{only marks, mark=*, mark size=1.8pt, cmove}
+\addlegendentry{leave-out estimates, average}
+\addlegendimage{no marks, thick, cstay}
+\addlegendentry{fitted by the model, average}
+\addplot[cmove, only marks, mark=*, mark size=1.8pt, forget plot] coordinates {\figalphalo};
+\addplot[cstay, thick, no marks, forget plot] coordinates {\figalphafit};
+\nextgroupplot[title={By estimated firm effect}, xlabel={standardised firm effect (decile means)}]
+\addplot[cmove, only marks, mark=*, mark size=1.8pt] coordinates {\figpsilo};
+\addplot[cstay, thick, no marks] coordinates {\figpsifit};
+\end{groupplot}
+\end{tikzpicture}
+\caption{Movers' rows by decile of the estimated effects: average leave-out estimate $\hat\sigma_i^2$ and average
+fitted variance $\st_i^2$. Deciles are those of the stayers' estimated effects.}
+\label{fig:profile}
+\end{figure}
+
+Figure~\ref{fig:profile} shows what the model works with and what it delivers. The averages of the leave-out
+estimates vary a great deal. They are \R{dec.data.lo.bottom} times their average in the lowest decile of the
+estimated person effect, \R{dec.data.lo.mid} times in the middle deciles and \R{dec.data.lo.top} times in the
+highest, and they fall by more than half across the deciles of the firm effect. Stayers show the same pattern
+at a lower level: the average $q_g$ (weighted by $T_g-1$) is \R{real.prof.alpha.stay.lo} times the stayers' overall average in the
+lowest decile of the person effect, about \R{real.prof.alpha.stay.mid} times in the middle deciles and
+\R{real.prof.alpha.stay.hi} times in the highest. The fitted variances follow the leave-out estimates closely
+across the firm effect. Across the person effect they reproduce the U shape, but not exactly: they are
+\R{dec.data.over.min} to \R{dec.data.over.max} above the leave-out averages in deciles 2 to 4 and
+\R{dec.data.under.min} to \R{dec.data.under.max} below them in deciles 7 to 9. This fit, a quadratic in effects capped at three standard deviations, falls short there.
+
+The scale of step~1 has a clear role in the data as well. The leave-out estimates average \R{real.lo.len1} for
+one-year matches and \R{real.lo.longer.min} to \R{real.lo.longer.max} for longer ones. The variance of a mover's
+yearly wages within a match is only \R{real.within_match_mean} on average: most of the error of a mover's row is
+common to the years of the match, which is why nothing is assumed within a match and why the scale depends on
+its length.
+
+Can the decile averages of Figure~\ref{fig:profile} be trusted as a benchmark? Averaged over a fixed set of many
+rows, the leave-out estimates estimate the average variance of those rows. Here the rows are sorted by an
+estimated effect that depends on the same errors, which can distort the averages. Table~\ref{tab:deciles} adds
+three simulated settings, where the truth is known. There the average leave-out estimate of a decile differs
+from the average true variance by at most \R{dec.sim.gap.max}, upwards in the extreme deciles and about 5\%
+downwards in the middle. The distortion in the data need not be the same.
+
+\begin{table}[H]
+\centering\small
+\caption{Movers' rows by decile of the estimated person effect: average leave-out estimate $\hat\sigma_i^2$,
+average fitted variance $\st_i^2$ and, in simulated data, average true variance ($\times100$)}\label{tab:deciles}
+\begin{tabular}{@{}lcccccccccc@{}}
+\toprule
+ & \multicolumn{10}{c}{Decile of the estimated person effect (lowest to highest)} \\
+\cmidrule(l){2-11}
+ & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 \\
+\midrule
+\tabinput{gen/tab_deciles.tex}
+\bottomrule
+\multicolumn{11}{@{}p{0.92\textwidth}@{}}{\rule{0pt}{2.6ex}Deciles are those of the stayers' estimated person
+effects, so movers' rows are spread unevenly over them (\R{dec.rows.min} to \R{dec.rows.max} of the rows per decile).
+Simulated data: averages over \R{dec.reps} draws on the Veneto design (Section~\ref{sec:sim}); across the draws the
+decile averages of the leave-out estimates vary by at most \R{dec.sd.max} (standard deviation). ``True variance''
+is the average true variance of the rows that fall in the decile.}
+\end{tabular}
+\end{table}
+
+In the simulated settings the fitted variances can also be compared with the truth. In the highest decile
+they exceed the true variances in all three settings (by \R{dec.N1.fit.top}, \R{dec.N6.fit.top} and
+\R{dec.N10.fit.top}), and in the setting without any profile in the lowest decile as well: the fit inherits
+part of the distortion, which is the mechanism described in Section~\ref{sec:transfer}. What the discrepancies of the first panel mean for the
+standard error, that is, how large $b(\Delta)/\V[\hat\theta]$ is on this panel, the table cannot say, and the
+data cannot say it either, because movers' true variances are not observed. Scenario~10 of the simulation below
+gives movers exactly the decile profile of the first panel; there the answer can be computed.
+
+\subsection{Is any stayer or direction dominant?}
+
+Sample versions of the two quantities in Proposition~\ref{prop:conc} are computed with the estimated
+variances. For a stayer the first is
+$\hat\phi_g=\sum_{i\in g}\st_i^2\,(4\hat m_i^{\,2}+2\hat r_i)/\hat\V[\hat\theta]$, where $\hat r_i$ is the simulated
+value of $\sum_\ell C_{i\ell}^2\st_\ell^2$ from 32 draws as in \eqref{eq:sim}; the same ratio is formed for each
+mover's row. The second is $\hat\lambda_{\max}^2/\hat\V[\hat\theta]$, with $\hat\lambda_{\max}^2$ from 20 power
+iterations on the matrix with entries $\st_iC_{i\ell}\st_\ell$. These are concentration ratios, not exact shares:
+$\hat m_i^{\,2}$ overstates $m_i^2$, so the $\hat\phi_g$ do not add up to one. All are small. The largest
+$\hat\phi_g$ is \R{real.max_stayer_share}, the largest ratio of a mover's row \R{real.max_mover_share}, and
+$\hat\lambda_{\max}^2/\hat\V[\hat\theta]$ is between \R{real.lambda.min} and \R{real.lambda.max} for the four
+components.
+
+\subsection{Simulation}\label{sec:sim}
+
+\paragraph{Design.} The effects fitted on the panel serve as the truth, and new errors are drawn for every
+person-year, \R{sim.reps} times in each of ten scenarios (\R{sim.failures} draws failed). Each draw runs the
+estimator exactly as on the data: effects, leverages of movers from the same 1{,}600 projections, the two steps
+of the model for movers with estimated effects in the profile, and 16 draws for the double sum. The variance
+of $\hat\theta$ is computed from \eqref{eq:V} for each scenario. Appendix~\ref{app:sim} defines the scenarios and
+reports how each was realised. In scenarios 1 to 7 movers and stayers share one variance profile. Scenario~1
+has none. In scenarios 2 to 5 the profile is quadratic in the standardised person effect, as the model's is,
+with one difference: the model caps the standardised effects at three standard deviations and the scenarios do
+not. Scenario~6 uses a step profile taken from the data, the stayers' average sample variance by decile of the
+person effect, and scenario~7 a profile that is log-linear in the wage level. Scenarios 3 to 5 also violate A3
+(fat tails, skewness). In scenarios 8 to 10 movers have a profile of their own. In 8 and 9 their variances rise
+three times as fast with the distance from the mean wage as the stayers', or not at all. In both, the movers'
+profile lies in the model's quadratic basis before capping; exact recovery by the two regressions requires in
+addition the condition on the scale in Corollary~\ref{cor:transfer}. Scenario~10 is calibrated to the data and is
+not within the model: movers follow the decile profile of their own leave-out estimates in the first row of
+Table~\ref{tab:deciles}.
+
+\begin{table}[H]
+\centering\small
+\caption{Simulation on the Veneto design: square root of the mean variance estimate over the true variance}\label{tab:sim}
+\begin{tabular}{@{}rlcccccccccc@{}}
+\toprule
+ & & \multicolumn{4}{c}{With the model for movers} & & \multicolumn{4}{c}{With movers' true variances} \\
+\cmidrule(lr){3-6}\cmidrule(l){8-11}
+ & Scenario & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ & & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ \\
+\midrule
+\tabinput{gen/tab_sim.tex}
+\bottomrule
+\multicolumn{11}{@{}p{0.9\textwidth}@{}}{\rule{0pt}{2.6ex}A value of 1 means that the mean variance estimate
+equals the true variance; the entry is the root-mean-square standard error over the true one.
+\R{sim.reps} draws per scenario. In scenarios 8 to 10 movers have a profile of their own. Right panel:
+\eqref{eq:Vhat} with $\st_i^2=\sigma_i^2$ on movers' rows, which isolates the stayers' part.}
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering\small\setlength{\tabcolsep}{4.6pt}
+\caption{Simulation on the Veneto design: coverage of the 95\% interval}\label{tab:simcov}
+\begin{tabular}{@{}rlcccccccccc@{}}
+\toprule
+ & & \multicolumn{4}{c}{With the model for movers} & & \multicolumn{4}{c}{With movers' true variances} \\
+\cmidrule(lr){3-6}\cmidrule(l){8-11}
+ & Scenario & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ & & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ \\
+\midrule
+\tabinput{gen/tab_simcov.tex}
+\bottomrule
+\multicolumn{11}{@{}p{0.9\textwidth}@{}}{\rule{0pt}{2.6ex}Share of draws in which
+$\hat\theta\pm1.96\,\hat\V[\hat\theta]^{1/2}$ covers the true $\theta$. With \R{sim.reps} draws the Monte Carlo
+standard error is about 0.015.}
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering\small
+\caption{The model's error at fixed characteristics, $[1+b(\Delta)/\V[\hat\theta]]^{1/2}$, against the simulated ratio}\label{tab:bdelta}
+\begin{tabular}{@{}rlcccccccccc@{}}
+\toprule
+ & & \multicolumn{4}{c}{At fixed characteristics} & & \multicolumn{4}{c}{As implemented (Table~\ref{tab:sim})} \\
+\cmidrule(lr){3-6}\cmidrule(l){8-11}
+ & Scenario & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ & & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ \\
+\midrule
+\tabinput{gen/tab_bdelta.tex}
+\bottomrule
+\multicolumn{11}{@{}p{0.9\textwidth}@{}}{\rule{0pt}{2.6ex}Left: the two steps of the model are run with the true
+variances as outcomes and the true effects as characteristics; this gives $v_i^*$, $\Delta_i=v_i^*-\sigma_i^2$ and
+$b(\Delta)$ from \eqref{eq:b}, with no simulated outcomes. It concerns the model for movers only; the stayers' departures from A3 in scenarios 3 to 5 are not in it.
+Right: the left panel of Table~\ref{tab:sim}. The panels differ in everything else: estimated effects, the
+sampling error of the two fits, the stayers' part, projected weights, and the projection of the covariance
+matrix described in the text.}
+\end{tabular}
+\end{table}
+
+\paragraph{Findings.} \emph{The stayers' part.} With movers' true variances (right panels of
+Tables~\ref{tab:sim} and~\ref{tab:simcov}) the ratio is between \R{sim.or.noskew.min} and \R{sim.or.noskew.max}
+in the eight scenarios without skewness, including scenario~3 with fat tails. In the two scenarios with skewed
+stayers' errors it is \R{sim.N4.or.sum} and \R{sim.N5.or.sum} for the variance of the sum: the shift that
+Section~\ref{sec:results} predicts, with the predicted signs. The simulations thus agree with
+Proposition~\ref{prop:mean} and the formulas for departures from A3, although those are for exact weights and
+these runs use projected ones.
+
+\emph{With the model for movers.} Across the \R{sim.n.cells} cells the ratio of Table~\ref{tab:sim}, the
+root-mean-square standard error over the true one, is between \R{sim.all.min} and \R{sim.all.max}. It is below
+0.95 in \R{sim.n.below95} cells and above 1.05 in \R{sim.n.above105} (counts here and below are before
+rounding). For $\sigma^2_\alpha$ the ratio is between
+\R{sim.comp.alpha.min} and \R{sim.comp.alpha.max}, for $\sigma^2_\psi$ between \R{sim.comp.psi.min} and
+\R{sim.comp.psi.max}, for the covariance between \R{sim.comp.cov.min} and \R{sim.comp.cov.max}, and for the
+variance of the sum between \R{sim.comp.sum.min} and \R{sim.comp.sum.max}. The ratio is thus below one
+by \R{sim.under.max} at most (the variance of the sum in scenario~4, where the benchmark with movers' true
+variances in the right panel is itself about three percent low), and above one by up to \R{sim.over.max}. The largest ratios are those for
+$\sigma^2_\psi$ in the four scenarios with worker-specific variance factors, and for the sum in two of them. In
+scenario~10, where movers have the decile profile of the data, the ratios are \R{sim.N10.alpha}, \R{sim.N10.psi},
+\R{sim.N10.cov} and \R{sim.N10.sum}. The coverage of the 95\% interval is between \R{sim.all.cov.min} and
+\R{sim.all.cov.max} (Table~\ref{tab:simcov}), against \R{sim.or.cov.min} to \R{sim.or.cov.max} with movers' true
+variances. No draw failed. In no draw did the last floor bind for more than \R{sim.floor.final.max} of movers'
+rows, and the floor on the scale never bound. The Monte Carlo standard error of the ratios is at most \R{sim.ratio.mcse.max}. One step of the prototype in
+these runs is not in Section~\ref{sec:estimator}: before the variances were read off, negative eigenvalues of the
+estimated covariance matrix of the three base components were set to zero. This can only raise a variance
+estimate, and it applies to Tables~\ref{tab:sim} to~\ref{tab:bdelta} (right panel). On
+the data that matrix is positive definite, with a smallest eigenvalue of \R{real8.eig.ratio} of the largest, so
+the projection changes nothing there. For these simulated draws it was not recorded whether it changed
+anything. The validation runs of Section~\ref{sec:validation} use the estimator without the projection, and on
+the same design they give the same ratios to within \R{val.six.devdiff.max}.
+
+\emph{The model at fixed characteristics.} Table~\ref{tab:bdelta} separates the model for movers from the
+rest. Its left panel evaluates the quantity of A4 on this design: the error $b(\Delta)$ of the model when its
+two steps see the true variances and the true effects. In scenarios 1 and 9 the model's error is zero to three decimals. In the other
+eight, $[1+b(\Delta)/\V[\hat\theta]]^{1/2}$ is between \R{sim.bd.other.min} and \R{sim.bd.other.max} for the first
+three components and between \R{sim.bd.sum.min} and \R{sim.bd.sum.max} for the variance of the sum: at fixed
+characteristics the model would understate that standard error by \R{sim.bd.sum.short.min} to
+\R{sim.bd.sum.short.max}. Two sources can be told apart. One is the cap on the standardised effects. In
+scenarios 2 to 5 and 8 the true variances keep growing with the square of the effect beyond three standard
+deviations, where the model holds its profile constant. Few rows lie there, \R{sim.cap.N4.rows3} of movers'
+rows, but in scenario~4 they carry \R{sim.cap.N4.first3.whole} of the first term of \eqref{eq:V} for the variance
+of the sum (\R{sim.cap.N4.first3} of the movers' part). In that scenario the entry of Table~\ref{tab:bdelta} for the sum is \R{sim.cap.N4.3.sum} with the cap at
+3; with a cap at 4 it would be \R{sim.cap.N4.4.sum}, at 6 \R{sim.cap.N4.6.sum}, and without a cap
+\R{sim.cap.N4.none.sum}. In scenario~8 the same four numbers are \R{sim.cap.N8.3.sum}, \R{sim.cap.N8.4.sum},
+\R{sim.cap.N8.6.sum} and \R{sim.cap.N8.none.sum}. The cap protects the fit from a few rows with extreme estimated effects, and this is its
+price when variances keep rising in the tails. The other source is easy to overlook. In scenarios 2, 3, 6 and
+10 every worker has a variance factor of its own, which the matches of a mover share and which no
+characteristic in the model captures. Such errors average out in the first part of $b(\Delta)$, in expectation
+over the factors, but not in its second, the double sum, which is negative when the errors of the model are
+positively related within a worker. For $\sigma^2_{\alpha+\psi}$ the double sum lowers the mean of the variance
+estimate by \R{sim.bdquad.mix.min} to \R{sim.bdquad.mix.max} of the variance in these four scenarios, and by at
+most \R{sim.bdquad.other.max} elsewhere (Table~\ref{tab:regime}); it contains all errors of the model, not only
+those from the worker factors. A model that is right about the average variance of every group of rows can
+therefore still give a standard error that is too small.
+
+\emph{As implemented.} The procedure as implemented (right panel of Table~\ref{tab:bdelta}) lies above its
+fixed-characteristics counterpart in \R{sim.bd.above.all} of the \R{sim.n.cells} cells; for the variance of the
+sum the difference is between $\R{sim.bd.diff.sum.min}$ and $\R{sim.bd.diff.sum.max}$ (before rounding). The
+ratios of Table~\ref{tab:sim} are therefore the net of two opposing contributions: a model error that lowers the
+variance estimate, and an often larger net contribution of the implementation in the other direction. The two
+panels differ in several ways at once (estimated effects in place of true ones, noisy outcomes in the two fits,
+the stayers' part in scenarios 3 to 5, the projection of the covariance matrix), so the comparison does not
+isolate a cause. In scenario~1 the model is exact at fixed characteristics, and as implemented the ratio for
+the variance of the sum is \R{sim.N1.sum}: an upward discrepancy of the implementation with no model error
+behind it. We have no result that predicts its sign in other designs; Section~\ref{sec:validation} looks at
+two.
+
+\emph{What the simulations do not show.} They use one design and ten scenarios of our choosing, and the form of
+the model was chosen on the same scenarios (Appendix~\ref{app:sim}). They show how the standard error behaves when
+movers' variances are as specified. They cannot show how large $b(\Delta)/\V[\hat\theta]$ is on the Veneto panel
+itself, where movers' variances are not observed; scenario~10 is the closest we can come.
+
+\subsection{Validation: fresh draws and two further designs}\label{sec:validation}
+
+The simulations above served to choose the model. After that choice the estimator was frozen and run once
+more, with acceptance thresholds written down before any task ran. There are three runs.
+\begin{itemize}
+\item \emph{Six-year panel, fresh draws.} The ten scenarios of Table~\ref{tab:sim} with new error draws.
+\item \emph{A three-year window.} The years 1999 to 2001 of the same data: \R{val.y3.n.person_years} person-years
+of \R{val.y3.n.workers} workers at \R{val.y3.n.firms} firms, \R{val.y3.n.rows} rows. Stayers have two or three
+years (\R{val.y3.share.stayer2} of them two), and their rows carry most of the first term for the variance of
+the sum.
+\item \emph{Half of the workers.} A random half of the workers of the six-year panel:
+\R{val.half.n.person_years} person-years of \R{val.half.n.workers} workers at \R{val.half.n.firms} firms,
+\R{val.half.n.rows} rows, with a thinner network of moves.
+\end{itemize}
+Each sub-panel was pruned to the set in which every mover's match can be left out, the effects fitted on it
+serve as its truth, and six of the ten scenarios (1, 2, 4, 6, 8 and 10) were run on it. Every cell has 200
+draws. In these runs the estimator is that of Section~\ref{sec:estimator}, with no projection of the covariance
+matrix (the cases in which that section gives no standard error did not arise). A draw whose variance estimate is not positive is counted and enters the coverage as a
+miss; a draw that fails altogether fails the run.
+
+The thresholds were, for every scenario and component, a ratio as in Table~\ref{tab:sim} between
+\R{val.acc.ratio_min} and \R{val.acc.ratio_max} and a coverage of the 95\% interval of at least
+\R{val.acc.coverage_min}; and for every run, an average coverage of at least \R{val.acc.mean_coverage_min}, no
+failed draw, no variance estimate that is not positive, and floors that bind for at most \R{val.acc.max_floored}
+of movers' rows in any draw. These are tolerances chosen in advance. Meeting them does not establish a
+coverage of 95\%: with 200 draws the coverage of a cell is known to about $\pm0.03$.
+
+\begin{table}[H]
+\centering\footnotesize\setlength{\tabcolsep}{4.5pt}
+\caption{Validation runs: root-mean-square standard error over the true one, and coverage, by run}\label{tab:val}
+\begin{tabular}{@{}lccccccc@{}}
+\toprule
+ & & \multicolumn{4}{c}{Ratio, smallest to largest over scenarios} & & Thresholds \\
+\cmidrule(lr){3-6}
+Run & Scenarios & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ & Coverage & met \\
+\midrule
+\tabinput{gen/tab_val.tex}
+\bottomrule
+\multicolumn{8}{@{}p{0.9\textwidth}@{}}{\rule{0pt}{2.6ex}200 draws per scenario; coverage is the smallest and
+the largest over scenarios and components. Appendix~\ref{app:sim} gives every cell.}
+\end{tabular}
+\end{table}
+
+Two of the three runs met every threshold; the three-year window did not (Table~\ref{tab:val}). On the
+six-year panel the fresh draws reproduce Table~\ref{tab:sim}: the forty ratios lie between
+\R{val.six.ratio.min} and \R{val.six.ratio.max} and differ from those of the earlier runs by at most
+\R{val.six.devdiff.max}, although this run has no projection of the covariance matrix. That step was therefore
+immaterial; in all \R{val.all.draws} validation draws the matrix was positive definite, with a smallest
+eigenvalue of at least \R{val.all.eig.min} of the largest. Coverage on the six-year panel is between
+\R{val.six.cover.min} and \R{val.six.cover.max}. With half of the workers the ratios are between
+\R{val.half.ratio.min} and \R{val.half.ratio.max} and coverage is between \R{val.half.cover.min} and
+\R{val.half.cover.max}. In the three-year window the ratios are between \R{val.y3.ratio.min} and
+\R{val.y3.ratio.max}, and the upper threshold of \R{val.acc.ratio_max} is exceeded in two cells, both for
+$\sigma^2_\psi$: \R{val.y3.N6.psi.d3} in scenario~6 and \R{val.y3.N10.psi.d3} in scenario~10. Coverage there is between
+\R{val.y3.cover.min} and \R{val.y3.cover.max}. In no run did a draw fail or a variance estimate come out zero or
+negative, and floors bound for at most \R{val.all.floor.max} of movers' rows in any draw.
+
+The validation adds two things. First, the results of Section~\ref{sec:sim} are not an artefact of the draws on
+which the model was chosen, or of the projection. Second, the upward discrepancy is not the same in every
+design. For $\sigma^2_\psi$ the largest ratio rises from \R{val.six.psi.max} on the six-year panel to
+\R{val.half.psi.max} with half of the workers and \R{val.y3.psi.max} in the three-year window, the two designs
+with fewer observations behind each estimated effect. On a short panel the standard error of
+$\hat\sigma^2_\psi$ can thus be too large by a sixth. Across the \R{val.all.cells} cells of the three runs the ratio
+is below 0.95 in \R{val.all.n.below95} and above 1.10 in \R{val.all.n.above110}. As before, none of this says how
+large the model's error is on the real panel.

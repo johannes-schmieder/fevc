@@ -1,0 +1,33 @@
+\begin{abstract}
+\noindent The leave-out estimator of Kline, Saggio and S{\o}lvsten (2020, KSS) removes the bias of variance
+components in two-way fixed effects wage models. Its sampling variance depends on the error variance of every
+observation, which a single observation cannot reveal. This note proposes a standard error built on one rule:
+estimate each error variance from independent repeat measurements of the same mean wherever they exist, using
+only the independence that the point estimator already assumes, and use a model elsewhere. The wages of a
+\emph{stayer} in different years are such repeat measurements, so every stayer gets its own variance estimate,
+with no model linking it to other workers. \emph{Movers} get a model: their error variances are a scale, which depends on the length of the match and
+on the leverage, times a quadratic function of the estimated person and firm effects, both fitted to the
+movers' own leave-out variance estimates. We show that the variance estimator is exactly unbiased when movers'
+variances are known, however variances differ across stayers; that it converges under moment bounds and under
+design conditions implied by those KSS use for asymptotic normality; and that with the model for movers,
+evaluated at known characteristics of workers and firms, it converges to the truth plus an explicit term,
+which is zero when the model holds. The implementation evaluates the model at estimated person and firm
+effects; for that step we rely on simulations. The computations reuse what FEVC already computes for the point
+estimate and add a small number of linear solves. In simulations on the design of a six-year Veneto panel
+(\R{real.n.rows} rows), with estimated effects throughout, the root-mean-square standard error is between
+\R{sim.all.min} and \R{sim.all.max} times the true one in ten scenarios, and the coverage of the 95\% interval
+is between \R{sim.all.cov.min} and \R{sim.all.cov.max}. In these runs the standard error is more often too large than too small.
+This is the net of opposing contributions, which the note measures, and not a proven property. A
+validation with tolerances fixed in advance, on fresh draws and on two smaller designs cut from the same
+data, met them on two designs; on the third, a three-year window, the standard error of the variance of firm
+effects was up to \R{val.all.over.max} too large, beyond the tolerance of 15\%. Coverage in these runs is
+between \R{val.all.cover.min} and \R{val.all.cover.max}. For
+designs with one weakly identified direction, the note shows that the same variance estimates, with KSS's own
+estimate for the variance of that direction, give a consistent covariance matrix for the interval of KSS, and
+that a rule which guards that estimate against being too small keeps the interval's coverage bound. In
+simulations on synthetic panels in which two groups of firms are linked by 10 to 100 workers, or not divided
+at all, that interval covers between \R{q1.acc.min} and \R{q1.acc.max}. The normal interval covers as little as
+\R{q1.normal.worst} there, in the worst cases because its variance estimate is not positive in up to
+\R{q1.vneg.max} of the draws. One of the tolerances set in advance, on the length of the interval without a
+bottleneck, was missed.
+\end{abstract}

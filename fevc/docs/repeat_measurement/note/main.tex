@@ -1,0 +1,90 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage[skip=5pt,font=small]{caption}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!50!black]{hyperref}
+\setlist{itemsep=2pt,topsep=4pt}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\textfraction}{0.08}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\V}{\mathbb{V}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\st}{\tilde\sigma}
+\newcommand{\op}{\mathrm{op}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\bnu}{\bar\nu}
+\newcommand{\bth}{\bar\vartheta}
+\definecolor{cstay}{HTML}{0072B2}
+\definecolor{cmove}{HTML}{D55E00}
+\definecolor{cgrey}{HTML}{555555}
+\makeatletter
+\newcommand{\R}[1]{\ifcsname res@#1\endcsname\csname res@#1\endcsname\else\textbf{[\detokenize{#1}]}\fi}
+\newcommand{\setres}[2]{\expandafter\gdef\csname res@#1\endcsname{#2}}
+\newcommand{\tabinput}[1]{\@@input #1 }
+\makeatother
+\input{gen/numbers.tex}
+\input{gen/q1_numbers.tex}
+\allowdisplaybreaks[2]
+
+\title{A Standard Error for Leave-Out Variance Components:\\ Repeat Measurements for Stayers, a Fitted Variance Model for Movers}
+\author{Note for the FEVC project\thanks{FEVC is the Stata package for leave-out variance decompositions that
+this note is written for. Prepared by Claude (an AI assistant) at Johannes Schmieder's request. The estimator
+exists as a prototype and is not part of the package. The propositions are proved in the appendix; the formulas
+were also checked by exact calculation in small designs. The simulations use designs cut from one data set and, in Section~\ref{sec:q1}, synthetic panels. The
+validation runs had tolerances fixed in advance, but they test a prototype, not an implementation in the
+package.}}
+\date{November 13, 2026}
+
+\begin{document}
+\maketitle
+
+\input{s0_abstract.tex}
+\input{s1_setting.tex}
+\input{s2_estimator.tex}
+\input{s3_results.tex}
+\input{s4_computation.tex}
+\input{s5_controls.tex}
+\input{s6_evidence.tex}
+\input{s6b_q1.tex}
+\input{s7_scope.tex}
+
+\appendix
+{\small
+\input{a1_proofs.tex}
+}
+\input{a2_simdetails.tex}
+\input{a3_cost.tex}
+
+\section*{References}
+Andrews, I. and A. Mikusheva (2016). A geometric approach to nonlinear econometric models. \emph{Econometrica}
+84(3), 1249--1264.
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten (2018). Leave-out estimation of variance components. arXiv:1806.01494v1,
+June 2018.
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten (2020). Leave-out estimation of variance components.
+\emph{Econometrica} 88(5), 1859--1898.
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten. LeaveOutTwoWay, a Matlab package for leave-out estimation of
+variance components (the ``KSS Matlab package'').
+
+\end{document}

@@ -1,0 +1,22 @@
+{"schema": "LP-MC-MANIFEST-V1", "purpose": "development study (not a confirmation run): repeat-measurement SE on the six-year Veneto design",
+ "probes": 200, "theory_draws": 128,
+ "scenarios": {
+  "L1":   {"kind": "gauss", "seed": 201, "note": "normal errors, working-model variances"},
+  "L4":   {"kind": "gauss", "grad": 0.5, "mix": 1.5, "seed": 204, "note": "normal; variance rises away from the mean wage; worker-specific variances (CV 1.5, as estimated within stayers)"},
+  "L5":   {"kind": "fat", "shape": 2.0, "seed": 205, "note": "symmetric fat tails, kurtosis 6 (within-stayer estimate 4 to 6)"},
+  "L11":  {"kind": "skew", "shape": 4.0, "align": 1.0, "grad": 1.0, "seed": 211, "note": "skewness 1, stayers signed against the wage level; variance gradient"},
+  "L12":  {"kind": "skew", "shape": 4.0, "align": -1.0, "grad": 1.0, "seed": 212, "note": "skewness 1, stayers signed with the wage level (the direction seen in the data); variance gradient"},
+  "LAR5": {"kind": "ar", "rho": 0.5, "seed": 225, "note": "stayers' errors autoregressive, correlation 0.5 between adjacent years"},
+  "LRW":  {"kind": "rw", "su2": 0.0077, "se2": 0.0033, "seed": 230, "note": "stayers: random walk (innovation variance .0077) plus transitory noise (.0033), as fitted to the gap curve"}},
+ "cells": [
+  {"scenario": "L1", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "L4", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "L5", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "L11", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "L12", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "LAR5", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "LAR5", "design": "gap1", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "LAR5", "design": "firstlast", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "LRW", "design": "default", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "LRW", "design": "gap1", "tasks": 4, "reps_per_task": 25, "draws": 16},
+  {"scenario": "L1", "design": "gap1", "tasks": 4, "reps_per_task": 25, "draws": 16}]}

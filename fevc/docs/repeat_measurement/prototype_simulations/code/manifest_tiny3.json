@@ -1,0 +1,6 @@
+{"probes": 60, "theory_draws": 64,
+ "scenarios": {"L1": {"kind": "gauss", "seed": 101}, "LRW": {"kind": "rw", "su2": 0.0077, "se2": 0.0033, "seed": 130}, "L12": {"kind": "skew", "shape": 4.0, "align": -1.0, "grad": 1.0, "seed": 112}},
+ "cells": [{"scenario": "L1", "design": "firstlast", "tasks": 1, "reps_per_task": 40, "draws": 8},
+           {"scenario": "LRW", "design": "default", "tasks": 1, "reps_per_task": 100, "draws": 8},
+           {"scenario": "LRW", "design": "gap1", "tasks": 1, "reps_per_task": 100, "draws": 8},
+           {"scenario": "L12", "design": "default", "tasks": 1, "reps_per_task": 100, "draws": 8}]}

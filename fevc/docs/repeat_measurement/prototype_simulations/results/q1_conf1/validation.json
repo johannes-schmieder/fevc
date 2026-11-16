@@ -1,0 +1,28 @@
+{
+ "run": "q1-conf1",
+ "passed": false,
+ "complete": true,
+ "acceptance": {
+  "components": [
+   "person",
+   "firm",
+   "cov"
+  ],
+  "q1_cover_min": 0.92,
+  "q1_cover_mean_min": 0.94,
+  "no_interval_max": 0.01,
+  "sum_normal_cover_min": 0.92,
+  "len_ratio_no_bottleneck_max": 1.1,
+  "failed_replications_max": 0
+ },
+ "failures": [
+  "none_movers cov: q1 length 1.127 times the normal length without a bottleneck"
+ ],
+ "inventory_problems": [],
+ "summary": {
+  "acceptance_cells": 25,
+  "q1_cover_min": 0.941,
+  "q1_cover_max": 1.0,
+  "q1_cover_mean": 0.9777199999999999
+ }
+}

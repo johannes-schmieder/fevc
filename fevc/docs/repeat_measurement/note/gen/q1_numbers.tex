@@ -1,0 +1,671 @@
+\setres{q1.reps}{1,000}
+\setres{q1.dev.draws}{200}
+\setres{q1.acc.cells}{25}
+\setres{q1.acc.n}{75}
+\setres{q1.acc.min}{0.941}
+\setres{q1.acc.max}{1.000}
+\setres{q1.acc.mean}{0.978}
+\setres{q1.normal.worst}{0.487}
+\setres{q1.normal.acc.max}{0.964}
+\setres{q1.acc.below93}{0}
+\setres{q1.acc.above97}{55}
+\setres{q1.sum.min}{0.936}
+\setres{q1.sum.max}{0.968}
+\setres{q1.sum.kappa.max}{0.003}
+\setres{q1.fail.reps}{0}
+\setres{q1.draws.total}{27,000}
+\setres{q1.noint.acc}{0}
+\setres{q1.mcse}{0.007}
+\setres{q1.design.rows}{40,700}
+\setres{q1.design.movers}{6,421 to 6,571}
+\setres{q1.design.w2bridge}{96.9\% to 98.1\%}
+\setres{q1.maxw2.none}{0.157 to 0.167}
+\setres{q1.kappa.none.min}{0.05}
+\setres{q1.kappa.none.max}{0.28}
+\setres{q1.normal.none.min}{0.939}
+\setres{q1.normal.none.max}{0.964}
+\setres{q1.normal.none.mean}{0.948}
+\setres{q1.q1.none.min}{0.941}
+\setres{q1.q1.none.max}{0.970}
+\setres{q1.q1.none.mean}{0.958}
+\setres{q1.lo.none.min}{0.941}
+\setres{q1.lo.none.max}{0.967}
+\setres{q1.lo.none.mean}{0.955}
+\setres{q1.fit.none.min}{0.940}
+\setres{q1.fit.none.max}{0.970}
+\setres{q1.fit.none.mean}{0.956}
+\setres{q1.true.none.min}{0.945}
+\setres{q1.true.none.max}{0.963}
+\setres{q1.true.none.mean}{0.956}
+\setres{q1.or.none.min}{0.948}
+\setres{q1.or.none.max}{0.971}
+\setres{q1.or.none.mean}{0.961}
+\setres{q1.len.none.min}{1.01}
+\setres{q1.len.none.max}{1.13}
+\setres{q1.len.none.mean}{1.04}
+\setres{q1.lentrue.none.min}{0.98}
+\setres{q1.lentrue.none.max}{1.05}
+\setres{q1.lentrue.none.mean}{1.01}
+\setres{q1.lenlo.none.mean}{1.01}
+\setres{q1.lenlo.none.max}{1.04}
+\setres{q1.fitlarger.none.min}{58\%}
+\setres{q1.fitlarger.none.max}{66\%}
+\setres{q1.lononpos.none.max}{0.1\%}
+\setres{q1.lonone.none.max}{0.1\%}
+\setres{q1.noint.none.max}{0.0\%}
+\setres{q1.steps.none}{17}
+\setres{q1.cal.bb.none.min}{0.95}
+\setres{q1.cal.bb.none.max}{1.01}
+\setres{q1.cal.bbfit.none.min}{1.00}
+\setres{q1.cal.bbfit.none.max}{1.07}
+\setres{q1.cal.rr.none.min}{0.96}
+\setres{q1.cal.rr.none.max}{1.01}
+\setres{q1.cal.br.none.min}{-0.00}
+\setres{q1.cal.br.none.max}{0.00}
+\setres{q1.cal.bbcv.none.min}{0.66}
+\setres{q1.cal.bbcv.none.max}{0.79}
+\setres{q1.cal.b1sd.none.min}{0.09}
+\setres{q1.cal.b1sd.none.max}{0.70}
+\setres{q1.sumnormal.none.min}{0.949}
+\setres{q1.sumnormal.none.max}{0.954}
+\setres{q1.maxw2.b100}{0.010}
+\setres{q1.kappa.b100.min}{0.30}
+\setres{q1.kappa.b100.max}{1.42}
+\setres{q1.normal.b100.min}{0.708}
+\setres{q1.normal.b100.max}{0.956}
+\setres{q1.normal.b100.mean}{0.914}
+\setres{q1.q1.b100.min}{0.951}
+\setres{q1.q1.b100.max}{0.986}
+\setres{q1.q1.b100.mean}{0.972}
+\setres{q1.lo.b100.min}{0.944}
+\setres{q1.lo.b100.max}{0.984}
+\setres{q1.lo.b100.mean}{0.967}
+\setres{q1.fit.b100.min}{0.928}
+\setres{q1.fit.b100.max}{0.984}
+\setres{q1.fit.b100.mean}{0.963}
+\setres{q1.true.b100.min}{0.953}
+\setres{q1.true.b100.max}{0.982}
+\setres{q1.true.b100.mean}{0.969}
+\setres{q1.or.b100.min}{0.951}
+\setres{q1.or.b100.max}{0.991}
+\setres{q1.or.b100.mean}{0.975}
+\setres{q1.len.b100.min}{1.10}
+\setres{q1.len.b100.max}{1.95}
+\setres{q1.len.b100.mean}{1.28}
+\setres{q1.lentrue.b100.min}{0.99}
+\setres{q1.lentrue.b100.max}{1.06}
+\setres{q1.lentrue.b100.mean}{1.02}
+\setres{q1.lenlo.b100.mean}{1.03}
+\setres{q1.lenlo.b100.max}{1.05}
+\setres{q1.fitlarger.b100.min}{19\%}
+\setres{q1.fitlarger.b100.max}{57\%}
+\setres{q1.lononpos.b100.max}{0.0\%}
+\setres{q1.lonone.b100.max}{0.0\%}
+\setres{q1.noint.b100.max}{0.0\%}
+\setres{q1.steps.b100}{6 to 7}
+\setres{q1.cal.bb.b100.min}{0.99}
+\setres{q1.cal.bb.b100.max}{1.01}
+\setres{q1.cal.bbfit.b100.min}{0.77}
+\setres{q1.cal.bbfit.b100.max}{1.02}
+\setres{q1.cal.rr.b100.min}{0.95}
+\setres{q1.cal.rr.b100.max}{1.03}
+\setres{q1.cal.br.b100.min}{-0.03}
+\setres{q1.cal.br.b100.max}{0.02}
+\setres{q1.cal.bbcv.b100.min}{0.20}
+\setres{q1.cal.bbcv.b100.max}{0.27}
+\setres{q1.cal.b1sd.b100.min}{0.20}
+\setres{q1.cal.b1sd.b100.max}{16.65}
+\setres{q1.sumnormal.b100.min}{0.936}
+\setres{q1.sumnormal.b100.max}{0.959}
+\setres{q1.maxw2.b30}{0.031}
+\setres{q1.kappa.b30.min}{0.95}
+\setres{q1.kappa.b30.max}{5.09}
+\setres{q1.normal.b30.min}{0.528}
+\setres{q1.normal.b30.max}{0.935}
+\setres{q1.normal.b30.mean}{0.802}
+\setres{q1.q1.b30.min}{0.973}
+\setres{q1.q1.b30.max}{0.993}
+\setres{q1.q1.b30.mean}{0.984}
+\setres{q1.lo.b30.min}{0.935}
+\setres{q1.lo.b30.max}{0.986}
+\setres{q1.lo.b30.mean}{0.966}
+\setres{q1.fit.b30.min}{0.956}
+\setres{q1.fit.b30.max}{0.993}
+\setres{q1.fit.b30.mean}{0.977}
+\setres{q1.true.b30.min}{0.966}
+\setres{q1.true.b30.max}{0.990}
+\setres{q1.true.b30.mean}{0.981}
+\setres{q1.or.b30.min}{0.974}
+\setres{q1.or.b30.max}{0.994}
+\setres{q1.or.b30.mean}{0.986}
+\setres{q1.len.b30.min}{1.23}
+\setres{q1.len.b30.max}{2.10}
+\setres{q1.len.b30.mean}{1.60}
+\setres{q1.lentrue.b30.min}{1.03}
+\setres{q1.lentrue.b30.max}{1.12}
+\setres{q1.lentrue.b30.mean}{1.08}
+\setres{q1.lenlo.b30.mean}{1.09}
+\setres{q1.lenlo.b30.max}{1.12}
+\setres{q1.fitlarger.b30.min}{37\%}
+\setres{q1.fitlarger.b30.max}{56\%}
+\setres{q1.lononpos.b30.max}{0.5\%}
+\setres{q1.lonone.b30.max}{0.5\%}
+\setres{q1.noint.b30.max}{0.0\%}
+\setres{q1.steps.b30}{5}
+\setres{q1.cal.bb.b30.min}{1.00}
+\setres{q1.cal.bb.b30.max}{1.01}
+\setres{q1.cal.bbfit.b30.min}{0.79}
+\setres{q1.cal.bbfit.b30.max}{1.02}
+\setres{q1.cal.rr.b30.min}{0.97}
+\setres{q1.cal.rr.b30.max}{1.02}
+\setres{q1.cal.br.b30.min}{-0.02}
+\setres{q1.cal.br.b30.max}{0.01}
+\setres{q1.cal.bbcv.b30.min}{0.36}
+\setres{q1.cal.bbcv.b30.max}{0.49}
+\setres{q1.cal.b1sd.b30.min}{0.22}
+\setres{q1.cal.b1sd.b30.max}{9.26}
+\setres{q1.sumnormal.b30.min}{0.938}
+\setres{q1.sumnormal.b30.max}{0.958}
+\setres{q1.maxw2.b10}{0.090}
+\setres{q1.kappa.b10.min}{2.74}
+\setres{q1.kappa.b10.max}{11}
+\setres{q1.normal.b10.min}{0.487}
+\setres{q1.normal.b10.max}{0.937}
+\setres{q1.normal.b10.mean}{0.725}
+\setres{q1.q1.b10.min}{0.970}
+\setres{q1.q1.b10.max}{1.000}
+\setres{q1.q1.b10.mean}{0.986}
+\setres{q1.lo.b10.min}{0.795}
+\setres{q1.lo.b10.max}{0.911}
+\setres{q1.lo.b10.mean}{0.844}
+\setres{q1.fit.b10.min}{0.935}
+\setres{q1.fit.b10.max}{0.999}
+\setres{q1.fit.b10.mean}{0.978}
+\setres{q1.true.b10.min}{0.971}
+\setres{q1.true.b10.max}{0.996}
+\setres{q1.true.b10.mean}{0.984}
+\setres{q1.or.b10.min}{0.980}
+\setres{q1.or.b10.max}{1.000}
+\setres{q1.or.b10.mean}{0.990}
+\setres{q1.len.b10.min}{1.34}
+\setres{q1.len.b10.max}{2.36}
+\setres{q1.len.b10.mean}{1.90}
+\setres{q1.lentrue.b10.min}{1.07}
+\setres{q1.lentrue.b10.max}{1.33}
+\setres{q1.lentrue.b10.mean}{1.19}
+\setres{q1.lenlo.b10.mean}{1.13}
+\setres{q1.lenlo.b10.max}{1.27}
+\setres{q1.fitlarger.b10.min}{39\%}
+\setres{q1.fitlarger.b10.max}{68\%}
+\setres{q1.lononpos.b10.max}{13.6\%}
+\setres{q1.lonone.b10.max}{13.6\%}
+\setres{q1.noint.b10.max}{0.0\%}
+\setres{q1.steps.b10}{5}
+\setres{q1.cal.bb.b10.min}{0.97}
+\setres{q1.cal.bb.b10.max}{1.05}
+\setres{q1.cal.bbfit.b10.min}{0.67}
+\setres{q1.cal.bbfit.b10.max}{1.21}
+\setres{q1.cal.rr.b10.min}{0.95}
+\setres{q1.cal.rr.b10.max}{1.01}
+\setres{q1.cal.br.b10.min}{-0.01}
+\setres{q1.cal.br.b10.max}{0.01}
+\setres{q1.cal.bbcv.b10.min}{0.74}
+\setres{q1.cal.bbcv.b10.max}{0.95}
+\setres{q1.cal.b1sd.b10.min}{0.09}
+\setres{q1.cal.b1sd.b10.max}{5.44}
+\setres{q1.sumnormal.b10.min}{0.939}
+\setres{q1.sumnormal.b10.max}{0.957}
+\setres{q1.maxw2.skew}{0.031 to 0.090}
+\setres{q1.kappa.skew.min}{1.11}
+\setres{q1.kappa.skew.max}{9.90}
+\setres{q1.normal.skew.min}{0.743}
+\setres{q1.normal.skew.max}{0.923}
+\setres{q1.normal.skew.mean}{0.842}
+\setres{q1.q1.skew.min}{0.972}
+\setres{q1.q1.skew.max}{0.995}
+\setres{q1.q1.skew.mean}{0.983}
+\setres{q1.lo.skew.min}{0.812}
+\setres{q1.lo.skew.max}{0.967}
+\setres{q1.lo.skew.mean}{0.889}
+\setres{q1.fit.skew.min}{0.933}
+\setres{q1.fit.skew.max}{0.988}
+\setres{q1.fit.skew.mean}{0.959}
+\setres{q1.true.skew.min}{0.977}
+\setres{q1.true.skew.max}{0.993}
+\setres{q1.true.skew.mean}{0.984}
+\setres{q1.or.skew.min}{0.988}
+\setres{q1.or.skew.max}{0.998}
+\setres{q1.or.skew.mean}{0.993}
+\setres{q1.len.skew.min}{1.31}
+\setres{q1.len.skew.max}{2.13}
+\setres{q1.len.skew.mean}{1.60}
+\setres{q1.lentrue.skew.min}{1.04}
+\setres{q1.lentrue.skew.max}{1.14}
+\setres{q1.lentrue.skew.mean}{1.08}
+\setres{q1.lenlo.skew.mean}{1.06}
+\setres{q1.lenlo.skew.max}{1.11}
+\setres{q1.fitlarger.skew.min}{41\%}
+\setres{q1.fitlarger.skew.max}{49\%}
+\setres{q1.lononpos.skew.max}{12.6\%}
+\setres{q1.lonone.skew.max}{12.7\%}
+\setres{q1.noint.skew.max}{0.0\%}
+\setres{q1.steps.skew}{5}
+\setres{q1.cal.bb.skew.min}{1.01}
+\setres{q1.cal.bb.skew.max}{1.04}
+\setres{q1.cal.bbfit.skew.min}{0.62}
+\setres{q1.cal.bbfit.skew.max}{0.87}
+\setres{q1.cal.rr.skew.min}{0.95}
+\setres{q1.cal.rr.skew.max}{1.17}
+\setres{q1.cal.br.skew.min}{-0.02}
+\setres{q1.cal.br.skew.max}{0.01}
+\setres{q1.cal.bbcv.skew.min}{0.82}
+\setres{q1.cal.bbcv.skew.max}{1.06}
+\setres{q1.cal.b1sd.skew.min}{1.15}
+\setres{q1.cal.b1sd.skew.max}{7.87}
+\setres{q1.sumnormal.skew.min}{0.961}
+\setres{q1.sumnormal.skew.max}{0.968}
+\setres{q1.maxw2.bridge}{0.031 to 0.090}
+\setres{q1.kappa.bridge.min}{2.77}
+\setres{q1.kappa.bridge.max}{23}
+\setres{q1.normal.bridge.min}{0.629}
+\setres{q1.normal.bridge.max}{0.727}
+\setres{q1.normal.bridge.mean}{0.682}
+\setres{q1.q1.bridge.min}{0.950}
+\setres{q1.q1.bridge.max}{0.991}
+\setres{q1.q1.bridge.mean}{0.974}
+\setres{q1.lo.bridge.min}{0.921}
+\setres{q1.lo.bridge.max}{0.991}
+\setres{q1.lo.bridge.mean}{0.960}
+\setres{q1.fit.bridge.min}{0.803}
+\setres{q1.fit.bridge.max}{0.925}
+\setres{q1.fit.bridge.mean}{0.855}
+\setres{q1.true.bridge.min}{0.982}
+\setres{q1.true.bridge.max}{0.996}
+\setres{q1.true.bridge.mean}{0.989}
+\setres{q1.or.bridge.min}{0.989}
+\setres{q1.or.bridge.max}{0.998}
+\setres{q1.or.bridge.mean}{0.993}
+\setres{q1.len.bridge.min}{2.01}
+\setres{q1.len.bridge.max}{2.65}
+\setres{q1.len.bridge.mean}{2.25}
+\setres{q1.lentrue.bridge.min}{0.99}
+\setres{q1.lentrue.bridge.max}{1.02}
+\setres{q1.lentrue.bridge.mean}{1.00}
+\setres{q1.lenlo.bridge.mean}{1.00}
+\setres{q1.lenlo.bridge.max}{1.01}
+\setres{q1.fitlarger.bridge.min}{1\%}
+\setres{q1.fitlarger.bridge.max}{13\%}
+\setres{q1.lononpos.bridge.max}{2.0\%}
+\setres{q1.lonone.bridge.max}{2.0\%}
+\setres{q1.noint.bridge.max}{0.0\%}
+\setres{q1.steps.bridge}{5}
+\setres{q1.cal.bb.bridge.min}{1.02}
+\setres{q1.cal.bb.bridge.max}{1.03}
+\setres{q1.cal.bbfit.bridge.min}{0.34}
+\setres{q1.cal.bbfit.bridge.max}{0.35}
+\setres{q1.cal.rr.bridge.min}{0.99}
+\setres{q1.cal.rr.bridge.max}{1.00}
+\setres{q1.cal.br.bridge.min}{-0.03}
+\setres{q1.cal.br.bridge.max}{0.01}
+\setres{q1.cal.bbcv.bridge.min}{0.34}
+\setres{q1.cal.bbcv.bridge.max}{0.67}
+\setres{q1.cal.b1sd.bridge.min}{0.76}
+\setres{q1.cal.b1sd.bridge.max}{5.38}
+\setres{q1.sumnormal.bridge.min}{0.950}
+\setres{q1.sumnormal.bridge.max}{0.954}
+\setres{q1.maxw2.b3}{0.256}
+\setres{q1.kappa.b3.min}{11}
+\setres{q1.kappa.b3.max}{35}
+\setres{q1.normal.b3.min}{0.713}
+\setres{q1.normal.b3.max}{0.805}
+\setres{q1.normal.b3.mean}{0.775}
+\setres{q1.q1.b3.min}{0.940}
+\setres{q1.q1.b3.max}{0.980}
+\setres{q1.q1.b3.mean}{0.963}
+\setres{q1.lo.b3.min}{0.710}
+\setres{q1.lo.b3.max}{0.833}
+\setres{q1.lo.b3.mean}{0.775}
+\setres{q1.fit.b3.min}{0.891}
+\setres{q1.fit.b3.max}{0.959}
+\setres{q1.fit.b3.mean}{0.929}
+\setres{q1.true.b3.min}{0.939}
+\setres{q1.true.b3.max}{0.989}
+\setres{q1.true.b3.mean}{0.977}
+\setres{q1.or.b3.min}{0.975}
+\setres{q1.or.b3.max}{0.995}
+\setres{q1.or.b3.mean}{0.989}
+\setres{q1.len.b3.min}{1.82}
+\setres{q1.len.b3.max}{2.32}
+\setres{q1.len.b3.mean}{2.16}
+\setres{q1.lentrue.b3.min}{1.05}
+\setres{q1.lentrue.b3.max}{1.16}
+\setres{q1.lentrue.b3.mean}{1.11}
+\setres{q1.lenlo.b3.mean}{1.00}
+\setres{q1.lenlo.b3.max}{1.04}
+\setres{q1.fitlarger.b3.min}{39\%}
+\setres{q1.fitlarger.b3.max}{46\%}
+\setres{q1.lononpos.b3.max}{20.8\%}
+\setres{q1.lonone.b3.max}{20.9\%}
+\setres{q1.noint.b3.max}{0.0\%}
+\setres{q1.steps.b3}{5}
+\setres{q1.cal.bb.b3.min}{1.03}
+\setres{q1.cal.bb.b3.max}{1.07}
+\setres{q1.cal.bbfit.b3.min}{0.51}
+\setres{q1.cal.bbfit.b3.max}{0.52}
+\setres{q1.cal.rr.b3.min}{0.89}
+\setres{q1.cal.rr.b3.max}{0.99}
+\setres{q1.cal.br.b3.min}{-0.01}
+\setres{q1.cal.br.b3.max}{0.02}
+\setres{q1.cal.bbcv.b3.min}{1.15}
+\setres{q1.cal.bbcv.b3.max}{1.33}
+\setres{q1.cal.b1sd.b3.min}{0.06}
+\setres{q1.cal.b1sd.b3.max}{2.42}
+\setres{q1.sumnormal.b3.min}{0.954}
+\setres{q1.sumnormal.b3.max}{0.960}
+\setres{q1.steps.bottleneck}{5 to 7}
+\setres{q1.verdict}{Not all tolerances were met: 1 of the checks failed.}
+\setres{q1.nfail}{1}
+\setres{q1.fail.len}{12.7\%}
+\setres{q1.fail.comp}{cov}
+\setres{q1.fail.cell}{none-movers}
+\setres{q1.fail.kappa}{0.28}
+\setres{q1.fail.maxw2}{0.16}
+\setres{q1.fail.z}{2.07}
+\setres{q1.fail.zpct}{5.6\%}
+\setres{q1.fail.truelen}{8\%}
+\setres{q1.fail.cover}{0.969}
+\setres{q1.fail.normalcover}{0.949}
+\setres{q1.none.len.others}{1.016 and 1.072}
+\setres{q1.none.n}{9}
+\setres{q1.true.acc.min}{0.945}
+\setres{q1.true.acc.max}{0.996}
+\setres{q1.se.bridge}{0.594 to 0.667}
+\setres{q1.se.profilegap}{0.77 to 0.97}
+\setres{q1.se.profilegap.n}{5}
+\setres{q1.bbfit.profilegap}{12\% to 38\%}
+\setres{q1.bbfit.bridge}{0.339 to 0.349}
+\setres{q1.se.other}{0.90 to 1.12}
+\setres{q1.se.sum}{0.997 to 1.064}
+\setres{q1.lonone.b10all}{2\% to 14\%}
+\setres{q1.lo.b10all}{0.795 to 0.955}
+\setres{q1.lo.ge30}{0.935 to 0.991}
+\setres{q1.cal.bb.acc}{0.945 to 1.053}
+\setres{q1.cal.rr.acc}{0.948 to 1.168}
+\setres{q1.cal.br.acc}{0.028}
+\setres{q1.mcvar.acc}{0.81 to 1.10}
+\setres{q1.lentrue.all.b100}{1.02}
+\setres{q1.lentrue.all.b100.max}{1.05}
+\setres{q1.bbcv.all.b100}{0.195 to 0.268}
+\setres{q1.lentrue.all.b30}{1.08}
+\setres{q1.lentrue.all.b30.max}{1.12}
+\setres{q1.bbcv.all.b30}{0.34 to 0.82}
+\setres{q1.lentrue.all.b10}{1.19}
+\setres{q1.lentrue.all.b10.max}{1.32}
+\setres{q1.bbcv.all.b10}{0.667 to 1.057}
+\setres{q1.lentrue.acc.max}{1.33}
+\setres{q1.len.acc.max}{2.65}
+\setres{q1.bykappa.0.n}{8}
+\setres{q1.bykappa.0.normal}{0.939 to 0.964}
+\setres{q1.bykappa.0.q1}{0.941 to 0.970}
+\setres{q1.bykappa.0p2.n}{13}
+\setres{q1.bykappa.0p2.normal}{0.914 to 0.956}
+\setres{q1.bykappa.0p2.q1}{0.951 to 0.976}
+\setres{q1.bykappa.0p6.n}{20}
+\setres{q1.bykappa.0p6.normal}{0.681 to 0.935}
+\setres{q1.bykappa.0p6.q1}{0.973 to 0.989}
+\setres{q1.bykappa.2.n}{23}
+\setres{q1.bykappa.2.normal}{0.528 to 0.937}
+\setres{q1.bykappa.2.q1}{0.970 to 0.996}
+\setres{q1.bykappa.6.n}{11}
+\setres{q1.bykappa.6.normal}{0.487 to 0.743}
+\setres{q1.bykappa.6.q1}{0.950 to 1.000}
+\setres{q1.screen.ratio.min}{0.039}
+\setres{q1.screen.ratio.max}{1.195}
+\setres{q1.kappahat.ratio.min}{0.71}
+\setres{q1.kappahat.ratio.max}{1.31}
+\setres{q1.screen.low.n}{6}
+\setres{q1.screen.low.normal.min}{0.914}
+\setres{q1.screen.high.n}{69}
+\setres{q1.screen.high.normal.min}{0.487}
+\setres{q1.rho.true.max}{0.05}
+\setres{q1.rholo.above}{0.3\%}
+\setres{q1.bench.srr}{0.2\%}
+\setres{q1.bench.v}{3\%}
+\setres{q1.vneg.max}{47.8\%}
+\setres{q1.vneg.cases}{36}
+\setres{q1.vneg.cases10}{18}
+\setres{q1.vneg.worst}{47.8\%}
+\setres{q1.normal.worst.cond}{0.933}
+\setres{q1.normal.cond.min}{0.658}
+\setres{q1.vneg.sum}{0}
+\setres{q1.vneg.lowkappa}{0.0\%}
+\setres{q1.b1sd.gap0}{0.0 to 2.3}
+\setres{q1.b1sd.gap3}{0.7 to 17}
+\setres{q1.neff.b100}{102}
+\setres{q1.neff.b30}{32}
+\setres{q1.neff.b10}{11}
+\setres{q1.real.six.rows}{4,063,732}
+\setres{q1.real.six.seconds}{1706}
+\setres{q1.real.six.solves.se}{68}
+\setres{q1.real.six.person.share}{0.6\%}
+\setres{q1.real.six.person.maxw2}{0.321}
+\setres{q1.real.six.person.steps}{90}
+\setres{q1.real.six.person.converged}{True}
+\setres{q1.real.six.person.neff}{5}
+\setres{q1.real.six.person.half}{3}
+\setres{q1.real.six.person.kscreen}{0.022}
+\setres{q1.real.six.person.solves}{85}
+\setres{q1.real.six.person.b1se}{2.0}
+\setres{q1.real.six.person.lo.nonpos}{False}
+\setres{q1.real.six.person.bbratio}{0.52}
+\setres{q1.real.six.person.kappa}{0.022}
+\setres{q1.real.six.person.z}{1.971}
+\setres{q1.real.six.person.larger}{fitted}
+\setres{q1.real.six.person.q1}{[0.09654, 0.09740]}
+\setres{q1.real.six.person.normal}{[0.09654, 0.09740]}
+\setres{q1.real.six.person.lenratio}{1.005}
+\setres{q1.real.six.firm.share}{0.6\%}
+\setres{q1.real.six.firm.maxw2}{0.320}
+\setres{q1.real.six.firm.steps}{126}
+\setres{q1.real.six.firm.converged}{True}
+\setres{q1.real.six.firm.neff}{5}
+\setres{q1.real.six.firm.half}{3}
+\setres{q1.real.six.firm.kscreen}{0.025}
+\setres{q1.real.six.firm.solves}{85}
+\setres{q1.real.six.firm.b1se}{-0.3}
+\setres{q1.real.six.firm.lo.nonpos}{False}
+\setres{q1.real.six.firm.bbratio}{0.51}
+\setres{q1.real.six.firm.kappa}{0.025}
+\setres{q1.real.six.firm.z}{1.972}
+\setres{q1.real.six.firm.larger}{fitted}
+\setres{q1.real.six.firm.q1}{[0.02570, 0.02647]}
+\setres{q1.real.six.firm.normal}{[0.02570, 0.02647]}
+\setres{q1.real.six.firm.lenratio}{1.006}
+\setres{q1.real.six.cov.share}{0.7\%}
+\setres{q1.real.six.cov.maxw2}{0.321}
+\setres{q1.real.six.cov.steps}{109}
+\setres{q1.real.six.cov.converged}{True}
+\setres{q1.real.six.cov.neff}{5}
+\setres{q1.real.six.cov.half}{3}
+\setres{q1.real.six.cov.kscreen}{0.051}
+\setres{q1.real.six.cov.solves}{85}
+\setres{q1.real.six.cov.b1se}{-1.1}
+\setres{q1.real.six.cov.lo.nonpos}{False}
+\setres{q1.real.six.cov.bbratio}{0.52}
+\setres{q1.real.six.cov.kappa}{0.051}
+\setres{q1.real.six.cov.z}{1.984}
+\setres{q1.real.six.cov.larger}{fitted}
+\setres{q1.real.six.cov.q1}{[0.01326, 0.01364]}
+\setres{q1.real.six.cov.normal}{[0.01326, 0.01364]}
+\setres{q1.real.six.cov.lenratio}{1.011}
+\setres{q1.real.six.sum.share}{0.0\%}
+\setres{q1.real.six.sum.maxw2}{1.9e-05}
+\setres{q1.real.six.sum.steps}{5}
+\setres{q1.real.six.sum.converged}{True}
+\setres{q1.real.six.sum.neff}{983,420}
+\setres{q1.real.six.sum.half}{423,506}
+\setres{q1.real.six.sum.kscreen}{0.000}
+\setres{q1.real.six.sum.solves}{85}
+\setres{q1.real.six.sum.b1se}{-78.9}
+\setres{q1.real.six.sum.lo.nonpos}{False}
+\setres{q1.real.six.sum.bbratio}{1.05}
+\setres{q1.real.six.sum.kappa}{0.000}
+\setres{q1.real.six.sum.z}{1.960}
+\setres{q1.real.six.sum.larger}{leave-out}
+\setres{q1.real.six.sum.q1}{[0.14976, 0.15013]}
+\setres{q1.real.six.sum.normal}{[0.14976, 0.15013]}
+\setres{q1.real.six.sum.lenratio}{1.000}
+\setres{q1.real.half.rows}{1,879,522}
+\setres{q1.real.half.seconds}{375}
+\setres{q1.real.half.solves.se}{68}
+\setres{q1.real.half.person.share}{2.3\%}
+\setres{q1.real.half.person.maxw2}{0.403}
+\setres{q1.real.half.person.steps}{19}
+\setres{q1.real.half.person.converged}{True}
+\setres{q1.real.half.person.neff}{4}
+\setres{q1.real.half.person.half}{2}
+\setres{q1.real.half.person.kscreen}{0.117}
+\setres{q1.real.half.person.solves}{85}
+\setres{q1.real.half.person.b1se}{-0.2}
+\setres{q1.real.half.person.lo.nonpos}{False}
+\setres{q1.real.half.person.bbratio}{2.49}
+\setres{q1.real.half.person.kappa}{0.117}
+\setres{q1.real.half.person.z}{2.013}
+\setres{q1.real.half.person.larger}{leave-out}
+\setres{q1.real.half.person.q1}{[0.09838, 0.09977]}
+\setres{q1.real.half.person.normal}{[0.09838, 0.09973]}
+\setres{q1.real.half.person.lenratio}{1.025}
+\setres{q1.real.half.firm.share}{2.4\%}
+\setres{q1.real.half.firm.maxw2}{0.405}
+\setres{q1.real.half.firm.steps}{17}
+\setres{q1.real.half.firm.converged}{True}
+\setres{q1.real.half.firm.neff}{4}
+\setres{q1.real.half.firm.half}{2}
+\setres{q1.real.half.firm.kscreen}{0.127}
+\setres{q1.real.half.firm.solves}{85}
+\setres{q1.real.half.firm.b1se}{0.6}
+\setres{q1.real.half.firm.lo.nonpos}{False}
+\setres{q1.real.half.firm.bbratio}{2.50}
+\setres{q1.real.half.firm.kappa}{0.128}
+\setres{q1.real.half.firm.z}{2.017}
+\setres{q1.real.half.firm.larger}{leave-out}
+\setres{q1.real.half.firm.q1}{[0.02533, 0.02662]}
+\setres{q1.real.half.firm.normal}{[0.02533, 0.02658]}
+\setres{q1.real.half.firm.lenratio}{1.028}
+\setres{q1.real.half.cov.share}{2.6\%}
+\setres{q1.real.half.cov.maxw2}{0.405}
+\setres{q1.real.half.cov.steps}{15}
+\setres{q1.real.half.cov.converged}{True}
+\setres{q1.real.half.cov.neff}{4}
+\setres{q1.real.half.cov.half}{2}
+\setres{q1.real.half.cov.kscreen}{0.254}
+\setres{q1.real.half.cov.solves}{85}
+\setres{q1.real.half.cov.b1se}{-0.4}
+\setres{q1.real.half.cov.lo.nonpos}{False}
+\setres{q1.real.half.cov.bbratio}{2.50}
+\setres{q1.real.half.cov.kappa}{0.257}
+\setres{q1.real.half.cov.z}{2.064}
+\setres{q1.real.half.cov.larger}{leave-out}
+\setres{q1.real.half.cov.q1}{[0.01327, 0.01392]}
+\setres{q1.real.half.cov.normal}{[0.01331, 0.01393]}
+\setres{q1.real.half.cov.lenratio}{1.046}
+\setres{q1.real.half.sum.share}{0.0\%}
+\setres{q1.real.half.sum.maxw2}{4.6e-05}
+\setres{q1.real.half.sum.steps}{5}
+\setres{q1.real.half.sum.converged}{True}
+\setres{q1.real.half.sum.neff}{457,260}
+\setres{q1.real.half.sum.half}{196,185}
+\setres{q1.real.half.sum.kscreen}{0.000}
+\setres{q1.real.half.sum.solves}{85}
+\setres{q1.real.half.sum.b1se}{10.2}
+\setres{q1.real.half.sum.lo.nonpos}{False}
+\setres{q1.real.half.sum.bbratio}{1.01}
+\setres{q1.real.half.sum.kappa}{0.000}
+\setres{q1.real.half.sum.z}{1.960}
+\setres{q1.real.half.sum.larger}{leave-out}
+\setres{q1.real.half.sum.q1}{[0.15197, 0.15252]}
+\setres{q1.real.half.sum.normal}{[0.15197, 0.15252]}
+\setres{q1.real.half.sum.lenratio}{1.000}
+\setres{q1.real.y3.rows}{2,188,161}
+\setres{q1.real.y3.seconds}{356}
+\setres{q1.real.y3.solves.se}{68}
+\setres{q1.real.y3.person.share}{1.3\%}
+\setres{q1.real.y3.person.maxw2}{0.115}
+\setres{q1.real.y3.person.steps}{200}
+\setres{q1.real.y3.person.converged}{False}
+\setres{q1.real.y3.person.neff}{13}
+\setres{q1.real.y3.person.half}{5}
+\setres{q1.real.y3.person.kscreen}{0.055}
+\setres{q1.real.y3.person.solves}{85}
+\setres{q1.real.y3.person.b1se}{-3.7}
+\setres{q1.real.y3.person.lo.nonpos}{False}
+\setres{q1.real.y3.person.bbratio}{0.52}
+\setres{q1.real.y3.person.kappa}{0.056}
+\setres{q1.real.y3.person.z}{1.986}
+\setres{q1.real.y3.person.larger}{fitted}
+\setres{q1.real.y3.person.q1}{[0.11041, 0.11198]}
+\setres{q1.real.y3.person.normal}{[0.11041, 0.11197]}
+\setres{q1.real.y3.person.lenratio}{1.010}
+\setres{q1.real.y3.firm.share}{1.4\%}
+\setres{q1.real.y3.firm.maxw2}{0.116}
+\setres{q1.real.y3.firm.steps}{166}
+\setres{q1.real.y3.firm.converged}{True}
+\setres{q1.real.y3.firm.neff}{13}
+\setres{q1.real.y3.firm.half}{5}
+\setres{q1.real.y3.firm.kscreen}{0.062}
+\setres{q1.real.y3.firm.solves}{85}
+\setres{q1.real.y3.firm.b1se}{2.9}
+\setres{q1.real.y3.firm.lo.nonpos}{False}
+\setres{q1.real.y3.firm.bbratio}{0.52}
+\setres{q1.real.y3.firm.kappa}{0.062}
+\setres{q1.real.y3.firm.z}{1.989}
+\setres{q1.real.y3.firm.larger}{fitted}
+\setres{q1.real.y3.firm.q1}{[0.02259, 0.02399]}
+\setres{q1.real.y3.firm.normal}{[0.02259, 0.02398]}
+\setres{q1.real.y3.firm.lenratio}{1.014}
+\setres{q1.real.y3.cov.share}{1.4\%}
+\setres{q1.real.y3.cov.maxw2}{0.115}
+\setres{q1.real.y3.cov.steps}{152}
+\setres{q1.real.y3.cov.converged}{True}
+\setres{q1.real.y3.cov.neff}{13}
+\setres{q1.real.y3.cov.half}{5}
+\setres{q1.real.y3.cov.kscreen}{0.120}
+\setres{q1.real.y3.cov.solves}{85}
+\setres{q1.real.y3.cov.b1se}{-0.4}
+\setres{q1.real.y3.cov.lo.nonpos}{False}
+\setres{q1.real.y3.cov.bbratio}{0.52}
+\setres{q1.real.y3.cov.kappa}{0.122}
+\setres{q1.real.y3.cov.z}{2.015}
+\setres{q1.real.y3.cov.larger}{fitted}
+\setres{q1.real.y3.cov.q1}{[0.01386, 0.01459]}
+\setres{q1.real.y3.cov.normal}{[0.01387, 0.01458]}
+\setres{q1.real.y3.cov.lenratio}{1.018}
+\setres{q1.real.y3.sum.share}{0.0\%}
+\setres{q1.real.y3.sum.maxw2}{1.6e-05}
+\setres{q1.real.y3.sum.steps}{5}
+\setres{q1.real.y3.sum.converged}{True}
+\setres{q1.real.y3.sum.neff}{696,241}
+\setres{q1.real.y3.sum.half}{265,198}
+\setres{q1.real.y3.sum.kscreen}{0.000}
+\setres{q1.real.y3.sum.solves}{85}
+\setres{q1.real.y3.sum.b1se}{-93.8}
+\setres{q1.real.y3.sum.lo.nonpos}{False}
+\setres{q1.real.y3.sum.bbratio}{1.01}
+\setres{q1.real.y3.sum.kappa}{0.000}
+\setres{q1.real.y3.sum.z}{1.960}
+\setres{q1.real.y3.sum.larger}{leave-out}
+\setres{q1.real.y3.sum.q1}{[0.16273, 0.16312]}
+\setres{q1.real.y3.sum.normal}{[0.16273, 0.16312]}
+\setres{q1.real.y3.sum.lenratio}{1.000}
+\setres{q1.real.share}{0.55\% to 2.61\%}
+\setres{q1.real.kappa}{0.02 to 0.26}
+\setres{q1.real.maxw2}{0.115 to 0.405}
+\setres{q1.real.lenratio}{1.005 to 1.047}
+\setres{q1.real.half}{2 to 5}
+\setres{q1.real.steps}{15 to 200}
+\setres{q1.real.bbratio}{0.51 to 2.50}
+\setres{q1.real.fitted.n}{6}
+\setres{q1.real.n}{9}
+\setres{q1.real.unconverged}{1}
+\setres{q1.real.power.seconds}{3 to 76}
+\setres{q1.real.sum.share}{below 0.001\%}

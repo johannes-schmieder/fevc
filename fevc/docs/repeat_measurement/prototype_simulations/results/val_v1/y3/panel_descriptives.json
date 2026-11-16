@@ -1,0 +1,27 @@
+{
+ "source": {
+  "mode": "years",
+  "first": 1999,
+  "last": 2001
+ },
+ "person_years_selected": 2668835,
+ "person_years": 2328924,
+ "workers": 832064,
+ "firms": 50384,
+ "matches": 1055362,
+ "stayers": 628544,
+ "stayer_rows": 1761343,
+ "movers": 203520,
+ "mover_matches": 426818,
+ "stayer_years_hist": {
+  "2": 124289,
+  "3": 504255
+ },
+ "firms_per_mover_hist": {
+  "2": 183742,
+  "3": 19778
+ },
+ "y_mean": 4.839041775009214,
+ "y_var": 0.1791856422676729,
+ "seconds": 9.229715824127197
+}

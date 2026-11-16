@@ -1,0 +1,4 @@
+{"probes": 60, "theory_draws": 256,
+ "scenarios": {"LRW": {"kind": "rw", "su2": 0.0077, "se2": 0.0033, "seed": 130}},
+ "cells": [{"scenario": "LRW", "design": "default", "tasks": 1, "reps_per_task": 600, "draws": 8},
+           {"scenario": "LRW", "design": "gap1", "tasks": 1, "reps_per_task": 600, "draws": 8}]}

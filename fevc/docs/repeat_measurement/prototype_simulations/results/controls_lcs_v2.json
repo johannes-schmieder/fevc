@@ -1,0 +1,133 @@
+{
+ "sample": {
+  "person_years": 5254605,
+  "workers": 1129994,
+  "firms": 89980,
+  "stayers": 673306
+ },
+ "gamma": [
+  -0.07600726795379575,
+  -0.04677322845737594,
+  -0.03050073484507272,
+  -0.013679897922664958,
+  -0.008558477610185713,
+  -0.4306635949912465,
+  1.1325468003438415
+ ],
+ "normal_equation_check": 1.887379141862766e-15,
+ "transfer": {
+  "coef": [
+   0.013179433965737019,
+   -0.004523645814058631,
+   0.0017700681270115862,
+   -0.0009793111392670454,
+   0.00010523467452270533,
+   5.63761634731433e-05
+  ],
+  "scale": [
+   0.06078877903589673,
+   0.04565229159751651,
+   -0.012194015839799479,
+   0.013049958083177347,
+   -0.02149674140424204
+  ],
+  "r2": 0.03019005507334016,
+  "std": [
+   0.14979009247898356,
+   0.32860918658227917,
+   -0.14979009247897077,
+   0.17926281353123905
+  ],
+  "profile_floored": 0.0,
+  "variance_floored": 0.0,
+  "profile_min": 0.5369196710366154,
+  "profile_max": 24.120477805119037
+ },
+ "V_transfer": [
+  4.851016503643581e-08,
+  4.046000476347698e-08,
+  9.159452657269223e-09,
+  6.3074308435406995e-09
+ ],
+ "theta": [
+  0.0960915416743443,
+  0.026140508584517684,
+  0.013479015838949617,
+  0.14919008193676123
+ ],
+ "components": {
+  "all:worker": {
+   "score_ratio": 1.0074226352574998,
+   "model_ratio": 1.0071332335845782,
+   "transfer_first_term_ratio": 1.006417579259326,
+   "transfer_se_ratio": 1.0036290392821743
+  },
+  "all:firm": {
+   "score_ratio": 1.0007301850612909,
+   "model_ratio": 1.0005255024434359,
+   "transfer_first_term_ratio": 1.0003498396846393,
+   "transfer_se_ratio": 1.0002005273072487
+  },
+  "all:cov": {
+   "score_ratio": 1.0071717526941226,
+   "model_ratio": 1.0086154447455404,
+   "transfer_first_term_ratio": 1.008096735853052,
+   "transfer_se_ratio": 1.0063187626994086
+  },
+  "all:sum": {
+   "score_ratio": 1.1868562293450293,
+   "model_ratio": 1.2835846556061834,
+   "transfer_first_term_ratio": 1.2142138205807642,
+   "transfer_se_ratio": 1.1136497415997317
+  },
+  "year_only:worker": {
+   "score_ratio": 1.0040299129737291,
+   "model_ratio": 1.0020456230169232,
+   "transfer_first_term_ratio": 1.0019910844066175,
+   "transfer_se_ratio": 1.0011273342262246
+  },
+  "year_only:firm": {
+   "score_ratio": 1.0000480263674412,
+   "model_ratio": 0.9998984121829678,
+   "transfer_first_term_ratio": 0.9998352019903788,
+   "transfer_se_ratio": 0.999905524223807
+  },
+  "year_only:cov": {
+   "score_ratio": 1.0008749424535295,
+   "model_ratio": 1.0006457996263647,
+   "transfer_first_term_ratio": 1.0006178383114734,
+   "transfer_se_ratio": 1.0004835727888912
+  },
+  "year_only:sum": {
+   "score_ratio": 1.0026991025705456,
+   "model_ratio": 1.0015822868070783,
+   "transfer_first_term_ratio": 1.0014103882837608,
+   "transfer_se_ratio": 1.0007904803264123
+  },
+  "age_only:worker": {
+   "score_ratio": 0.9995679067773495,
+   "model_ratio": 1.0005521470915464,
+   "transfer_first_term_ratio": 1.000420478361161,
+   "transfer_se_ratio": 1.000238176925232
+  },
+  "age_only:firm": {
+   "score_ratio": 1.0006088177071415,
+   "model_ratio": 1.0004450592478729,
+   "transfer_first_term_ratio": 1.0002646189935396,
+   "transfer_se_ratio": 1.0001516827060557
+  },
+  "age_only:cov": {
+   "score_ratio": 1.0072460790500486,
+   "model_ratio": 1.0073406907373579,
+   "transfer_first_term_ratio": 1.0069123451843345,
+   "transfer_se_ratio": 1.0053969336669162
+  },
+  "age_only:sum": {
+   "score_ratio": 1.0767848927654755,
+   "model_ratio": 1.127631969602934,
+   "transfer_first_term_ratio": 1.0929625647871126,
+   "transfer_se_ratio": 1.0508314061806157
+  }
+ },
+ "seconds": 1988.5779609680176
+}

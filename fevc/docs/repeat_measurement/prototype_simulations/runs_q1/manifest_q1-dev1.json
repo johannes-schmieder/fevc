@@ -1,0 +1,321 @@
+{
+ "schema": "LP-Q1-MANIFEST-V2",
+ "run": "q1-dev1",
+ "stream": 101,
+ "probes": 1600,
+ "draws": 16,
+ "reps_per_task": 50,
+ "tasks": 4,
+ "cells": [
+  {
+   "name": "b10_g0_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g0_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g0_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g3_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g3_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g3_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g0_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g0_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g0_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g3_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g3_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g3_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b100_g0_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b100_g0_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b100_g0_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b100_g3_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b100_g3_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b100_g3_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 100,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "none_flat",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": null,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "flat",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "none_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": null,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "none_movers",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": null,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "movers",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g3_profile_skew",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "profile",
+   "errors": "skew",
+   "role": "acceptance"
+  },
+  {
+   "name": "b10_g3_bridge",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 10,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "bridge",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g3_profile_skew",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "profile",
+   "errors": "skew",
+   "role": "acceptance"
+  },
+  {
+   "name": "b30_g3_bridge",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 30,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "bridge",
+   "errors": "normal",
+   "role": "acceptance"
+  },
+  {
+   "name": "b3_g0_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 3,
+   "design_seed": 11,
+   "gap": 0.0,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "stress"
+  },
+  {
+   "name": "b3_g3_profile",
+   "nJ": 100,
+   "nW": 12000,
+   "n_bridge": 3,
+   "design_seed": 11,
+   "gap": 0.3,
+   "variance": "profile",
+   "errors": "normal",
+   "role": "stress"
+  }
+ ],
+ "acceptance": {
+  "components": [
+   "person",
+   "firm",
+   "cov"
+  ],
+  "q1_cover_min": 0.92,
+  "q1_cover_mean_min": 0.94,
+  "no_interval_max": 0.01,
+  "sum_normal_cover_min": 0.92,
+  "len_ratio_no_bottleneck_max": 1.1,
+  "failed_replications_max": 0
+ }
+}

@@ -1,0 +1,9 @@
+schema=FEVC-E2E-BUILD-V1
+source_commit=fb49e16db6320c7185e6d7e99c25ef1984f4dfb8
+source_tar_sha256=bb842764d7e111209deb63d6524d35ba767af697d20c89706215680162cf2e98
+plugin_sha256=408b5fdeed83eae6356c6c8b224c5c2b6544851f3d8a1e6b91bb49cbdcdeac6b
+rustc=rustc 1.85.1 (4eb161250 2025-03-15)
+job_id=8615618
+host=scc-gr4
+smoke=PASS
+finished=2026-11-13T22:15:51-05:00

@@ -18,6 +18,19 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Johannes F. Schmieder"
 SPDX-License-Identifier = "MIT"
 
+# Code of the repeat-measurement method note and its prototype. The note, its
+# addendum and the results are not covered (CODE_LICENSE.md, Other materials).
+[[annotations]]
+path = [
+    "fevc/docs/repeat_measurement/**/*.py",
+    "fevc/docs/repeat_measurement/**/*.sh",
+    "fevc/docs/repeat_measurement/**/*.do",
+    "fevc/docs/repeat_measurement/prototype_simulations/code/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Johannes F. Schmieder"
+SPDX-License-Identifier = "MIT"
+
 [[annotations]]
 path = [
     "fevc/cmg/src/**",

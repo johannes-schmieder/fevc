@@ -1,0 +1,7 @@
+{"probes": 60, "theory_draws": 128, "estimators": ["shipped", "model", "prop_k3", "propo_k3", "hyb", "hybo", "propm"],
+ "scenarios": {"L1": {"kind": "gauss", "seed": 101}, "L4": {"kind": "gauss", "grad": 0.5, "mix": 1.5, "seed": 104},
+               "L11": {"kind": "skew", "shape": 4.0, "align": 1.0, "grad": 1.0, "seed": 111}, "L5": {"kind": "fat", "shape": 2.0, "seed": 105}},
+ "cells": [{"scenario": "L1", "design": "default", "tasks": 1, "reps_per_task": 400, "draws": 8},
+           {"scenario": "L4", "design": "default", "tasks": 1, "reps_per_task": 400, "draws": 8},
+           {"scenario": "L11", "design": "default", "tasks": 1, "reps_per_task": 400, "draws": 8},
+           {"scenario": "L5", "design": "default", "tasks": 1, "reps_per_task": 400, "draws": 8}]}

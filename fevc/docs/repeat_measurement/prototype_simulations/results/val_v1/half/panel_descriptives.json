@@ -1,0 +1,32 @@
+{
+ "source": {
+  "mode": "half",
+  "seed": 20261112
+ },
+ "person_years_selected": 2583507,
+ "person_years": 2389081,
+ "workers": 512724,
+ "firms": 58214,
+ "matches": 787653,
+ "stayers": 307039,
+ "stayer_rows": 1398908,
+ "movers": 205685,
+ "mover_matches": 480614,
+ "stayer_years_hist": {
+  "2": 61470,
+  "3": 38152,
+  "4": 29513,
+  "5": 23964,
+  "6": 153940
+ },
+ "firms_per_mover_hist": {
+  "2": 150323,
+  "3": 43560,
+  "4": 9902,
+  "5": 1720,
+  "6": 180
+ },
+ "y_mean": 4.847793395825205,
+ "y_var": 0.17361165379314678,
+ "seconds": 8.432402849197388
+}

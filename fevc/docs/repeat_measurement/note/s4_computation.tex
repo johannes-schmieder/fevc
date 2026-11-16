@@ -1,0 +1,75 @@
+\section{Computation in FEVC}\label{sec:computation}
+
+In large samples FEVC computes $\hat\theta$ without forming an inverse. It solves the normal equations for
+$\hat\beta$, and it obtains the leverages $P_{ii}$ and the weights $B_{ii}$ from random projections, the
+Johnson--Lindenstrauss approximation (JLA) of KSS: each projection is a solve of the normal equations with a
+random right-hand side. The standard error reuses these quantities and adds a few solves of the same kind.
+
+\begin{enumerate}
+\item \emph{Variance estimates.} The $q_g$ take one pass over the stayers' rows. The model for movers takes two
+least-squares fits with five and six coefficients; their inputs ($\hat\alpha$, $\hat\psi$, $P_{ii}$,
+$\hat\sigma_i^2$) are by-products of the point estimate.
+\item \emph{The influences $\hat m$.} With $d_i=B_{ii}/(1-P_{ii})$ and $D=\diag(d_i)$, the weights are
+$C=B-\frac12(DM+MD)$, and
+\[
+\hat m=Cy=X\,S_{xx}^{-1}\big(A\hat\beta+\tfrac12X'Dy\big)-\tfrac12D\,(y-X\hat\beta)-\tfrac12Dy ,
+\]
+which is one solve per component.
+\item \emph{The double sum.} It is not computed pair by pair. Draw $D_s$ vectors $\zeta^{(d)}$ with
+independent normal entries of mean zero and variances $\st_i^2$, apply the weights to each as in step~2, and
+use
+\begin{equation}\label{eq:sim}
+\sum_i\sum_{\ell\ne i}C_{i\ell}^2\,\st_i^2\,\st_\ell^2\;\approx\;
+\frac{1}{D_s}\sum_{d=1}^{D_s}\sum_i\st_i^2\,\big(C\zeta^{(d)}\big)_i^{2} ,
+\end{equation}
+which is right on average because the expectation of $(C\zeta)_i^2$ over the draws is
+$\sum_\ell C_{i\ell}^2\st_\ell^2$. Each draw costs one solve per component and one for its residual. The same
+draws serve all components and their covariances.
+\item \emph{The adjustment} is the closed form in \eqref{eq:Vhat}.
+\end{enumerate}
+
+\begin{proposition}[Simulated double sum]\label{prop:sim}
+Let $\hat\V_{D_s}$ be \eqref{eq:Vhat} with the double sum computed by \eqref{eq:sim}. Under the assumptions of
+Proposition~\ref{prop:conc}, with $0\le\st_i^2\le\bth\sigma_i^2$ on movers' rows,
+$\E[\hat\V_{D_s}\mid\text{data}]=\hat\V[\hat\theta]$ and
+\[
+\frac{\E\big[(\hat\V_{D_s}-\hat\V[\hat\theta])^2\big]}{\V[\hat\theta]^2}\;\le\;\frac{c''\,\bth^4}{D_s}\cdot\frac{\lambda_{\max}^2}{\V[\hat\theta]} ,
+\]
+where $c''$ depends only on $\bar c$.
+\end{proposition}
+
+The noise from the draws is thus small under the same condition (b) that makes the variance estimate settle
+down, and it falls with the number of draws. (The bound is for non-random values on movers' rows. With fitted
+values the first statement still holds, and given the data the variance of $\hat\V_{D_s}$ is
+$8\tr(\tilde K^4)/D_s$ with $\tilde K_{i\ell}=\st_iC_{i\ell}\st_\ell$.) We use $D_s=16$; Section~\ref{sec:evidence} reports how much two
+runs differ.
+
+\paragraph{Stayers' leverages are known exactly.} A stayer's rows move only that stayer's person effect, so
+\[
+P_{ii}=\frac{1}{T_g},\qquad B_{ii}=\frac{A_{gg}}{T_g^{\,2}}
+\]
+for every row of stayer $g$, and \eqref{eq:cg} follows. The prototype uses these values instead of projected
+ones for stayers. This costs nothing and removes the projection noise from three quarters of the rows of the
+panel in Section~\ref{sec:evidence}.
+
+\paragraph{Projected leverages for movers.} Movers' $P_{ii}$ and $B_{ii}$ come from projections, so the weights
+actually used have a small non-zero diagonal. The propositions are for exact weights; every simulation below
+uses the projected ones, so the evidence covers them. One point concerns the estimate rather than its standard
+error. The projection error of $\hat\theta$ is not sampling error and is not part of the standard error, and in a
+very large panel the two can be of the same size. On the Veneto panel the standard error of
+$\hat\sigma^2_{\alpha+\psi}$ is \R{real.rel_se_sum} of the estimate; with 200 projections and no further
+correction the prototype's estimate was off by up to \R{sim.bias200} standard errors. With 1{,}600 the bias is
+smaller but still systematic: up to about 0.2 standard errors, and downwards in every scenario. FEVC applies an analytical correction for the finite number of projections; the prototype
+does not, and uses 1{,}600 projections throughout this note.
+
+\paragraph{Cost.} On the six-year Veneto panel (4.1 million rows, 87{,}000 firms) the prototype factors the
+firm system once, which took between 8 and 37 minutes depending on the machine. A standard error for all four
+components then needs 67 solves beyond the least-squares fit: three for $\hat m$ and four for each of the 16
+draws (one for the residuals of the draw and one for each of three components; the weights for the variance of
+the sum are a linear combination of the other three). In a run of this model alone the least-squares fit with the three influence solves took
+\R{real8.seconds.fit} seconds and the 64 solves of the draws \R{real8.seconds.draws} seconds. This compares with
+\R{real.probe_solves} solves for the 1{,}600 projections of the point estimate. FEVC itself solves the
+normal equations iteratively, without a factorisation, and its point estimate takes roughly 600 to 800 solves;
+the 67 solves of the standard error would add about a tenth to that. This is an expectation from the solve
+counts, not a measurement: the estimator is not yet part of FEVC. Appendix~\ref{app:cost} explains why so few
+solves are enough, by comparison with two earlier computations.

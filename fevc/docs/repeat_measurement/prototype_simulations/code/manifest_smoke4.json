@@ -1,0 +1,95 @@
+{
+ "schema": "LP-MC-MANIFEST-V1",
+ "probes": 1600,
+ "theory_draws": 16,
+ "which": [
+  "final"
+ ],
+ "estimators": [
+  "tr",
+  "or",
+  "trx"
+ ],
+ "scenarios": {
+  "N1": {
+   "kind": "gauss",
+   "seed": 401,
+   "note": "normal errors; variances from the scale part only (no profile)"
+  },
+  "N2": {
+   "kind": "gauss",
+   "grad": 0.5,
+   "mix": 1.5,
+   "seed": 402,
+   "note": "normal; variance rises with the squared distance of the person effect from its mean (coefficient 0.5); worker-specific gamma factor, CV 1.5"
+  },
+  "N3": {
+   "kind": "fat",
+   "shape": 2.0,
+   "grad": 0.5,
+   "mix": 1.5,
+   "seed": 403,
+   "note": "as N2 with symmetric fat-tailed errors, kurtosis 6"
+  },
+  "N4": {
+   "kind": "skew",
+   "shape": 4.0,
+   "align": 1.0,
+   "grad": 1.0,
+   "seed": 404,
+   "note": "gamma errors, skewness 1, stayers signed against the wage level; quadratic profile, coefficient 1"
+  },
+  "N5": {
+   "kind": "skew",
+   "shape": 4.0,
+   "align": -1.0,
+   "grad": 1.0,
+   "seed": 405,
+   "note": "as N4, stayers signed with the wage level"
+  },
+  "N6": {
+   "kind": "gauss",
+   "decile": true,
+   "mix": 1.5,
+   "seed": 406,
+   "note": "normal; step profile: the data's stayer sample variance by decile of the person effect, applied to stayers and movers; worker-specific factor, CV 1.5"
+  },
+  "N7": {
+   "kind": "gauss",
+   "expo": -0.6,
+   "seed": 407,
+   "note": "normal; variance log-linear in the standardised wage level alpha+psi, slope -0.6"
+  },
+  "N8": {
+   "kind": "gauss",
+   "grad": 0.5,
+   "grad_mover": 1.5,
+   "seed": 408,
+   "note": "violation: movers' profile three times as steep as stayers' (coefficients 1.5 and 0.5)"
+  },
+  "N9": {
+   "kind": "gauss",
+   "grad": 1.0,
+   "grad_mover": 0.0,
+   "seed": 409,
+   "note": "violation: stayers' variance follows the quadratic profile (coefficient 1), movers' does not"
+  }
+ },
+ "purpose": "launcher smoke test for round 4: two cells, two draws each",
+ "cells": [
+  {
+   "scenario": "N6",
+   "design": "default",
+   "tasks": 1,
+   "reps_per_task": 2,
+   "draws": 16
+  },
+  {
+   "scenario": "N8",
+   "design": "default",
+   "tasks": 1,
+   "reps_per_task": 2,
+   "draws": 16
+  }
+ ]
+}

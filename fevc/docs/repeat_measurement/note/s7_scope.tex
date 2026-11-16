@@ -1,0 +1,38 @@
+\section{Scope}\label{sec:scope}
+
+The note covers the standard error of $\hat\theta$ in FEVC's default design (movers' matches and stayers'
+person-years as rows), for the four components. The propositions hold for exact weights, a profile evaluated
+at fixed characteristics, known coefficients of controls and a fixed centring constant. The procedure as
+implemented differs in each of these four respects; for that the evidence is the simulation of
+Section~\ref{sec:sim}, or, for controls and centring, FEVC's convention for the point estimate. Further limits:
+\begin{itemize}
+\item \emph{The independence of a stayer's errors across years} (A1) is taken from the point estimator. If it
+fails, $\hat\theta$ itself is affected, and the question is not one about its standard error.
+\item \emph{The model for movers} (A4) cannot be checked row by row, because a mover's row has no repeat
+measurement; averages of the leave-out estimates over many rows give a partial check
+(Table~\ref{tab:deciles}). On the Veneto panel the fitted variances deviate visibly from these averages in
+several deciles; what that implies for the standard error is not known. The standard error is as good as the
+model. In the ten scenarios of Section~\ref{sec:sim} the root-mean-square standard error was between
+\R{sim.all.min} and \R{sim.all.max} times the true one. That it was more often too large than too small is the
+net of two things: at fixed characteristics the model alone would have understated the standard error of
+$\hat\sigma^2_{\alpha+\psi}$ by \R{sim.bd.sum.short.min} to \R{sim.bd.sum.short.max} in eight scenarios
+(Table~\ref{tab:bdelta}), and the rest of the implementation raised the estimate, often by more. The
+validation of Section~\ref{sec:validation} shows that this balance shifts with the design: in a three-year
+window the standard error of $\hat\sigma^2_\psi$ was up to \R{val.all.over.max} too large. A
+user should read the standard error accordingly: it uses a fitted model for movers' variances; its calibration
+is supported by the simulated designs reported here; neither a conservative error nor the stated coverage is
+guaranteed when the model or the design differs.
+\item \emph{Weak identification.} With few firms, or firms linked by few movers, A5 can fail, and then neither
+the variance estimate nor the normal approximation is guaranteed. The two quantities of
+Proposition~\ref{prop:conc} should be reported with the standard error. They are descriptive: the propositions
+do not give a threshold. Section~\ref{sec:q1} gives KSS's interval for one dominant direction with the variance estimates of this
+note: a consistency result for the covariance matrix with KSS's leave-out entry, a coverage bound for the rule
+used here under KSS's conditions for joint normality and a bound on one correlation, and a simulation on
+synthetic panels with one bottleneck (coverage between \R{q1.acc.min} and \R{q1.acc.max}; one tolerance on
+length missed). The simulation shows calibration on those designs; it does not establish coverage beyond them,
+and designs with several weak links, or a link of a handful of workers, are not covered by the theory.
+\item \emph{Small samples.} $\hat\V[\hat\theta]$ can be negative, and fitting the model adds a bias that the
+propositions do not bound.
+\item \emph{Other repeat measurements.} The argument for stayers applies to any set of rows with identical
+regressors and a common variance. In FEVC's default design stayers are the only such sets.
+\end{itemize}

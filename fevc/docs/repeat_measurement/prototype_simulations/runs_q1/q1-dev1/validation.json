@@ -1,0 +1,29 @@
+{
+ "run": "q1-dev1",
+ "passed": false,
+ "complete": true,
+ "acceptance": {
+  "components": [
+   "person",
+   "firm",
+   "cov"
+  ],
+  "q1_cover_min": 0.92,
+  "q1_cover_mean_min": 0.94,
+  "no_interval_max": 0.01,
+  "sum_normal_cover_min": 0.92,
+  "len_ratio_no_bottleneck_max": 1.1,
+  "failed_replications_max": 0
+ },
+ "failures": [
+  "b10_g3_profile_skew person: q1 coverage 0.915 < 0.92",
+  "b10_g3_profile_skew firm: q1 coverage 0.910 < 0.92"
+ ],
+ "inventory_problems": [],
+ "summary": {
+  "acceptance_cells": 25,
+  "q1_cover_min": 0.91,
+  "q1_cover_max": 0.995,
+  "q1_cover_mean": 0.9622666666666663
+ }
+}

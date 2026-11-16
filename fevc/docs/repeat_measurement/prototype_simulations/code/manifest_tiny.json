@@ -1,0 +1,6 @@
+{"probes": 60, "theory_draws": 64,
+ "scenarios": {"L1": {"kind": "gauss", "seed": 101}, "L11": {"kind": "skew", "shape": 4.0, "align": 1.0, "grad": 1.0, "seed": 111}, "LAR5": {"kind": "ar", "rho": 0.5, "seed": 125}},
+ "cells": [{"scenario": "L1", "design": "default", "tasks": 2, "reps_per_task": 20, "draws": 8},
+           {"scenario": "L11", "design": "default", "tasks": 2, "reps_per_task": 20, "draws": 8},
+           {"scenario": "LAR5", "design": "default", "tasks": 1, "reps_per_task": 20, "draws": 8},
+           {"scenario": "LAR5", "design": "gap1", "tasks": 1, "reps_per_task": 20, "draws": 8}]}

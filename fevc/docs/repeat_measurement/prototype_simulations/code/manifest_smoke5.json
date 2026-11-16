@@ -1,0 +1,71 @@
+{
+ "schema": "LP-MC-MANIFEST-V1",
+ "probes": 1600,
+ "theory_draws": 16,
+ "which": [
+  "final",
+  "load"
+ ],
+ "estimators": [
+  "tr",
+  "or",
+  "tl"
+ ],
+ "scenarios": {
+  "N1": {
+   "kind": "gauss",
+   "seed": 401,
+   "note": "normal errors; variances from the scale part only (no profile)"
+  },
+  "N6": {
+   "kind": "gauss",
+   "decile": true,
+   "mix": 1.5,
+   "seed": 406,
+   "note": "normal; step profile: the data's stayer sample variance by decile of the person effect, applied to stayers and movers; worker-specific factor, CV 1.5"
+  },
+  "N8": {
+   "kind": "gauss",
+   "grad": 0.5,
+   "grad_mover": 1.5,
+   "seed": 408,
+   "note": "violation: movers' profile three times as steep as stayers' (coefficients 1.5 and 0.5)"
+  },
+  "N9": {
+   "kind": "gauss",
+   "grad": 1.0,
+   "grad_mover": 0.0,
+   "seed": 409,
+   "note": "violation: stayers' variance follows the quadratic profile (coefficient 1), movers' does not"
+  },
+  "N10": {
+   "kind": "gauss",
+   "decile": true,
+   "decile_movers": [
+    3.5746,
+    1.1268,
+    0.7105,
+    0.5824,
+    0.5404,
+    0.5264,
+    0.5784,
+    0.7265,
+    1.0368,
+    1.8514
+   ],
+   "mix": 1.5,
+   "seed": 410,
+   "note": "normal; stayers: the data's stayer profile by decile of the person effect (as N6); movers: the data's own profile, the average leave-out estimate of movers' rows by the same deciles relative to its mean (real-v4); worker-specific factor, CV 1.5"
+  }
+ },
+ "purpose": "launcher smoke test for round 5",
+ "cells": [
+  {
+   "scenario": "N10",
+   "design": "default",
+   "tasks": 1,
+   "reps_per_task": 2,
+   "draws": 16
+  }
+ ]
+}

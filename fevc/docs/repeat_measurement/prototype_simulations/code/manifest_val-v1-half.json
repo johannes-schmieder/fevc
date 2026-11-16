@@ -1,0 +1,149 @@
+{
+ "schema": "LP-MC-MANIFEST-V1",
+ "probes": 1600,
+ "theory_draws": 256,
+ "estimators": [
+  "dq",
+  "or"
+ ],
+ "draw_stream": 11,
+ "acceptance": {
+  "ratio_min": 0.93,
+  "ratio_max": 1.15,
+  "coverage_min": 0.9,
+  "mean_coverage_min": 0.94,
+  "max_failed_draws": 0,
+  "max_nonpositive": 0,
+  "max_floored": 0.02
+ },
+ "scenarios": {
+  "N1": {
+   "kind": "gauss",
+   "seed": 401,
+   "note": "normal errors; variances from the scale part only (no profile)"
+  },
+  "N2": {
+   "kind": "gauss",
+   "grad": 0.5,
+   "mix": 1.5,
+   "seed": 402,
+   "note": "normal; variance rises with the squared distance of the person effect from its mean (coefficient 0.5); worker-specific gamma factor, CV 1.5"
+  },
+  "N3": {
+   "kind": "fat",
+   "shape": 2.0,
+   "grad": 0.5,
+   "mix": 1.5,
+   "seed": 403,
+   "note": "as N2 with symmetric fat-tailed errors, kurtosis 6"
+  },
+  "N4": {
+   "kind": "skew",
+   "shape": 4.0,
+   "align": 1.0,
+   "grad": 1.0,
+   "seed": 404,
+   "note": "gamma errors, skewness 1, stayers signed against the wage level; quadratic profile, coefficient 1"
+  },
+  "N5": {
+   "kind": "skew",
+   "shape": 4.0,
+   "align": -1.0,
+   "grad": 1.0,
+   "seed": 405,
+   "note": "as N4, stayers signed with the wage level"
+  },
+  "N6": {
+   "kind": "gauss",
+   "decile": true,
+   "mix": 1.5,
+   "seed": 406,
+   "note": "normal; step profile: the data's stayer sample variance by decile of the person effect, applied to stayers and movers; worker-specific factor, CV 1.5"
+  },
+  "N7": {
+   "kind": "gauss",
+   "expo": -0.6,
+   "seed": 407,
+   "note": "normal; variance log-linear in the standardised wage level alpha+psi, slope -0.6"
+  },
+  "N8": {
+   "kind": "gauss",
+   "grad": 0.5,
+   "grad_mover": 1.5,
+   "seed": 408,
+   "note": "violation: movers' profile three times as steep as stayers' (coefficients 1.5 and 0.5)"
+  },
+  "N9": {
+   "kind": "gauss",
+   "grad": 1.0,
+   "grad_mover": 0.0,
+   "seed": 409,
+   "note": "violation: stayers' variance follows the quadratic profile (coefficient 1), movers' does not"
+  },
+  "N10": {
+   "kind": "gauss",
+   "decile": true,
+   "decile_movers": [
+    3.5746,
+    1.1268,
+    0.7105,
+    0.5824,
+    0.5404,
+    0.5264,
+    0.5784,
+    0.7265,
+    1.0368,
+    1.8514
+   ],
+   "mix": 1.5,
+   "seed": 410,
+   "note": "normal; stayers: the data's stayer profile by decile of the person effect (as N6); movers: the data's own profile, the average leave-out estimate of movers' rows by the same deciles relative to its mean (real-v4); worker-specific factor, CV 1.5"
+  }
+ },
+ "run_id": "val-v1-half",
+ "purpose": "validation of the frozen estimator lp7.LPF (model 'dq', cap 3, 16 draws, no PSD projection), registered 2026-11-12 before any task ran; error draws from stream 11 (development rounds used stream 1); thresholds in 'acceptance' apply to every scenario x component cell; a failure stays a failure; prototype validation, not a confirmation of an FEVC implementation; random half of the workers (seed 20261112), six years, six scenarios",
+ "cells": [
+  {
+   "scenario": "N1",
+   "design": "default",
+   "tasks": 8,
+   "reps_per_task": 25,
+   "draws": 16
+  },
+  {
+   "scenario": "N2",
+   "design": "default",
+   "tasks": 8,
+   "reps_per_task": 25,
+   "draws": 16
+  },
+  {
+   "scenario": "N4",
+   "design": "default",
+   "tasks": 8,
+   "reps_per_task": 25,
+   "draws": 16
+  },
+  {
+   "scenario": "N6",
+   "design": "default",
+   "tasks": 8,
+   "reps_per_task": 25,
+   "draws": 16
+  },
+  {
+   "scenario": "N8",
+   "design": "default",
+   "tasks": 8,
+   "reps_per_task": 25,
+   "draws": 16
+  },
+  {
+   "scenario": "N10",
+   "design": "default",
+   "tasks": 8,
+   "reps_per_task": 25,
+   "draws": 16
+  }
+ ]
+}
