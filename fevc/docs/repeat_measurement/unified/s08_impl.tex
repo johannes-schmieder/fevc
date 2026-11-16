@@ -1,0 +1,159 @@
+\section{Implementation in \fevc{} 0.6.0}\label{sec:impl}
+
+The prototype behind Sections~\ref{sec:q1} and~\ref{sec:evidence} preceded the package. \fevc{} implemented the
+method between November 13 and 14, 2026, and released it in 0.6.0 as its only standard-error method and its
+default, \code{inference(auto)}; \code{inference(none)} gives point estimates only. What the command does is
+specified in the package's \code{fevc/docs/INFERENCE.md}; where this note and that guide differ, the guide
+describes the command. This section lists the differences, states the rule by which the default chooses an
+interval, and summarises the package's own Monte Carlo evidence.
+
+\subsection{Differences from the prototype}\label{sec:impl-diff}
+
+\begin{enumerate}[leftmargin=1.6em,itemsep=3pt]
+\item \textbf{Deletion modes and repeat-measurement sets.} The propositions and the prototype cover match
+deletion, where stayers are the only sets of rows with identical regressors (Section~\ref{sec:scope}); the control
+term of Section~\ref{sec:controls} is derived for both modes. 0.6.0 also covers observation deletion,
+where every worker--firm cell with two or more observations, a mover's match included, is a set, with the pair
+weight $B_{ii}/(1-P_{ii})$ for every target; and mover-only populations. The only sets are deletion units that
+share a worker--firm cell. Co-mover groups and cycles of matches, which earlier drafts considered, are not used.
+\item \textbf{Fitting the model for the other units.} The two steps and the floors are those of
+Section~\ref{sec:transfer}. In addition, each step keeps at most one coefficient per hundred fitted units,
+shortening the basis in a fixed order; a term that the others span is dropped, also in a fixed order, where
+Section~\ref{sec:transfer} withholds the standard error; with fewer than a hundred units outside sets the model is fitted on all units
+of movers; the final floor also applies to the sample variance of a set; and the pass stops with
+\code{JLA\_CONSTRAINT\_FAILED} when the mean leave-out estimate is not positive (as in Section~\ref{sec:transfer}) or when every
+fitted variance is floored.
+\item \textbf{Leverages, projections and draws.} The prototype uses the exact $P_{ii}=1/T_g$ and
+$B_{ii}=A_{gg}/T_g^2$ for stayers and 1{,}600 projections for movers, without a finite-projection correction
+(Section~\ref{sec:computation}). 0.6.0 takes them from the route: on the native route the pass uses the JLA
+leverages of the point estimate (200 projections by default) and checks them against its bias correction; the
+Mata \code{algorithm(jla)} stage draws its own projections; exact leverages exist only on the Mata
+\code{algorithm(exact)} route. The stayers' exact values are not substituted. The
+default is eight pseudo-noise draws (\code{inferencedraws()}), not 16, and the linear systems are solved
+iteratively, not by a factorisation.
+\item \textbf{Kurtosis.} The pair term is the one for errors with the kurtosis of the normal distribution; the
+variant for another stated kurtosis (Appendix~\ref{app:proofs}) is not offered.
+\item \textbf{No projection of the covariance.} The prototype's simulation of Section~\ref{sec:sim} set negative
+eigenvalues of the estimated covariance of the three base components to zero. 0.6.0 reports the covariance as
+computed; a variance estimate that is not positive withholds the normal interval of that component, and the
+default then reports its $q=1$ interval where it exists.
+\item \textbf{Controls.} The prototype treats the control coefficients as known. 0.6.0 includes their estimation
+to first order, as derived in Section~\ref{sec:controls}: the variance of the fixed-offset estimate under the noise
+of the control-adjusted outcome, on every route. Not covered: the joint estimate's additional term in the control
+index (Section~\ref{ctl:joint}), error variances that move with a control inside a cell (item~7 of
+Section~\ref{ctl:est}), the within-unit covariance that the pseudo-noise omits (item~1), and poorly identified
+coefficients. The repair $\hat Q_{\rm full}$ of item~1 is not implemented.
+\item \textbf{Centring.} The propositions and the prototype treat the sample mean used for centring as a constant. Under
+\code{centering(mean)} the package centres the pseudo-noise as the outcome, so no fixed-mean approximation is made;
+under \code{centering(corrected)} the standard error is that of the mean-centred estimate, with the increment
+held fixed (Section~\ref{sec:centring}).
+\item \textbf{Leading direction.} The prototype uses power iteration (stopped at 200 steps; one Veneto case did
+not converge). 0.6.0 uses a thick-restart Lanczos iteration in the $S_{xx}$ inner product (basis six, three Ritz
+vectors kept, stopped at a relative residual of $10^{-3}$ or after 40 solves, each search started from the
+previous target's direction), and a dense eigendecomposition on the exact Mata route
+(Appendix~\ref{kss:app:lanczos}). The draws of the pass are reused for the remainder: about 90 solves in all with
+the default eight draws, where the pass alone takes 35.
+\item \textbf{One interval per component.} Section~\ref{sec:q1} gives the $q=1$ interval for designs with one weak direction
+and a screening value without a validated threshold, and leaves the choice between the two intervals open.
+0.6.0 chooses per component by the rule of Section~\ref{sec:impl-rule}.
+\item \textbf{The other variance models.} Appendix~\ref{app:cost} compares the cost with the KSS Matlab package,
+with \fevc's structured route under \code{inference(highrank)}, and with the leave-out residual standard error that
+was the development default at the time (never released). 0.6.0 removed those models (\code{target\_lowess},
+\code{structured\_common}, \code{structured\_leverage}, \code{leaveout\_residual}); \code{inference(highrank)} now
+selects the normal intervals of this method.
+\end{enumerate}
+
+The prototype's failed tolerances stand: in the validation of Section~\ref{sec:validation} the standard error of the
+firm variance in the three-year window was up to 16\% too large, beyond the registered 15\%, and the $q=1$
+confirmation of Section~\ref{sec:q1sim} missed its length tolerance in one design without a bottleneck.
+
+\subsection{The interval of every component}\label{sec:impl-rule}
+
+Under \code{inference(auto)} a component receives the $q=1$ interval of Section~\ref{sec:q1} when its leading
+direction carries more than ten per cent of the estimated sampling variance,
+\[
+\frac{4\lambda_1^2\max(\hat b_1^{\,2}-V_b,0)\,V_b+2\lambda_1^2V_b^2}{\hat\V[\hat\theta]},
+\]
+with $V_b$ the estimated variance of $\hat b_1$, or when the high-rank variance estimate \eqref{eq:Vhat} is not
+positive; otherwise it receives the normal interval. The variance of the sum, whose non-zero eigenvalues are all
+equal (Section~\ref{sec:q1}), keeps the normal interval. A component with the $q=1$ interval has no standard error,
+and \code{e(V)} is posted only when every component has a normal interval; it is then the four-by-four covariance
+of the components, mapped from the three base components. \code{inference(highrank)} asks for normal intervals
+only and \code{inference(q1)} for the $q=1$ interval wherever it exists; both are strict, while the default
+returns point estimates with a reason when the standard errors cannot be computed. The share is a ratio of two
+estimates and can exceed one. The critical value of the $q=1$ interval is simulated with 100{,}000 draws.
+
+The statistic and the threshold were chosen afterwards, on simulations through the command (\code{dev1} below),
+confirmed on new designs (\code{conf2}), and the threshold was fixed by the owner on November 14, 2026. Over the
+96 cases of \code{dev1}, the rule's lowest coverage is 0.937, against 0.940 with a threshold of 5\% and 0.935 with
+20\%; it reports the $q=1$ interval for 4.3\% of the components without a bottleneck and posts \code{e(V)} in 89\%
+of those samples, against 9.8\% and 76\% at 5\%. On three panels of the Veneto data (2.3 to 5.2 million
+person-years, both deletion modes) every component receives the normal interval under this rule (shares 0.03\% to
+8.1\%), and the default costs 24\% to 30\% more time than the point estimates alone (16 threads). Neither KSS nor
+this note has a theoretical result for this data-dependent choice, and two or more dominant directions are not
+covered.
+
+\subsection{The package Monte Carlo evidence}\label{sec:impl-mc}
+
+The package's own Monte Carlo passes the plain Stata command, with a plugin built from a named commit, through
+two-block synthetic panels of about 48{,}000 person-years, from no bottleneck to a strong one, with error variances
+that follow or violate the fitted model and normal or skewed errors, under match and observation deletion. Each
+run's manifest was frozen before any task ran. The harness is \code{fevc/tools/default\_interval/} and the records
+are in \code{fevc/docs/default\_interval/}. Table~\ref{tab:impl-mc} summarises the runs that decide the rule and
+its confirmation.
+
+\begin{table}[H]
+\centering\small\setlength{\tabcolsep}{4pt}
+\caption{Package Monte Carlo runs of the default interval}\label{tab:impl-mc}
+\begin{tabular}{@{}lllccccc@{}}
+\toprule
+ & & & Designs & & & \multicolumn{2}{c}{Coverage} \\
+\cmidrule(l){7-8}
+Run & Kind & Commit & $\times$ 2 modes & Fits & Verdict & lowest & mean \\
+\midrule
+\code{dev1} & development & \code{250a760c} & 16 & 32{,}000 & none & 0.937$^a$ & -- \\
+\code{conf1} & confirmation & \code{fb49e16d} & 20 & 40{,}000 & FAIL & 0.937$^b$ & 0.960$^b$ \\
+\code{conf2} & confirmation & \code{fb49e16d} & 20 & 40{,}000 & PASS & 0.930 & 0.9593 \\
+\code{dev3\_controls} & development & \code{02d7955f} & 13 & 13{,}000 & none & 0.918 & 0.962 \\
+\code{conf3\_controls} & confirmation & \code{f3938986} & 20 & 40{,}000 & PASS & 0.923 & 0.9602 \\
+\bottomrule
+\multicolumn{8}{@{}p{0.92\textwidth}@{}}{\rule{0pt}{2.6ex}Coverage is that of the reported interval over the
+cases (design, deletion mode and component); a
+replication without an interval counts as not covered. $^a$~The 10\% rule evaluated on the draws of \code{dev1},
+which ran with the first threshold of 5\%. $^b$~The verdict failed on the inventory: one fit returned point
+estimates (the documented fallback after \code{JLA\_CONSTRAINT\_FAILED}), the harness of the time rejected its
+task, and the verdict stands as registered. The numbers are for information only and count that fit as a
+replication without an interval. \code{dev1},
+\code{conf1} and \code{conf2} have no controls; \code{dev3\_controls} and \code{conf3\_controls} have controls in
+every design.}
+\end{tabular}
+\end{table}
+
+\code{conf2} met all of its tolerances: none of its 40{,}000 fits failed or fell back to point estimates, at most 6
+of the 1{,}000 replications of a case had no interval, the lowest coverage is that of the variance of the sum under
+match deletion in a design with 1{,}000 bridging workers, and without a bottleneck the reported interval is at most
+1.059 times as long as the normal one and \code{e(V)} is posted in 89\% of the samples. The same replications
+judged with the normal interval alone have a lowest coverage of 0.789. \code{conf3\_controls} ran the same twenty
+design shapes, replications and tolerances with new seeds and controls in every design, in a fixed rotation of
+four kinds; its lowest cases are the worker and firm variances (0.923 and 0.926) in a design whose blocks differ,
+with the control loaded on the worker effect, where their standard errors are 8\% and 7\% short. A compatibility
+review carries its claim from \code{f3938986} to the original 0.6.0 candidate build commit \code{d4b2d942}: 36
+default requests give byte-identical results. The released 0.6.0 plugins were built later, from \code{2082f209};
+the review does not extend the simulation claims to the subsequent Stata~15 compatibility changes or to the
+revised exact eigensolver, so these confirmations are of pre-release builds, not of the released binaries. Before the control term, \code{dev2\_controls} found the standard error of the variance of
+the sum 9\% to 16\% too small with one adverse control; on the same outcome draws with the term of
+Section~\ref{sec:controls}, \code{dev3\_controls} gives 0.97 to 1.04 of the spread and coverage of 0.938 to 0.956.
+Its lowest case (the covariance, with a control index as large as the effects and no bottleneck, under match
+deletion) has a standard error 12\% too small; under \code{nuisance(fixedoffset)} the same design gives, under
+match deletion, 0.99 to 1.07 of the spread and coverage of 0.948 to 0.962 (\code{dev4\_fixedoffset}), so the
+shortfall belongs to the joint estimate's additional term of Section~\ref{ctl:joint}, not to the standard error of
+the fixed-offset estimate. (\code{deletion(observation)} with \code{nuisance(fixedoffset)} is not covered by the
+standard errors: the command returns point estimates only, as all 1{,}000 such fits of \code{dev4\_fixedoffset}
+did.) The same term shows where the two blocks of firms differ by three log points and the control loads on the
+firm effect: under the default the standard error of the worker variance, and in two of three designs that of the
+firm variance, is 0.87 to 0.94 of the spread (\code{dev6\_shapes}, \code{dev7\_adv}), and under the fixed offset,
+with match deletion, 0.92 to 0.99 (\code{dev7\_fixedoffset}). Not covered by
+\code{conf3\_controls}, by design: a control index as large as the effects, error variances that move with a
+control inside a cell, and a control loaded on the firm effect where the blocks differ. This is simulation
+evidence for designs with one bottleneck at most and independent errors; it is not a coverage guarantee, and it
+does not cover two or more dominant directions.

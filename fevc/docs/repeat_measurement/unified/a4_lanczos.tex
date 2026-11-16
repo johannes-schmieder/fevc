@@ -1,0 +1,26 @@
+\section{Lanczos and the leading direction}\label{kss:app:lanczos}
+
+\fevc{} 0.6.0 finds the leading direction of Section~\ref{sec:q1} by a Lanczos iteration on the native route and
+the matrix-free Mata route, where the prototype used power iteration; the exact Mata route uses a dense
+eigendecomposition instead. Lanczos finds the extreme eigenvalues of a large symmetric operator $\mathcal M$ from products
+$\mathcal Mv$ alone. It builds the Krylov subspace spanned by $r,\mathcal Mr,\mathcal M^2r,\dots$ from a start
+vector $r$, orthonormalizes it with a three-term recurrence, and reads approximate eigenvalues (Ritz values) off
+the small tridiagonal matrix that $\mathcal M$ becomes in that basis. The extreme eigenvalues converge first, at
+a rate governed by the gap between $\lambda_1$ and $\lambda_2$ relative to the rest of the spectrum (roughly
+$e^{-2k\sqrt{\mathrm{gap}}}$ after $k$ steps, against $(\lambda_2/\lambda_1)^k$ for power iteration); both ends of
+the spectrum converge together, which matters for the covariance component, whose kernel has eigenvalues of both
+signs. A thick restart keeps memory bounded.
+
+In \fevc{} the problem is $Av_1=\lambda_1S_{xx}v_1$ of Section~\ref{sec:q1}, with $A$ the matrix of the component
+and $S_{xx}=X'X$; its eigenvalues are those of the outcome-space kernel $B=XS_{xx}^{-1}AS_{xx}^{-1}X'$, and the
+unit-space direction is $w_1=Xv_1$. The iteration runs in the $S_{xx}$ inner product, so each step is one linear
+solve with $S_{xx}$ (the solver of the point estimate) plus a product with $A$; re-orthogonalization costs a
+prediction and a transpose. The basis holds six vectors and a restart carries three Ritz vectors; the start vector
+is a fixed function of the coefficient index (it never looks at the outcome) and each component starts from the
+previous component's direction. The search stops when the residual of the leading pair is below the tolerance or
+after 40 solves. When a direction dominates---the case that matters---the gap is large and a handful of steps
+suffice; when no direction dominates, the top eigenvalues cluster, the search may stop at the cap, and the
+direction carries a small share, so the rule picks the normal interval anyway. The second Ritz value is reported
+because two large, close directions are the case that neither interval covers. KSS's code solves the same
+generalized problem with \code{eigs}, which factors the explicit normal matrix and, for their non-symmetric form of
+the problem, uses the Arnoldi-based Krylov--Schur method.

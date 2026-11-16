@@ -1,0 +1,264 @@
+
+On real data the standard errors cannot be checked. This section draws outcomes with a known truth on the real
+mobility networks of the two older-worker samples, where the four standard errors disagree most, and runs
+every method on the same draws.
+
+\subsubsection{Design}\label{kss:sec:synth-design}
+
+\paragraph{Data-generating process.} KSS's own Monte Carlo design (Section~9.5, and the code of
+\code{leave\_out\_FD.m} behind their Table~V). Firm assignments are the real ones. A mover's wage change is
+\[
+\Delta y_g=\Delta\psi_g+\varepsilon_g,\qquad
+\varepsilon_g=\sqrt{\sigma_g^2}\,\sqrt{3/5}\;t_5 ,\qquad
+\sigma_g^2=\exp\!\big(b_0+b_1P_{gg}+b_2B_{gg}+b_3\ln L_{g1}+b_4\ln L_{g2}\big),
+\]
+with $t_5$ a Student-$t$ variable with five degrees of freedom scaled to unit variance, $P_{gg}$ and $B_{gg}$
+the leverage and the firm-variance weight of the first difference, and $L_{g1},L_{g2}$ the sizes of the two
+firms. The coefficients $b$ come from a nonlinear least-squares fit of KSS's raw variance estimates
+$\Delta y_g\hat\eta_g$ on the real data; the firm effects $\psi$ are the OLS estimates rescaled so that their
+variance equals the KSS estimate. Stayers' wages do not change. The truth is therefore the KSS estimate on the
+real data: 0.017916 (leave-two-out) and 0.020486 (leave-one-out). Because stayers carry no noise and, under
+observation deletion, a two-period mover has no repeat measurement, this design exercises \fevc's fitted
+variance model for movers only, not its repeat-measurement part.
+
+\paragraph{Three deviations from KSS.} (i) KSS fit $b$ and $\psi$ on the pooled leave-one-out sample and carry
+them to the subsamples; here they are fitted, with KSS's formulas, on each older-worker sample itself, because
+the pooled run was not available when the simulation started. On the leave-two-out sample
+$b=(-3.51,\,1.98,\,0.006,\,-0.062,\,0.022)$ in the order of the formula above, which is the order of KSS's code
+(\code{leave\_out\_FD.m}); the variance rises with leverage and little else, and the fitted variances of movers
+range from 0.020 to 0.150. The fit explains only 0.9\% of the variation of the raw estimates, which are very
+noisy. KSS's pooled values, read in the same order, are $(-3.34,\,1.40,\,-0.004,\,-0.001,\,-0.009)$; the paper
+prints them with the labels of the first two slopes and of the two firm sizes the other way round, which does not
+match their code. (ii) KSS's Monte Carlo keeps the paths, and the random choice of movers on them, from the real
+data fixed across draws and recomputes only the variance pieces; here KSS's routine is rerun in full on every
+draw, so those choices are drawn anew each time, as they would be for a new data set. (iii) KSS's design
+specifies wage changes only. \fevc{} and the
+model-based code work in levels, so a level must be chosen. The main design keeps each worker's observed 1999
+wage and adds the simulated change to it, which puts all of a mover's noise on the 2001 observation. The firm
+variance depends on changes only, so this choice does not affect it; the worker variance and the covariance do
+depend on levels. A second design (Section~\ref{kss:sec:synth-split}) splits the noise into two independent halves,
+one per year, with the same variance of the change.
+
+\paragraph{Methods and draws.} KSS's paper method (\code{leave\_out\_FD}, Table~IV settings, one call with
+$q=1$) and the KSS Matlab model-based estimator (GitHub version, eigenvalue diagnostics on) on 200 draws of the
+leave-two-out sample and 100 of the leave-one-out sample; \fevc{} 0.6.0 with its default standard error, under
+\code{centering(mean)} and \code{centering(none)}, on 1{,}000 draws of each. The first 200 (100) draws are
+byte-identical for all methods. Every attempted draw is counted; a draw on which a method returns no valid
+interval counts as not covered. Every draw ran; eight KSS draws whose results our harness had failed to record
+(complex numbers, see below) were rerun on identical data.
+
+\paragraph{What counts as an invalid interval.} KSS's code takes square roots of estimated variances, and an
+estimate below zero gives a complex number. A \emph{normal interval is undefined} when the variance estimate is
+negative. A \emph{$q=1$ interval is invalid} when its curvature is complex (the conditional variance of the
+remainder is estimated below zero) or when the interval excludes the method's own point estimate. KSS's own
+Monte Carlo compares only the real parts of complex bounds, which scores such draws as not covered as well.
+
+\subsubsection{Results: variance of firm effects}\label{kss:sec:synth-firm}
+
+All methods estimate the same quantity and their point estimates agree draw by draw (correlation 0.996 between
+\fevc{} and KSS; \fevc's random projections add noise with RMS 0.00015 under the default centering). None is
+biased. The standard deviation of the estimates over the 1{,}000 draws, net of that noise, is 0.00154 on the
+leave-two-out sample, 8.6\% of the truth; over the 200 shared draws it is 0.00145, 6\% lower, which is consistent
+with the sampling error of a 200-draw standard deviation (about 5\%). Standard-error bias is measured against
+the 1{,}000-draw value.
+
+KSS's paper method never returned an undefined interval because its code replaces negative estimates before
+reporting them (Section~\ref{kss:sec:kss}). On the leave-two-out draws that replacement was used for the variance on
+14 of 200 draws and for the variance of the remainder in the $q=1$ interval on 54; both replacements are
+conservative and can contribute to the upward bias of its standard error.
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{2.5pt}
+\caption{Simulation, variance of firm effects, older workers.}\label{kss:tab:synth-firm}
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+ & Mean SE & SE bias & \multicolumn{2}{c}{Invalid (\%)} & \multicolumn{3}{c}{Coverage (\%)} & Median length\\
+\cmidrule(lr){4-5}\cmidrule(lr){6-8}
+ & & & normal & $q=1$ & normal & $q=1$ & reported & reported\\
+\midrule
+\multicolumn{9}{@{}l}{\emph{Leave-two-out sample (truth 0.017916; SD of the estimates 0.00154)}}\\
+KSS (2020), 200 draws & 0.00169 & $+10\%$ & 0 & 0.5 & 95.5 & 97.5 & 97.5 ($q=1$) & 0.0086\\
+KSS Matlab model-based, 200 draws & 0.00146 & $-5\%$ & 6.5 & 19.0 & 88.0 & 76.5 & 76.5 ($q=1$) & 0.0076\\
+\fevc{} default, 1{,}000 draws & 0.00145 & $-6\%$ & 0.2 & 0.1 & 92.0 & 98.8 & 98.9 & 0.0086\\
+\fevc, \code{centering(none)}, 1{,}000 draws & 0.00155 & $+0\%$ & 0.9 & 0.1 & 91.8 & 99.0 & 99.1 & 0.0092\\
+\addlinespace
+\multicolumn{9}{@{}l}{\emph{Leave-one-out sample (truth 0.020486; SD of the estimates 0.00165)}}\\
+KSS (2020), 100 draws & 0.00237 & $+44\%$ & 0 & 0 & 100.0 & 100.0 & 100.0 ($q=1$) & 0.0094\\
+KSS Matlab model-based, 100 draws & 0.00168 & $+2\%$ & 0 & 0 & 98.0 & 98.0 & 98.0 ($q=1$) & 0.0077\\
+\fevc{} default, 1{,}000 draws & 0.00171 & $+4\%$ & 0 & 0 & 96.5 & 98.0 & 97.2 & 0.0072\\
+\fevc, \code{centering(none)}, 1{,}000 draws & 0.00181 & $+10\%$ & 0 & 0 & 96.1 & 98.0 & 97.3 & 0.0078\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize SE bias: mean standard error over draws with a valid one, divided by the standard
+deviation of the estimates over the 1{,}000 \fevc{} draws net of \fevc's numerical noise, minus one. 95\%
+bootstrap intervals: \fevc{} default $[-11\%,-2\%]$; KSS $+17\%$ $[+6\%,+32\%]$ against the spread of its own
+200 draws.
+Invalid: share of draws on which the interval is undefined or invalid (see text); these count as not covered.
+Reported: the interval a user would report---for KSS's two methods the $q=1$ interval, which KSS's rule
+(leading squared eigenvalue above a tenth of the total) selects on this sample; for \fevc{} its automatic
+choice, which was $q=1$ on every leave-two-out draw and on 56\% of the leave-one-out draws. Coverage intervals
+(Wilson) have half-widths of 2--6 points at 100--200 draws and 1--2 points at 1{,}000.
+\end{table}
+
+\paragraph{Leave-two-out sample.} Table~\ref{kss:tab:synth-firm} is the check of the disagreement on the real
+data. The KSS paper method gives the largest standard error here as there, and here it is too large by about
+10\%; \fevc's default is about 6\% too small, the model-based estimator about 5\% too small where it returns a
+standard error, and \fevc{} without centering is on target. The intervals that would be reported tell the same
+story more strongly. Both KSS's $q=1$ interval and \fevc's automatically chosen $q=1$ interval cover at
+97.5--99\%, with the same median length. The model-based method's variance estimate is negative on 6.5\%
+of the draws, and its $q=1$ interval excludes its own estimate on 19\%; that interval covers 76.5\%. The normal
+intervals of the model-based estimator and of \fevc{} undercover (88--92\%) because the estimator is skewed when
+one direction dominates; KSS's normal interval reaches 95.5\%, helped by a standard error that is 10\% too
+large.
+That is why the $q=1$ interval is the one to report here, and \fevc{} chose it on every draw (the leading
+direction carried a median 66\% of the estimated variance).
+
+\paragraph{KSS's Table~V.} For the same sample KSS report a standard-error bias of $-0.3\%$ and coverage of
+89.9\% (normal) and 95.5\% ($q=1$), with a spread of the estimates of 10.6\% of the truth. Their design differs
+in the source of $\psi$ and $b$ (the pooled sample) and in keeping the paths fixed across draws. The
+qualitative pattern---normal intervals undercover, $q=1$ intervals cover---is the same; the KSS standard error
+is unbiased in their design and too large by about 10\% in this one.
+
+\paragraph{Leave-one-out sample.} Here 22\% of the movers have no split-sample estimator and get KSS's
+conservative variance. KSS's standard error is 44\% too large (28\% in their Table~V), and its intervals cover
+every draw at 30\% more length than \fevc's. The model-based estimator, which fails nowhere on this sample, and
+\fevc{} are within 2--4\% of the truth; \fevc{} without centering is 10\% too large. The leading direction is
+weaker (a median share of 12\% of the estimated variance), so \fevc{} chooses the $q=1$ interval on just over
+half the draws; its reported interval covers 97.2\%, its normal interval 96.5\%. On the 100 shared draws,
+\fevc's standard error is a median 0.75 of KSS's.
+
+\subsubsection{Results: worker variance and covariance}\label{kss:sec:synth-other}
+
+KSS's paper method does not compute these. Table~\ref{kss:tab:synth-other} compares the model-based estimator and
+\fevc.
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{3.5pt}
+\caption{Simulation, worker variance and worker--firm covariance, older workers.}\label{kss:tab:synth-other}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & \multicolumn{3}{c}{Worker variance} & \multicolumn{3}{c}{Covariance}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+ & SE bias & Coverage (\%) & Length & SE bias & Coverage (\%) & Length\\
+\midrule
+\multicolumn{7}{@{}l}{\emph{Leave-two-out sample (truths 0.2368 and 0.00486), all noise on the 2001 observation}}\\
+KSS Matlab model-based, 200 draws & $+2\%$ & 93.5 / 95.5 / 95.5 & 0.045 & $+1\%$ & 90.0 / 96.0 / 96.0 & 0.024\\
+\fevc{} default, 1{,}000 draws & $-14\%$ & 89.0 / 97.6 / 97.6 & 0.043 & $-15\%$ & 88.1 / 97.4 / 97.5 & 0.023\\
+\fevc, \code{centering(none)} & $-10\%$ & 90.0 / 97.1 / 97.1 & 0.045 & $-11\%$ & 88.7 / 97.2 / 97.3 & 0.024\\
+\addlinespace
+\multicolumn{7}{@{}l}{\emph{Leave-one-out sample (truths 0.2153 and 0.00609), all noise on the 2001 observation}}\\
+KSS Matlab model-based, 100 draws & $-3\%$ & 90.0 / 91.0 / 91.0 & 0.023 & $-6\%$ & 93.0 / 95.0 / 95.0 & 0.012\\
+\fevc{} default, 1{,}000 draws & $-1\%$ & 94.5 / 97.2 / 97.2 & 0.025 & $-4\%$ & 93.7 / 96.8 / 96.8 & 0.013\\
+\fevc, \code{centering(none)} & $+6\%$ & 95.7 / 97.7 / 97.7 & 0.027 & $+3\%$ & 95.3 / 97.6 / 97.6 & 0.014\\
+\addlinespace
+\multicolumn{7}{@{}l}{\emph{Noise split between the two years (\fevc{} only)}}\\
+Leave-two-out, \fevc{} default & $-16\%$ & 88.5 / 96.1 / 96.1 & 0.043 & $-17\%$ & 88.1 / 96.6 / 96.6 & 0.023\\
+Leave-two-out, \fevc, \code{centering(none)} & $-12\%$ & 90.1 / 96.5 / 96.5 & 0.044 & $-14\%$ & 88.8 / 97.0 / 97.0 & 0.023\\
+Leave-one-out, \fevc{} default & $-4\%$ & 94.1 / 97.0 / 97.0 & 0.024 & $-3\%$ & 93.5 / 98.0 / 98.0 & 0.012\\
+Leave-one-out, \fevc, \code{centering(none)} & $+6\%$ & 96.3 / 98.0 / 98.0 & 0.026 & $+7\%$ & 95.6 / 98.4 / 98.4 & 0.013\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize SE bias: mean standard error divided by the standard deviation of the \fevc{}
+default estimates over 1{,}000 draws (net of numerical noise), minus one, for every method; the model-based
+estimator's own 100--200 draws give a standard deviation with 5--7\% sampling error. Coverage: normal / $q=1$ /
+reported interval. Length: median length of the reported interval ($q=1$ for the model-based estimator; \fevc's
+choice). The covariance estimate is negative on 17\% (leave-two-out) and 3--4\% (leave-one-out) of draws for
+every method.
+\end{table}
+
+On the leave-one-out sample all standard errors of these two components are within 6\% of the truth, with
+\fevc's reported intervals covering 97\%. On the leave-two-out sample \fevc's are 10--15\% too small and the
+model-based ones are on target; \fevc's reported intervals still cover 97--98\% (the model-based ones 95--96\%) at
+similar lengths, because the leading direction dominates these components as well and both report the $q=1$
+interval. The shortfall is specific to the sample in which one direction dominates.
+
+\subsubsection{Noise split between the two years}\label{kss:sec:synth-split}
+
+\fevc's model for the movers' variances has no term for the year, so with all of a mover's noise on the 2001
+observation it spreads that noise over both observations. To see whether this caused the shortfall, the
+simulation was repeated for \fevc{} with each mover's noise split into two independent halves, one per year,
+with the same means, truths and variance of the change (1{,}000 new draws per sample). The bottom panel of
+Table~\ref{kss:tab:synth-other} shows the result: the shortfall on the leave-two-out sample stays (16--17\% under the
+default centering, 12--14\% without), and the leave-one-out results stay within 7\%. The allocation of the
+noise between the years is therefore not the cause. For the firm variance, which depends on changes only, the
+leave-two-out result is unchanged ($-7\%$ against $-6\%$ under the default centering, reported intervals covering
+98.4\%). On the leave-one-out sample it moves from $+4\%$ to $-4\%$, and the reported interval's coverage from
+97.2\% to 95.7\%; the spread of the estimates differs by 6\% between the two sets of draws. That is a shift of
+about two combined standard errors, somewhat more than noise alone would usually produce for a statistic whose
+variance does not depend on the split.
+
+The shortfall on the leave-two-out sample therefore has another cause, examined next.
+
+\subsubsection{Why \fevc's worker-variance and covariance standard errors fall short on the leave-two-out
+sample}\label{kss:sec:synth-varfit}
+
+Under observation deletion every mover observation is alone in its worker--firm cell, so its variance comes
+from \fevc's fitted model: a scale, fitted by least squares on a quadratic in the rank of the leverage, times a
+quadratic profile in the standardized estimated worker and firm effects (\code{vckss\_rse\_\_repeat} in
+\code{fevc\_residual\_se.mata}). To see where that model departs from the truth, it was reimplemented and applied
+to 20 further draws of each sample with exact leverages. The reimplementation reproduces \fevc's stored
+coefficients to $4\times10^{-11}$ where \fevc's leverages are exact (a small test network) and to within the
+projection noise on the real networks. Two fits are compared with the true variances: the model fitted to the
+true variances themselves, the best its functional form can do (specification error), and the model fitted to
+the noisy leave-out products, as \fevc{} does (specification and estimation error).
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\caption{Fitted relative to true variance of mover observations, by leverage group (noise split between the
+years, 20 draws).}\label{kss:tab:varfit}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+ & \multicolumn{3}{c}{Leave-two-out} & \multicolumn{3}{c}{Leave-one-out}\\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Leverage group & best fit & \fevc{} fit & share of variance & best fit & \fevc{} fit & share of variance\\
+\midrule
+Deciles 1--9 (range) & 0.95--1.07 & 0.96--1.07 & 0.81 & 0.98--1.04 & 0.98--1.05 & 0.81\\
+Decile 10 & 0.98 & 0.95 & 0.19 & 0.98 & 0.98 & 0.19\\
+\quad 90--95\% & 1.02 & 0.99 & 0.09 & 1.01 & 1.00 & 0.09\\
+\quad 95--99\% & 0.96 & 0.93 & 0.08 & 0.97 & 0.97 & 0.08\\
+\quad 99--100\% & 0.86 & 0.83 & 0.02 & 0.90 & 0.89 & 0.02\\
+\addlinespace
+Along the leading direction & 0.59 & 0.63 & & 0.77 & 0.91 & \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize Ratios of mean fitted to mean true variance. Best fit: \fevc's two-step model fitted
+to the true variances. \fevc{} fit: fitted to the leave-out products, averaged over draws. Share: the group's
+share of the movers' total true variance. Along the leading direction: the variance of the score $w_1'y$ of the
+worker variance's leading direction implied by the fitted variances, relative to the true one.
+\end{table}
+
+\paragraph{Leverage is not the explanation.} The model does understate the variance of the top 1\% of leverage,
+by 14\% in the best fit and 17\% as fitted (Table~\ref{kss:tab:varfit}), but these observations carry 2\% of the
+movers' variance, and the leave-one-out sample, whose standard errors are on target, shows nearly the same
+pattern. Across the bulk of the leverage distribution the fit is within a few per cent.
+
+\paragraph{The bottleneck is.} On the leave-two-out sample one direction carries 95\% of the sampling variance of
+the worker variance and 92\% of that of the covariance, and that direction rests on about thirty movers at
+moderate leverage: 81\% of its squared weight lies in leverage deciles 6--9 and almost none in the top
+percentile. They are the movers on the network's bottleneck. In KSS's design their noise variance depends on
+$B_{gg}$, the mover's weight in the firm-variance estimator, which is large exactly on a bottleneck. \fevc's
+model has no such term: the ten heaviest of these movers, which carry half of the direction's weight, get 44--48\%
+of their true variance (the truth is 2.1--2.3 times the fit). Along the leading direction the fitted
+variance is 59--63\% of the truth, which implies a standard error about 21\% too small; the simulation measured
+16.5\%. On the leave-one-out sample the corresponding misfit implies 5\% and the simulation measured 4\%. This is
+specification error: the model fitted to the true variances is as far off along that direction as the model
+fitted to the data. The firm variance shares the direction but has almost no signal along it, so its standard
+error is barely affected.
+
+\paragraph{How much this says about \fevc.} Two features of the design make this case unfavourable to \fevc{} and
+favourable to the model-based estimator. First, KSS's design makes the noise variance a function of exactly the
+two inputs of the model-based estimator's smoother, the leverage and $B_{ii}$, so that estimator's model is
+correct by construction; \fevc's is not. Second, the dependence on $B_{gg}$ comes from our own-sample fit, which
+gives it a coefficient of $+0.0056$, against $-0.0037$ in KSS's pooled fit; with KSS's sign the bottleneck movers
+would get less noise than average, not more. The own-sample coefficient rests on a regression that explains
+0.9\% of very noisy raw estimates, with a few dozen bottleneck movers carrying it. Whether real error variances
+rise on bottlenecks is an empirical question this simulation cannot answer. What it does show is the cost if they
+do: when one direction dominates a component and the error variance depends on something \fevc's model does not
+see, the standard error of that component can be well short of the truth. The reported interval still protected
+coverage here (96--98\%), because \fevc{} switches to the $q=1$ interval in exactly this case.

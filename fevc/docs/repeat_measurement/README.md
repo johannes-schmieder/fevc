@@ -7,6 +7,10 @@ the method as its only standard-error method and its default (`inference(auto)`)
 specified in [INFERENCE.md](../INFERENCE.md), and where the note and INFERENCE.md differ, INFERENCE.md
 describes the command. The list of differences is [below](#the-note-and-the-package).
 
+`unified/` combines the note, the addendum, a section on the implementation in 0.6.0 and a comparison
+with the standard errors of KSS (2020) and of the KSS Matlab package into one document; the note and the
+addendum remain here as they were written.
+
 ## Contents
 
 | Path | What it is | Date |
@@ -19,6 +23,8 @@ describes the command. The list of differences is [below](#the-note-and-the-pack
 | `note/build_appendix.py` | assembled `a1_proofs.tex` from an earlier proofs note (not included) and text for this note | November 13, 2026 |
 | `control_term/control_term_v3.pdf`, `.tex` | *Estimated control coefficients in the repeat-measurement standard error*, the addendum (6 pages, version 3): the variance of the fixed-offset estimate with estimated control coefficients, its estimator within the method, the `q = 1` pieces, what is exact, conditional or only checked numerically, and a dense numerical check | November 14, 2026 |
 | `control_term/ctl_theory.py`, `ctl_v2.py`, `ctl_estimator.py` | the addendum's numerical check: the dense design and exact variance, the check of the variance formula and of the estimator against it (NumPy, no code shared with the package) | November 14, 2026 |
+| `unified/se_unified_20261116.pdf` | *Standard errors for leave-out variance components: the repeat-measurement method, its implementation in fevc 0.6.0, and a comparison with the KSS standard errors* (72 pages): the note's Sections 1 to 7 with the addendum folded into the section on controls, the implementation in 0.6.0 (the differences listed below, the interval rule, the package Monte Carlo runs of [default_interval](../default_interval/README.md)), and the comparison with KSS on the six samples of KSS Table IV and in a simulation of KSS's Monte Carlo design, with KSS's code run unchanged; appendices with the proofs, the simulation details, the addendum's numerical check and the reproduction details of the comparison. Cells marked "run." are KSS reruns that had not finished | November 16, 2026 |
+| `unified/se_unified_20261116.tex`, `unified/s*.tex`, `unified/k_*.tex`, `unified/a*.tex` | its LaTeX sources; they input the note's `../note/gen/` | November 16, 2026 |
 | `prototype_simulations/PLAN.md` | the running development log of the prototype and of the implementation that followed, with the owner's decisions | November 11 to 14, 2026 |
 | `prototype_simulations/code/` | the prototype (Python with NumPy and SciPy): estimator versions (`lp*.py`; `lp7.py` is the final form of Sections 2 to 6, `lp_q1.py` of Section 7), simulation drivers, aggregators and verdict scripts (`lp_mc*.py`, `lp_agg.py`, `lp_val7.py`, `lp_q1sim.py`, `lp_q1agg.py`), the synthetic designs (`akm_design.py`), the Lanczos search (`lp_lead.py`), local tests (`test_*.py`), run manifests (`manifest_*.json`) and the SCC job and submission scripts (`job_*.sh`, `submit_*.sh`) | November 11 to 13, 2026 |
 | `prototype_simulations/results/` | aggregate results: simulation rounds on the Veneto design (`mc_v*_aggregate.*`), one-shot analyses of the Veneto panel (`real_v*.json`), size of the control term (`controls_*.json`), checks with known truth (`check_v*.json`), the model's error at fixed characteristics (`bdelta*`), the validation campaign with its manifests and verdicts (`val_v1/`), the `q = 1` confirmation (`q1_conf1/`) and the `q = 1` calculation on the Veneto designs (`q1_real/`), the cost of the Lanczos search (`lead/`), and the package's end-to-end runs on three Veneto panels with their scripts (`e2e-250a760c/`, `e2e-fb49e16d/`) | November 11 to 13, 2026 |
@@ -239,7 +245,15 @@ cd fevc/docs/repeat_measurement/note
 latexmk -pdf main.tex            # or pdflatex main.tex, twice; a third pass settles the PDF bookmarks
 cd ../control_term
 latexmk -pdf control_term_v3.tex
+cd ../unified
+latexmk -pdf se_unified_20261116.tex   # or pdflatex three times
 ```
+
+The unified document builds over the committed PDF as well; build it in a copy of `note/` and `unified/`
+side by side to keep the committed bytes. Built that way its text is identical to the committed PDF. The
+comparison's aggregate results (per-sample estimates, per-draw simulation records, summaries and manifests)
+come from runs on private data and are kept outside the repository; Appendix F of the document gives their
+sources, versions and hashes.
 
 Built from this layout, both give PDFs whose text (`pdftotext -layout`) is identical to the committed
 ones; the bytes differ by build metadata (dates and identifiers). The note builds to `note/main.pdf`, the

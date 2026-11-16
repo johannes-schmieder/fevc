@@ -1,0 +1,91 @@
+\section{Why the computation is cheap}\label{app:cost}
+
+This appendix compares the computation of Section~\ref{sec:computation} with two earlier ones. One is the KSS
+Matlab package, in its routine \texttt{leave\_out\_COMPLETE}. The other is \fevc's structured route,
+\texttt{inference(highrank)}, which is behind the standard errors in the \fevc{} paper. Table~\ref{tab:cost} counts linear solves beyond those of
+the point estimate. The counts for the KSS Matlab package come from reading its code (the simulation routine
+is the same in the package's GitHub version of October 2024, commit \texttt{8b957ffe}; other options of the
+package, such as smoothing on a subsample, are not counted), those for \fevc{} from its documentation of November
+2026 (\texttt{standard\_errors.tex}, repository commit \texttt{53947b43}); we did not time either. The column for
+this note is the standard error alone, without the diagnostics of Section~\ref{sec:evidence}. The comparison is
+kept as it was made before the implementation. \fevc{} 0.6.0 removed the structured route and the development
+default mentioned below, and \code{inference(highrank)} now selects the normal intervals of the method of this note
+(Section~\ref{sec:impl-diff}, item~10). With its default eight draws the pass takes 35 solves, and about 90 with
+the leading directions that the default computes for every component, plus 400 for the offset pass with controls
+under the default \code{nuisance(joint)} (Section~\ref{sec:computation});
+Section~\ref{kss:sec:cost} compares the released package with the two KSS codes.
+
+\begin{table}[H]
+\centering\small
+\caption{Linear solves for the standard errors of the variance components, beyond the point estimate}\label{tab:cost}
+\begin{tabular}{@{}p{0.27\textwidth}p{0.2\textwidth}p{0.2\textwidth}p{0.22\textwidth}@{}}
+\toprule
+ & KSS Matlab package & \fevc{}, structured route & This note \\
+\midrule
+Error variances & smoothing of $\hat\sigma_i^2$ over all observations (lowess), per component; no solves & 2{,}048 solves to fit a variance model & closed form for stayers, two small regressions for movers; no solves \\
+\addlinespace
+Influences $\hat m$ & 2 per component & 3 & 3 \\
+\addlinespace
+Double sum & 1{,}000 draws per component, one number per draw & 1{,}000 draws, one number per component and draw & 16 draws, four solves each: 64 \\
+\addlinespace
+Dominance diagnostic & eigenvalue routines, on request & 8{,}850 & a bound from the same draws; no solves \\
+\midrule
+Total & about 3{,}000 for three components & 11{,}901 & 67 \\
+\bottomrule
+\multicolumn{4}{@{}p{0.93\textwidth}@{}}{\rule{0pt}{2.6ex}KSS Matlab package: each of its draws also solves a second,
+block-diagonal system. \fevc's development default of the time (the leave-out residual standard error, never
+released) has the same pattern of solves as this note (three and four per draw; 35 with its 8 draws) with different
+variance estimates.}
+\end{tabular}
+\end{table}
+
+Four things account for the difference.
+
+\emph{One vector per draw instead of one number.} The variance of $\hat\theta$ contains the double sum
+$\sum\sum C_{i\ell}^2\sigma_i^2\sigma_\ell^2$. The two earlier computations draw an error vector $\zeta$ with the
+fitted variances, compute the single number $\zeta'C\zeta$ (one solve), and take the sample variance of that
+number across draws. With $r_{\rm eff}=(\sum_j\lambda_j^2)^2/\sum_j\lambda_j^4$ the effective number of
+directions of the matrix with entries $\st_iC_{i\ell}\st_\ell$ and $\lambda_j$ its eigenvalues, that sample
+variance has relative variance $2/(R-1)+12/(R\,r_{\rm eff})$ from $R$ draws: at least $2/(R-1)$ whatever the
+design, hence the thousand draws. Section~\ref{sec:computation} also computes the vector $C\zeta$, at one more
+solve per component: $\sum_i\st_i^2(C\zeta)_i^2$ is an average over millions of rows, and one draw already has
+relative variance $2/r_{\rm eff}$. On a large,
+well-connected panel $r_{\rm eff}$ is in the thousands, so a handful of draws is enough. On the Veneto panel it
+is between about \R{real.reff.min} and \R{real.reff.max} for the four components (estimated from 32 draws), and
+runs with different sets of draws, and a run with 64 draws, differ by at most \R{real.run_maxdiff} in the
+standard error.
+
+\emph{The same draws serve every component.} One draw costs one solve for its residual and one for each of
+three components, and gives the double sums of all four components and of their covariances. The KSS Matlab package simulates each component separately.
+
+\emph{The error variances need no solves.} A stayer's variance estimate is a sample variance, and the model for
+movers is two regressions with eleven coefficients on quantities the point estimate has already produced.
+The KSS Matlab package smooths the leave-out estimates over all observations, once per component; the
+structured route of \fevc{} fits its variance model from 2{,}048 further solves.
+
+\emph{A dominance diagnostic comes with the draws.} With $u_d$ the vector with entries $\st_i(C\zeta^{(d)})_i$,
+the average of $(u_d'u_e)^2$ over pairs of different draws is unbiased for $\sum_j\lambda_j^4$, given the data,
+and $(\sum_j\lambda_j^4)^{1/2}/\hat\V[\hat\theta]$ is an upper bound for the ratio
+$\lambda_{\max}^2/\hat\V[\hat\theta]$. This is an estimated bound, and it is for the matrix with the fitted
+variances, not for the one with the true variances in Proposition~\ref{prop:conc}. On the Veneto panel the estimated bound from the 16 draws of the standard error is between
+\R{real8.d2.min} and \R{real8.d2.max} for the four components, in two sets of draws. The ratio itself, by power
+iteration, is between \R{real.lambda.min} and \R{real.lambda.max} (Section~\ref{sec:evidence}; 20 iterations per
+component, each applying the weights twice, and the prototype solves for all components and the residual at
+every application: $4\times20\times2\times4=640$ solves). The structured route spends three quarters of its solves on its spectral diagnostic, mostly power iteration
+for the leading eigenvalues of every component. Here power iteration is needed only when the bound is not
+small. (A bound that is not small can also mean several important directions, which the interval of
+Section~\ref{sec:q1} does not address.)
+
+Three of these four points are numerical and would speed up the earlier variance models as well; only the
+third is specific to the variance estimates of this note.
+
+\paragraph{What the comparison leaves out.} The counts exclude the point estimate, which needs hundreds of
+solves in \fevc{} and, in the prototype of this note, a factorisation (Section~\ref{sec:computation}). The earlier
+routes also deliver more for their cost: both include the eigenvalue calculations and the $q=1$ interval of
+Section~\ref{sec:q1}, and the split-sample estimator of KSS's published paper, which neither code implements, needs no model
+for the variances. (In the $q=1$ case the KSS Matlab package fills the three entries of \eqref{eq:q1cov} with
+its smoothed variances. Section~\ref{sec:q1} does the same for two of them with the estimates of this note, and
+for the first takes the larger of the leave-out estimate of KSS's paper and the value from the estimates of
+this note.) Finally, sixteen draws suffice
+because $r_{\rm eff}$ is large. With a dominant direction it is not, the bound of Proposition~\ref{prop:sim}
+is weak, and more draws are needed.

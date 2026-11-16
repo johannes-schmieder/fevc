@@ -1,0 +1,76 @@
+\paragraph{What was done.} The six samples of KSS Table~IV were rebuilt from the raw data with KSS's own,
+unchanged code; they match KSS Table~I to within 0.01\%. On identical rows, KSS's paper method (their
+Table~IV code), the model-based estimator of the KSS Matlab package (GitHub and replication versions) and
+\fevc{} 0.6.0 were run. Then, on the two older-worker networks, where the methods disagree most, outcomes were
+drawn with a known truth from KSS's own Monte Carlo design, and every method was run on the same draws (1{,}000
+for \fevc, 100--200 for the KSS codes, which take 15 minutes to over an hour per draw).
+
+\paragraph{Point estimates.} With two periods and observation deletion, \fevc{} and KSS compute the same
+estimator. \fevc{} reproduces KSS's estimates to within its numerical error once the year effect is handled as
+KSS handle it (\code{nuisance(fixedoffset)}) and enough random projections are used. Its default lies between
+0.9\% below and 0.8\% above KSS: re-estimating the year effect in every leave-out fit raises it by 0.2--0.9\%,
+and its 200 default projections add numerical noise of 10--12\% of the standard error on the older-worker
+samples.
+
+\paragraph{Standard errors on the real data (firm variance).}
+\begin{itemize}
+\item On the three leave-one-out samples, KSS's standard error is the largest, by design: 15--22\% of movers have
+no split-sample estimator and get a conservative variance. \fevc{} and the model-based estimator agree with each
+other (0.00049 and 0.00048 pooled, 0.00052 and 0.00049 younger, 0.00199 and 0.00196 older).
+\item On the pooled and younger leave-two-out samples all methods agree. On the older-worker leave-two-out
+sample, where one direction dominates, they range from 0.00094 (\fevc{} default) to 0.00137 (KSS; 0.00141 on a
+second call of the same code), yet the
+reported $q=1$ intervals are almost the same: $[.0155,.0220]$ for KSS and $[.0154,.0218]$ for \fevc.
+\item \fevc{} reports the $q=1$ interval on exactly the three samples where KSS's $q=1$ and normal intervals
+differ.
+\end{itemize}
+
+\paragraph{Against a known truth (firm variance, older workers).}
+\begin{itemize}
+\item \emph{Leave-two-out.} KSS's standard error is 10\% too large; \fevc's is 6\% too small by default and on
+target without centering; the model-based one is 5\% too small, and its $q=1$ interval is invalid on 19\% of the
+draws: it excludes its own estimate, and on a third of those draws the variance estimate is also negative. The reported intervals cover
+97.5\% (KSS, $q=1$) and 98.9\% (\fevc, which chose $q=1$ on every draw) at the same median length; the
+model-based $q=1$ interval covers 76.5\%.
+\item \emph{Leave-one-out.} KSS's standard error is 44\% too large (KSS's own Table~V: 28\%) and its intervals
+cover every draw at 30\% more length than \fevc's. The model-based estimator and \fevc{} are within 2--4\%;
+\fevc's reported interval covers 97.2\%.
+\end{itemize}
+
+\paragraph{Worker variance and covariance.} KSS's paper method does not estimate them. On the real data \fevc{}
+and the model-based estimator agree within 6--11\% on the pooled and older samples, and \fevc's are 12--25\% larger
+on the younger samples. In the simulation \fevc{} is within 7\% on the leave-one-out sample but 10--17\% too small
+on the older leave-two-out sample, where the model-based estimator is on target; this does not change when the
+noise is split between the two years. \fevc's reported ($q=1$) intervals still cover 96--98\% there. A diagnostic
+traces the shortfall to about thirty movers on the network's bottleneck, on whom the leading direction of these
+two components rests: in the simulated design their noise depends on their weight in the firm-variance estimator,
+which \fevc's variance model does not see, and the model gives them under half their true variance. High leverage as
+such is not the cause. The design favours the model-based estimator, whose smoother uses exactly that weight, and
+the dependence itself comes from a noisy own-sample fit whose sign is opposite to KSS's pooled fit.
+
+\paragraph{Computing time.} \fevc{} takes 18--96 seconds per sample for all four components and their covariance.
+KSS's paper method takes 15 minutes (older leave-two-out) to 10 hours (younger leave-two-out) for the firm variance
+alone, and had not finished the pooled samples after 15 hours; the model-based code takes 10 minutes to 10 hours.
+
+\paragraph{Problems in the KSS code.} The critical values for $q=2$ are not shipped, so the $q=2$ intervals of
+Table~IV cannot be reproduced; their randomness is unseeded, so two runs differ by 0.5--8\% in the standard error;
+the variance routine of the paper method subtracts a constant where the projection on the leading direction
+appears to be meant, which affects the $q=1$ interval by an amount not measured here; the replication package's
+model-based routine fails when eigenvalue diagnostics are requested; and the model-based estimator returns
+negative variance estimates, which their code turns into imaginary standard errors.
+
+\paragraph{Caveats.} The simulation fits KSS's design on each sample rather than on the pooled sample, as KSS do.
+In KSS's design stayers' wages carry no noise, and under observation deletion a two-period mover has no repeat
+measurement, so the simulation tests \fevc's fitted variance model for movers, not its repeat-measurement part. The
+paper method's runs on three samples were still going when this comparison was written.
+
+\paragraph{For \fevc.} Three points follow. (i) For samples like these the default 200 projections leave
+noticeable numerical noise in the point estimate; a larger or adaptive default would remove it, at about two to
+three times the run time for 2{,}000 projections.
+(ii) Under observation deletion with two periods the centering changes the standard error, not the estimate; the
+default was 6\% low on the leave-two-out simulation and on target on the leave-one-out one. (iii) When one
+direction dominates a component, its standard error depends on the variances of the few movers that direction
+rests on, and \fevc's variance model, which uses the rank of leverage and the estimated effects, cannot follow a
+variance that depends on the mover's weight in the target, as KSS's design does. Adding the target diagonals to the
+features of the scale would nest the inputs of KSS's smoother; whether it is worth it depends on whether real error
+variances behave that way, which a design without this dependence, or real repeat measurements, would have to show.

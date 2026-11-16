@@ -1,0 +1,358 @@
+\section{One dominant direction: a $q=1$ interval}\label{sec:q1}
+
+When a single direction of the quadratic part of $\hat\theta$ is not negligible relative to its total
+uncertainty, as can happen with two groups of firms linked by few movers, condition (b) of
+Proposition~\ref{prop:conc} can fail, $\hat\theta$ need not be close to normal, and the interval
+$\hat\theta\pm1.96\,\hat\V[\hat\theta]^{1/2}$ should then not be used. For this case KSS (their Sections~6 and~7,
+with $q=1$) treat the dominant direction separately. Their interval needs a $2\times2$ covariance matrix, and
+the variance estimates of Section~\ref{sec:estimator} can supply it. This section gives the three entries, shows
+that the matrix built on them with KSS's own first entry is consistent under conditions parallel to those of
+Section~\ref{sec:results} (Proposition~\ref{prop:q1}), shows that the rule used here for the first entry keeps
+the coverage that follows from it (Corollary~\ref{cor:q1}), and reports a simulation in which the link between
+two groups of firms is made narrower step by step.
+
+The section concerns $\sigma^2_\alpha$, $\sigma^2_\psi$ and the covariance. For the variance of the sum the matrix
+$S_{xx}^{-1/2}AS_{xx}^{-1/2}$ equals $(I-uu')/n_{\rm py}$ for a vector $u$ of unit length, so its non-zero
+eigenvalues are all equal: the largest accounts for one over the rank of the sum of squared eigenvalues, a
+share that vanishes as the number of workers and firms grows. A single direction cannot dominate there.
+
+\subsection{The decomposition of KSS}
+
+Let $\lambda_1$ be the eigenvalue of $S_{xx}^{-1/2}AS_{xx}^{-1/2}$ that is largest in absolute value and $q_1$ its
+eigenvector of unit length, and let
+\[
+w_{i1}=x_i'S_{xx}^{-1/2}q_1,\qquad \hat b_1=\sum_iw_{i1}\,y_i,\qquad \hat\V[\hat b_1]=\sum_iw_{i1}^2\,\hat\sigma_i^2 ,
+\]
+so that $\sum_iw_{i1}^2=1$. KSS write
+$\hat\theta=\lambda_1\big(\hat b_1^{\,2}-\hat\V[\hat b_1]\big)+\hat\theta_{\rm r}$
+and base the interval on the joint normality of $\hat b_1$ and the remainder $\hat\theta_{\rm r}$. It needs the three
+entries of their covariance matrix $\Sigma$,
+\begin{equation}\label{eq:q1cov}
+\Sigma_{bb}=\sum_iw_{i1}^2\sigma_i^2,\qquad
+\Sigma_{b{\rm r}}=2\sum_iw_{i1}\,m_i^{\rm r}\,\sigma_i^2,\qquad
+\Sigma_{\rm rr}=4\sum_i(m_i^{\rm r})^2\sigma_i^2+2\sum_i\sum_{\ell\ne i}(C_{i\ell}^{\rm r})^2\sigma_i^2\sigma_\ell^2 ,
+\end{equation}
+where $C^{\rm r}$ are the weights of the remainder and $m^{\rm r}=C^{\rm r}\mu$. Let
+$\rho=\Sigma_{b{\rm r}}/(\Sigma_{bb}\Sigma_{\rm rr})^{1/2}$ be the correlation of $\hat b_1$ and $\hat\theta_{\rm r}$.
+
+\subsection{The three estimates}
+
+Three facts, all algebra, make the estimates of this note fit:
+\begin{enumerate}
+\item The remainder is itself a leave-out estimator, $\hat\theta_{\rm r}=\sum_i\sum_{\ell\ne i}C^{\rm r}_{i\ell}y_iy_\ell$,
+with weights formed as in \eqref{eq:ustat} from $A^{\rm r}=A-\lambda_1S_{xx}^{1/2}q_1q_1'S_{xx}^{1/2}$ in place of
+$A$; that is, from $B^{\rm r}_{i\ell}=B_{i\ell}-\lambda_1w_{i1}w_{\ell1}$.
+\item The rows of a stayer have identical regressors, so $w_{i1}$ takes one value $w_{g1}$ on them, and the
+weight between two of them is again a constant,
+\[
+c_g^{\rm r}=\Big(\frac{A_{gg}}{T_g^{\,2}}-\lambda_1w_{g1}^2\Big)\frac{T_g}{T_g-1}.
+\]
+\item Over the rows of a stayer the leave-out estimates add up to $T_g\,q_g$. So $\hat\V[\hat b_1]$ already uses
+the stayers' sample variances.
+\end{enumerate}
+With $\hat m^{\rm r}=C^{\rm r}y$ and the variance estimates $\st_i^2$ of Section~\ref{sec:estimator} (the stayer's
+$q_g$, the fitted model for movers), the estimates are
+\begin{align}
+\hat\Sigma_{bb}&=\max\Big\{\sum_iw_{i1}^2\,\hat\sigma_i^2,\ \sum_iw_{i1}^2\,\st_i^2\Big\},\qquad
+\hat\Sigma_{b{\rm r}}=2\sum_iw_{i1}\,\hat m_i^{\rm r}\,\st_i^2 ,\label{eq:q1est}\\
+\hat\Sigma_{\rm rr}&=4\sum_i(\hat m_i^{\rm r})^2\st_i^2-2\sum_i\sum_{\ell\ne i}(C^{\rm r}_{i\ell})^2\st_i^2\st_\ell^2
++4\sum_{g\in\cG}(c_g^{\rm r})^2q_g^2\,\frac{(T_g-2)(T_g-1)}{T_g+1}.\notag
+\end{align}
+The last is \eqref{eq:Vhat} for the remainder; the second is its analogue for the covariance.
+
+\paragraph{Why the larger of two numbers for $\hat\Sigma_{bb}$.} The first number in the braces is KSS's
+$\hat\V[\hat b_1]$. It is unbiased and needs no model for anyone, because $\Sigma_{bb}$ is linear in the error
+variances. But with a bottleneck $\hat b_1$ rests on the few rows that link the two groups, and the leave-out
+estimates of a few rows are noisy: their weighted sum can come out far too small, or negative, and a
+$\hat\Sigma_{bb}$ that is too small makes the interval too short. The second number uses the fitted variances. It
+is positive and stable, but only as good as the model on those few rows. Taking the larger guards against the
+downward errors of the first without relying on the second. The price is, as a rule, a longer interval
+(Corollary~\ref{cor:q1} says when it is certain to be longer). The fitted number is positive whenever the fitted
+variances are, which the floors of Section~\ref{sec:estimator} ensure unless residuals vanish; the interval is
+reported only if $\hat\Sigma$ is positive definite. The correction inside $\hat\theta_{\rm r}$ is not affected:
+the point estimate and the remainder are KSS's.
+
+\subsection{Consistency}
+
+\begin{proposition}[The covariance matrix for $q=1$]\label{prop:q1}
+Assume A1 to A3, the moment bounds of Proposition~\ref{prop:conc} and Assumption~1 of KSS, suppose
+$\Sigma_{\rm rr}>0$, and give the movers' rows non-random numbers $\st_i^2=\sigma_i^2+\Delta_i$ with
+$|\st_i^2|\le\bth\,\sigma_i^2$ for a constant $\bth\ge1$. Let
+$\phi_g^{\rm r}$ and $\lambda_{\max}^{\rm r}$ be the quantities of Proposition~\ref{prop:conc} for the remainder,
+that is, with $C^{\rm r}$, $m^{\rm r}$ and $\Sigma_{\rm rr}$ in place of $C$, $m$ and $\V[\hat\theta]$, and let
+$\epsilon_{\rm r}=\max_g\phi_g^{\rm r}+(\lambda_{\max}^{\rm r})^2/\Sigma_{\rm rr}$. Write
+$\hat\Sigma_{bb}^{\rm lo}=\sum_iw_{i1}^2\hat\sigma_i^2$ for the leave-out number in \eqref{eq:q1est},
+$d_{\rm r}(\Delta)=2\sum_{i\in\cR}w_{i1}m_i^{\rm r}\Delta_i$, and $b_{\rm r}(\Delta)$ for \eqref{eq:b} formed with
+$C^{\rm r}$ and $m^{\rm r}$. Then, in every sample,
+\[
+\E\hat\Sigma_{bb}^{\rm lo}=\Sigma_{bb},\qquad \E\hat\Sigma_{b{\rm r}}=\Sigma_{b{\rm r}}+d_{\rm r}(\Delta),\qquad
+\E\hat\Sigma_{\rm rr}=\Sigma_{\rm rr}+b_{\rm r}(\Delta),
+\]
+and
+\begin{align*}
+\E\Big[\Big(\frac{\hat\Sigma_{bb}^{\rm lo}}{\Sigma_{bb}}-1\Big)^2\Big]&\le c_b\,\max_iw_{i1}^2,\\
+\E\Big[\frac{\big(\hat\Sigma_{b{\rm r}}-\Sigma_{b{\rm r}}-d_{\rm r}(\Delta)\big)^2}{\Sigma_{bb}\,\Sigma_{\rm rr}}\Big]&\le c_{b{\rm r}}\,\bth^2\,\epsilon_{\rm r},\qquad
+\E\Big[\Big(\frac{\hat\Sigma_{\rm rr}-\Sigma_{\rm rr}-b_{\rm r}(\Delta)}{\Sigma_{\rm rr}}\Big)^2\Big]\le c'\,\bth^2\,\epsilon_{\rm r},
+\end{align*}
+where $c_b$, $c_{b{\rm r}}$ and $c'$ depend only on the constants of the assumptions. Consequently, along a
+sequence of designs in which $\max_iw_{i1}^2\to0$, $\epsilon_{\rm r}\to0$, $b_{\rm r}(\Delta)/\Sigma_{\rm rr}\to0$,
+$d_{\rm r}(\Delta)/(\Sigma_{bb}\Sigma_{\rm rr})^{1/2}\to0$ and $|\rho|$ stays below a number less than one, the matrix
+$\hat\Sigma^{\rm lo}$ with entries $\hat\Sigma_{bb}^{\rm lo}$, $\hat\Sigma_{b{\rm r}}$, $\hat\Sigma_{\rm rr}$ satisfies
+$\Sigma^{-1/2}\hat\Sigma^{\rm lo}\Sigma^{-1/2}\to I$ in probability. The same holds when the movers' rows receive
+the fitted values of Corollary~\ref{cor:transfer}, with $\Delta_i=v_i^*-\sigma_i^2$ and $n_{\cR}\to\infty$.
+\end{proposition}
+
+The proposition is about $\hat\Sigma^{\rm lo}$, the matrix with KSS's first entry. The matrix with the rule
+\eqref{eq:q1est} need not be consistent: where the fitted variances overstate $\Sigma_{bb}$ its first entry
+stays too large. What the rule keeps is coverage. Let $\hat\rho_{\rm lo}$ be the correlation computed from
+$\hat\Sigma^{\rm lo}$.
+
+\begin{corollary}[Coverage]\label{cor:q1}
+\textup{(a)} In any sample in which $\hat\Sigma^{\rm lo}$ is positive definite and $\hat\rho_{\rm lo}^2\le2/3$, the
+interval of Section~\ref{sec:q1int} formed with \eqref{eq:q1est} contains the interval formed with
+$\hat\Sigma^{\rm lo}$.
+\textup{(b)} Suppose the conditions of the last part of Proposition~\ref{prop:q1} hold, with $|\rho|$ at most a
+constant strictly below $(2/3)^{1/2}$, together with the hypotheses of KSS's Theorem~3 for $q=1$: their
+Assumptions~1 and~2, $\max_iw_{i1}^2\to0$, and
+$\Sigma_{\rm rr}^{-1}\max_i\big((\tilde x_{i1}'\beta)^2+(\check x_{i1}'\beta)^2\big)\to0$. Then the interval formed
+with \eqref{eq:q1est} covers $\theta$ with probability of at least $1-\alpha$ in the limit.
+\end{corollary}
+
+Part (a) is algebra (Appendix~\ref{app:proofs}); the bound $2/3$ is on the correlation before the first entry is
+raised, and without it a larger first entry can lower the critical value and move an end point inwards. Part (b)
+combines three things: KSS's Theorem~3, under which $\hat b_1$ and $\hat\theta_{\rm r}$ are jointly asymptotically
+normal; their Lemma~7, under which the interval with a consistent matrix then covers with probability of at
+least $1-\alpha$ in the limit; and part (a), which holds with probability tending to one. The condition on
+$\tilde x_{i1}$ and $\check x_{i1}$ says that no single row dominates the linear part of the remainder; it is
+KSS's and is not implied by the conditions of the proposition. If the fitted variances overstate $\Sigma_{bb}$ in
+large samples, the interval is longer than necessary but its coverage bound stands. The conditions of the
+proposition, in words:
+\begin{itemize}
+\item \emph{No single row dominates $\hat b_1$}: $\max_iw_{i1}^2\to0$. This is the Lindeberg condition of KSS's
+Theorem~3. KSS read $1/\max_iw_{i1}^2$ as an effective number of observations behind $\hat b_1$.
+\item \emph{The remainder has no dominant stayer and no dominant direction}: $\epsilon_{\rm r}\to0$. When the
+years per stayer are bounded, a sufficient condition is the remainder's analogue of KSS's conditions, with the
+second eigenvalue set against the remaining ones, $\lambda_2^2/\sum_{\ell\ge2}\lambda_\ell^2\to0$
+(Appendix~\ref{app:proofs}). This is stronger than KSS's Assumption~2, which sets $\lambda_2^2$ against the sum
+over all eigenvalues.
+\item \emph{The model's errors average out for the remainder}, in its variance and in its covariance with
+$\hat b_1$: $b_{\rm r}(\Delta)/\Sigma_{\rm rr}\to0$ and $d_{\rm r}(\Delta)/(\Sigma_{bb}\Sigma_{\rm rr})^{1/2}\to0$. This is
+A4 for the remainder. Both are zero when movers' variances follow the model.
+\item \emph{$\hat b_1$ and the remainder are not collinear.} With equal variances $\rho=0$.
+\end{itemize}
+No independence beyond A1 is used, and the stayers' part is again exact in the mean: only the third condition
+involves the model. The zero third moments of A3 are needed for the mean of $\hat\Sigma_{b{\rm r}}$; with
+skewed stayers' errors it shifts by a term given in the appendix. As in Section~\ref{sec:results}, the
+proposition evaluates the profile at fixed characteristics; the estimator evaluates it at estimated effects.
+
+\subsection{The interval}\label{sec:q1int}
+
+As in KSS (Section~7.1): with $\hat\rho=\hat\Sigma_{b{\rm r}}/(\hat\Sigma_{bb}\hat\Sigma_{\rm rr})^{1/2}$ and the
+curvature
+\begin{equation}\label{eq:kappa}
+\hat\kappa=\frac{2\,|\lambda_1|\,\hat\Sigma_{bb}}{\hat\Sigma_{\rm rr}^{1/2}\,(1-\hat\rho^2)^{1/2}},
+\end{equation}
+the interval runs from the smallest to the largest value of $\lambda_1b^2+\theta_{\rm r}$ over the ellipse
+\[
+\begin{pmatrix}b-\hat b_1\\ \theta_{\rm r}-\hat\theta_{\rm r}\end{pmatrix}'\hat\Sigma^{-1}
+\begin{pmatrix}b-\hat b_1\\ \theta_{\rm r}-\hat\theta_{\rm r}\end{pmatrix}\le z_{\alpha,\hat\kappa}^{\,2} .
+\]
+The critical value is that of Andrews and Mikusheva (2016): $z_{\alpha,\kappa}$ is the $1-\alpha$ quantile of
+$\big(Z_1^2+(|Z_2|+\kappa^{-1})^2\big)^{1/2}-\kappa^{-1}$ for independent standard normal $Z_1,Z_2$. For
+$\alpha=0.05$ it rises from 1.96 at $\kappa=0$ to 2.08 at $\kappa=0.3$, 2.22 at $\kappa=1$, 2.35 at $\kappa=3$ and
+2.45 as $\kappa\to\infty$. The curvature measures how much the square of $\hat b_1$ bends the problem. As it
+goes to zero the interval approaches the one from a linear approximation,
+$\lambda_1\hat b_1^{\,2}+\hat\theta_{\rm r}\pm1.96\,(g'\hat\Sigma g)^{1/2}$ with $g=(2\lambda_1\hat b_1,1)'$. That is
+not literally $\hat\theta\pm1.96\,\hat\V[\hat\theta]^{1/2}$: the centre differs by $\lambda_1\hat\V[\hat b_1]$ and the
+standard error is built from $\hat\Sigma$. How close the two are in practice is seen below, in the designs
+without a bottleneck and on the Veneto panels. The construction needs $\hat\Sigma$ to be positive definite; if
+$\hat\Sigma_{bb}$, $\hat\Sigma_{\rm rr}$ or the determinant is not positive, no interval is reported. In \fevc{}
+0.6.0 this is the interval of \code{inference(q1)}, and of the default where it chooses $q=1$, with the entries
+\eqref{eq:q1est}; the critical value is simulated with 100{,}000 draws (Section~\ref{sec:impl}).
+
+\subsection{Computation}
+
+The eigenvector is found in coefficient space: $v_1=S_{xx}^{-1/2}q_1$ solves $Av_1=\lambda_1S_{xx}v_1$ with
+$v_1'S_{xx}v_1=1$. Power iteration on $v\mapsto S_{xx}^{-1}Av$ costs one solve per step, and $w_1=Xv_1$ needs no
+further solve. With a bottleneck the leading eigenvalue is well separated and few steps suffice
+(\R{q1.steps.bottleneck} in the simulated designs below); without one the iteration can be slow. The decomposition
+$\hat\theta=\lambda_1(\hat b_1^{\,2}-\hat\V[\hat b_1])+\hat\theta_{\rm r}$ is an identity for any vector $v_1$ with
+$v_1'S_{xx}v_1=1$ and any number $\lambda_1$, so an unconverged iteration does not change the point estimate.
+But the results above are for the leading direction, and a small change of $\lambda_1$ from one step to the
+next does not certify it; an implementation should check the residual of the eigenvalue equation and say so
+when the iteration has not converged. After that $B^{\rm r}_{ii}=B_{ii}-\lambda_1w_{i1}^2$ needs no further
+projections, and the remainder is one more component in the calculation of Section~\ref{sec:computation}: one
+solve for $\hat m^{\rm r}$ and one for each of the 16 draws: 17 solves per component and 51 for the three, against
+the 67 of the standard error, when the draws of the standard error are reused. The steps of the power iteration
+come on top. (The prototype does not reuse the draws and spent 85 solves per component.) In \fevc{} 0.6.0 the
+direction is found by a thick-restart Lanczos iteration in the $S_{xx}$ inner product, stopped at a relative
+residual of $10^{-3}$ or after 40 solves, and by a dense eigendecomposition on the exact Mata route
+(Appendix~\ref{kss:app:lanczos}); the draws of the standard error are reused for the remainder, and with eight
+draws the standard errors and the decompositions of all components together take about 90 solves. The step counts
+and timings of the power iteration below are the prototype's.
+
+The power iteration alone already gives $\lambda_1$, $\max_iw_{i1}^2$ and $\hat\Sigma_{bb}$, and with them a
+screening value that needs no further solve,
+$\tilde\kappa=2|\lambda_1|\hat\Sigma_{bb}/\hat\V[\hat\theta]^{1/2}$. It is not the curvature and not a bound for it:
+its denominator is the whole standard error, which includes the part of $\hat\theta$ that is linear in $\hat b_1$,
+so $\tilde\kappa$ is small also when $\hat b_1$ is many standard errors from zero, and its estimate of
+$\Sigma_{bb}$ can be too large. In the simulation below its median, over the draws in which
+$\hat\V[\hat\theta]$ is positive, was between \R{q1.screen.ratio.min} and \R{q1.screen.ratio.max} times the
+curvature. It is a rough guide to whether the interval is worth computing; no
+threshold for it has been validated. \fevc{} 0.6.0 does not use it: its default chooses between the two intervals
+by the share of the estimated variance that the leading direction carries (Section~\ref{sec:impl}).
+
+\subsection{Simulation}\label{sec:q1sim}
+
+\paragraph{Design.} Synthetic panels with a bottleneck of chosen width: 100 firms in two groups of 50; 12,000
+workers observed for two to six years, each attached to one group and assigned a newly drawn firm of that
+group with probability 0.10 a year; and $b$ bridging workers, who move once to a firm of the other group. After pruning to the
+leave-one-out connected set a panel has about \R{q1.design.rows} rows, of which about \R{q1.design.movers} are
+movers' matches. The link is $b=100$, 30 or 10 workers, or there is no bottleneck (one group). Firm effects
+differ between the groups by a gap of 0 or 0.3 (their standard deviation within a group is 0.12). Without the
+gap $\E\hat b_1$ is \R{q1.b1sd.gap0} standard deviations of $\hat b_1$ from zero, with it \R{q1.b1sd.gap3}. Error
+variances are equal (\emph{flat}); a quadratic
+in the person effect times a worker-specific factor (\emph{profile}); steeper and three times as high for movers
+(\emph{movers}); or three times as high for the bridging workers alone (\emph{bridge}), an indicator that the
+model for movers lacks. Errors are normal, or skewed (centred exponential); the skewed designs are outside A3
+and are a check of robustness. Appendix~\ref{app:sim} has the details.
+
+The bridging workers carry \R{q1.design.w2bridge} of $\sum_iw_{i1}^2$, and $\max_iw_{i1}^2$ is
+\R{q1.maxw2.b100}, \R{q1.maxw2.b30} and \R{q1.maxw2.b10} for $b=100$, 30 and 10: an effective number of
+observations behind $\hat b_1$ of about \R{q1.neff.b100}, \R{q1.neff.b30} and \R{q1.neff.b10}. The curvature ranges
+from \R{q1.kappa.none.min} without a bottleneck to \R{q1.kappa.b10.max} with ten bridging workers
+(\R{q1.kappa.bridge.max} when the bridging workers are noisy).
+
+\paragraph{Procedure.} The estimates and the rule were fixed after a development run on other panels
+(\R{q1.dev.draws} draws per design), in which the rule \eqref{eq:q1est} replaced a first version that used the
+fitted number only when the leave-out number was unusable. The run reported here uses new panels and new draws,
+\R{q1.reps} per design, the estimator of Section~\ref{sec:estimator} throughout (model fitted in every draw,
+estimated effects in the profile, 16 draws for the double sums). The designs, the number of draws and the
+following tolerances were written down beforehand, for the \R{q1.acc.cells} designs with $b\ge10$ or no
+bottleneck: coverage of the 95\% interval of at least 0.92 for each of the three components in each design, and
+at least 0.94 on average over these \R{q1.acc.n} cases; no failed draw; no interval missing in more than 1\% of
+the draws of a case; coverage of the normal interval for the variance of the sum of at least 0.92 in each
+design; and, in each design without a bottleneck and for each component, a mean length of the $q=1$ interval
+of at most 1.10 times the mean length of the normal interval. Coverage is a share of all draws: a draw in
+which a method gives no interval counts as not covered for that method, and lengths are averaged over the
+draws with an interval. The tolerances allow for departures from 0.95; meeting them does not establish nominal
+coverage. Two designs with $b=3$ were run as a stress test outside these tolerances: there
+$\max_iw_{i1}^2=\R{q1.maxw2.b3}$ and KSS's condition is far from met.
+
+\paragraph{Results.} All \R{q1.draws.total} draws were completed, and every one produced a $q=1$ interval. The
+coverage tolerances were met; one tolerance on length was not. Table~\ref{tab:q1} summarises;
+Table~\ref{tab:q1cells} in Appendix~\ref{app:sim} lists every design.
+
+\begin{table}[t]\centering\footnotesize\setlength{\tabcolsep}{4.5pt}
+\caption{Coverage of 95\% intervals with a bottleneck of $b$ bridging workers (\R{q1.reps} draws per design;
+ranges over designs and over $\hat\sigma^2_\alpha$, $\hat\sigma^2_\psi$, $\hat\sigma_{\alpha,\psi}$)}\label{tab:q1}
+\tabinput{../note/gen/tab_q1.tex}
+\begin{minipage}{0.97\textwidth}\footnotesize\smallskip
+\emph{Normal}: $\hat\theta\pm1.96\,\hat\V[\hat\theta]^{1/2}$. \emph{$q=1$}: the interval of this section with
+\eqref{eq:q1est}. \emph{Leave-out}: the same with KSS's $\hat\V[\hat b_1]$ alone as $\hat\Sigma_{bb}$; a draw in which
+that matrix is not positive definite has no interval and counts as not covered. \emph{True $\Sigma$}: the interval
+with the true covariance matrix, which no estimate can use. \emph{Noisy bridge}: the bridging workers' errors
+have three times the variance. A normal interval does not exist when $\hat\V[\hat\theta]\le0$; such a draw counts
+as not covered. \emph{Length}: mean length of the $q=1$ interval over the mean length of the
+normal interval, and over that of the interval with the true matrix, each on the draws in which both exist,
+averaged over cases. The Monte Carlo standard error of a coverage of 0.95
+is \R{q1.mcse}. The first four blocks have normal errors and the variance patterns flat, profile and movers.
+\end{minipage}
+\end{table}
+
+\emph{Tolerances.} In the \R{q1.acc.n} cases (three components in \R{q1.acc.cells} designs) the $q=1$ interval
+covers between \R{q1.acc.min} and \R{q1.acc.max}, on average \R{q1.acc.mean}; the normal interval for the
+variance of the sum covers between \R{q1.sum.min} and \R{q1.sum.max}. The tolerance that failed concerns the
+designs without a bottleneck, where the $q=1$ interval was to be at most 10\% longer than the normal one. For
+the covariance in one of the three designs it is \R{q1.fail.len} longer; the other eight ratios are between
+\R{q1.none.len.others}. In that design the leading direction is a sparse one that rests on a few rows
+($\max_iw_{i1}^2=\R{q1.fail.maxw2}$), and the curvature is \R{q1.fail.kappa}, not close to zero: the critical value
+alone is \R{q1.fail.zpct} above 1.96, and even with the true matrix the interval is \R{q1.fail.truelen} longer than
+the normal one. The tolerance assumed that without a bottleneck the two intervals coincide. That is so only
+when the curvature is small. The interval is not wrong there (it covers \R{q1.fail.cover}, the normal one
+\R{q1.fail.normalcover}), but the tolerance was set in advance and the result stands as a failure of it.
+
+\emph{The normal interval.} Its coverage falls as the curvature rises: it is \R{q1.bykappa.0.normal} for
+$\kappa<0.2$, \R{q1.bykappa.0p2.normal} for $\kappa$ between 0.2 and 0.6, \R{q1.bykappa.0p6.normal} for $\kappa$
+between 0.6 and 2, and as low as \R{q1.normal.worst} above that. Three things go wrong. $\hat\theta$ is not close to normal.
+The variance estimate is often not positive, so that there is no standard error at all: this happens in
+\R{q1.vneg.cases} of the \R{q1.acc.n} cases, in more than a tenth of the draws in \R{q1.vneg.cases10} of them, and in
+up to \R{q1.vneg.max} of the draws; such draws count as not covered. (In the case with coverage
+\R{q1.normal.worst} it is \R{q1.vneg.worst} of the draws, and among the others the interval covers
+\R{q1.normal.worst.cond}; over all cases the coverage among draws with a standard error is at least
+\R{q1.normal.cond.min}.) It does not happen for $\kappa<0.6$. And where the standard error exists it can be off,
+because with a bottleneck the variance of $\hat\theta$ rests on the bridging rows, where the errors of the model
+for movers need not average out: when the bridging workers are noisier than the model can know, the
+root-mean-square standard error is \R{q1.se.bridge} times the true one. For the variance of the sum, which has
+no dominant direction, the variance estimate is positive in every draw and the standard error is \R{q1.se.sum}
+times the true one over all designs.
+
+\emph{The $q=1$ interval.} It covers at least \R{q1.acc.min} in every case, also with skewed errors and with
+noisy bridging workers. It is conservative: in \R{q1.acc.above97} of the \R{q1.acc.n} cases it covers more than
+0.97. Most of that is the construction of KSS and not the estimates: with the true matrix the coverage is
+between \R{q1.true.acc.min} and \R{q1.true.acc.max}. Relative to the interval with the true matrix, the estimated
+one is on average \R{q1.lentrue.all.b100}, \R{q1.lentrue.all.b30} and \R{q1.lentrue.all.b10} times as long for
+$b=100$, 30 and 10 (the designs of the second to fourth rows of Table~\ref{tab:q1}), and at most
+\R{q1.lentrue.acc.max} times in any case.
+
+\emph{The rule for $\hat\Sigma_{bb}$.} With ten bridging workers the leave-out number alone is not usable: it is
+not positive, or the matrix is not positive definite, in \R{q1.lonone.b10all} of draws, and the coverage of the
+interval built on it is \R{q1.lo.b10all}. Its standard deviation across draws is then \R{q1.bbcv.all.b10} times
+the true $\Sigma_{bb}$, against \R{q1.bbcv.all.b100} with a hundred. With thirty or more, or without a bottleneck, the
+leave-out number alone covers \R{q1.lo.ge30}, and there the rule costs length without need. The fitted number
+alone fails where the model is wrong on the bridging rows: with noisy bridging workers it is
+\R{q1.bbfit.bridge} of the true value and the interval built on it covers between \R{q1.fit.bridge.min} and
+\R{q1.fit.bridge.max}. The larger of the two does well in both situations.
+
+\emph{The three entries.} Across the \R{q1.acc.cells} designs the mean of the leave-out number is \R{q1.cal.bb.acc} times
+$\Sigma_{bb}$, the mean of $\hat\Sigma_{\rm rr}$ is \R{q1.cal.rr.acc} times $\Sigma_{\rm rr}$ (the largest values are
+for skewed errors, where A3 fails), and the mean error of $\hat\Sigma_{b{\rm r}}$ is at most \R{q1.cal.br.acc} in
+units of $(\Sigma_{bb}\Sigma_{\rm rr})^{1/2}$.
+
+\emph{Stress test.} With three bridging workers the $q=1$ interval covers between \R{q1.q1.b3.min} and
+\R{q1.q1.b3.max}, and the leave-out number is unusable in up to \R{q1.lonone.b3.max} of draws. KSS's condition
+is not met there, the errors are normal, and nothing should be read into the result beyond these two designs.
+
+\subsection{The Veneto panels}\label{sec:q1real}
+
+The same calculation was run on the six-year Veneto panel of Section~\ref{sec:evidence} and on the two smaller
+designs of Section~\ref{sec:validation} (Table~\ref{tab:q1real}). None of them has a dominant direction. The
+leading eigenvalue accounts for \R{q1.real.share} of the sum of squared eigenvalues of the three components, the
+estimated curvature is \R{q1.real.kappa}, and the $q=1$ interval is \R{q1.real.lenratio} times as long as the
+normal one: the two nearly coincide, as they should. For the variance of the sum the share is
+\R{q1.real.sum.share}.
+
+The leading direction is a sparse one in these designs too: $\max_iw_{i1}^2$ is \R{q1.real.maxw2}, and half of
+$\sum_iw_{i1}^2$ sits on \R{q1.real.half} rows. With so few rows the two numbers in \eqref{eq:q1est} are far apart,
+in either direction: the leave-out number is \R{q1.real.bbratio} times the fitted one, and the rule took the
+fitted one in \R{q1.real.fitted.n} of the \R{q1.real.n} cases. Because the curvature is small, this hardly moves
+the interval. Without a dominant direction the power iteration can be slow: it took \R{q1.real.steps} steps,
+against \R{q1.steps.bottleneck} in the simulated bottlenecks, and \R{q1.real.power.seconds} seconds per component
+in the prototype. It is stopped at 200 steps, and in \R{q1.real.unconverged} of the \R{q1.real.n} cases it stopped
+there without meeting its tolerance; the row of Table~\ref{tab:q1real} with 200 steps is that case, and its
+direction is the last iterate, not a certified leading direction.
+
+\begin{table}[t]\centering\footnotesize\setlength{\tabcolsep}{4.5pt}
+\caption{The leading direction and the two 95\% intervals on the Veneto designs}\label{tab:q1real}
+\tabinput{../note/gen/tab_q1real.tex}
+\begin{minipage}{0.97\textwidth}\footnotesize\smallskip
+\emph{Steps}: of the power iteration (at most 200). \emph{Ratio}: length of the $q=1$ interval over length of the
+normal interval.
+\end{minipage}
+\end{table}
+
+\subsection{Limits}
+
+The coverage result rests on KSS's, and it requires that no single row dominates $\hat b_1$. Two groups of
+firms linked by a handful of movers are not covered by it: adding workers elsewhere in the network does not
+make $\max_iw_{i1}^2$ small if the same few bridging workers keep carrying the direction. In the stress test
+with three bridging workers the interval still covered in two designs with normal errors; that is not a
+guarantee. The simulation shows how the procedure is calibrated on the designs and variance patterns that were
+run. It does not establish coverage beyond them, and it does not replace the conditions of
+Corollary~\ref{cor:q1}. It uses synthetic panels with one bottleneck; several weak links at once would need
+$q>1$, which is not treated here. For $\sigma^2_\psi$ every stayer has $w_{g1}=0$, so stayers do not enter $\hat\Sigma_{bb}$ and
+$\hat\Sigma_{b{\rm r}}$, and those two entries rest on the leave-out estimates and the model for movers. For the
+covariance and for $\sigma^2_\alpha$ stayers do enter, and can carry much of the remainder's variance; there the
+repeat measurements matter. The rule \eqref{eq:q1est} was chosen after a development run, to guard against
+intervals that are too short; where the fitted variances overstate the variance of $\hat b_1$ it gives away
+length.
