@@ -98,12 +98,17 @@ def test_help_preserves_all_runnable_example_names():
     current = (ROOT / "fevc/fevc.sthlp").read_text()
     pattern = r"\{\* example_start - ([^}]+)\}\{\.\.\.\}(.*?)\{\* example_end\}\{\.\.\.\}"
     current_examples = dict(re.findall(pattern, current, re.S))
-    assert len(current_examples) == 5
-    assert set(INVENTORY["examples"]) == current_examples.keys()
+    # The qualified inventory is kept; the 0.6.0 interval overrides added two.
+    additive_examples = {"highrank_inference", "q1_inference"}
+    assert len(current_examples) == 7
+    assert set(INVENTORY["examples"]) | additive_examples == current_examples.keys()
     # Numerical fixture and truth checks run in Stata after moving generation
     # into the installed helper; example text is no longer byte-identical.
-    for name, number in (("weights_targets", 3), ("component_inference", 5)):
+    for name, number in (("weights_targets", 3), ("component_inference", 5),
+                         ("highrank_inference", 2), ("q1_inference", 4)):
         assert f"simulate_data(ex{number})" in current_examples[name]
+    assert "inference(highrank)" in current_examples["highrank_inference"]
+    assert "inference(q1)" in current_examples["q1_inference"]
 
 
 def test_catalog_preserves_match_install_inventory():
