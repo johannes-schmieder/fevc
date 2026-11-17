@@ -120,7 +120,7 @@ more would bring this noise well below the sampling error.
 \midrule
 \multicolumn{7}{@{}l}{\emph{Standard error}}\\
 KSS (2020), published & 0.0006 & 0.0006 & 0.0006 & 0.0006 & 0.0025 & 0.0013\\
-KSS (2020), rerun & \pend & \pend & \pend & 0.00058 & 0.00244 & 0.00137\\
+KSS (2020), rerun & \pend & \pend & 0.00059 & 0.00058 & 0.00244 & 0.00137\\
 KSS Matlab model-based & 0.00048 & 0.00053 & 0.00049 & 0.00055 & 0.00196 & 0.00110\\
 \fevc{} default & 0.00049 & 0.00052 & 0.00052 & 0.00059 & 0.00199 & 0.00094\\
 \fevc, \code{centering(none)} & 0.00047 & 0.00056 & 0.00051 & 0.00060 & 0.00192 & 0.00125\\
@@ -130,7 +130,7 @@ Bias of the KSS standard error & $+41\%$ & $+3\%$ & $+48\%$ & $+4\%$ & $+28\%$ &
 \addlinespace
 \multicolumn{7}{@{}l}{\emph{Interval reported}}\\
 KSS (2020), published, $q=1$ & [.0228,.0251] & [.0227,.0249] & [.0207,.0230] & [.0209,.0234] & [.0157,.0267] & [.0158,.0221]\\
-KSS (2020), rerun, $q=1$ & \pend & \pend & \pend & [.0209,.0234] & [.0159,.0267] & [.0155,.0220]\\
+KSS (2020), rerun, $q=1$ & \pend & \pend & [.0207,.0230] & [.0209,.0234] & [.0159,.0267] & [.0155,.0220]\\
 KSS Matlab model-based, $q=1$ & [.0230,.0250] & [.0227,.0249] & [.0208,.0229] & [.0210,.0233] & [.0167,.0263] & [.0157,.0215]\\
 \fevc{} default & [.0231,.0250] & [.0228,.0249] & [.0210,.0230] & [.0211,.0235] & [.0166,.0257] & [.0154,.0218]\\
 \quad which interval & normal & normal & normal & $q=1$ & $q=1$ & $q=1$\\
@@ -141,7 +141,8 @@ KSS Matlab model-based, $q=1$ & [.0230,.0250] & [.0227,.0249] & [.0208,.0229] & 
 \raggedright\footnotesize KSS publish the $q=0$ and $q=1$ intervals; they coincide in the first three
 columns and differ in the last three. The model-based standard errors are those of the GitHub version; the
 replication package's version gives 0.00198 and 0.00110 on the older-worker samples. \fevc{} default: 8
-draws; 256 draws change the standard errors by at most 2\%.
+draws; 256 draws change the standard errors by at most 2\%. \pend: KSS's code on the pooled samples was stopped
+after 23 hours, still in the first of its two calls; the published values are shown above.
 \end{table}
 
 Table~\ref{kss:tab:emp-se} is the main result on the real data.
@@ -150,9 +151,11 @@ Table~\ref{kss:tab:emp-se} is the main result on the real data.
 15--22\% of movers have no second, independent path in these samples, and those movers get the
 conservative variance estimate, which KSS's own Monte Carlo puts at 28--48\% too large. \fevc{} and the
 model-based estimator agree with each other (0.00199 and 0.00196 on the older workers, 0.00052 and 0.00049
-on the younger, 0.00049 and 0.00048 on the pooled sample) and lie where KSS's standard error lands once its
-Table~V bias is taken out (about 0.0019 for the older workers; the published 0.0006 has too few digits for the
-other samples).
+on the younger, 0.00049 and 0.00048 on the pooled sample). On the older workers both lie where KSS's standard
+error lands once its Table~V bias is taken out (0.00244/1.28, about 0.0019). On the younger workers the same
+adjustment gives about 0.0004 (0.00059/1.48), below both \fevc{} and the model-based estimator; the adjustment
+carries KSS's simulation design over to the real data, which it need not match. The pooled sample could not be
+checked this way: KSS's code was stopped after 23 hours without finishing.
 
 \paragraph{Leave-two-out samples.} Here every mover has two independent paths and KSS's own Monte Carlo
 finds their standard error within 4\% of the truth. On the pooled and younger samples all methods agree. On the
@@ -209,7 +212,7 @@ model-based code does not.
 \subsubsection{Computing time}\label{kss:sec:emp-time}
 
 \begin{table}[ht]
-\centering\small
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
 \caption{Wall-clock time per sample (seconds), firm variance or all components as noted.}\label{kss:tab:emp-time}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
@@ -217,7 +220,7 @@ model-based code does not.
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
  & LOO & LTO & LOO & LTO & LOO & LTO\\
 \midrule
-KSS (2020), \code{table\_4} (two calls; firm variance) & \pend & \pend & \pend & 36{,}338 & 9{,}249 & 788\\
+KSS (2020), \code{table\_4} (two calls; firm variance) & $>$83{,}000 & $>$83{,}000 & 55{,}000$^{a}$ & 36{,}338 & 9{,}249 & 788\\
 KSS Matlab model-based, GitHub (three components) & 37{,}200 & 22{,}053 & 9{,}037 & 5{,}397 & 2{,}452 & 624\\
 KSS Matlab model-based, replication package & 25{,}592 & 22{,}230 & 9{,}845 & 5{,}377 & 3{,}469 & 1{,}555\\
 \fevc{} default (four components and covariance) & 96 & 38 & 53 & 35 & 27 & 18\\
@@ -228,7 +231,9 @@ KSS Matlab model-based, replication package & 25{,}592 & 22{,}230 & 9{,}845 & 5{
 \raggedright\footnotesize Time of the estimation calls, without MATLAB start-up and compilation. KSS: MATLAB
 with 16--28 parallel workers on one SCC node, exact leverages. \fevc: Stata/MP with the native plugin, 16
 threads, on comparable nodes, leverages from 200 random projections. Node speeds on the cluster differ by up to
-a factor of four, so the comparison is one of orders of magnitude.
+a factor of four, so the comparison is one of orders of magnitude. $^{a}$The first call alone, which gives the
+$q=1$ results; the second call, for $q=2$, ends at KSS's missing critical values like the others. $>$: stopped after 23 hours, still in the first
+call.
 \end{table}
 
 \subsubsection{Problems found in the KSS code}\label{kss:sec:emp-problems}

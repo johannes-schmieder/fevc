@@ -49,8 +49,10 @@ such is not the cause. The design favours the model-based estimator, whose smoot
 the dependence itself comes from a noisy own-sample fit whose sign is opposite to KSS's pooled fit.
 
 \paragraph{Computing time.} \fevc{} takes 18--96 seconds per sample for all four components and their covariance.
-KSS's paper method takes 15 minutes (older leave-two-out) to 10 hours (younger leave-two-out) for the firm variance
-alone, and had not finished the pooled samples after 15 hours; the model-based code takes 10 minutes to 10 hours.
+KSS's paper method takes 13 minutes (older leave-two-out) to 10 hours (younger leave-two-out) for its two calls on
+the firm variance alone, 15 hours for the first call alone on the younger leave-one-out sample, and had not finished
+the first call on either pooled sample when it was stopped after 23 hours; the model-based code takes 10 minutes to
+10 hours.
 
 \paragraph{Problems in the KSS code.} The critical values for $q=2$ are not shipped, so the $q=2$ intervals of
 Table~IV cannot be reproduced; their randomness is unseeded, so two runs differ by 0.5--8\% in the standard error;
@@ -62,7 +64,8 @@ negative variance estimates, which their code turns into imaginary standard erro
 \paragraph{Caveats.} The simulation fits KSS's design on each sample rather than on the pooled sample, as KSS do.
 In KSS's design stayers' wages carry no noise, and under observation deletion a two-period mover has no repeat
 measurement, so the simulation tests \fevc's fitted variance model for movers, not its repeat-measurement part. The
-paper method's runs on three samples were still going when this comparison was written.
+paper method's reruns on the two pooled samples were stopped after 23 hours, before their first call had finished;
+for those samples the tables show KSS's published values only.
 
 \paragraph{For \fevc.} Three points follow. (i) For samples like these the default 200 projections leave
 noticeable numerical noise in the point estimate; a larger or adaptive default would remove it, at about two to
