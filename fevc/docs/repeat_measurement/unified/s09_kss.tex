@@ -1,0 +1,253 @@
+%=====================================================================================
+\section{Comparison with the KSS standard errors}\label{sec:kss}
+
+This section compares three ways of computing standard errors for leave-out (KSS) variance components: the
+split-sample estimator of Kline, Saggio and S{\o}lvsten (2020, Section~5.2; ``KSS'') as implemented in their
+Econometrica replication code; the model-based estimator of the KSS Matlab package, which replaces each error
+variance by a smooth fit; and the repeat-measurement estimator that \fevc{} 0.6.0 reports by default. The first
+part explains how each works, where its computing time goes, and what it assumes. The second part runs \fevc{} on
+the samples for which KSS published standard errors and confidence intervals (Table~IV), next to KSS's own code
+run on the same samples, and on outcomes drawn with a known truth.
+
+\subsection{Summary of the comparison}\label{kss:sec:summary}
+\input{k_summary.tex}
+
+%=====================================================================================
+\subsection{The two KSS estimators}\label{kss:sec:methods}
+
+\paragraph{What all three estimate.} Every method estimates the sampling variance \eqref{eq:V} of the leave-out
+estimator \eqref{eq:ustat}, $\hat\theta=\sum_i\sum_{\ell\ne i}C_{i\ell}\,y_iy_\ell$, under the independence that the
+point estimator assumes. Its first term, $4\sum_im_i^2\sigma_i^2$ with $m=C\mu$, is linear in the errors and usually
+most of the variance (the \emph{signal} term); the second, the double sum, is quadratic (the \emph{noise} term).
+Because $C_{ii}=0$ no third or fourth moments enter. Two things make it hard to estimate:
+$(Cy)_i^2$ overstates $m_i^2$ by $\sum_\ell C_{i\ell}^2\sigma_\ell^2$ (Section~\ref{sec:estimator}); and each
+$\sigma_i^2$ is observed once, through the leave-out estimate $\hat\sigma_i^2=y_i(y_i-x_i'\hat\beta_{-i})$, which is
+unbiased, but whose products $\hat\sigma_i^2\hat\sigma_\ell^2$ are biased when the two leave-out fits share
+observations (Section~\ref{sec:setting}), and which is correlated with $(Cy)_i^2$. When one eigenvalue dominates (a bottleneck: two parts of the
+mobility network joined by few movers), all three methods use KSS's decomposition
+$\hat\theta=\lambda_1(\hat b_1^{\,2}-\hat\V[\hat b_1])+\hat\theta_{\rm r}$ of Section~\ref{sec:q1} and the
+Andrews--Mikusheva interval with the curvature \eqref{eq:kappa}; they differ in how they estimate the covariance
+matrix $\Sigma$ of $(\hat b_1,\hat\theta_{\rm r})$ and in how they choose $q$. The \fevc{} estimator is that of
+Section~\ref{sec:estimator}, computed as in Section~\ref{sec:computation}, with the details and the interval rule
+of 0.6.0 in Section~\ref{sec:impl}. The two KSS estimators follow.
+
+\subsubsection{KSS (2020): split-sample estimator}\label{kss:sec:kss}
+
+\paragraph{Construction (Section~5.2, Lemma~5).} For every observation $i$ KSS build two predictions of
+$x_i'\beta$ that do not use $y_i$ and that rest on disjoint sets of observations,
+$x_i'\hat\beta_{-i,s}=\sum_{\ell\neq i}P_{i\ell s}\,y_\ell$ with $P_{i\ell1}P_{i\ell2}=0$. From them,
+\[
+\check\sigma_i^2=(y_i-x_i'\hat\beta_{-i,1})(y_i-x_i'\hat\beta_{-i,2}),
+\]
+a cross-fit estimate that is unbiased for $\sigma_i^2$ and independent of $y_\ell$ for $\ell$ outside its
+two supports, and $\hat\sigma_{i,-\ell}^2=y_i(y_i-x_i'\hat\beta_{-i,s})$ with the split $s$ that does
+not use $y_\ell$. Each product $\sigma_i^2\sigma_\ell^2$ is estimated by one of four forms, depending on
+whether the two pairs of predictions share observations; for the pairs where none of the unbiased forms
+exists (the set $\mathcal B$) an upward-biased product with $(y_\ell-\bar y)^2$ is used, which makes the
+standard error conservative. The estimator is
+\[
+\hat\V[\hat\theta]=4\sum_i\Big(\sum_{\ell\neq i}C_{i\ell}y_\ell\Big)^2\check\sigma_i^2
+-2\sum_i\sum_{\ell\neq i}\tilde C_{i\ell}\,\widehat{\sigma_i^2\sigma_\ell^2},
+\qquad
+\tilde C_{i\ell}=C_{i\ell}^2+2\sum_kC_{ki}C_{k\ell}(P_{ki1}P_{k\ell2}+P_{ki2}P_{k\ell1}).
+\]
+It is unbiased when $\mathcal B$ is empty and conservative otherwise, and it needs no model for the
+variances: $\sigma_i^2$ may differ arbitrarily across observations.
+
+\paragraph{Design requirement.} In the worker--firm model the predictions are paths in the mobility
+network, and the two paths of an observation must be edge-disjoint. By Menger's theorem they exist if
+the design keeps full rank when any two observations are dropped; avoiding the conservative pairs needs
+full rank after any three. Observations without a second path get the conservative variance estimate.
+
+\paragraph{What KSS actually implemented.} The application (Section~9.4, Table~IV) reports standard
+errors and intervals for the \emph{variance of firm effects only}, in two-period panels (1999 and 2001),
+with observation leave-out, after removing year effects, for three samples (pooled, younger, older
+workers) each pruned to a leave-one-out and a leave-two-out connected set. Split predictions could not
+be built for 15--22\% of movers in the leave-one-out samples; the share of pairs in $\mathcal B$
+was 0.03--0.46\%. The longer panel of Appendix~A has point estimates only. The replication code
+(\code{leave\_out\_FD.m} with \code{paths\_network\_v3.m} and \code{finish\_SE.m}) works on the movers'
+wage changes (the first-differenced representation, in which a mover is an edge between two firms):
+\begin{itemize}
+\item for each mover, in a parallel loop, a shortest leave-one-out path between the two firms and a
+second shortest path avoiding the first (\code{shortest\_path\_double\_leave\_out}), adding further
+disjoint paths, up to four, where they exist; which mover is used on each edge of a path is drawn at random;
+movers without a second path get the conservative estimate;
+\item kernel entries $C_{i\ell}$ only for the pairs that occur on each other's paths, from which a sparse
+correction matrix is formed;
+\item the bulk of the pair sum as a \emph{randomized trace} with a fixed variance vector
+$\hat\sigma_{\cdot,1}$ (the first-path leave-out products): $1{,}000$ Gaussian draws $\xi$, each giving
+$\xi'C\hat V_1C\hat V_1\xi$, with $\hat V_1$ the diagonal matrix of that vector, from two applications of the kernel---four with the eigenvalue
+diagnostics, which add the kernel net of its leading directions---plus the sparse corrections for pairs whose
+products differ from $\hat\sigma_{i,1}\hat\sigma_{\ell,1}$. At the settings of Table~IV this routine
+(\code{finish\_SE}) runs twice per call;
+\item the sum of squared eigenvalues from a further $10{,}000$ Rademacher draws of two solves each;
+\item the leading eigenvectors from MATLAB's \code{eigs} on the generalized problem $Av=\lambda S_{xx}v$
+($S_{xx}=X'X$) for the $q=1$ and $q=2$ intervals, the curvatures and the eigenvalue shares.
+\end{itemize}
+Negative estimates are replaced: a negative variance by its first term, and if that is negative too by a
+conservative bound; the same for the variances that enter the $q=1$ interval. So the pair sum is not computed
+pair by pair, but the randomized parts are large: each kernel application (\code{C\_build\_FD}) takes three
+solves, and a call at the Table~IV settings takes on the order of $44{,}000$ solves, besides the path searches
+and the pair entries on paths. The driver of Table~IV makes two such calls.
+
+\subsubsection{KSS Matlab package: model-based estimator}\label{kss:sec:kssm}
+
+The KSS Matlab package (\code{LeaveOutTwoWay}, commit \code{8b957ffe}) returns point estimates only from
+its main function \code{leave\_out\_KSS.m}. The additional routine \code{leave\_out\_COMPLETE.m} reports
+standard errors for the worker variance, the firm variance and their covariance (no joint covariance,
+no standard error for the variance of the sum), and on request (\code{eigen\_diagno=1}) the $q=1$
+interval.
+\begin{itemize}
+\item \textbf{Variances.} The leave-out products $\hat\sigma_i^2$ are smoothed by a local linear
+regression (\code{llr\_fit}) on the leverage $P_{ii}$ and the component's own diagonal $B_{ii}$,
+separately for each component, with options to fit movers and stayers separately. The fitted values
+$\bar\sigma_{t,i}^2$ replace $\sigma_i^2$. Negative fitted values are kept.
+\item \textbf{Variance.} $\hat\V_t=4\sum_i\hat m_{t,i}^2\bar\sigma_{t,i}^2-\widehat{\V}(\hat\theta^*_t)$, with
+$\hat m_t=C_ty$ (three solves) and $\widehat{\V}(\hat\theta^*_t)$ the sample variance of the estimator
+recomputed on $1{,}000$ simulated outcomes $v\sim N(0,\bar V_t)$ with $\bar V_t=\operatorname{diag}(\bar\sigma_{t,i}^2)$, one
+normal-matrix solve and one solve with the diagonal system $I-\Lambda_P$ each
+(\code{leave\_out\_estimation\_two\_way.m}). Its expectation is
+$2\tr(C_t\bar V_tC_t\bar V_t)$. Everything is repeated for each component.
+\item \textbf{Leading direction.} \code{eigs(Adot,Sxxdot,3)} per component; the sum of squared
+eigenvalues by a Hutchinson trace; the Andrews--Mikusheva interval (\code{AM\_CI}).
+\end{itemize}
+The replication package contains the same construction (\code{hutchison\_trace\_SE.m}, default branch),
+and a clustered branch that uses a Hutchinson trace with vector images instead, with the number of draws
+set by a worst-case bound.
+
+%=====================================================================================
+\subsection{Where the computing time goes}\label{kss:sec:cost}
+
+\subsubsection{The noise term: scalar draws, vector draws, and how many}
+
+With $V=\diag(\sigma_i^2)$, all three methods estimate a trace of the form $\tr(CVCV)=\sum_{i,\ell}C_{i\ell}^2
+\sigma_i^2\sigma_\ell^2$ by simulation (KSS's split-sample code for the bulk of its pair sum, with a fixed
+vector). Let $\nu_j$ be the eigenvalues of $V^{1/2}CV^{1/2}$, so the trace is $\sum_j\nu_j^2$,
+and let $r=(\sum_j\nu_j^2)^2/\sum_j\nu_j^4$ be the \emph{effective rank} (Appendix~\ref{app:cost} writes $\lambda_j$
+and $r_{\rm eff}$).
+
+\begin{itemize}
+\item \textbf{Scalar draws} (KSS Matlab model-based). Each draw yields one number, the simulated estimate
+$\zeta'C\zeta$; the trace is recovered from their sample variance. Its relative variance is about
+$(2+12/r)/R$ from $R$ draws: at least 4.5\% relative error at $R=1{,}000$, and 8--10\% at the effective
+ranks of 1.4--2.4 found on the older-worker leave-two-out sample.
+\item \textbf{Vector draws, two applications} (KSS split-sample code). $\xi'CVCV\xi$ with
+$\xi\sim N(0,I)$ is unbiased for the trace. It needs two applications of $C$ per draw (four with the
+diagnostics), and because the matrix $CVCV$ is not symmetric its variance is at least that of the
+symmetric form below.
+\item \textbf{Vector draws, one application} (\fevc). With $\zeta=V^{1/2}\xi$ and $u=C\zeta$,
+$u'Vu$ is unbiased for the trace with relative variance $2/r$ per draw. For a high-rank component
+$r$ is in the hundreds or thousands, so eight draws give an error of one to a few per cent, on a term that
+is itself a minor part of the variance. Where $r$ is small, one direction dominates, and the $q=1$
+decomposition takes it out; the remainder is high-rank again.
+\end{itemize}
+At equal precision the scalar approach needs about $r+6$ times as many draws as the one-application
+vector approach. One kernel application costs a few linear solves with the normal matrix, each as
+expensive as one probe of the point estimate, plus cheap block-diagonal solves (KSS's \code{C\_build\_FD}
+makes three solves; \fevc{} four per draw, and four more when the leading directions are computed).
+
+\subsubsection{Other costs}
+\begin{itemize}
+\item \textbf{Variances.} KSS's split-sample code searches two edge-disjoint paths per mover; the model-%
+based code runs a local linear fit per component; \fevc{} computes cell sample variances and one small
+regression, with no solve.
+\item \textbf{Per component.} KSS's model-based code repeats the variance fit and the simulation for each
+component. \fevc{} uses one variance vector and one set of draws for all components and their covariances.
+\item \textbf{Leading direction.} KSS call \code{eigs}, which factors the explicit normal matrix and, because
+their matrix is stored in a non-symmetric form, runs the Arnoldi-based Krylov--Schur iteration; \fevc{} runs
+thick-restart Lanczos, the symmetric counterpart, in the $S_{xx}$ inner product with one iterative solve per step
+(Appendix~\ref{kss:app:lanczos}). Same algorithm family, different treatment of the solve inside each step.
+\end{itemize}
+
+\begin{table}[ht]
+\centering\small
+\caption{Computation of the standard error, by method (default settings).}\label{kss:tab:cost}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.5cm}XXX@{}}
+\toprule
+ & KSS (2020) split-sample code & KSS Matlab model-based & \fevc{} 0.6.0 \\
+\midrule
+Error variances & two edge-disjoint paths per mover; conservative where none & local linear fit on $(P_{ii},B_{ii})$, per component & cell sample variances; fitted model for the other units \\
+Noise term & $1{,}000$ vector draws, two to four kernel applications each, twice per call, plus sparse path-pair corrections & variance of $1{,}000$ simulated scalar estimates, per component & 8 vector draws, one kernel application each, all components at once \\
+Linear solves (order of magnitude) & about $44{,}000$ per call at the Table~IV settings & about $1{,}000$ per component & about 90, plus 400 with controls under the default \code{nuisance(joint)} \\
+Leverages & exact & exact & 200 random projections \\
+Components & firm variance (application) & three, marginal only & four, joint covariance \\
+Leading direction & \code{eigs} on explicit matrices & \code{eigs} on explicit matrices & Lanczos with iterative solves \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%=====================================================================================
+\subsection{What each method assumes}\label{kss:sec:assumptions}
+
+All three methods estimate the same variance $\V[\hat\theta]$ under the independence the point estimator
+assumes. Given the same error variances, the model-based estimator and \fevc{} estimate the same quantity;
+apart from the leverages (exact in KSS's codes, random projections in \fevc), the speed difference between them
+is Monte Carlo design. Their statistical difference is where the
+variances come from.
+
+\paragraph{The raw material is the same.} Every method starts from the leave-out products
+$\hat\sigma_i^2=y_i(y_i-x_i'\hat\beta_{-i})$. For a stayer $g$ with $T_g$ observations at one firm, the
+leave-out prediction of observation $t$ is the mean of the other wages, $\bar y_{g,-t}$, because the
+stayer's observations pin down the worker effect plus the firm effect and do not move the estimated firm
+effects. Hence
+\[
+\frac1{T_g}\sum_{t=1}^{T_g} y_{gt}(y_{gt}-\bar y_{g,-t})=\frac{1}{T_g-1}\sum_{t=1}^{T_g}(y_{gt}-\bar y_g)^2=q_g ,
+\]
+the stayer's sample variance \eqref{eq:q}. The \fevc{} variance of a stayer is the within-stayer average of KSS's own
+raw estimates. The KSS Matlab code smooths those raw estimates across all stayers with similar leverage
+instead; KSS (2020) use split predictions, which for a stayer are means of disjoint halves of the other
+observations (possible from three observations on).
+
+\begin{table}[ht]
+\centering\small
+\caption{Assumptions, by method.}\label{kss:tab:assumptions}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}XXX@{}}
+\toprule
+ & KSS (2020) & KSS Matlab model-based & \fevc{} 0.6.0 \\
+\midrule
+Error variances & unrestricted & smooth in $(P_{ii},B_{ii})$, for every unit & stayers and multi-observation cells: unrestricted across cells, one variance within a cell; other units: fitted model \\
+Unbiased if & independence and $\mathcal B$ empty; conservative otherwise & the smoother is right & independence, one variance per cell, normal fourth moments (pair term), model right for the other units \\
+Design requirement & full rank after dropping any two (three) observations & leave-out connectivity & leave-out connectivity \\
+Across components & per component & three marginal standard errors & coherent joint covariance \\
+Positivity & a negative variance estimate is replaced by its first term, then by a conservative bound & negative fitted variances kept; negative variance estimates returned & fitted scale floored; $q=1$ interval when the variance estimate is not positive \\
+Choice of $q$ & researcher; heuristic $\lambda_q^2/\sum\lambda^2\ge1/10$ & on request & automatic: leading direction's share of the estimated variance above 10\% \\
+Controls & partialled out once with the full-sample coefficient, treated as known & the same as run here (\code{resid\_controls=1}) & standard errors of the fixed-offset estimate, with a first-order term for the estimated coefficients \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Where the models bite.} For the units without repeat measurements---under match deletion all
+movers' matches, which carry the identification of the firm effects---both the KSS Matlab code and \fevc{}
+rest on a model, and neither nests the other: the local linear fit is more flexible in leverage, the
+\fevc{} model can follow variances that rise with worker or firm type. For a model with error $\Delta_i$,
+the variance estimate is off by $b(\Delta)=4\sum_im_i^2\Delta_i-2\sum_{i,\ell}C_{i\ell}^2\Delta_i\Delta_\ell$
+(Proposition~\ref{prop:mean}), which does not vanish with the sample size when $\Delta$ is
+correlated with $m_i^2$. KSS (2020) carry no such risk, at the price of its design requirement and its
+conservative fallback.
+
+\paragraph{What is proved.} For KSS (2020): unbiasedness without $\mathcal B$, consistency (Lemma~5), and
+coverage of the $q$-intervals under their conditions (Lemmas~6--7). For the KSS Matlab model-based
+estimator: nothing beyond the identity that makes it unbiased when the smoother is exact. For \fevc: exact
+unbiasedness of the repeat-measurement part, the explicit bias $b(\Delta)$ of the model part, and
+convergence conditions (no dominant set or direction; Propositions~\ref{prop:mean} to~\ref{prop:fitted}); the
+automatic choice between the two intervals is supported by registered simulations, not by a theorem.
+
+%=====================================================================================
+\subsection{Could the fast trace speed up the KSS methods?}\label{kss:sec:speedup}
+
+For the model-based estimator, yes, without changing what it estimates: replace the variance of $1{,}000$
+simulated scalar estimates by a few vector draws $u=C\bar V_t^{1/2}\xi$ and the average of
+$\sum_i\bar\sigma_{t,i}^2u_i^2$. Because its variances differ by component, each component needs its
+own draws, and a joint covariance stays undefined; with one common variance vector one set of draws would
+give every variance and covariance, which is the \fevc{} structure. For the split-sample code, the bulk
+trace already uses vector draws; the symmetric one-application form and a draw count chosen from the
+estimated effective rank rather than a fixed $1{,}000$ would cut that part by one to two orders of
+magnitude, leaving the path searches and pair entries.
+
+%=====================================================================================
+\subsection{Comparison on the samples of KSS Table IV}\label{kss:sec:empirical}
+\input{k_empirical.tex}
+
+%=====================================================================================
+\subsection{Simulation with known truth: KSS's Monte Carlo design}\label{kss:sec:synth}
+\input{k_synth.tex}

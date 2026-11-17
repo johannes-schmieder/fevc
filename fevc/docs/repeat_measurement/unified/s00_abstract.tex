@@ -1,0 +1,19 @@
+\begin{abstract}
+\noindent The leave-out estimator of Kline, Saggio and S{\o}lvsten (2020, KSS) removes the bias of variance
+components in two-way fixed-effects models; its sampling variance involves every observation's error variance.
+This note derives a standard error that takes each error variance from independent repeat measurements where they
+exist and from a fitted model elsewhere. Stayers' yearly wages are such measurements; movers' variances follow a
+scale in match length and leverage times a quadratic in estimated effects. Its variance estimate is exactly
+unbiased when movers' variances are known, converges under conditions implied by KSS's, and has an explicit error
+when the movers' model is wrong. With controls it estimates the fixed-offset estimate's variance, including the
+coefficients' estimation to first order (checked numerically in one Gaussian design); the joint estimate's
+extra term is not covered. For one dominant direction it supplies the covariance matrix of KSS's $q=1$ interval.
+Prototype simulations on Veneto data put its root-mean-square standard error at \R{sim.all.min}--\R{sim.all.max}
+times the truth. \fevc{} 0.6.0 implements it as its default; registered confirmations on pre-release builds
+passed (lowest coverage 0.930 without controls, at the second attempt, 0.923 with). On KSS's Table~IV samples
+its firm-variance standard errors agree within 7\% with the KSS Matlab model-based ones on five of the six, lie
+below KSS's split-sample ones where those are conservative by design, and take 18--96 seconds, against 10
+minutes to more than 23 hours. In a known-truth bottleneck simulation whose error variances follow the inputs of
+the KSS Matlab smoother, its worker-variance and covariance standard errors were 10--17\% too small; its reported
+intervals covered 96--98\%.
+\end{abstract}

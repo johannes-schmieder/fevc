@@ -1,0 +1,258 @@
+
+\subsubsection{What was run}\label{kss:sec:emp-setup}
+
+\paragraph{Samples.} The six samples of KSS Table~IV were rebuilt from the raw Veneto Workers Histories
+files with KSS's own Stata build code (\code{build.do}, \code{estim.do}) and the sample code of their
+Table~I (\code{table\_1.m}), all unchanged. The rebuild cannot be exact: the build keeps each worker's
+best-paid spell per year with a sort that breaks ties at random, and 3{,}159 worker-years have tied top
+pay at different firms. With another sort seed the counts move by up to 78 rows. Table~\ref{kss:tab:emp-n}
+compares the leave-one-out samples with KSS Table~I; the differences are below 0.01\%. KSS do not
+publish the sizes of the leave-two-out samples.
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{2.5pt}
+\caption{Leave-one-out samples: rebuilt versus KSS Table~I; and the leave-two-out samples.}\label{kss:tab:emp-n}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{Pooled} & \multicolumn{2}{c}{Younger} & \multicolumn{2}{c}{Older}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ & rebuilt & KSS & rebuilt & KSS & rebuilt & KSS\\
+\midrule
+Leave-one-out: observations & 1{,}320{,}010 & 1{,}319{,}972 & 661{,}558 & 661{,}528 & 425{,}200 & 425{,}208\\
+\quad movers & 164{,}210 & 164{,}203 & 102{,}754 & 102{,}746 & 35{,}465 & 35{,}467\\
+\quad firms & 42{,}492 & 42{,}489 & 33{,}152 & 33{,}151 & 10{,}732 & 10{,}733\\
+\quad mean log wage & 4.8066 & 4.8066 & 4.7275 & 4.7275 & 4.9454 & 4.9455\\
+Leave-two-out: observations & 1{,}126{,}960 & & 514{,}258 & & 301{,}926 & \\
+\quad movers & 128{,}706 & & 70{,}709 & & 21{,}066 & \\
+\quad firms & 24{,}424 & & 16{,}262 & & 3{,}755 & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{KSS (2020).} Their Table~IV driver (\code{table\_4.m}) was run unchanged on BU's SCC cluster
+(MATLAB R2019b, 16--28 workers), with the settings of their \code{main.m}: observation leave-out, a
+dummy for 2001 as the control, exact leverages, eigenvalue diagnostics. The driver calls
+\code{leave\_out\_FD} twice, for $q=1$ and for $q=2$. The package does not ship the file of critical
+values that its interval code reads (\code{src/AM\_Tabulation5.csv}); it was supplied from the package's own
+\code{tabulation\_10K.mat}, which holds the $q=1$ column only. The $q=1$ call therefore completes and
+saves its results; the $q=2$ call stops at its last step, so the $q=2$ intervals of Table~IV cannot be
+reproduced from the shipped files.
+
+\paragraph{KSS Matlab model-based.} \code{leave\_out\_COMPLETE} from the KSS Matlab package
+(\code{LeaveOutTwoWay}, commit \code{8b957ffe}) and from the replication package, unchanged, with the same
+sample and control, standard errors on, and the variance fit \code{subsample\_llr\_fit=2} (a local linear
+fit on equal-count bins of $(B_{ii},P_{ii})$, the documented default). The setting used for KSS's Table~II
+(\code{subsample\_llr\_fit=0}, a fit on every observation) took more than 5.8 hours for the firm
+component alone on the older-worker sample and was stopped. The replication package's version stops with
+an error when eigenvalue diagnostics are requested, so it gives normal-approximation standard errors only;
+the GitHub version gives the $q=1$ interval as well.
+
+\paragraph{\fevc{} 0.6.0.} The released package and Linux plugin, on the same rows, with
+\code{fevc y d2001, worker(id) firm(firmid) deletion(observation) stayers(both)} and the default
+standard error (\code{inference(auto)}, 8 draws). It is run with the default \code{centering(mean)} and
+with \code{centering(none)}, the uncentered estimator of the KSS article. \fevc{} retained every row of
+every sample.
+
+\subsubsection{Point estimates}\label{kss:sec:emp-point}
+
+With two periods and observation deletion, the levels estimator of \fevc{} and the first-difference
+estimator of KSS are the same estimator. Leaving out one of a worker's two observations leaves the worker
+effect pinned down by the other one, so the leave-out prediction of the left-out wage is the other wage
+plus the difference of the firm effects estimated without that worker. The two leave-out products of a
+mover then sum to the first-difference product $\Delta y_g(\Delta y_g-\Delta x_g'\hat\beta_{-g})$, any
+level shift cancels, and the within-worker design gives both observations the weight $B_{gg}$ of the
+first difference. Three settings remain that can separate the numbers (Table~\ref{kss:tab:emp-point}):
+\begin{enumerate}
+\item \emph{Controls.} KSS remove the year effect once, with the coefficient of the full-sample
+regression, and run the leave-out model on the residualized outcome. That is \fevc's
+\code{nuisance(fixedoffset)}. The \fevc{} default re-estimates the control in every leave-out fit, which
+raises the estimate by 0.2--0.9\% (measured at 5{,}000 projections).
+\item \emph{Leverages.} KSS compute them exactly; \fevc{} by default from 200 random projections, which adds
+numerical noise that \fevc{} reports as an MCSE.
+\item \emph{Sample.} The rebuilt samples, which are the same for both programs.
+\end{enumerate}
+With the fixed offset and 20{,}000 projections, \fevc{} reproduces the KSS estimate to within its MCSE on
+every sample checked. The two KSS programs also agree with each other exactly. The \fevc{} default lies
+between 0.9\% below and 0.8\% above KSS: above it on the pooled and younger samples, where the control effect
+dominates, below it on the older-worker samples, where the projection noise does.
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{3.5pt}
+\caption{Variance of firm effects: point estimates.}\label{kss:tab:emp-point}
+\begin{tabular}{@{}lllllll@{}}
+\toprule
+ & \multicolumn{2}{c}{Pooled} & \multicolumn{2}{c}{Younger} & \multicolumn{2}{c}{Older}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ & LOO & LTO & LOO & LTO & LOO & LTO\\
+\midrule
+KSS, published & 0.0240 & 0.0238 & 0.0218 & 0.0221 & 0.0204 & 0.0180\\
+KSS, rerun & 0.023957 & 0.023797 & 0.021841 & 0.022139 & 0.020486 & 0.017916\\
+\fevc, fixed offset, 20{,}000 projections & 0.023958 & 0.023797 & 0.021839 & 0.022139 & 0.020498 & 0.017914\\
+\quad its MCSE & 0.000003 & 0.000002 & 0.000004 & 0.000003 & 0.000020 & 0.000010\\
+\fevc{} default (\code{centering(mean)}) & 0.024045 & 0.023836 & 0.022022 & 0.022245 & 0.020443 & 0.017752\\
+\quad its MCSE & 0.000027 & 0.000019 & 0.000036 & 0.000025 & 0.000193 & 0.000114\\
+\fevc, \code{centering(none)} & 0.023951 & 0.023758 & 0.022345 & 0.022215 & 0.020517 & 0.018314\\
+\quad its MCSE & 0.000099 & 0.000062 & 0.000135 & 0.000080 & 0.000634 & 0.000360\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize LOO, LTO: leave-one-out and leave-two-out samples. Rerun: KSS's
+first-difference code (\code{table\_4}) where it has finished, otherwise their levels code
+(\code{leave\_out\_COMPLETE}); the two agree to every printed digit where both are available.
+\end{table}
+
+On the older-worker samples, the random-projection noise of the default point estimate is not small:
+0.00019 and 0.00011 under the default centering, 10--12\% of the standard error, and three times as large
+under \code{centering(none)}. The number of projections is a user option; for samples like these, 2{,}000 or
+more would bring this noise well below the sampling error.
+
+\subsubsection{Standard errors and intervals for the firm variance}\label{kss:sec:emp-se}
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{3.5pt}
+\caption{Variance of firm effects: standard errors and 95\% intervals.}\label{kss:tab:emp-se}
+\begin{tabular}{@{}lllllll@{}}
+\toprule
+ & \multicolumn{2}{c}{Pooled} & \multicolumn{2}{c}{Younger} & \multicolumn{2}{c}{Older}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ & LOO & LTO & LOO & LTO & LOO & LTO\\
+\midrule
+\multicolumn{7}{@{}l}{\emph{Standard error}}\\
+KSS (2020), published & 0.0006 & 0.0006 & 0.0006 & 0.0006 & 0.0025 & 0.0013\\
+KSS (2020), rerun & \pend & \pend & 0.00059 & 0.00058 & 0.00244 & 0.00137\\
+KSS Matlab model-based & 0.00048 & 0.00053 & 0.00049 & 0.00055 & 0.00196 & 0.00110\\
+\fevc{} default & 0.00049 & 0.00052 & 0.00052 & 0.00059 & 0.00199 & 0.00094\\
+\fevc, \code{centering(none)} & 0.00047 & 0.00056 & 0.00051 & 0.00060 & 0.00192 & 0.00125\\
+\addlinespace
+\multicolumn{7}{@{}l}{\emph{KSS's own Monte Carlo (Table~V)}}\\
+Bias of the KSS standard error & $+41\%$ & $+3\%$ & $+48\%$ & $+4\%$ & $+28\%$ & $-0.3\%$\\
+\addlinespace
+\multicolumn{7}{@{}l}{\emph{Interval reported}}\\
+KSS (2020), published, $q=1$ & [.0228,.0251] & [.0227,.0249] & [.0207,.0230] & [.0209,.0234] & [.0157,.0267] & [.0158,.0221]\\
+KSS (2020), rerun, $q=1$ & \pend & \pend & [.0207,.0230] & [.0209,.0234] & [.0159,.0267] & [.0155,.0220]\\
+KSS Matlab model-based, $q=1$ & [.0230,.0250] & [.0227,.0249] & [.0208,.0229] & [.0210,.0233] & [.0167,.0263] & [.0157,.0215]\\
+\fevc{} default & [.0231,.0250] & [.0228,.0249] & [.0210,.0230] & [.0211,.0235] & [.0166,.0257] & [.0154,.0218]\\
+\quad which interval & normal & normal & normal & $q=1$ & $q=1$ & $q=1$\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize KSS publish the $q=0$ and $q=1$ intervals; they coincide in the first three
+columns and differ in the last three. The model-based standard errors are those of the GitHub version; the
+replication package's version gives 0.00198 and 0.00110 on the older-worker samples. \fevc{} default: 8
+draws; 256 draws change the standard errors by at most 2\%. \pend: KSS's code on the pooled samples was stopped
+after 23 hours, still in the first of its two calls; the published values are shown above.
+\end{table}
+
+Table~\ref{kss:tab:emp-se} is the main result on the real data.
+
+\paragraph{Leave-one-out samples.} KSS's standard error is the largest on every sample. It is meant to be:
+15--22\% of movers have no second, independent path in these samples, and those movers get the
+conservative variance estimate, which KSS's own Monte Carlo puts at 28--48\% too large. \fevc{} and the
+model-based estimator agree with each other (0.00199 and 0.00196 on the older workers, 0.00052 and 0.00049
+on the younger, 0.00049 and 0.00048 on the pooled sample). On the older workers both lie where KSS's standard
+error lands once its Table~V bias is taken out (0.00244/1.28, about 0.0019). On the younger workers the same
+adjustment gives about 0.0004 (0.00059/1.48), below both \fevc{} and the model-based estimator; the adjustment
+carries KSS's simulation design over to the real data, which it need not match. The pooled sample could not be
+checked this way: KSS's code was stopped after 23 hours without finishing.
+
+\paragraph{Leave-two-out samples.} Here every mover has two independent paths and KSS's own Monte Carlo
+finds their standard error within 4\% of the truth. On the pooled and younger samples all methods agree. On the
+older-worker sample they do not: 0.00137 (KSS, rerun; 0.00141 on the second call of the same code, whose
+random draws are unseeded), 0.00110 (model-based), 0.00125 (\fevc{} without centering) and 0.00094 (\fevc{}
+default). The reported intervals agree much more closely---[.0155,.0220] for KSS and [.0154,.0218] for
+\fevc---because this is the one sample where one direction dominates (it carries 59\% of the squared
+eigenvalues), and both programs report the $q=1$ interval, whose width is driven by that direction.
+
+\paragraph{Centering.} The \fevc{} point estimate does not depend on the centering here (Section
+\ref{kss:sec:emp-point}), but its standard error does: 0.00125 against 0.00094 on the older leave-two-out sample,
+a gap that does not shrink with 2{,}000 or 5{,}000 projections, and 0.00192 against 0.00199, the other way
+round, on the older leave-one-out sample. The difference most likely comes from the fitted variances of the
+movers. Under observation deletion a two-period mover has no repeat measurement, so all mover variances come
+from the fitted model, and its inputs, the per-observation leave-out products, carry the outcome level, which
+centering changes. Both sets of inputs are unbiased, up to the small bias that mean-centering can introduce;
+which yields the more accurate standard error is a question for the simulation in Section~\ref{kss:sec:synth}.
+
+\paragraph{Choice of interval.} \fevc{} reports the $q=1$ interval on exactly the three samples where KSS's
+$q=1$ and $q=0$ intervals differ, and the normal interval on the three where they coincide.
+
+\paragraph{Other components.} KSS publish standard errors for the firm variance only. For the worker variance
+and the worker--firm covariance the only comparison is the model-based estimator (Table~\ref{kss:tab:emp-other}).
+The two agree within 6\% on the pooled samples and within 11\% on the older-worker samples, with no
+consistent sign; on the younger samples \fevc's standard errors are 12--25\% larger. \fevc{} reports the $q=1$ interval for both components on the
+older-worker samples, where the leading direction carries almost all of their estimated variance (shares of
+0.77--1.0).
+
+\begin{table}[ht]
+\centering\small
+\caption{Worker variance and worker--firm covariance: estimates and standard errors.}\label{kss:tab:emp-other}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+ & \multicolumn{2}{c}{Worker variance} & \multicolumn{2}{c}{Covariance}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+ & estimate & SE: model-based / \fevc & estimate & SE: model-based / \fevc\\
+\midrule
+Older, LOO & 0.1910 & 0.00707 / 0.00632 & 0.0171 & 0.00315 / 0.00301\\
+Older, LTO & 0.2219 & 0.00898 / 0.00983 & 0.0117 & 0.00453 / 0.00492\\
+Younger, LOO & 0.0598 & 0.00037 / 0.00047 & 0.0074 & 0.00028 / 0.00032\\
+Younger, LTO & 0.0634 & 0.00041 / 0.00046 & 0.0075 & 0.00026 / 0.00029\\
+Pooled, LOO & 0.1120 & 0.00049 / 0.00050 & 0.0146 & 0.00023 / 0.00024\\
+Pooled, LTO & 0.1179 & 0.00056 / 0.00053 & 0.0148 & 0.00023 / 0.00023\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize Estimates: \fevc{} default. The model-based estimates differ by at most 2\% (older
+leave-two-out: 0.2221 and 0.0115), from the handling of the control and the random projections
+(Section~\ref{kss:sec:emp-point}). \fevc{} also reports the variance of the sum of the effects with its covariance matrix; the
+model-based code does not.
+\end{table}
+
+\subsubsection{Computing time}\label{kss:sec:emp-time}
+
+\begin{table}[ht]
+\centering\footnotesize\setlength{\tabcolsep}{4pt}
+\caption{Wall-clock time per sample (seconds), firm variance or all components as noted.}\label{kss:tab:emp-time}
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{Pooled} & \multicolumn{2}{c}{Younger} & \multicolumn{2}{c}{Older}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ & LOO & LTO & LOO & LTO & LOO & LTO\\
+\midrule
+KSS (2020), \code{table\_4} (two calls; firm variance) & $>$83{,}000 & $>$83{,}000 & 55{,}000$^{a}$ & 36{,}338 & 9{,}249 & 788\\
+KSS Matlab model-based, GitHub (three components) & 37{,}200 & 22{,}053 & 9{,}037 & 5{,}397 & 2{,}452 & 624\\
+KSS Matlab model-based, replication package & 25{,}592 & 22{,}230 & 9{,}845 & 5{,}377 & 3{,}469 & 1{,}555\\
+\fevc{} default (four components and covariance) & 96 & 38 & 53 & 35 & 27 & 18\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\raggedright\footnotesize Time of the estimation calls, without MATLAB start-up and compilation. KSS: MATLAB
+with 16--28 parallel workers on one SCC node, exact leverages. \fevc: Stata/MP with the native plugin, 16
+threads, on comparable nodes, leverages from 200 random projections. Node speeds on the cluster differ by up to
+a factor of four, so the comparison is one of orders of magnitude. $^{a}$The first call alone, which gives the
+$q=1$ results; the second call, for $q=2$, ends at KSS's missing critical values like the others. $>$: stopped after 23 hours, still in the first
+call.
+\end{table}
+
+\subsubsection{Problems found in the KSS code}\label{kss:sec:emp-problems}
+
+\begin{itemize}
+\item The file of critical values read by the interval routine is not shipped, and the package's own table has
+the $q=1$ column only. The $q=2$ intervals of Table~IV cannot be reproduced.
+\item The randomized traces and the choice of mover on each edge of a path are not seeded: two calls on the
+same data give standard errors 0.5--8\% apart (0.000579 and 0.000576; 0.00137 and 0.00141; 0.00244 and
+0.00264), which also bounds how closely a rerun can match the published numbers.
+\item In the variance routine (\code{finish\_SE.m}, lines 47 and 58) the kernel net of the leading direction is
+formed with \code{x1bar(qqq)}, a single element, where the main code (\code{leave\_out\_FD.m}, line 841) uses
+the column \code{x1bar(:,qqq)}. As written, a constant is subtracted instead of the projection on the leading
+direction, which affects the variance of the remainder that enters the $q=1$ interval. This looks like a bug; its
+effect on the reported intervals was not measured.
+\item The replication package's \code{leave\_out\_COMPLETE} stops with an error when eigenvalue diagnostics
+and standard errors are both requested, and calls the interval routine with one argument too many.
+\item The printed Lindeberg statistic of the first-difference code is twice the published, per-observation one.
+\item The percentage of pairs in $\mathcal B$ is random across runs; its definition in the paper could be
+matched on the older leave-two-out sample (0.465 against 0.46) but not on the leave-one-out sample (0.178
+against 0.21).
+\end{itemize}

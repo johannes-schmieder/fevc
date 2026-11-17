@@ -1,0 +1,177 @@
+\section{Simulation details}\label{app:sim}
+
+\paragraph{Construction.} The person and firm effects estimated on the panel are the true effects. Every
+scenario starts from baseline variances $\bar\sigma^2_{gt}$ for the person-years: a fit of the leave-out
+estimates $\hat\sigma_i^2$ on the scale characteristics $z_i$ of Section~\ref{sec:transfer} alone (for stayers, on a
+quadratic in the rank of the leverage), assigned to every person-year of the row. A scenario multiplies them
+by a profile factor and, where stated, by a worker-specific factor. The factors are drawn once per scenario
+and then held fixed, like the effects; in every draw only the errors are new, independent across person-years
+with these variances, and the variance of $\hat\theta$ is computed for the fixed variances. Movers' rows are then formed as in Section~\ref{sec:setting}. Let $\tilde\alpha$
+denote the true person effect standardised across person-years and $\tilde\omega$ the standardised sum of the
+true person and firm effects.
+
+\begin{table}[H]
+\centering\small
+\caption{Scenarios}\label{tab:scen}
+\begin{tabular}{@{}rp{0.2\textwidth}p{0.7\textwidth}@{}}
+\toprule
+ & Errors & Variance of a person-year, relative to the baseline \\
+\midrule
+1 & normal & 1 \\
+2 & normal & $1+0.5\,\tilde\alpha^2$ (rescaled to mean one), times a gamma factor per worker with mean one and coefficient of variation 1.5 \\
+3 & symmetric, kurtosis 6 & as scenario 2 \\
+4 & gamma, skewness 1 & $1+\tilde\alpha^2$ (rescaled); stayers' errors skewed against the wage level (left-skewed above the mean wage, right-skewed below) \\
+5 & gamma, skewness 1 & as scenario 4, with stayers' errors skewed with the wage level \\
+6 & normal & step function of $\tilde\alpha$: the stayers' sample variance in the data by decile of the person effect, relative to its mean; times the gamma factor of scenario 2 \\
+7 & normal & $\exp(-0.6\,\tilde\omega)$ (rescaled) \\
+8 & normal & stayers $1+0.5\,\tilde\alpha^2$, movers $1+1.5\,\tilde\alpha^2$ (each rescaled to mean one within its group) \\
+9 & normal & stayers $1+\tilde\alpha^2$ (rescaled), movers 1 \\
+10 & normal & stayers as in scenario 6; movers a step function of $\tilde\alpha$ on the same deciles, with the
+values of the first row of Table~\ref{tab:deciles} relative to their mean (3.57, 1.13, 0.71, 0.58, 0.54, 0.53,
+0.58, 0.73, 1.04, 1.85); times the gamma factor of scenario 2 \\
+\bottomrule
+\multicolumn{3}{@{}p{0.94\textwidth}@{}}{\rule{0pt}{2.6ex}Errors in scenario 3: a standardised gamma variable
+with shape 2, with a random sign. In scenarios 4 and 5: a standardised gamma variable with shape 4 (skewness
+1, kurtosis 4.5); for stayers its sign is fixed, opposite to the sign of the stayer's $m_i$ for the variance of
+the sum (``against the wage level'') or equal to it; for movers the sign is random, so that movers' errors are
+symmetric and the stayers' skewness is isolated.}
+\end{tabular}
+\end{table}
+
+\paragraph{True variance.} For each scenario the benchmark for the variance of $\hat\theta$ is $4\sum_im_i^2\sigma_i^2$ plus
+twice the double sum of \eqref{eq:V}, with the weights as used by the estimator, that is, \eqref{eq:ustat} with
+the projected $B_{ii}$ and $P_{ii}$ on movers' rows; the double sum is computed as in \eqref{eq:sim} with 256 draws
+at the true variances. On movers' rows these weights have a small diagonal that is not zero. The terms in third
+and fourth cumulants that it adds to the variance in the scenarios without normal errors are not included, so
+the benchmark is approximate there. These terms are of second order in the projection error of the diagonal
+(a few percent with 1{,}600 projections); they were not computed. Across the scenarios the variance of the simulated estimates
+is between \R{sim.mcvar.min} and \R{sim.mcvar.max} times this number, in line with the sampling error of a
+variance from \R{sim.reps} draws (two standard errors are about 0.2), which makes this a coarse check only.
+
+\paragraph{The model's error at fixed characteristics.} For Table~\ref{tab:bdelta} the two steps of
+Section~\ref{sec:transfer} are run once per scenario with the true variances $\sigma_i^2$ as
+outcomes and with the true effects, standardised and winsorised in the same way, in place of the estimated
+ones. With $\Delta_i=v_i^*-\sigma_i^2$, the first part of $b(\Delta)$ in \eqref{eq:b} is computed directly. For the
+double sum write $\Delta=a-b$ with $a$ and $b$ the positive and negative parts; then
+$\sum\sum C_{i\ell}^2\Delta_i\Delta_\ell=2Q(a)+2Q(b)-Q(a+b)$ with $Q(v)=\sum\sum C_{i\ell}^2v_iv_\ell$, and each $Q$
+is computed as in \eqref{eq:sim} with \R{sim.bd.draws} draws, the same for the three.
+
+\paragraph{Realised scenarios.} Table~\ref{tab:regime} reports, for each scenario, the average variance factor
+by decile of the true person effect, separately for stayers and movers, the movers' share of the first term of
+\eqref{eq:V} for the variance of the sum, and the two parts of $b(\Delta)$ behind Table~\ref{tab:bdelta} for that
+component.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Realised variance factors by decile of the person effect (lowest, fifth, highest); for
+$\sigma^2_{\alpha+\psi}$, movers' share of the first term and the two parts of $b(\Delta)/\V[\hat\theta]$}\label{tab:regime}
+\begin{tabular}{@{}rccccccccc@{}}
+\toprule
+ & \multicolumn{3}{c}{Stayers} & \multicolumn{3}{c}{Movers} & Movers' share & \multicolumn{2}{c}{$b(\Delta)/\V[\hat\theta]$} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(l){9-10}
+Scenario & lowest & fifth & highest & lowest & fifth & highest & of term 1 & first part & double sum \\
+\midrule
+\tabinput{../note/gen/tab_regime.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Validation runs.} The three runs of Section~\ref{sec:validation} use the scenario definitions of
+Table~\ref{tab:scen}, with the baseline variances, the effects and the decile profile of scenario 6 computed on
+each run's own panel, and the movers' multipliers of scenario 10 as in the table. Their error draws come from a
+random stream that the earlier runs did not use. The code of the estimator, the list of scenarios, the number
+of draws and the thresholds were fixed, with file hashes, before the first task ran; one task was run and
+checked first, and the results of each run were then aggregated and compared with the thresholds by a script,
+which lists every cell that fails. Table~\ref{tab:valcells} gives all cells.
+
+\begin{table}[H]
+\centering\footnotesize
+\caption{Validation runs, every cell: ratio as in Table~\ref{tab:sim} and coverage of the 95\% interval}\label{tab:valcells}
+\begin{tabular}{@{}rlcccccccc@{}}
+\toprule
+ & & \multicolumn{4}{c}{Ratio} & \multicolumn{4}{c}{Coverage} \\
+\cmidrule(lr){3-6}\cmidrule(l){7-10}
+ & Scenario & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ & $\sigma^2_\alpha$ & $\sigma^2_\psi$ & $\sigma_{\alpha,\psi}$ & $\sigma^2_{\alpha+\psi}$ \\
+\midrule
+\tabinput{../note/gen/tab_val_cells.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Runs.} Eight tasks of 25 draws per scenario, on Boston University's Shared Computing Cluster; errors
+are drawn from random streams keyed by scenario, task and draw, so results do not depend on the order of
+execution. No draw was discarded. Two things were decided after first runs on these scenarios, and the reader
+should know them. Scenario 10 was added when the comparison in Table~\ref{tab:deciles} had been seen. And the
+form of the model for movers was chosen among four candidates that were run on the same draws. A rule fixed
+before the comparison (the smallest worst shortfall among candidates with no ratio above 1.10 and with floors
+binding for fewer than 0.5\% of movers' rows on the data, a condition that excluded one candidate) selected a
+different candidate, which took the shape of the profile from the stayers and had ratios between 0.93 and
+1.06. The present model exceeded the limit of that rule narrowly (1.103 and 1.104 in two cells). After seeing
+the results we chose it all the same, because its errors are on the conservative side. The ratios in
+Table~\ref{tab:sim} are therefore not an out-of-sample test of that choice; the validation of
+Section~\ref{sec:validation} was run afterwards, with thresholds fixed in advance.
+The right panels of Tables~\ref{tab:sim} and~\ref{tab:simcov} come from separate runs on the same draws of the
+data (the simulated estimates agree to twelve digits). This
+is a development study of a prototype, not a registered confirmation of an implementation.
+
+\paragraph{The $q=1$ simulation (Section~\ref{sec:q1sim}).} \emph{Panels.} 100 firms in two groups of 50, with
+log-normal sizes (the log of size is standard normal); 99 remain after pruning in the designs without a
+bottleneck. 12,000 workers, each assigned to a group with
+probability one half and observed in two to six consecutive years of a six-year window (bridging workers in
+three to six). A worker's first firm is drawn with probability proportional to size among the firms of the
+worker's group; in each later year the worker is assigned a newly drawn firm of the group with probability
+0.10 (the draw can return the same firm, so actual changes are somewhat rarer). A bridging worker moves once, in a year drawn at random, to a firm of the other group and belongs to
+that group from then on. Without a bottleneck all firms form one group. The panel is pruned to the
+leave-one-out connected set, and rows are formed as in Section~\ref{sec:setting}.
+\emph{Effects.} Firm effects are plus or minus half the gap, by group, plus a normal deviation with standard
+deviation 0.12; person effects are a normal deviation with standard deviation 0.30 plus one half of the
+centred effect of the firm of the worker's last observed year. \emph{Variances of a person-year.} Flat: 0.04. Profile:
+$0.04\,(1+0.5\,\tilde\alpha^2)$, rescaled to mean 0.04, times a gamma factor per worker with mean one and
+coefficient of variation one. Movers: $1+0.5\,\tilde\alpha^2$ for stayers and $1+1.5\,\tilde\alpha^2$ for movers,
+each rescaled to mean one within its group, times 0.04 for stayers and 0.12 for movers. Bridge: 0.04, and 0.12
+for the bridging workers. \emph{Errors.} Normal; in two designs a centred exponential variable (skewness 2,
+kurtosis 9) scaled to the same variances. Effects and variances are fixed within a design; each draw has new
+errors.
+
+\emph{Estimates.} As in the other simulations: 1,600 projections for movers' leverages and weights, exact values
+for stayers, the model for movers fitted in every draw with estimated effects in the profile, 16 draws for the
+double sums, and the outcome centred at its person-year mean, which the propositions treat as a constant
+(Section~\ref{sec:centring}). The power iteration stops when $\lambda_1$ changes by less than $10^{-9}$ in
+relative terms, or after 200 steps. The true values of $\V[\hat\theta]$ and $\Sigma$ are those of the estimator
+as implemented, given its projections: the weights include the centring and the projected leverages, which are
+drawn once per design and held fixed across draws of the outcome. They are computed with the formulas for
+normal errors, $4m'\Omega m+2\tr(C\Omega C\Omega)$ with $\Omega=\diag(\sigma_i^2)$ and its analogues for $\Sigma$,
+the traces with 512 random draws; repeating that calculation with other draws in three designs changed
+$\Sigma_{\rm rr}$ by at most \R{q1.bench.srr} and $\V[\hat\theta]$ by at most \R{q1.bench.v} in relative terms (standard
+deviation over four repetitions; the largest value is for ten bridging workers). With normal errors these
+benchmarks are exact up to that simulation error. With skewed errors they omit terms in the third and fourth
+moments that are proportional to the diagonal of the weights, which is not exactly zero with projected
+leverages and centring; there they are approximations. Coverage is measured against the true component and
+does not depend on these benchmarks.
+
+\emph{Runs.} The run reported in Section~\ref{sec:q1sim} has \R{q1.reps} draws for each of 27 designs, in tasks of
+100 with random streams keyed by run, design, task and draw. The designs, the tolerances and the hashes of the
+source files were written to a manifest before the run; the realised bottlenecks (Table~\ref{tab:q1cells}) were
+checked before any outcome was drawn; and the results were aggregated only after every task had been checked
+against the manifest. \R{q1.fail.reps} of \R{q1.draws.total} draws failed, and none was discarded. A
+development run on other panels (\R{q1.dev.draws} draws per design) preceded it. There a first version of the
+estimates, which used $\sum_iw_{i1}^2\hat\sigma_i^2$ for $\hat\Sigma_{bb}$ and the fitted value only when that number
+was unusable, covered between 0.910 and 0.995, with two of 75 values below 0.92, both with ten bridging workers
+and skewed errors; using the fitted value alone covered as little as 0.785 where the bridging workers are
+noisier than the model says. (These are shares of 200 draws, with a Monte Carlo standard error of about 0.015,
+so the two low values alone would not establish undercoverage.) The rule \eqref{eq:q1est} was adopted then, and
+nothing was changed afterwards. In the run reported here the correlation of $\hat b_1$ and the remainder is at
+most \R{q1.rho.true.max} in absolute value across designs, and $\hat\rho_{\rm lo}^2$ exceeded $2/3$ in at most
+\R{q1.rholo.above} of the draws of a case (among draws in which both diagonal entries are positive), so the
+condition of Corollary~\ref{cor:q1} is not put to a test.
+
+\begin{table}[H]
+\centering\footnotesize\setlength{\tabcolsep}{4.2pt}
+\caption{The $q=1$ simulation, every design: curvature, coverage of the normal and of the $q=1$ interval for
+$\hat\sigma^2_\alpha$, $\hat\sigma^2_\psi$ and $\hat\sigma_{\alpha,\psi}$, coverage of the normal interval for the
+variance of the sum, share of draws in which the fitted number is the larger one in \eqref{eq:q1est}, and mean
+length of the $q=1$ interval over mean length of the normal interval (on the draws in which both exist; the
+ratio is formed for each component and the three ratios are averaged). The normal interval uses the 0.975
+quantile of the normal distribution; a draw without an interval counts as not covered}\label{tab:q1cells}
+\tabinput{../note/gen/tab_q1cells.tex}
+\end{table}

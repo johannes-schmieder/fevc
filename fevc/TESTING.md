@@ -180,8 +180,9 @@ effect dimensions, frequency/target projection weights, Mean/None, shifts
 and literal-copy expansion. `test_projection_mean_native.do` checks the
 explicit JLA projection attachment with the new native capability, including
 diagonal/CMG agreement and the same mean convention. These point/projection
-checks do not qualify the separate Mean component extension below. Corrected
-remains unsupported for both projection and component inference.
+checks do not qualify the standard errors of the components below. Corrected
+remains unsupported for projections; the standard errors of the components
+accept all three modes and are checked by `test_repeat_measurement_se.do`.
 The map oracle is Mata-specific; the other files accept package root and
 backend arguments. They are part of the ordinary Stata runner.
 
@@ -209,7 +210,42 @@ qualification. [CENTERING.md](docs/CENTERING.md) records the exact scope.
 Documentation-only updates reuse these scientific/runtime results with
 focused source and documentation checks under the evidence rules above.
 
-## Mean component inference checks
+## Standard errors of the components
+
+Since 0.6.0 the command reports repeat-measurement standard errors by
+default ([INFERENCE.md](docs/INFERENCE.md)). The registered Stata suites
+were written for the earlier point-only default and keep it through
+`FEVC_DEFAULT_INFERENCE=none`; the files below name `inference()` or check
+the default explicitly.
+
+- `test_repeat_measurement_se.do` compares the Mata routes, and the native
+  route when the loaded plugin carries the method, with an independent
+  dense calculation under both deletion modes, with controls, the
+  mover-only population and every centering mode; it also checks the
+  leading directions and the interval of every component, a variance
+  estimate that is not positive, and the messages for the removed models.
+- `test_default_inference.do` checks the command's own default, natively
+  and in Mata, and restores the suite setting.
+- `test_help_examples.do` runs the help's examples through `fevc_run`,
+  including Examples 6 (`inference(highrank)`: normal intervals and `e(V)`)
+  and 7 (`inference(q1)` on the bottleneck of `ex4`: `q = 1` intervals and no
+  `e(V)`), and checks what the help says the default reports on the same
+  data.
+
+The Monte Carlo harness of the interval rule is `tools/default_interval/`;
+its run records are in `docs/default_interval/`. Run a focused file with the
+package root, for example:
+
+```bash
+/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do \
+  fevc/tests/stata/test_repeat_measurement_se.do /absolute/path/to/fevc/fevc
+```
+
+## Mean component inference checks (models removed in 0.6.0)
+
+This section describes the checks of the fixed-observed-mean component
+models of 0.5.2, which 0.6.0 removed from the command, and records their
+evidence. The Stata files it names now drive the repeat-measurement model.
 
 `test_component_centering_exact.do` and
 `test_component_centering_native.do` cover the public exact and structured

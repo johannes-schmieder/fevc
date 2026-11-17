@@ -11,8 +11,9 @@ and installed-native tests on Intel/Rosetta; focused Stata 18/19 tests pass.
 Windows qualification uses Stata 19 and one/two workers. Native Intel hardware
 and Stata 16/17 runtime execution are not claimed.
 The [adoption manifest](../native/repeat-measurement-20261115/manifest.json) binds all exact bytes,
-corresponding source and qualification evidence. Publication/HTTP install
-checks follow separately. Historical checkpoints below retain their scope.
+corresponding source and qualification evidence. Version 0.6.0 is published
+at `b861a368`; the [publication audit](../native/repeat-measurement-20261115/final-audit.json)
+records the HTTP installation checks. Historical checkpoints below retain their scope.
 
 ## 0.5.2 Windows full-CMG binaries
 

@@ -1,0 +1,132 @@
+\section{The standard error}\label{sec:estimator}
+
+\paragraph{The rule.} \emph{Estimate each error variance from independent repeat measurements of the same mean
+wherever they exist, using only the independence that $\hat\theta$ already assumes; use a model elsewhere.}
+
+\subsection{Stayers: repeat measurements}
+
+A stayer's $T_g$ rows have the same regressors, so the stayer's wages differ from year to year only by their
+errors. Their sample variance,
+\begin{equation}\label{eq:q}
+q_g=\frac{1}{T_g-1}\sum_{t=1}^{T_g}\big(y_{gt}-\bar y_g\big)^2 ,
+\end{equation}
+is an unbiased estimate of the stayer's error variance. It uses no model. Each stayer has its own, so stayers'
+variances may differ in any way across workers, firms and wage levels. Every row $i$ of stayer $g$ receives the
+variance estimate $\st_i^2=q_g$.
+
+\subsection{Movers: a scale and a profile, fitted to their leave-out estimates}\label{sec:transfer}
+
+A mover's row has no repeat measurement of this kind: the years of a match are averaged into one row, and
+nothing is assumed about the errors within a match. The leave-out estimate $\hat\sigma_i^2$ is unbiased for
+each mover's row but far too noisy to be used row by row; it has to be pooled across rows by a model. What that
+model must get right is how $\sigma_i^2$ varies with $m_i^2$, because \eqref{eq:V} weights $\sigma_i^2$ by
+$m_i^2$, and $m_i$ follows the wage level of the worker and of the firm. The model therefore lets movers'
+variances depend on the wage level, on top of a scale that depends on the row's place in the design:
+\begin{equation}\label{eq:model}
+\sigma_i^2\;\approx\;\underbrace{z_i'c_z}_{\text{scale }s_i}\;\times\;\underbrace{b(\tilde\alpha_i,\tilde\psi_i)'d}_{\text{profile}},\qquad i\in\cR .
+\end{equation}
+Here $\tilde\alpha_i$ and $\tilde\psi_i$ are the estimated person effect of the row's worker and the estimated
+firm effect of its firm, each standardised to mean zero and variance one across person-years and then limited
+to the range from $-3$ to $3$ (winsorised). The model is fitted in two small least-squares steps, both to the
+movers' leave-out estimates.
+
+\emph{Step 1: the scale.} Regress the movers' leave-out estimates on five characteristics of the row,
+\begin{equation}\label{eq:scale}
+\hat c_z=\arg\min_c\sum_{i\in\cR}\big(\hat\sigma_i^2-z_i'c\big)^2,\qquad z_i=(1,\;p_i,\;f_i,\;p_i^2,\;f_i^2)',\qquad \hat s_i=z_i'\hat c_z ,
+\end{equation}
+where $f_i$ is the rank of the match length $F_i$ and $p_i$ the rank of the leverage $P_{ii}$ among movers'
+rows, each rescaled to lie between $-1$ and $1$ (tied rows share their average rank). The match length is there
+because nothing is assumed within a match: the error of a mover's row is $\sqrt{F_i}$ times the average of $F_i$
+yearly errors, and if these have a common variance $\sigma^2$ and a common correlation $\rho$, its variance is
+$\sigma^2[1+(F_i-1)\rho]$. The leverage picks up differences between thinly and densely connected parts of the
+design.
+
+\emph{Step 2: the profile.} Regress the leave-out estimates on the scale times a quadratic in the standardised
+effects:
+\begin{equation}\label{eq:profile}
+\hat d=\arg\min_d\sum_{i\in\cR}\big(\hat\sigma_i^2-\hat s_i\,b_i'd\big)^2,\qquad
+b_i=b(\tilde\alpha_i,\tilde\psi_i)=(1,\;\tilde\alpha_i,\;\tilde\alpha_i^2,\;\tilde\psi_i,\;\tilde\psi_i^2,\;\tilde\alpha_i\tilde\psi_i)',\qquad
+\st_i^2=\hat s_i\,b_i'\hat d .
+\end{equation}
+If $\sigma_i^2=z_i'c$ for every mover, the model reduces to its scale: the counterpart of $\hat d$ with
+true variances and true effects is $(1,0,0,0,0,0)'$. When no floor binds, the normal equations of the two steps
+give $\sum_{i\in\cR}\hat s_i^{\,2}\,b_i'\hat d=\sum_{i\in\cR}\hat s_i^{\,2}$: the fitted profile averages one,
+with weights $\hat s_i^{\,2}$, and needs no further normalisation.
+
+Two floors guard against fitted values that are not positive; neither was binding on the data.\footnote{The
+scale $\hat s_i$ is floored at 5\% of the average leave-out estimate, and $\st_i^2$ at $10^{-8}$ times the median
+of $(y_i-x_i'\hat\beta)^2/(1-P_{ii})$. On the Veneto panel of Section~\ref{sec:evidence} they bind for
+\R{real.floor.scale} and \R{real.floor.final} of movers' rows.} No standard error is available when a regression
+has collinear regressors, when the estimated person or firm effects do not vary, or when the average leave-out
+estimate of the movers is not positive. (In the first two cases \fevc{} 0.6.0 instead drops a term that the others
+span, in a fixed order; each step also keeps at most one coefficient per hundred fitted rows;
+Section~\ref{sec:impl}.)
+
+Four features of this model matter. First, it is fitted where it is used: eleven coefficients, on the movers'
+rows alone. Stayers' variances are not assumed to resemble movers'. Second, the fit of step~2 is not a clean
+regression: a row's leave-out estimate and the estimated effects of its worker and firm depend on the same
+errors. Whether and in which direction this distorts the fit depends on the error variances. With normal
+errors of equal variance it does not: the mean of a leave-out estimate given $\hat\beta$ is then the common
+variance, whatever the estimated effects. With unequal variances the mean of a
+row's leave-out estimate given an estimated effect depends on the covariance between the error of that effect
+and the row's residual, which can have either sign. In the simulated panels of Section~\ref{sec:evidence} the
+leave-out estimates of rows with extreme estimated effects are too large on average, the fitted profile is
+too high in the upper tail, and the standard error is more often too large than too small. We have no result that
+predicts that direction. Third, winsorising bounds the regressors of step~2; it does not by itself limit the
+influence of rows with extreme leave-out estimates. Fourth, the model need not be right row by row. What must be small is one
+weighted combination of its errors, $b(\Delta)$ in \eqref{eq:b} below, whose leading part weights them by $m_i^2$
+(Propositions~\ref{prop:mean} and~\ref{prop:fitted}).
+
+\subsection{The variance estimator}
+
+With $\st_i^2=q_g$ for stayers' rows and \eqref{eq:profile} for movers' rows, the estimator of
+$\V[\hat\theta]$ is
+\begin{equation}\label{eq:Vhat}
+\hat\V[\hat\theta]=4\sum_i\hat m_i^{\,2}\,\st_i^2\;-\;2\sum_i\sum_{\ell\ne i}C_{i\ell}^2\,\st_i^2\,\st_\ell^2
+\;+\;4\sum_{g\in\cG}c_g^2\,q_g^2\,\frac{(T_g-2)(T_g-1)}{T_g+1},
+\end{equation}
+where $c_g$ is the weight $C_{i\ell}$ between two different rows of stayer $g$ (it is the same for every pair).
+The standard error is $\hat\V[\hat\theta]^{1/2}$ and the 95\% interval
+$\hat\theta\pm1.96\,\hat\V[\hat\theta]^{1/2}$. Being a difference, $\hat\V[\hat\theta]$ can be zero or negative in
+small samples or when A5 below fails; no standard error should then be reported. (In \fevc{} 0.6.0 only the
+default \code{inference(auto)} then reports the $q=1$ interval of Section~\ref{sec:q1} where it exists; under
+\code{inference(highrank)} that component has no interval; Section~\ref{sec:impl}.)
+
+The three terms have simple readings. The first replaces $m_i$ and $\sigma_i^2$ in the first term of
+\eqref{eq:V} by their estimates. Because $\hat m_i$ is noisy, $\hat m_i^{\,2}$ overstates $m_i^2$ by
+$\sum_\ell C_{i\ell}^2\sigma_\ell^2$ on average, so the first term estimates the first term of \eqref{eq:V}
+plus \emph{twice} its second term. Subtracting the second term once, which is what the double sum does, leaves
+the variance. The last term is a small adjustment for stayers: their $q_g$ enters twice, in $\st_i^2$ and,
+through the stayer's other years, in $\hat m_i$ and in $\st_\ell^2$, and the square of an unbiased estimate is
+not unbiased for the square. The adjustment has a closed form because a stayer's rows have identical
+regressors:
+\begin{equation}\label{eq:cg}
+c_g=\frac{A_{gg}}{T_g\,(T_g-1)},
+\end{equation}
+where $A_{gg}$ is the diagonal entry of $A$ for worker $g$'s person effect. It equals
+$(T_g/n_{\rm py})(1-T_g/n_{\rm py})$ for $\sigma^2_\alpha$ and $\sigma^2_{\alpha+\psi}$ and zero for $\sigma^2_\psi$
+and $\sigma_{\alpha,\psi}$, for which the adjustment vanishes. The adjustment is written for errors with the
+kurtosis of the normal distribution; Appendix~\ref{app:proofs} gives it for any stated kurtosis (\fevc{} 0.6.0
+offers only the normal case). For two
+components $\theta^{(1)}$ and $\theta^{(2)}$ the covariance of the estimates is estimated by the same formula
+with $\hat m_i^{(1)}\hat m_i^{(2)}$, $C^{(1)}_{i\ell}C^{(2)}_{i\ell}$ and $c^{(1)}_gc^{(2)}_g$ in place of the
+squares, and the same variance estimates $\st_i^2$. In small samples the estimated covariance matrix of several
+components need not be positive semi-definite; joint statements about them should then not be made. (The four components satisfy
+one linear identity, so their covariance matrix has rank three at most.)
+
+\paragraph{Relation to KSS.} The form of \eqref{eq:Vhat}, with the double sum subtracted, is due to KSS. The
+first version of their paper (Kline, Saggio and S{\o}lvsten 2018, Section~5) uses it with variance estimates
+obtained by smoothing the leave-out estimates $\hat\sigma_i^2$ over the two characteristics $(B_{ii},P_{ii})$,
+and shows that it is consistent when the error variances are a smooth function of these characteristics, under
+conditions on the design and on the smoothing. The
+published version (KSS, Section~5) replaces the smoothing by estimates built from sample splitting. These need
+no model for the variances. They are unbiased where the mean of an observation can be predicted from two
+separate parts of the remaining sample, and KSS give a conservative version for observations where it cannot.
+In their example with group effects only, which is how a stayer's person effect enters here, this takes groups of at least three
+observations, and of at least four to avoid the conservative version; in exchange, variances may differ within
+a group and no kurtosis is assumed. This note keeps the earlier form and changes the variance estimates that
+go into it. For stayers it uses each stayer's own sample variance, which KSS's bias correction of $\hat\theta$
+also uses in that example, and adds the adjustment that makes the variance estimator exactly unbiased under A2
+and A3, for stayers with two years as well. For movers it stays close to the first version: the leave-out estimates are pooled
+by a fitted function, here a parametric one of the match length, the leverage and the wage level, and the note
+adds an explicit expression for the error that the model causes when it is wrong.

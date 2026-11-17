@@ -160,11 +160,12 @@ specifying both is an error. The developer option {cmd:mcse(conditional)}
 reports a narrower diagnostic that holds the leverage directions fixed.
 
 {phang}
-The numerical MCSE is also reported when {cmd:project()} or an inference
-option is requested, but it describes only the four main point estimates.
-It is not computed for projection coefficients, component standard errors
-or confidence intervals, and it is never posted as {cmd:e(V)}. The main display
-and {cmd:estat diagnostics} show whether it is available.
+The numerical MCSE is also reported alongside {cmd:project()} and the
+standard errors of the components, but it describes only the four main
+point estimates. It is not computed for projection coefficients, component
+standard errors or confidence intervals, and it is never posted as
+{cmd:e(V)}. The main display and {cmd:estat diagnostics} show whether it is
+available.
 
 {phang}
 {cmd:seed()} makes the randomized calculation reproducible within the
@@ -242,8 +243,8 @@ before reporting them. {cmd:inference(none)} gives point estimates only.
 fitted coefficients, residuals, plug-in components, retained sample, weights
 and deletion units are the same under all three settings. In point
 estimation, only the estimated bias, and hence the corrected estimate,
-changes; with {cmd:project()} or an inference request, centering also
-changes the standard errors. The {cmd:corrected} row of {cmd:e(results)}
+changes; centering also changes the standard errors of {cmd:project()} and
+of the components. The {cmd:corrected} row of {cmd:e(results)}
 always holds the final leave-out estimate, whatever the setting. The
 default is {cmd:mean} for both exact and JLA calculation.
 
@@ -374,10 +375,11 @@ returns point estimates with a one-line reason; it never changes the
 backend, algorithm or solver route you selected, and if the calculation that
 carries the standard errors stops, the command runs once more without them
 so that the point estimates are always returned. {cmd:inference(none)}
-turns them off. {cmd:inference(highrank)} and {cmd:inference(q1)} request
-them strictly: the command stops if they cannot be computed.
-{cmd:inferencemodel(repeat_measurement)} names the method and may be
-omitted.
+turns them off. {cmd:inference(highrank)} and {cmd:inference(q1)} use the
+same method but fix the interval instead of choosing it component by
+component (see below), and they are strict: the command stops if the
+standard errors cannot be computed. {cmd:inferencemodel(repeat_measurement)}
+names the method and may be omitted.
 
 {pstd}
 {it:The variances.} Deletion units that share a worker and a firm are
@@ -403,26 +405,39 @@ finds the direction of the worker-firm network along which the estimate is
 most sensitive (the eigenvector of largest absolute eigenvalue), and what
 the estimate looks like along it. When no direction matters much, the
 estimate is close to normal and its interval is the estimate plus or minus
-1.96 standard errors. When one direction carries much of the sampling
-variance, as with a bottleneck between two parts of the network, the
-estimate is not close to normal; the interval is then the q = 1 interval of
-Kline, Saggio and S{c o/}lvsten (2020, Section 7.1), which need not be
-symmetric, and the component has no standard error. A component receives
-the q = 1 interval when its leading direction carries more than 10% of the
-estimated sampling variance or when the variance estimate is not positive,
-and the normal interval otherwise; the variance of the sum always keeps the
-normal interval. {cmd:e(V)} is posted only when every component has a
-normal interval; the display says which interval each component received
-and why, and {cmd:e(inference_intervals)} holds both intervals of every
-component. {cmd:inference(q1)} reports the q = 1 interval for every
-component that has one, and {cmd:inference(highrank)} computes no
-direction and reports normal intervals only.
+1.96 standard errors (at the default {cmd:level(95)}). When one direction
+carries much of the sampling variance, as with a bottleneck between two
+parts of the network, the estimate is not close to normal; the interval is
+then the q = 1 interval of Kline, Saggio and S{c o/}lvsten (2020, Section
+7.1), which need not be symmetric, and the component has no standard error.
+Under the default a component receives the q = 1 interval when its leading
+direction carries more than 10% of the estimated sampling variance or when
+the variance estimate is not positive, and the normal interval otherwise;
+the variance of the sum always keeps the normal interval. {cmd:e(V)} is
+posted only when every component has a normal interval; the display says
+which interval each component received and why, and
+{cmd:e(inference_intervals)} holds both intervals of every component.
+
+{pstd}
+The two overrides fix the interval for every component.
+{cmd:inference(q1)} reports the q = 1 interval for every component that has
+one, the variance of the sum included, and the normal interval for any
+other, so it posts {cmd:e(V)} only if no component has a q = 1 interval.
+{cmd:inference(highrank)} computes no direction, reports the normal
+interval and standard error of every component, and posts {cmd:e(V)}
+whenever the estimated covariance allows it, so {cmd:test} and {cmd:lincom}
+work whatever the leading directions. Where one direction dominates, its
+normal intervals can under-cover; its display warns when the effective rank
+of a component is low. Examples
+{help fevc##highrank_example:6} and {help fevc##q1_example:7} show both
+overrides and how to read their results.
 
 {pstd}
 {it:Cost.} On the native backend the default adds about 90 linear solves
 to the roughly 600 to 800 of the point estimates: three plus four per draw
 for the standard errors (35 with the default {cmd:inferencedraws(8)}) and
-a few dozen for the directions and the q = 1 pieces. With controls under the
+a few dozen for the directions and the q = 1 pieces, which
+{cmd:inference(highrank)} skips. With controls under the
 default {cmd:nuisance(joint)} it adds one further pass of two solves per
 probe (400 by default), because the standard errors use a fixed-offset
 version of the units; {cmd:nuisance(fixedoffset)} avoids that pass. On the
@@ -473,28 +488,34 @@ mean-centred estimate and treat the small corrected-centering increment as
 fixed. The numerical MCSE remains a separate, computational quantity.
 
 {pstd}
-{it:Diagnostics.} {cmd:e(inference_intervals)} holds, for each component,
-the estimate, the standard error, both intervals and the one reported, the
-share of the estimated sampling variance carried by the leading direction,
-the curvature of the estimate along it, and the largest squared weight of
-one deletion unit in the direction. The display warns when that weight
-exceeds 0.1, when a search for a direction did not settle, and when a
-component calls for an interval that could not be formed.
-{cmd:e(inference_leading)} holds the pieces of the decomposition.
+{it:Diagnostics.} After the default or {cmd:inference(q1)},
+{cmd:e(inference_intervals)} holds, for each component, the estimate, the
+high-rank standard error, both intervals and the one reported, the share
+of the estimated sampling variance carried by the leading direction, the
+curvature of the estimate along it, and the largest squared weight of one
+deletion unit in the direction. The display warns when that weight exceeds
+0.1 for a component with the q = 1 interval, when a search for a direction
+did not settle, and when a component calls for an interval that could not
+be formed. {cmd:e(inference_leading)} holds the pieces of the
+decomposition. {cmd:inference(highrank)} computes no direction and posts
+neither matrix; its display reports instead the effective rank of the
+worker variance, the firm variance and the covariance, and warns when one
+is below 10.
 
 {pstd}
 {it:Where it is available.} Both deletion modes, {cmd:deletionid()},
 {cmd:stayers(both)} and {cmd:stayers(movers)}, controls under either nuisance
 mode, {cmd:targetweight()}, every {cmd:centering()} mode, and the native and
-Mata backends with {cmd:algorithm(jla)}, as well as Mata
-{cmd:algorithm(exact)}. Exceptions, for which the default returns point
+Mata backends with {cmd:algorithm(jla)}, as well as {cmd:algorithm(exact)}
+with {cmd:backend(mata)}. Exceptions, for which the default returns point
 estimates and says why:
 
 {phang2}{cmd:project()} in the same call;{p_end}
 {phang2}{cmd:deletion(observation)} with {cmd:nuisance(fixedoffset)}, or
 with frequency weights on the native backend;{p_end}
-{phang2}{cmd:algorithm(auto)}, and {cmd:algorithm(exact)} on the native
-backend;{p_end}
+{phang2}{cmd:algorithm(auto)}; {cmd:algorithm(exact)} or
+{cmd:engine(compressed)} without {cmd:backend(mata)} (or
+{cmd:rng(stata)});{p_end}
 {phang2}a native plugin built before this feature.{p_end}
 
 {pstd}
@@ -517,8 +538,13 @@ leading directions are computed. {cmd:inferenceseed()} sets their seed. Both
 are separate from the point-estimation probes set by {cmd:probes()}, and the
 numerical MCSE does not cover them. The
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
-gives the formulas, the simulations and their limits;
-{help fevc##component_example:Example 5} shows the syntax.
+gives the formulas, the simulations and their limits; the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf":standard-error document}
+({cmd:fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf} in the
+source repository) derives the method, describes its implementation in
+0.6.0 and compares it with the standard errors of KSS.
+{help fevc##component_example:Examples 5 to 7} show the syntax and how to
+read the results.
 
 {pstd}
 {bf:Removed in 0.6.0.} The standard errors of the components come from the
@@ -601,10 +627,10 @@ Automatic backend selection uses the Rust plugin when it supports the
 request and otherwise uses Mata. {cmd:backend(mata)} selects the portable
 implementation; {cmd:backend(rust)} and {cmd:rng(counter_v1)} require the
 native one. The package includes native plugins for macOS, Linux (x86-64)
-and Windows (x86-64). The Windows plugin passes build and unit tests but has
-not yet been tested inside Stata on Windows. A self-built or outdated plugin
-may lack some features. In that case {cmd:backend(auto)} uses Mata if it can
-decide before estimation starts, while {cmd:backend(rust)} or
+and Windows (x86-64); all three pass native Stata qualification (on Windows
+with Stata 19 and one or two worker threads). A self-built or outdated
+plugin may lack some features. In that case {cmd:backend(auto)} uses Mata
+if it can decide before estimation starts, while {cmd:backend(rust)} or
 {cmd:rng(counter_v1)} stop with an error; an omitted {cmd:mcse()} keeps the
 native point estimates and reports the MCSE as unavailable, while an
 explicit {cmd:mcse(all)} stops with an error. Run {cmd:fevc_rust probe} to
@@ -744,7 +770,7 @@ coverage. Both commands compute repeat-measurement standard errors, as the
 default does. {cmd:inference(q1)} reports the q = 1 interval for every
 component that has one; {cmd:inference(highrank)} reports normal intervals
 only and posts the joint component covariance {cmd:e(V)}, which {cmd:lincom}
-requires.
+requires. Examples 6 and 7 show how to read the results of each.
 
 {cmd}{...}
         preserve
@@ -759,6 +785,76 @@ requires.
         restore
 {txt}{...}
 {pstd}{stata fevc_run component_inference using fevc.sthlp:Click to run}{p_end}
+
+{marker highrank_example}
+{dlgtab:Example 6: Normal intervals and e(V) with inference(highrank)}
+
+{pstd}
+{cmd:inference(highrank)} reports the high-rank standard error and the
+normal interval of every component and posts their covariance as
+{cmd:e(V)}, without searching for leading directions. The positive-sorting
+design of Example 2 has no bottleneck: no direction carries more than a few
+per cent of a component's estimated sampling variance, so the default would
+report the same normal intervals. {cmd:e(component_inference)} holds the
+estimate, standard error and interval limits of each component, and
+{cmd:test} and {cmd:lincom} use {cmd:e(V)}. The display also reports the
+effective rank of the worker variance, the firm variance and the
+covariance; a value below 10 is flagged, because normal intervals can then
+under-cover.
+
+{cmd}{...}
+        preserve
+{* example_start - highrank_inference}{...}
+        fevc, simulate_data(ex2) clear
+        * Default: normal unless one direction carries >10%; none does here
+        fevc log_wage productivity i.period, ///
+            worker(worker_id) firm(firm_id) inference(highrank)
+        matrix list e(component_inference)
+        test worker_variance = firm_variance
+{* example_end}{...}
+        restore
+{txt}{...}
+{pstd}{stata fevc_run highrank_inference using fevc.sthlp:Click to run}{p_end}
+
+{marker q1_example}
+{dlgtab:Example 7: The q = 1 interval with inference(q1)}
+
+{pstd}
+In the data of Example 4 two workers move from firm 1 to firm 2 and four
+from firm 2 to firm 3, so the small firms are linked to the rest of the
+network by few movers: a bottleneck. One direction then carries most of
+the estimated sampling variance of the firm variance and of the
+covariance, and their estimates are not close to normal.
+{cmd:inference(q1)} reports the q = 1 interval for every component that
+has one, here all four. A q = 1 component has no standard error, so that
+column of the display is blank, and {cmd:e(V)} is not posted
+({cmd:e(inference_joint_posted)} is 0). {cmd:e(inference_intervals)} holds
+both intervals of every component: the reported one in columns {cmd:lb} and
+{cmd:ub} and the q = 1 one in {cmd:q1_lb} and {cmd:q1_ub}; column
+{cmd:regime} is 1 for a q = 1 interval and 0 for a normal one. Its
+{cmd:highrank_se} column keeps the standard error of the normal form for
+comparison only.
+
+{cmd}{...}
+        preserve
+{* example_start - q1_inference}{...}
+        fevc, simulate_data(ex4) clear
+        * Default: q = 1 only where one direction carries >10% of the variance
+        fevc log_wage, worker(worker_id) firm(firm_id) inference(q1)
+        matrix intervals = e(inference_intervals)
+        matlist intervals[., "q1_lb".."ub"]
+        display "e(V) posted: " e(inference_joint_posted)
+{* example_end}{...}
+        restore
+{txt}{...}
+{pstd}{stata fevc_run q1_inference using fevc.sthlp:Click to run}{p_end}
+
+{pstd}
+Without {cmd:inference(q1)}, the default reports the q = 1 interval on
+these data only for the firm variance and the covariance, and the normal
+interval with its standard error for the worker variance and the variance
+of the sum; because two components are q = 1, it does not post {cmd:e(V)}
+either.
 
 {marker simulation}
 {title:Generate example data separately}
@@ -853,8 +949,14 @@ this calculation fails, the MCSE is withheld and
 {bf:Sample and other results.} {cmd:e(sample)} identifies retained rows.
 Sample counts include {cmd:e(N)}, {cmd:e(worker_levels)}, and
 {cmd:e(firm_levels)}. The covariance of the components is posted in
-{cmd:e(V)} only when every component has a normal interval;
-{cmd:e(inference_intervals)} holds the interval reported for each.
+{cmd:e(V)} only when every component has a normal interval, and
+{cmd:e(inference_joint_posted)} is then 1. After the default or
+{cmd:inference(q1)}, {cmd:e(inference_intervals)} holds the interval
+reported for each component and {cmd:e(inference_q1_components)} counts the
+q = 1 ones. {cmd:e(status)} is {cmd:FEVC_REPEAT_MEASUREMENT_SE}
+({cmd:FEVC_REPEAT_MEASUREMENT_SE_PARTIAL} when a component variance is
+withheld), or {cmd:FEVC_REPEAT_MEASUREMENT_Q1} when a component has the
+q = 1 interval.
 For the {help fevc##se:standard errors} {cmd:e(inference_variance_fit)} is
 {cmd:repeat_measurement}; {cmd:e(inference_repeat)} holds the numbers of
 scale and profile terms, the scale floor and how often it bound, the numbers
@@ -864,7 +966,8 @@ every match of a mover with two or more observations), the worker-variance
 entry of the pair term and the six profile coefficients, and
 {cmd:e(inference_repeat_sets)} and {cmd:e(inference_pair_term)} repeat two
 of them as scalars. {cmd:e(component_inference)} holds the estimates,
-high-rank standard errors and normal interval limits, {cmd:e(V)} and
+high-rank standard errors and normal interval limits (whichever interval is
+reported), {cmd:e(V)} and
 {cmd:e(V_primitive)} the covariance when it is posted,
 {cmd:e(inference_draws)} the draws, {cmd:e(inference_nuisance_omitted)} 0
 when the estimation of the controls enters and 1 without controls, and
@@ -910,6 +1013,16 @@ computational methods.
 Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
 "Leave-Out Estimation of Variance Components." {it:Econometrica}
 88(5): 1859-1898.
+
+{pstd}
+"Standard Errors for Leave-Out Variance Components: The Repeat-Measurement
+Method, Its Implementation in fevc 0.6.0, and a Comparison with the KSS
+Standard Errors." November 16, 2026.
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf":fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf}
+in the source repository. It derives the standard errors of the components
+and compares them with those of KSS; the
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
+describes what the command computes.
 
 {pstd}
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/README.md":Technical documentation}

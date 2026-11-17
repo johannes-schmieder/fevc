@@ -1,0 +1,63 @@
+\section{Setting}\label{sec:setting}
+
+We keep the notation of KSS and add as little as possible.
+
+\paragraph{Model and rows.} The model is linear,
+\[
+y_i = x_i'\beta + \varepsilon_i, \qquad i=1,\dots,n .
+\]
+The regressors and $\beta$ are fixed. Expectations and variances are over the errors, which have mean zero, are
+independent across rows, and have row-specific variances $\sigma_i^2=\V[\varepsilon_i]$. Let
+$S_{xx}=\sum_ix_ix_i'$, nonsingular after the usual normalisation, and let $\hat\beta$ be the least-squares
+estimator.
+
+In the two-way wage model the log wage of worker $g$ in year $t$ is the sum of a person effect $\alpha_g$, the
+effect $\psi_j$ of the employing firm $j$, and an error. A \emph{match} is a worker--firm pair. A \emph{stayer}
+is a worker with one match; a \emph{mover} has two or more. The rows of the model are the ones \fevc{} forms by
+default:
+\begin{itemize}
+\item each \emph{match of a mover} is one row. With $F_i$ the number of years of the match, $y_i$ is $\sqrt{F_i}$
+times the mean log wage of the match, and $x_i'\beta=\sqrt{F_i}\,(\alpha_g+\psi_j)$;
+\item each \emph{person-year of a stayer} is one row, with $y_i$ the log wage and $x_i'\beta=\alpha_g+\psi_j$.
+\end{itemize}
+Least squares on these rows equals least squares on person-years. The rows also say which independence is
+assumed. Leaving out a row leaves out a whole match of a mover, or one year of a stayer. The errors are
+therefore taken to be independent across the matches of a mover and across the years of a stayer, and nothing
+is assumed about a mover's errors within a match. The point estimator below relies on exactly this, and the
+standard error will not ask for more. We write $\cR$ for the set of movers' rows, $\cG$ for the set of stayers,
+and $T_g\ge2$ for the number of years (rows) of stayer $g$.
+
+\paragraph{Estimand and estimator.} The objects of interest are quadratic forms $\theta=\beta'A\beta$ with $A$
+known and symmetric: the variance of person effects $\sigma^2_\alpha$, the variance of firm effects
+$\sigma^2_\psi$, their covariance $\sigma_{\alpha,\psi}$ (all across person-years), and the variance of the sum,
+$\sigma^2_{\alpha+\psi}=\sigma^2_\alpha+\sigma^2_\psi+2\sigma_{\alpha,\psi}$. With leverage
+$P_{ii}=x_i'S_{xx}^{-1}x_i<1$, the weight $B_{ii}=x_i'S_{xx}^{-1}AS_{xx}^{-1}x_i$ and the leave-out variance
+estimate $\hat\sigma_i^2=y_i\,(y_i-x_i'\hat\beta)/(1-P_{ii})$, KSS estimate $\theta$ by
+$\hat\theta=\hat\beta'A\hat\beta-\sum_iB_{ii}\hat\sigma_i^2$. Their equation~(8) writes it as a weighted sum of
+products of \emph{different} rows,
+\begin{equation}\label{eq:ustat}
+\hat\theta=\sum_i\sum_{\ell\ne i}C_{i\ell}\,y_i\,y_\ell,\qquad
+C_{i\ell}=B_{i\ell}-\tfrac12M_{i\ell}\big(M_{ii}^{-1}B_{ii}+M_{\ell\ell}^{-1}B_{\ell\ell}\big),
+\end{equation}
+with $B_{i\ell}=x_i'S_{xx}^{-1}AS_{xx}^{-1}x_\ell$ and $M_{i\ell}=1\{i=\ell\}-x_i'S_{xx}^{-1}x_\ell$. No row is
+multiplied by itself ($C_{ii}=0$), so no $\sigma_i^2$ enters the mean of $\hat\theta$, and
+$\E[\hat\theta]=\theta$ whatever the error variances are.
+
+\paragraph{Sampling variance.} Let $\hat m_i=\sum_{\ell\ne i}C_{i\ell}\,y_\ell$, so that
+$\hat\theta=\sum_iy_i\hat m_i$, and let $m_i=\sum_{\ell\ne i}C_{i\ell}\,x_\ell'\beta$ be its mean. Then (KSS,
+Section~5; Lemma~\ref{lem:forms} below)
+\begin{equation}\label{eq:V}
+\V[\hat\theta]=4\sum_im_i^2\,\sigma_i^2\;+\;2\sum_i\sum_{\ell\ne i}C_{i\ell}^2\,\sigma_i^2\sigma_\ell^2 .
+\end{equation}
+The number $m_i$ says how much row $i$ moves $\hat\theta$. For a stayer's row it is the same in every year and has
+a simple form: $(\alpha_g-\bar\alpha)/n_{\rm py}$ for the variance of person effects and
+$(\alpha_g+\psi_j-\overline{\alpha+\psi})/n_{\rm py}$ for the variance of the sum, where bars are means over the
+$n_{\rm py}$ person-years. For a mover's row and the variance of the sum it is $\sqrt{F_i}$ times the same expression, plus a
+correction from the leave-out weights. The first term of
+\eqref{eq:V} is therefore large when workers far from the average wage have volatile wages: how error variances
+vary with the wage level is what matters most for the standard error.
+
+\paragraph{What a standard error needs.} Formula \eqref{eq:V} can be estimated once there is, for every row, an
+estimate of $\sigma_i^2$ that is unbiased and whose products with the estimates of other rows are unbiased too.
+The leave-out estimates $\hat\sigma_i^2$ are unbiased, but there is one per row, each is very noisy, and
+their products are not unbiased. The rest of this note is about better estimates of $\sigma_i^2$.

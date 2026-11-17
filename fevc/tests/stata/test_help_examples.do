@@ -54,6 +54,69 @@ assert rowsof(e(component_inference)) == 4
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
+// Example 6: inference(highrank) gives normal intervals, posts e(V) and
+// computes no leading direction.
+fevc_run highrank_inference using fevc.sthlp
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
+assert "`e(inference_variance_fit)'" == "repeat_measurement"
+assert "`e(inference_leading_request)'" == ""
+assert e(inference_joint_posted) == 1
+tempname help_V help_ci
+matrix `help_V' = e(V)
+assert rowsof(`help_V') == 4 & colsof(`help_V') == 4
+matrix `help_ci' = e(component_inference)
+assert rowsof(`help_ci') == 4
+forvalues target = 1/4 {
+    assert el(`help_ci',`target',2) > 0 & el(`help_ci',`target',2) < .
+}
+capture confirm matrix e(inference_intervals)
+assert _rc
+matrix drop `help_V' `help_ci'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+// The help says the default would give the same normal intervals here.
+preserve
+quietly fevc, simulate_data(ex2) clear
+quietly fevc log_wage productivity i.period, worker(worker_id) ///
+    firm(firm_id) inference(auto) nodisplay
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
+assert e(inference_q1_components) == 0 & e(inference_joint_posted) == 1
+restore
+
+// Example 7: inference(q1) on the bottleneck of the ex4 network gives the
+// q = 1 interval to all four components and withholds e(V).
+fevc_run q1_inference using fevc.sthlp
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_Q1"
+assert "`e(inference_leading_request)'" == "q1"
+assert e(inference_q1_components) == 4
+assert e(inference_joint_posted) == 0
+capture confirm matrix e(V)
+assert _rc
+tempname help_intervals
+matrix `help_intervals' = e(inference_intervals)
+forvalues target = 1/4 {
+    assert el(`help_intervals',`target',7) == 1
+    assert el(`help_intervals',`target',8) == el(`help_intervals',`target',5)
+    assert el(`help_intervals',`target',9) == el(`help_intervals',`target',6)
+    assert el(`help_intervals',`target',8) < el(`help_intervals',`target',9)
+}
+matrix drop `help_intervals'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+// The help says the default gives q = 1 here only for the firm variance and
+// the covariance, and then posts no e(V).
+preserve
+quietly fevc, simulate_data(ex4) clear
+quietly fevc log_wage, worker(worker_id) firm(firm_id) inference(auto) nodisplay
+assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_Q1"
+tempname help_auto
+matrix `help_auto' = e(inference_intervals)
+assert el(`help_auto',1,7) == 0 & el(`help_auto',2,7) == 1
+assert el(`help_auto',3,7) == 1 & el(`help_auto',4,7) == 0
+assert e(inference_q1_components) == 2 & e(inference_joint_posted) == 0
+matrix drop `help_auto'
+restore
+
 fevc_run projection_inference using fevc.sthlp
 assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"
 assert "`e(deletion)'" == "match"

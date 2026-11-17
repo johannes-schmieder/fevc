@@ -1,0 +1,46 @@
+\section{The control term: numerical check against the exact variance}\label{app:ctlnum}
+
+A dense calculation checks Section~\ref{sec:controls}: 260 workers, 16 firms, 1{,}160 person-years, $k=2$ controls
+correlated with the effects and varying within every match, Gaussian errors. The truth is \eqref{ctl:eq:exact},
+computed exactly. Each estimator is averaged over 1{,}500 outcome draws with exact traces; unit variances are the
+sample variance within every repeat-measurement set and the true variance elsewhere (the fitted model is not under
+test). Entries of Table~\ref{tab:ctlnum} are the mean of the estimate over the exact variance. ``Oracle'' is
+$4\hat m'S\hat m-2\tr(CSCS)$ with the true $S$ (a check of the calculation); ``known'' treats the control
+coefficients as known.
+
+\begin{table}[H]
+\centering\small
+\caption{Mean of the variance estimate over the exact variance of the fixed-offset estimate}\label{tab:ctlnum}
+\begin{tabular}{@{}lllcccc@{}}
+\toprule
+Error variances & Units & Estimate & Worker & Firm & Covariance & Sum \\
+\midrule
+One per worker--firm cell & match & oracle & 1.000 & 0.996 & 0.992 & 1.000 \\
+ & & known & 0.740 & 0.905 & 0.984 & 0.622 \\
+ & & \eqref{ctl:eq:Vhat} & 0.999 & 0.994 & 0.992 & 0.998 \\
+\addlinespace
+ & observation & oracle & 1.000 & 1.000 & 1.001 & 1.000 \\
+ & & known & 0.738 & 0.912 & 0.996 & 0.619 \\
+ & & \eqref{ctl:eq:Vhat} & 1.002 & 1.004 & 1.005 & 1.002 \\
+\addlinespace
+Moving with a control & match & oracle & 0.997 & 0.994 & 0.989 & 0.997 \\
+\quad inside the cell & & known & 0.684 & 0.847 & 0.983 & 0.537 \\
+ & & \eqref{ctl:eq:Vhat} & 0.976 & 0.988 & 0.990 & 0.970 \\
+\addlinespace
+ & observation & oracle & 1.001 & 1.001 & 1.004 & 1.001 \\
+ & & known & 0.676 & 0.853 & 1.002 & 0.528 \\
+ & & \eqref{ctl:eq:Vhat} & 0.925 & 0.992 & 1.005 & 0.903 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+An earlier version of this derivation, with the corrections formed with $V$ in place of $S$, agrees with
+\eqref{ctl:eq:Vhat} to three digits in every cell of this design, so the difference between them is not what the
+check can show. The shortfall in the last block is consistent with item~7 of Section~\ref{ctl:est}: under
+observation deletion every worker--firm cell with two or more observations is a set, and here its variances move
+with the control inside the cell; the control adjustment of the set variances and the unchanged pair term are also
+active in that block. The bias of the point estimate, $\tr(CS)$, is 0.01 standard deviations. Under observation
+units the jointly estimated version has 0.995 to 1.035 times the fixed-offset variance. The combined check uses
+true variances outside sets and exact traces; it does not test the fitted model for units outside sets, and it
+concerns the fixed-offset estimator, not the default jointly estimated one. Simulations through the command
+(default joint estimation, fitted model, random draws) are summarised in Section~\ref{sec:impl-mc}.

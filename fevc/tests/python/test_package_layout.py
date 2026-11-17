@@ -279,6 +279,8 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
         "weights_targets",
         "component_inference",
         "projection_inference",
+        "highrank_inference",
+        "q1_inference",
     )
     for example in examples:
         marker = f"{{* example_start - {example}}}{{...}}"

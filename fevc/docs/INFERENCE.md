@@ -66,7 +66,11 @@ deletion needs joint nuisance and, natively, unit frequencies. The
 derivation is in the method note of November 13, 2026 and its control-term
 addendum of November 14, with the prototype's code and evidence, in
 [`fevc/docs/repeat_measurement/`](repeat_measurement/README.md), whose
-README lists where the command differs from the note; the
+README lists where the command differs from the note. The
+[unified document](repeat_measurement/unified/se_unified_20261116.pdf) of
+November 16, 2026 combines the note and the addendum with the
+implementation in 0.6.0 and a comparison with the standard errors of KSS
+and of the KSS Matlab package. The
 simulation harness is `fevc/tools/default_interval/` and its evidence
 `fevc/docs/default_interval/`.
 

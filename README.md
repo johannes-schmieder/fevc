@@ -9,16 +9,18 @@ The command supports controls, frequency weights, and leaving out either
 whole worker–firm matches or single observations. It uses exact calculation
 for small problems and a randomized approximation for large ones. A native
 Rust plugin provides speed on large datasets, and a Mata implementation runs
-wherever Stata runs. By default the command also reports standard errors and
-confidence intervals for the four components; they assume similar error
-variances among observations that share a worker or a firm and are not robust
-to arbitrary heteroskedasticity (`inference(none)` gives point estimates
-only; see the
-[technical supplement](fevc/docs/standard_errors/standard_errors.tex)).
-Standard errors for projections of fixed effects on covariates, and other
-experimental intervals for the variance components, are available on request
-for supported models; see the
-[inference guide](fevc/docs/INFERENCE.md).
+wherever Stata runs. By default the command also reports repeat-measurement
+standard errors and one confidence interval for each of the four components:
+the normal interval where the estimate is close to normal, and otherwise the
+`q = 1` interval of Kline, Saggio, and Sølvsten (2020, Section 7.1), with
+their covariance posted as `e(V)` when every component is normal.
+`inference(highrank)` asks for normal intervals and `inference(q1)` for the
+`q = 1` interval wherever it exists; `inference(none)` gives point estimates
+only. Standard errors for projections of fixed effects on covariates are
+available on request (`project()`). See the
+[inference guide](fevc/docs/INFERENCE.md) and the
+[standard-error document](fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf),
+which derives the method and compares it with the KSS standard errors.
 
 Because the randomized approximation depends on random draws, `fevc` reports
 by default a numerical Monte Carlo standard error (MCSE) for each of the four
@@ -31,18 +33,21 @@ By default, the outcome mean is subtracted before the bias correction
 precise, particularly when the outcome mean is far from zero.
 `centering(none)` gives the uncentered estimator of the Kline, Saggio, and
 Sølvsten article, and `centering(corrected)` adds an adjustment for the bias
-that centering can introduce in point estimates. Projections and confidence intervals accept
-`mean` and `none`; with `mean`, confidence intervals treat the observed mean
-as fixed and ignore the uncertainty from estimating it. See the
-[centering guide](fevc/docs/CENTERING.md).
+that centering can introduce in point estimates. Projections accept `mean`
+and `none`. The standard errors of the components accept all three; their
+simulated noise is centred as the outcome is, so no fixed-mean approximation
+is made. See the [centering guide](fevc/docs/CENTERING.md).
 
-Confidence intervals for the variance components are experimental and rely
-on additional assumptions. In the package's simulation assessment, the exact Mata method
-produced intervals too rarely in three of its four primary designs, and the
-native calculation, which produced intervals in all eight primary designs,
-was materially sensitive to numerical settings.
-There is no general coverage guarantee; read the
-[assessment](fevc/docs/MEAN_COMPONENT_INFERENCE_ASSESSMENT_20261008.md)
+The standard errors of the components rest on assumptions that the point
+estimates do not need. Deletion units that repeat a worker–firm cell (a
+stayer's observations, for example) receive their own sample variance; the
+other units receive a fitted variance model, so for them the intervals are
+as good as that model and not robust to arbitrary heteroskedasticity. The
+choice between the normal and the `q = 1` interval was fixed after
+development simulations and then passed registered confirmations through
+the command, with and without controls; that is simulation evidence for
+designs with at most one bottleneck, not a coverage guarantee. Read the
+assumptions in `help fevc` and the [inference guide](fevc/docs/INFERENCE.md)
 before reporting intervals.
 
 ## Requirements
@@ -129,6 +134,9 @@ options, and more examples, or read the [usage guide](fevc/README.md).
 
 - [Technical supplement](https://johannes-schmieder.com/papers/fevc_technical_supplement.pdf)
 - [Usage guide](fevc/README.md)
+- [Inference guide](fevc/docs/INFERENCE.md) and the
+  [standard-error document](fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf)
+  ([sources and method note](fevc/docs/repeat_measurement/README.md))
 - [Outcome centering](fevc/docs/CENTERING.md)
 - [Installation](INSTALLATION.md)
 - [Changelog](fevc/CHANGELOG.md)

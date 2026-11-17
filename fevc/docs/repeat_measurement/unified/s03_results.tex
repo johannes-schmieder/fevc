@@ -1,0 +1,168 @@
+\section{Assumptions and results}\label{sec:results}
+
+\begin{enumerate}[label=\textbf{A\arabic*.},leftmargin=3em]
+\item \textbf{Independent errors.} The errors have mean zero and are independent across rows: across the
+matches of a mover and across the years of a stayer. This is the assumption under which $\hat\theta$ is
+unbiased; nothing is added to it.
+\item \textbf{One variance per stayer.} The rows of stayer $g$ share one variance $\sigma_g^2$. Across stayers
+the variances are unrestricted.
+\item \textbf{Shape of stayers' errors.} They have zero third moment and the kurtosis of the normal
+distribution, $\E\varepsilon_i^4=3\sigma_i^4$. (Any other stated kurtosis can be used, with the adjustment of
+Appendix~\ref{app:proofs}.) Movers' errors may have any shape.
+\item \textbf{Movers follow the model on average.} Let $v_i^*$ be the fitted value of the model for mover row
+$i$ when the true variances are used as outcomes in the two steps \eqref{eq:scale} and \eqref{eq:profile}, and
+$\Delta_i=v_i^*-\sigma_i^2$ its error. With these values the variance estimate is off by
+\begin{equation}\label{eq:b}
+b(\Delta)=4\sum_{i\in\cR}m_i^2\,\Delta_i-2\sum_{i\in\cR}\sum_{\ell\in\cR}C_{i\ell}^2\,\Delta_i\Delta_\ell ,
+\end{equation}
+and the assumption is that $b(\Delta)/\V[\hat\theta]\to0$ along the sequence of designs considered; in a given
+sample, that it is close to zero. It is zero when movers' variances are the scale of step~1 times a quadratic in
+the characteristics of step~2. (Corollary~\ref{cor:transfer} makes $v_i^*$ precise; it
+evaluates the profile at fixed characteristics.)
+\item \textbf{No dominant stayer and no dominant direction.} No single stayer carries more than a small share of
+$\V[\hat\theta]$, and no single direction (eigenvalue) accounts for more than a small share of it;
+Proposition~\ref{prop:conc} makes both precise.
+\end{enumerate}
+
+\smallskip\noindent\textbf{Not assumed:} equal variances across workers or firms; that stayers' variances
+follow the profile, or any model; normal errors for movers; any independence that $\hat\theta$ does not itself
+assume.
+
+The results come in three steps: the estimator is right on average when movers' variances are known; it
+settles down in large samples; and fitting the movers' variances adds an error of known form. All three are for
+the exact weights \eqref{eq:ustat}. Proofs are in Appendix~\ref{app:proofs}.
+
+\begin{proposition}[Exact mean]\label{prop:mean}
+Assume A1 to A3 and give the movers' rows any non-random numbers $\st_i^2=\sigma_i^2+\Delta_i$ in
+\eqref{eq:Vhat}. Then, in every sample,
+\[
+\E\big[\hat\V[\hat\theta]\big]=\V[\hat\theta]+b(\Delta),
+\]
+with $b(\Delta)$ as in \eqref{eq:b}. In particular $\hat\V[\hat\theta]$ is unbiased when movers' rows receive
+their true variances.
+\end{proposition}
+
+The stayers' part of the estimator is therefore exact in finite samples, whatever the stayers' variances are.
+An error in the movers' variances enters only through $b(\Delta)$. Its first part weights the errors by
+$m_i^2$, so errors that average out against $m_i^2$ do no harm there; its second part is quadratic in the
+errors. Both parts count.
+
+\paragraph{When A2 or A3 fails.} The appendix gives the mean of the estimator in three cases. They concern
+$\hat\sigma^2_\alpha$ and $\hat\sigma^2_{\alpha+\psi}$ only, because $c_g=0$ for the other two components.
+\begin{itemize}
+\item \emph{Unequal variances within a stayer.} Because $m_i$ is the same in every year of a stayer, the first
+term of \eqref{eq:V} involves a stayer's variances only through their average, and $q_g$ is unbiased for that
+average. The terms within the stayer are affected: with normal errors the estimator is too large on average by
+$6\sum_gc_g^2\,s_g^2\,(T_g-1)^2(T_g+4)/(T_g(T_g+1))$, where $s_g^2$ is the sample variance of the stayer's $T_g$
+variances.
+\item \emph{Another kurtosis.} If stayers' errors have kurtosis $\kappa$, its mean shifts by
+$2(\kappa-3)\sum_g\sigma_g^4\,c_g^2\,(T_g-1)^2(T_g+4)/(T_g(T_g+1))$: fat tails make the variance estimate too
+large.
+\item \emph{Skewness.} If stayers' errors have third moments $\mu_{3g}$, its mean shifts by
+$8\sum_g(T_g-1)\,c_g\,m_g\,\mu_{3g}$, where $m_g$ is the common value of $m_i$ on the stayer's rows. The shift is
+positive when $m_g$ and $\mu_{3g}$ tend to have the same sign, for example when stayers with high person
+effects have right-skewed errors and stayers with low person effects left-skewed ones.
+\end{itemize}
+These terms are not bounded by the adjustment in \eqref{eq:Vhat}: for a stayer with two years the adjustment
+is zero and the first two are not. Nor do they vanish in large samples. In a panel that consists of two-year
+stayers alone, with equal person effects and equal variances, a kurtosis of $\kappa$ shifts the mean of the variance estimate for
+$\hat\sigma^2_\alpha$ by the fraction $(\kappa-3)(G-1)/(2G-1)$ of the variance when there are $G$ stayers,
+which tends to $(\kappa-3)/2$. How much
+they matter depends on the share of the variance that comes from the pairs of rows within stayers, which is
+small when movers' rows carry most of the variance, as in Section~\ref{sec:evidence}; scenarios 3 to 5 of the
+simulation there violate A3.
+
+\begin{proposition}[Convergence]\label{prop:conc}
+Under the assumptions of Proposition~\ref{prop:mean}, suppose $\E\varepsilon_i^8\le\bar c\,\sigma_i^8$ on
+stayers' rows, $\E\varepsilon_i^4\le\bar\kappa\,\sigma_i^4$ on movers' rows, and
+$|\st_i^2|\le\bth\,\sigma_i^2$ on movers' rows with $\bth\ge1$. Let
+\[
+\phi_g=\frac{1}{\V[\hat\theta]}\sum_{i\in g}\sigma_i^2\Big(4m_i^2+2\sum_\ell C_{i\ell}^2\sigma_\ell^2\Big)
+\]
+be the share of the variance \eqref{eq:V} carried by the rows of stayer $g$, and let $\lambda_{\max}$ be the
+largest absolute eigenvalue of the matrix with entries $\sigma_iC_{i\ell}\sigma_\ell$. Then
+\[
+\E\bigg[\Big(\frac{\hat\V[\hat\theta]-\V[\hat\theta]-b(\Delta)}{\V[\hat\theta]}\Big)^{2}\bigg]\;\le\;
+c'\,\bth^2\Big(\max_g\phi_g+\frac{\lambda_{\max}^2}{\V[\hat\theta]}\Big),
+\]
+where $c'$ depends only on $\bar c$ and $\bar\kappa$.
+\end{proposition}
+
+So with true variances for movers the ratio $\hat\V[\hat\theta]/\V[\hat\theta]$ converges to one along any
+sequence of designs in which the moment bounds hold and (a) no single stayer carries more than a vanishing
+share of the variance and (b) $\lambda_{\max}^2/\V[\hat\theta]\to0$. The two design conditions (a) and (b) are
+implied by the design conditions of KSS's Theorem~2, under which $\hat\theta$ is asymptotically normal, provided
+the number of years per stayer is bounded (Lemma~\ref{lem:kss}). Condition (b) can fail when there are few
+firms, or when groups of firms are linked by few movers, which KSS call weak identification; the propositions
+then give no guarantee. Section~\ref{sec:evidence} reports sample versions of both quantities.
+
+\begin{proposition}[Fitted variances for movers]\label{prop:fitted}
+Assume A1 to A3, the moment bounds of Proposition~\ref{prop:conc}, and Assumption~1 of KSS (uniformly bounded
+fourth moments, variances bounded away from zero, leverages bounded away from one, bounded $x_i'\beta$). Let
+the movers' rows receive fitted values $\st_i^2$ that may depend on the data, and suppose there are a statistic
+$\hat\eta$ of fixed dimension, a non-random $\eta^*$, non-random functions $\psi_i$ and constants
+$c_\eta,L,r,\bar\psi$ such that $\st_i^2=\psi_i(\hat\eta)$ for all $i\in\cR$ with probability tending to one,
+and
+\[
+\E\|\hat\eta-\eta^*\|^2\le\frac{c_\eta}{n_0},\qquad
+|\psi_i(\eta)-\psi_i(\eta^*)|\le L\,\|\eta-\eta^*\|\ \text{ whenever }\|\eta-\eta^*\|\le r,\qquad
+|\psi_i(\eta^*)|\le\bar\psi ,
+\]
+for all $i\in\cR$. Put $\Delta_i=\psi_i(\eta^*)-\sigma_i^2$. Then, along a sequence of designs with
+$n_0\to\infty$ and the constants fixed,
+\[
+\frac{\hat\V[\hat\theta]}{\V[\hat\theta]}=1+\frac{b(\Delta)}{\V[\hat\theta]}+O_p\bigg(n_0^{-1/2}+
+\Big(\max_g\phi_g+\frac{\lambda_{\max}^2}{\V[\hat\theta]}\Big)^{1/2}\bigg).
+\]
+\end{proposition}
+
+The fitted values may depend on the same data as $\hat m$ in any way; the proof does not use independence
+between them.
+
+\begin{corollary}[The model for movers]\label{cor:transfer}
+Assume A1 to A3, the moment bounds of Proposition~\ref{prop:conc} and Assumption~1 of KSS. Suppose the
+characteristics are non-random and bounded: $z_i$ in \eqref{eq:scale}, and $b_i$ in place of
+$b(\tilde\alpha_i,\tilde\psi_i)$ in \eqref{eq:profile}. Let $c_z^*$ and $d^*$ be the results of the two steps when
+the true variances $\sigma_i^2$ are used as outcomes, and
+\[
+v_i^*=s_i^*\,b_i'd^*,\qquad s_i^*=z_i'c_z^* .
+\]
+Suppose that the smallest eigenvalues of $n_{\cR}^{-1}\sum_{i\in\cR}z_iz_i'$ and of
+$n_{\cR}^{-1}\sum_{i\in\cR}s_i^{*2}\,b_ib_i'$ are bounded away from zero, where $n_{\cR}$ is the number of movers'
+rows; and that, with probability tending to one, $s_i^*$ and $v_i^*$ exceed their floors by a uniform margin.
+Then Proposition~\ref{prop:fitted} applies with $n_0=n_{\cR}$ and
+\[
+\Delta_i=v_i^*-\sigma_i^2 .
+\]
+If $\sigma_i^2=s_i^*\,b_i'd$ for all $i\in\cR$ and some $d$, then $\Delta=0$, and
+$\hat\V[\hat\theta]/\V[\hat\theta]\to1$ in probability as $n_{\cR}\to\infty$ under A5. This is the case, for
+instance, when movers' variances are $\sigma_i^2=(z_i'c)(b_i'd)$ and
+$\sum_{i\in\cR}z_i\,(z_i'c)\,(b_i'd-\bar\pi)=0$ for some constant $\bar\pi\neq0$, as when the profile $b_i'd$ has
+the same mean at every value of $z_i$.
+\end{corollary}
+
+Under A5 and with many movers, the standard error is therefore consistent exactly when
+$b(\Delta)/\V[\hat\theta]\to0$: this is A4. It is not a small-sample matter. If movers' variances vary along a
+dimension that the model lacks and that is related to $m_i^2$, or if they depend on the wage level in a way
+that a quadratic in the capped effects does not capture, the error can persist in large samples.
+Section~\ref{sec:sim} computes $b(\Delta)/\V[\hat\theta]$ in ten simulated settings. In small samples fitting
+the model adds a further bias, which the propositions do not bound.
+
+\paragraph{Estimated effects in the profile.} The corollary treats the characteristics at which the profile is
+evaluated as known. The estimator of Section~\ref{sec:transfer} evaluates it at estimated person and firm
+effects, and this case is not covered by the propositions. The estimated effect of a worker with a few years
+of data does not settle down as the sample grows, so the fitted variances are not functions of a statistic of
+fixed dimension. Three things then differ. The profile that is learned is the relation between error variances
+and estimated effects. The fitted variance of a mover's row is correlated with $\hat m_i$, because both depend on
+the worker's other wages. And in step~2 the leave-out estimates are regressed on functions of estimated
+effects that contain the row's own error, which can tilt the fit. Section~\ref{sec:transfer} gives the one case in
+which this provably does no harm to the fitted profile, normal errors with equal variances; in general neither
+the size nor the sign of its effect on the variance estimate is determined. How much it matters in a realistic
+design is an empirical question. The simulations of Section~\ref{sec:sim} use estimated effects throughout, so
+their results include whatever this costs; they do not isolate it.
+
+\paragraph{Confidence intervals.} Under the conditions of KSS's Theorem~2,
+$(\hat\theta-\theta)/\V[\hat\theta]^{1/2}$ is asymptotically standard normal. With
+Propositions~\ref{prop:conc} and~\ref{prop:fitted} and A4, the interval
+$\hat\theta\pm z\,\hat\V[\hat\theta]^{1/2}$ then has the stated coverage in large samples. When one direction
+dominates, these conditions fail; Section~\ref{sec:q1} describes the interval for that case.
