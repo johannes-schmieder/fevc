@@ -11,8 +11,9 @@ and installed-native tests on Intel/Rosetta; focused Stata 18/19 tests pass.
 Windows qualification uses Stata 19 and one/two workers. Native Intel hardware
 and Stata 16/17 runtime execution are not claimed.
 The [adoption manifest](../native/repeat-measurement-20261115/manifest.json) binds all exact bytes,
-corresponding source and qualification evidence. Publication/HTTP install
-checks follow separately. Historical checkpoints below retain their scope.
+corresponding source and qualification evidence. Version 0.6.0 is published
+at `b861a368`; the [publication audit](../native/repeat-measurement-20261115/final-audit.json)
+records the HTTP installation checks. Historical checkpoints below retain their scope.
 
 ## 0.5.2 Windows full-CMG binaries
 
@@ -599,18 +600,21 @@ All accepted native routes must preserve:
 - caller data, `e(sample)`, RNG algorithm/stream/state, sort state, release,
   and idle registry restoration on success, error, and UserBreak.
 
-Point-only requests must not post `e(V)`. Explicit, capability-gated component
-inference posts econometric covariance under its documented assumptions;
-projection inference uses separate `e(projection_*)` returns. Probe dispersion
-is numerical Monte Carlo error, never an econometric standard error.
+Point-only requests (`inference(none)`, or a default request that cannot
+carry standard errors) must not post `e(V)`. Since 0.6.0 the capability-gated
+standard errors of the components are the default (`inference(auto)`); they
+post econometric covariance as `e(V)` under their documented assumptions only
+when every component has a normal interval. Projection inference uses
+separate `e(projection_*)` returns. Probe dispersion is numerical Monte Carlo
+error, never an econometric standard error.
 
 ## Qualification and release boundary
 
-Windows Stata/plugin qualification passes for the exact hosted `240ad74d`
-artifact after private smoke and full gates. All five qualified payloads are
-published at `66d0278b` with original source identities and documented reuse
-limits. The source-bound four-case public-install status is
-PASS on Mac arm64, as recorded above.
+The five 0.6.0 payloads are built from `2082f209`, qualified on every
+claimed platform and published at `b861a368`, as recorded
+[above](#current-060-binaries). The `240ad74d` Windows artifact and the
+payloads published at `66d0278b` retain their original source identities,
+qualification and documented reuse limits.
 Native Intel hardware qualification and a command-surviving native cache remain
 deferred.
 Current platform status is recorded in the

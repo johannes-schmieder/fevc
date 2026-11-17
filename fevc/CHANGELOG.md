@@ -2,7 +2,24 @@
 
 ## Unreleased
 
-No unreleased changes.
+Documentation only; the estimator, the standard errors and the native
+plugins are those of 0.6.0.
+
+- Help: Examples 6 and 7 show `inference(highrank)` (normal intervals and
+  `e(V)`, read from `e(component_inference)`, on `ex2`) and `inference(q1)`
+  (the `q = 1` interval and no `e(V)`, read from `e(inference_intervals)`,
+  on the bottleneck of `ex4`). The help now says that the two overrides fix
+  the interval, that `inference(highrank)` posts neither
+  `e(inference_intervals)` nor `e(inference_leading)`, that
+  `algorithm(exact)` and an explicit `engine(compressed)` carry the
+  standard errors only with `backend(mata)` (or `rng(stata)`), and that the
+  Windows plugin passes native Stata qualification; it points to the
+  standard-error document.
+- `docs/repeat_measurement/` holds the method note of November 13, 2026,
+  its control-term addendum, the prototype's code and aggregate results, and
+  the unified standard-error document of November 16
+  (`unified/se_unified_20261116.pdf`): the derivation, the implementation in
+  0.6.0 and a comparison with the standard errors of KSS.
 
 ## 0.6.0 — 2026-11-14
 
@@ -92,8 +109,9 @@ No unreleased changes.
   estimates never depend on them. Not covered, with point estimates and a
   reason under the default and an error under `inference(highrank|q1)`:
   `project()` in the same call, observation deletion with a fixed offset or
-  (native) frequency weights, `algorithm(auto)`, and native
-  `algorithm(exact)`.
+  (native) frequency weights, `algorithm(auto)`, and `algorithm(exact)` or
+  an explicit `engine(compressed)` without `backend(mata)` (or
+  `rng(stata)`).
 - Cost on the native backend: 35 linear solves at the default eight draws
   for the standard errors and a few dozen for the leading directions and
   the `q = 1` pieces, plus two per probe when controls stay in the operator

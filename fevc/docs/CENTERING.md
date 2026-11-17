@@ -218,16 +218,15 @@ fevc log_wage, worker(worker_id) firm(firm_id) ///
   component-centering API 1, exposed as `r(component_centering_api)`.
   Missing metadata is zero; explicit None needs neither
   attachment-centering capability on its separately supported native requests.
-- The five included payloads expose all three centering capabilities.
-  All are rebuilt from `002205f2` and include pooled component inference and
-  bounded diagonal residual refinement. Mac arm64/Rosetta thin/universal and
-  Linux full/installed qualification pass. Windows hosted build, unit and
-  PE/export checks pass; Windows Stata runtime testing remains pending.
-  Native Intel hardware is not claimed.
-  The [adoption manifest](../../native/pooled-component-20261010/manifest.json)
-  binds exact sources, artifacts and platform evidence. The
-  [current checkpoint](../PLAN.md) tracks publication and final installation
-  verification.
+- The five included 0.6.0 payloads expose all three centering capabilities.
+  All are built from `2082f209` and include the repeat-measurement standard
+  errors of the components. Mac arm64/Rosetta thin/universal, SCC Linux
+  full/installed and all 18 private Windows groups pass (Windows with
+  Stata 19 and one or two workers). Native Intel hardware is not claimed.
+  The [adoption manifest](../../native/repeat-measurement-20261115/manifest.json)
+  binds exact sources, artifacts and platform evidence, and the
+  [publication audit](../../native/repeat-measurement-20261115/final-audit.json)
+  the published installation checks.
   An older plugin may lead `backend(auto)` to Mata before preparation/RNG,
   subject to the ordinary strict-consent rules. `backend(rust)` and explicit
   Counter-V1 requests require the matching native capability and fail

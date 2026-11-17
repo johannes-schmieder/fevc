@@ -18,9 +18,11 @@ introduced it was removed from the command in fevc 0.6.0; the
 design record and the [checkpoint](../../fevc/PLAN.md) gives platform status.
 Earlier payload records below retain their original capabilities and evidence scope.
 
-## Current pooled component inference binaries
+## October 10 pooled component inference binaries (historical)
 
-All five payloads are rebuilt from `002205f2` and adopted for repository
+The current 0.6.0 binaries are built from `2082f209`; see the
+[native provenance](../../native/README.md#current-060-release).
+At this October 10 checkpoint all five payloads were rebuilt from `002205f2` and adopted for repository
 installation under explicit owner authorization. They include pooled mover–stayer
 structured component inference, mixed capability bit 17/unit receipt V2, and
 bounded diagonal residual refinement. The [manifest](../../native/pooled-component-20261010/manifest.json)

@@ -185,7 +185,21 @@ heteroskedasticity; with controls, their estimation enters to first order.
 `q = 1` interval wherever it exists, and `inference(none)` point estimates
 only. See `help fevc##se` and the [inference guide](docs/INFERENCE.md),
 which gives the simulations behind the rule and their limits; they are not
-a coverage guarantee.
+a coverage guarantee. The
+[standard-error document](docs/repeat_measurement/unified/se_unified_20261116.pdf)
+derives the method, describes its implementation in 0.6.0 and compares it
+with the standard errors of KSS; its sources and the method note it grew
+from are in [docs/repeat_measurement/](docs/repeat_measurement/README.md).
+
+```stata
+* Normal intervals for every component and e(V), for test and lincom
+fevc log_wage i.year, worker(worker_id) firm(firm_id) inference(highrank)
+matrix list e(component_inference)
+
+* The q = 1 interval for every component that has one; no e(V)
+fevc log_wage i.year, worker(worker_id) firm(firm_id) inference(q1)
+matrix list e(inference_intervals)
+```
 
 Projection standard errors (`project()`) are requested separately, have
 their own assumptions and accept mean (the default) and no centering; with
@@ -196,9 +210,10 @@ the options that tuned them; a request for one stops with a message.
 
 ## Runnable examples
 
-The installed help starts with a clickable example and contains five short,
-runnable examples. Clicked examples restore your data. To generate example
-data and explore them yourself:
+The installed help starts with a clickable example and contains six more
+short, runnable examples; Examples 6 and 7 show `inference(highrank)` and
+`inference(q1)` and how to read their results. Clicked examples restore
+your data. To generate example data and explore them yourself:
 
 ```stata
 fevc, simulate_data(ex1) clear
@@ -208,7 +223,9 @@ estat decomposition, full
 
 `ex1` is a larger positive-sorting panel; `ex2` is its small exact-calculation
 counterpart. `ex3` illustrates frequency and target weights, `ex4` a projection
-on firm size, and `ex5` the standard-error options on a fixed small dataset.
+on firm size (its small firms are linked by few movers, a bottleneck that
+calls for the `q = 1` interval), and `ex5` the standard-error options on a
+fixed small dataset.
 The helper prints observations, workers, firms, and the true variance components
 for the realized data and example weighting. It retains `worker_fe`, `firm_fe`,
 and `error`; inspect the construction with `viewsource fevc__simulate_data.ado`.
@@ -230,6 +247,8 @@ cap actually applied, the available capacity and the measured concurrency.
 
 The companion paper, *fevc: Leave-out bias-corrected variance decompositions
 in Stata* (Schmieder, 2026), and its technical supplement explain the method
-and sample construction.
+and sample construction. The standard errors of the components are derived
+in the [standard-error document](docs/repeat_measurement/unified/se_unified_20261116.pdf)
+of November 16, 2026, which also compares them with those of KSS.
 
 The package code is MIT; see [licensing](../CODE_LICENSE.md).

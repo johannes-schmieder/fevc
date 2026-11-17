@@ -120,9 +120,10 @@ returns are absent for point-only or projection-only requests and cleared on
 failure. They are separate from numerical MCSE. The models removed in 0.6.0
 recorded `fixed observed mean` and `1` under Mean.
 
-## Opt-in inference matrices
+## Inference matrices
 
-The standard errors of the components post `e(component_inference)`
+The standard errors of the components (the default since 0.6.0; off with
+`inference(none)`) post `e(component_inference)`
 (estimate, high-rank standard error and normal endpoints for each target)
 and, when the joint covariance is admissible and every component has a
 normal interval, `e(V_primitive)` for worker variance, firm variance, and
@@ -538,7 +539,8 @@ estimand. The catalog includes:
   `inference(highrank)` or `inference(q1)` request that the options or the
   installed plugin cannot carry: observation deletion with
   `nuisance(fixedoffset)` or, natively, frequency weights; `algorithm(auto)`;
-  native `algorithm(exact)`; a plugin without the capability.
+  `algorithm(exact)` or an explicit `engine(compressed)` without
+  `backend(mata)` (or `rng(stata)`); a plugin without the capability.
   `inference(auto)` returns point estimates with the reason instead;
 - statuses that only the models removed in 0.6.0 produced and that are no
   longer reachable from the command: `INFERENCE_DELETION_UNSUPPORTED`,
