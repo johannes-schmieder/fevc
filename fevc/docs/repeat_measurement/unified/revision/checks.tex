@@ -1,0 +1,108 @@
+\input{revision/control_check}
+
+\section{Designs, benchmarks and limits of the evidence}\label{app:evidence}
+
+\subsection{Repeat measurements and the normal approximation}
+The Veneto calibration fixes the estimated effects and assigns known noise variances.
+The ten scenarios include a flat profile, quadratic and log-linear wage profiles,
+fat-tailed and skewed errors, worker-specific variance factors, and profiles
+that differ between movers and stayers. The two fitting steps and the cap on
+estimated effects were developed on these designs. In one scenario the 1\%
+of mover rows beyond the cap account for 33\% of the linear term of the
+true variance of the estimated variance of the sum. Raising the cap from
+three to six standard deviations changes the predicted standard-error ratio
+at fixed characteristics from 0.95 to 0.99 in that scenario. The ratio
+describes the model with known characteristics. Several additional changes
+enter when outcomes and effects are estimated.
+
+The six-year method study used exact stayer leverages, 1,600 fixed projections
+for movers, and 16 draws for the trace. Controls and the centring constant
+were treated as fixed. Its initial ten-scenario exercise set negative
+eigenvalues of the estimated covariance matrix to zero. This can raise the
+estimated variances. The fresh-draw validation omitted that step. It changed
+the six-year ratios by at most 0.007, and the estimated matrix was positive
+definite in all 4,400 validation draws across the three panels. The benchmarks
+use projected weights and simulated traces at the true variances. For
+non-Gaussian errors they omit cumulant terms arising from small nonzero
+diagonal entries of the projected weights. They are approximate benchmarks
+in those scenarios. Coverage is measured against the known component.
+
+\subsection{A single bottleneck}
+A separate study used two groups of 50 firms, with the number of workers
+who moved between groups varying from 100 to 10, plus designs without a
+bottleneck, skewed errors, unusually noisy bridging workers, and a stress
+test with only three bridging workers. With 1,000 draws per design, the
+prespecified $q=1$ intervals covered between 94.1\% and 100\% across the
+75 registered component--design cases. In the ten-bridge designs with
+normal errors in the main panel, the worst normal coverage was 48.7\%.
+Comparing an interval based on estimated inputs with one based on the true
+covariance showed that some of the extra length came from the geometry of
+the interval itself.
+
+The study missed its registered length tolerance: without a bottleneck, the
+covariance interval in one design was 12.7\% longer than the normal interval,
+above the 10\% limit. This is a test of the prespecified $q=1$ construction.
+It did not test the automatic rule applied by the released package.
+In the three-bridge stress test the condition that no single row carry the
+leading score fails. The observed coverage in two Gaussian designs cannot
+extend the coverage result to a fixed handful of bridging workers. The
+simulations also did not stress the correlation boundary in
+Corollary~\ref{cor:q1}. Two or more dominant directions lie outside the design.
+
+\subsection{Package builds and comparability}
+The automatic rule was chosen on 32,000 development fits. Each confirmation
+manifest fixed its designs, seeds, deletion modes, repetitions and
+acceptance thresholds in advance. The first no-control confirmation failed
+on its result inventory when one fit returned point estimates only. The
+second no-control confirmation used fresh designs, and the controls
+confirmation used new seeds. A compatibility check carried the controls
+result from \code{f3938986} to candidate \code{d4b2d942} on the basis of
+36 byte-identical default results. The released plugins were later built
+from \code{2082f209}. The check does not extend the registered confirmation
+claim to the later compatibility and exact-eigensolver changes.
+The \href{https://github.com/johannes-schmieder/fevc/tree/59bf4094/fevc/docs/default_interval}{package simulation records}
+give the complete attempt counts and thresholds.
+The \href{https://github.com/johannes-schmieder/fevc/blob/59bf4094/fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf}{November 16 document}
+gives the full scenario and component tables, including the alternative
+covariance inputs and interval lengths.
+
+\subsection{Interpreting the KSS comparison}
+The rebuilt leave-one-out sample counts match KSS's published Table~I
+to within 0.01\%. Random tie-breaking among the highest-paid spells can
+change which firm a worker is assigned to. KSS do not publish corresponding
+leave-two-out counts. The point estimates in the two-period levels and
+first-difference formulations agree once the year-effect treatment and
+numerical accuracy are aligned. At the default 200 projections, numerical
+noise in the older-worker point estimates was about 10--12\% of their
+standard errors. A comparison at 20,000 projections and with a fixed
+offset brought the discrepancies within the numerical Monte Carlo error.
+The exact two-period point estimate is invariant to centring here.
+Centring can still change the raw products used for variance fitting and
+hence the reported standard errors.
+
+The simulation follows KSS's wage-change design with Student-$t_5$ errors,
+scaled to the prescribed variances. It fits firm effects and the variance
+equation on each older-worker sample and reruns the path searches on each
+draw. KSS used a pooled fit and held the paths fixed. The primary design
+puts all noise on the second year's wage. An alternative splits the noise
+independently across the two years while preserving the variance of the
+change. The first 100 leave-one-out and 200 leave-two-out draws were common
+to all three procedures. The \fevc{} runs used 1,000 per sample. The
+comparison counts an undefined interval, an interval with complex curvature
+or an interval excluding its own point estimate as a miss under the scoring convention used in these comparisons. On the older leave-two-out sample, 19\%
+of the KSS Matlab model-based $q=1$ intervals were scored invalid.
+Coverage estimates based on 100--200 draws have Wilson half-widths of
+roughly 2--6 percentage points in the reported cases.
+
+The Econometrica replication code and the KSS Matlab package have different
+implementation limits. The supplied critical-value table supports $q=1$
+only, so the published $q=2$ intervals could not be reproduced. The
+split-sample routine draws paths and traces without setting a seed, giving
+differences of 0.5--8\% in standard errors across repeated calls on the
+same data. Its remainder calculation indexes a single element where the
+main routine uses the leading-direction column. The effect of this apparent
+indexing error on interval widths has not been measured. In the replication
+package's model-based routine, requesting the eigenvalue diagnostics
+resulted in an error. The GitHub version of the KSS Matlab package supplied
+the model-based $q=1$ intervals. Appendix~\ref{kss:app:repro} identifies
+the actual programs, settings and inputs.

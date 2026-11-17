@@ -1,0 +1,243 @@
+\section{Estimated controls and centring: derivations}\label{app:controls}
+The adjusted outcomes within a deletion unit share the error of the estimated control coefficient.
+This appendix derives its effect on the fixed-offset estimator, states the additional term for the joint
+point estimate and gives the approximations in the feasible variance calculation.
+Here $z$ denotes the controls rather than the characteristics of the variance model.
+\subsection{Setup}\label{ctl:setup}
+
+Physical observation $\tau=1,\dots,F_i$ of deletion unit $i=1,\dots,n$ belongs to worker $g(i)$ and firm $j(i)$:
+$y_{i\tau}=\alpha_{g(i)}+\psi_{j(i)}+z_{i\tau}'\gamma+\varepsilon_{i\tau}$, with $z_{i\tau}\in\mathbb{R}^k$. Errors have
+mean zero and are independent across units; within a unit they may be dependent. Under match deletion a unit is a
+mover's match ($F_i\ge1$) or one observation of a stayer, the rows of Section~\ref{sec:setting}; under observation
+deletion every observation is a unit. Unit $i$ is one row,
+\[
+ x_i=\sqrt{F_i}\,(e_{g(i)}+e_{j(i)}),\qquad y_i(\gamma_0)=F_i^{-1/2}\sum_\tau\bigl(y_{i\tau}-z_{i\tau}'\gamma_0\bigr),\qquad
+ \varepsilon_i=F_i^{-1/2}\sum_\tau\varepsilon_{i\tau},\qquad \sigma_i^2=\V[\varepsilon_i],
+\]
+with $\mu_i=x_i'\beta$, and with $S_{xx}$, $P=XS_{xx}^{-1}X'$, $M=I-P$, $B$ and the leave-out weights $C$ of
+\eqref{eq:ustat} formed as in Section~\ref{sec:estimator}. For a known coefficient vector $\gamma_0$,
+$\tilde\theta(\gamma_0)=y(\gamma_0)'Cy(\gamma_0)$ is the KSS estimator, unbiased at $\gamma_0=\gamma$.
+
+$\hat\gamma$ is the coefficient of the full least-squares fit on worker dummies, firm dummies and the controls.
+With $\tilde z_{i\tau}$ the controls after removing the two-way effects over physical observations and
+$\Lambda=(\sum_{i,\tau}\tilde z_{i\tau}\tilde z_{i\tau}')^{-1}$, $\delta=\hat\gamma-\gamma=\Lambda\sum_{i,\tau}\tilde
+z_{i\tau}\varepsilon_{i\tau}$. The estimator studied here is the fixed-offset one,
+$\hat\theta=\tilde\theta(\hat\gamma)$.
+
+Unit aggregates: $Z_i=F_i^{-1/2}\sum_\tau z_{i\tau}$, $\tilde Z_i=F_i^{-1/2}\sum_\tau\tilde z_{i\tau}$,
+$\bar z_i=F_i^{-1}\sum_\tau z_{i\tau}$, $\omega_i=\sum_\tau(z_{i\tau}-\bar z_i)\varepsilon_{i\tau}$,
+$G_i=\sum_\tau(z_{i\tau}-\bar z_i)(z_{i\tau}-\bar z_i)'$; $Z$ and $\tilde Z$ are the $n\times k$ matrices with rows
+$Z_i'$ and $\tilde Z_i'$. Since the two-way part of $z$ is constant within a unit,
+$\delta=\Lambda(\tilde Z'\varepsilon+\omega)$ with $\omega=\sum_i\omega_i$. Write $\varsigma_i=\Cov[\varepsilon_i,\omega_i]$,
+$\Omega_i=\V[\omega_i]$, $K$ for the $n\times k$ matrix with rows $\varsigma_i'$, $\Omega=\sum_i\Omega_i$,
+$V=\diag(\sigma_i^2)$ and $\Pi=I-\tilde Z\Lambda Z'$. For $F_i=1$, $\omega_i=0$.
+
+\subsection{The variance of the fixed-offset estimator}\label{ctl:var}
+
+\paragraph{The noise of the adjusted outcome.} $y(\hat\gamma)=\mu+v$ with
+\begin{equation}\label{ctl:eq:v}
+ v=\varepsilon-Z\delta=\Pi'\varepsilon-Z\Lambda\omega,\qquad
+ S=\V[v]=\Pi'V\Pi-\Pi'K\Lambda Z'-Z\Lambda K'\Pi+Z\Lambda\Omega\Lambda Z'.
+\end{equation}
+$S$ equals $V$ plus a symmetric matrix of rank at most $2k$. The estimator is the quadratic form
+$\hat\theta=(\mu+v)'C(\mu+v)$, so with $m=C\mu$
+\begin{equation}\label{ctl:eq:exact}
+ \hat\theta-\theta=2m'v+v'Cv,\qquad \E\hat\theta-\theta=\tr(CS),\qquad
+ \V[\hat\theta]=4m'Sm+2\tr(CSCS)\ \text{ for Gaussian errors.}
+\end{equation}
+The bias $\tr(CS)$ can be nonzero because $S$ is not diagonal.
+
+\paragraph{The linear part.} $2m'v=\sum_i(2m_i^*\varepsilon_i+c_m'\omega_i)$ with $m^*=\Pi m$, $c_m=-2\Lambda Z'm$, and
+\begin{equation}\label{ctl:eq:Vlin}
+ 4m'Sm=\sum_i\bigl(4m_i^{*2}\sigma_i^2+4m_i^*\varsigma_i'c_m+c_m'\Omega_ic_m\bigr).
+\end{equation}
+With known controls it is $4\sum_im_i^2\sigma_i^2$, the first term of \eqref{eq:V}. (For two
+targets $s$ and $t$ it is $4m_s'Sm_t$.) The linear part is exactly uncorrelated with $\varepsilon'C\varepsilon$,
+without Gaussianity: since $C_{ii}=0$, each term of $\varepsilon'C\varepsilon$ involves two different units, and
+multiplying it by the linear contribution of any unit leaves an independent factor with mean zero. This does not
+establish zero covariance with $v'Cv$ for non-Gaussian errors.
+
+\paragraph{The quadratic part.} $v'Cv=\varepsilon'C\varepsilon+R$ with $R=-2\varepsilon'CZ\delta+\delta'Z'CZ\delta$,
+a quadratic form of rank at most $2k$ in the physical errors. Low rank does not make it small: writing
+$V_0=4m'Sm+2\tr(CVCV)$, what is needed is $\V[R]=o(V_0)$ and $\E R=o(\sqrt{V_0})$. \emph{These hold under
+stated conditions, not in general.} In the Gaussian case it suffices that $k$ is fixed, the covariance of the
+physical errors has bounded operator norm, $\|Z\Lambda^{1/2}\|_\op$ is bounded and $\|C\|_\op^2/V_0\to0$; then
+$\V[R]=O(k\|C\|_\op^2)$ and $|\E R|=O(k\|C\|_\op)$. The conditions can fail when a dominant quadratic direction is
+aligned with the controls. (For example, two workers, one firm, $z$ equal to the worker indicator
+plus a within-worker contrast; $\max_i\tilde Z_i'\Lambda\tilde Z_i=1/n$, yet $\V[\hat\theta]/(2\tr(CVCV))\to4$
+and the bias is of the order of the standard deviation.) Formula \eqref{ctl:eq:exact} with $S$ does not need this
+paragraph or its conditions; this is why the estimator below is built on $S$ rather than on $V$ plus a
+first-order term.
+
+\subsection{The jointly estimated version}\label{ctl:joint}
+
+For observation units the joint estimator is $y'C^{\rm f}y$ with the kernel of the full design $[X,\mathbf Z]$.
+$B^{\rm f}=\Pi B\Pi'$ exactly, so the $B$-part of its linear influence equals that of $m^*$.  The
+leave-out corrections differ: with $D=\diag(B_{ii}/M_{ii})$ from \eqref{eq:ustat},
+$M^{\rm f}=M-\tilde Z\Lambda\tilde Z'$ and $D^{\rm f}=\diag(B^{\rm f}_{ii}/M^{\rm f}_{ii})$,
+\begin{equation}\label{ctl:eq:joint}
+ m_{\rm joint}-m^*=-\tfrac12M^{\rm f}\bigl[(D^{\rm f}-D)\mu+D^{\rm f}Z\gamma\bigr].
+\end{equation}
+The second term can be non-negligible. It depends on $M^{\rm f}D^{\rm f}Z\gamma$, so it vanishes when $D^{\rm f}$ is
+a scalar matrix even if the control index $Z\gamma$ varies. It arises because the joint estimator uses the raw
+outcome in its correction, so it is not invariant to adding $Za$ to the outcome, while the fixed-offset estimator
+is. \textbf{The two estimators are therefore not first-order equivalent in general}, and the variance below
+describes the fixed-offset estimator. (For example, workers with two or four observations, a
+control alternating $\pm1$, unit error variance: $\V[\hat\theta_{\rm joint}]/\V[\hat\theta_{\rm fixed}]\to1+4\gamma^2/45$.)
+In the check of Appendix~\ref{app:ctlnum} the joint variance is 0.995 to 1.035 times the fixed-offset one. A term
+for \eqref{ctl:eq:joint} is not part of this analysis, nor of \fevc{} 0.6.0; Section~\ref{sec:impl-mc} reports what
+the package simulations show of it.
+
+\subsection{Estimating it within the method}\label{ctl:est}
+
+The method supplies variance estimates $\st_i^2$ for the units (for the units of a repeat-measurement set $U$,
+the sample variance $q_U$ of their adjusted outcomes, as $q_g$ in \eqref{eq:q}; a fitted value elsewhere),
+$\tilde V=\diag(\st_i^2)$, the influence estimates $\hat m=Cy(\hat\gamma)$, and the pseudo-noise draws of
+Section~\ref{sec:computation}. A set $U$ consists of the rows of a stayer or, under observation deletion, of a
+worker--firm cell with two or more observations (Section~\ref{sec:setting}), and $T_U$ is its number of rows. Let
+$\tilde e_i=\hat e_i/M_{ii}$, with $\hat e_i$ the residual of unit $i$ in the unit design, be its leave-out residual,
+so that $\hat\sigma_i^2=y_i(\hat\gamma)\,\tilde e_i$ is its leave-out estimate; let
+$\hat\omega_i=\sum_\tau(z_{i\tau}-\bar z_i)\bigl(y_{i\tau}-\bar y_i-(z_{i\tau}-\bar z_i)'\hat\gamma\bigr)$, with $\bar
+y_i$ the mean of the unit's $y_{i\tau}$, be the realised within-unit product; and let $\hat c_m=-2\Lambda Z'\hat m$,
+$\hat m^*=\Pi\hat m$ and $\hat\Omega=\sum_i\hat\omega_i\hat\omega_i'$.
+
+\paragraph{Linear part.} The plug-in for $4m'Sm$ with realised products for $\varsigma_i$ and $\Omega_i$:
+\begin{equation}\label{ctl:eq:Lhat}
+ \hat L=\sum_i\bigl(4\hat m_i^{*2}\st_i^2+4\hat m_i^*\tilde e_i\,\hat\omega_i'\hat c_m+(\hat\omega_i'\hat c_m)^2\bigr).
+\end{equation}
+With $S$ known, $\E[4\hat m'S\hat m]=4m'Sm+4\tr(CSCS)$ exactly, since $\V[\hat m]=CSC$.
+
+\paragraph{Quadratic part.} Draw $\zeta\sim N(0,\tilde V)$ and independent standard normal variables $\xi_i$,
+and set
+\begin{equation}\label{ctl:eq:draw}
+ v^*=\zeta-Z\Lambda\bigl(\tilde Z'\zeta+\textstyle\sum_i\hat\omega_i\xi_i\bigr),\qquad
+ \V^*[v^*]=S_d=\Pi'\tilde V\Pi+Z\Lambda\hat\Omega\Lambda Z' .
+\end{equation}
+With $u=Cv^*$, $\hat Q$ is the average over draws of $u'S_du=\sum_i\st_i^2(\Pi u)_i^2+
+(\Lambda Z'u)'\hat\Omega(\Lambda Z'u)$, an estimate of $\tr(CS_dCS_d)$. The estimate is
+\begin{equation}\label{ctl:eq:Vhat}
+ \hat\V[\hat\theta]=\hat L-2\hat Q+\text{pair term},
+\end{equation}
+where the pair term is the last term of \eqref{eq:Vhat}, the adjustment for the pairs of rows of a set. Without
+controls this is \eqref{eq:Vhat} with the double sum simulated as in \eqref{eq:sim}. With $S$ known and Gaussian
+errors, $4\hat m'S\hat m-2\tr(CSCS)$ is exactly unbiased for \eqref{ctl:eq:exact}.
+
+\paragraph{What is approximate in the feasible version.} The following discrepancies remain; their aggregate
+effect has not been bounded. The combined procedure is checked in one Gaussian design
+(Appendix~\ref{app:ctlnum}). Bounded whole-unit leverage is weaker than the vanishing maximum influence usually
+needed to replace the moments by these estimates. Every feasible claim is for Gaussian errors: with non-Gaussian
+physical errors the transformed quadratic form can have nonzero diagonal blocks within units, so third- and
+fourth-cumulant contributions to its variance are not identically zero.
+\begin{enumerate}\itemsep1pt
+\item $S_d$ leaves out the $K$ terms of $S$; they are kept in $\hat L$ through the realised cross products, and the
+draw is not changed. This does not compensate. Let $S_0=S+H$ be the covariance of the draw without $K$ when the
+covariance inputs are known, $H=\Pi'K\Lambda Z'+Z\Lambda K'\Pi$, of rank at most $2k$. Even with the linear part
+$4\hat m'S\hat m$, the trace based on $S_0$ leaves the discrepancy
+$2\{\tr(CSCS)-\tr(CS_0CS_0)\}=-4\tr(CSCH)-2\tr(CHCH)$, whose sign is not controlled. Under bounded $\|S\|_\op$ and
+$\|H\|_\op$ it is $O(k\|C\|_\op^2)$, negligible for fixed $k$ when $\|C\|_\op^2/\V[\hat\theta]\to0$. It can be first
+order with a dominant direction, even when the control information is diffuse: with $S=I$, $S_0=I+w_1w_1'$ for a
+diffuse unit vector $w_1$ and a kernel approaching $\lambda_1w_1w_1'$, the two traces approach $\lambda_1^2$ and
+$4\lambda_1^2$.
+The method meets that case through Section~\ref{ctl:q1}: when one direction carries more than ten per cent of the
+estimated variance, the interval is the $q=1$ interval (Section~\ref{sec:impl}), whose leading-score variance
+$\Sigma_{bb}=w_1'Sw_1$ is computed with the $K$ terms; the quadratic part enters only through the remainder
+weights $C^{\rm r}$, to which the bound applies with $C^{\rm r}$ in place of $C$. The row $\varsigma_i'$ of $K$ is zero
+when the errors of unit $i$ have one variance and are uncorrelated within the unit, because the within-unit control
+deviations sum to zero; the discrepancy needs within-unit heteroskedasticity that moves with the controls, or
+serial correlation. An algebraic repair is available and not implemented: with $\hat K$ the matrix with rows
+$\tilde e_i\hat\omega_i'$ and $\hat H=\Pi'\hat K\Lambda Z'+Z\Lambda\hat K'\Pi$, use
+$\hat Q_{\rm full}=\hat Q-2\tr(CS_dC\hat H)+\tr(C\hat HC\hat H)$, whose conditional mean is
+$\tr\{C(S_d-\hat H)C(S_d-\hat H)\}$, while $\hat L=4\hat m'(S_d-\hat H)\hat m$ exactly. The middle term is the average
+of $u'\hat Hu$ over the existing draws; the last needs $2k$ further applications of $C$, whereas the control term as implemented needs no
+further solve. (Under the default \code{nuisance(joint)} \fevc{} 0.6.0 adds an offset pass of two solves per
+point-estimate probe, 400 by default, to form the fixed-offset units; \code{nuisance(fixedoffset)} avoids it.) $S_d-\hat H$ need not be
+positive semidefinite, so it cannot be drawn from.
+\item $\hat\omega_i=\omega_i-G_i\delta$, not $\omega_i$: the realised product is shrunk by the fit, as a residual is.
+In the extreme case of one match carrying all information on $\gamma$, $\hat\omega_i=0$ while $\Omega_i>0$.
+\item $\E[\tilde e_i\hat\omega_i]=\varsigma_i-\sigma^2G_i\Lambda\tilde Z_i/M_{ii}$ under homoskedastic independent errors
+with variance $\sigma^2$: the cross product is biased by a control-leverage term.
+\item The sample variance of a set is computed from adjusted outcomes: under homoskedasticity
+$\E q_U=\sigma^2\big[1-\tr\big(\Lambda\sum_{i\in U}(Z_i-\bar Z_U)(Z_i-\bar Z_U)'\big)/(T_U-1)\big]$, with $\bar Z_U$ the
+mean of the $Z_i$ over $U$, and fitting $\gamma$ makes different sets dependent. The pair term is kept unchanged;
+its exact justification (constant kernel entries inside a set, independent sets) no longer applies.
+\item The leave-out estimates $\hat\sigma_i^2$ used to fit the model for units outside sets have mean
+$(SM)_{ii}/M_{ii}$ rather than $\sigma_i^2$.
+\item Products of the estimated $\hat m^*,\hat c_m$ with the realised $\hat\omega_i,\tilde e_i$ contain fourth-order
+interactions that $\hat Q$ does not remove.
+\item One sample variance per set. For independent adjusted outcomes $Y_i$, $i\in U$, with equal means and the
+true controls removed, $\E q_U=\bar\sigma_U^2=T_U^{-1}\sum_{i\in U}\sigma_i^2$. Pooling is then unbiased for the
+linear term $\sum_{i\in U}a_i\sigma_i^2$, $a_i=4(m_i^*)^2$, exactly when
+$\sum_{i\in U}(a_i-\bar a_U)(\sigma_i^2-\bar\sigma_U^2)=0$; with controls the weights $a_i$ vary inside a set. Zero
+linear correlation of the variances with a control is not enough, because the weights are quadratic:
+control-index values $(-1,0,1)$ and variances $(2,1,2)$ are linearly uncorrelated, yet with weights equal to the
+squared index the weighted sum is $4$ and pooling gives $10/3$. Exact cancellation in each set is stronger than
+needed: the aggregate discrepancy must be negligible relative to the variance. The condition covers the linear
+part only; the pair term with $q_U^2$ also uses one variance per set. With known controls, an alternative is available: for sets of three or more
+units, $\hat v_i^\times=(T_U(Y_i-\bar Y_U)^2-q_U)/(T_U-2)$ is unbiased for $\sigma_i^2$ under these conditions without
+Gaussianity, but it can be negative, so it cannot feed the draw; the pair term would need a new calculation; and
+with fitted controls it is not exactly unbiased.
+\end{enumerate}
+
+\paragraph{Weak identification.} Where the control coefficient is poorly identified, or the sensitivity of the
+estimate to it is itself noisy in a small sample, the second-order noise dominates and the feasible variance
+estimate \eqref{ctl:eq:Vhat} can be non-positive. \fevc{} then reports the component without a normal interval: the
+interval is withheld, or the $q=1$ interval is used. This was observed on a test fixture with a control whose
+within-unit variation was small (amplitude 0.13); a well-identified control on the same data gives agreement with
+a dense oracle to 0.004 per cent at 32{,}768 draws on the exact route.
+
+\subsection{The $q=1$ pieces}\label{ctl:q1}
+
+This subsection uses the decomposition of Section~\ref{sec:q1}. For a component with leading direction $w_1$
+(unit-space weights $w_{i1}$ of unit length; a function of the design) and eigenvalue $\lambda_1$,
+$\hat\theta=\lambda_1\big(\hat b_1^{\,2}-\hat\V[\hat b_1]\big)+\hat\theta_{\rm r}$ with $\hat b_1=w_1'y(\hat\gamma)$,
+$\hat\V[\hat b_1]=\sum_iw_{i1}^2\,\hat\sigma_i^2$ and $\hat\theta_{\rm r}$ the leave-out form with the remainder
+weights $C^{\rm r}$; this is an identity. With estimated controls $\hat b_1-b_1=w_1'v$, where $b_1=w_1'\mu$, so
+\[
+ \Sigma_{bb}=w_1'Sw_1=\sum_i\bigl((\Pi w_1)_i^2\sigma_i^2+2(\Pi w_1)_i\varsigma_i'c_w+c_w'\Omega_ic_w\bigr),\qquad
+ c_w=-\Lambda Z'w_1,
+\]
+exactly, and $\hat\theta_{\rm r}-\theta_{\rm r}=2(m^{\rm r})'v+v'C^{\rm r}v$ gives
+$\Cov[\hat b_1,2(m^{\rm r})'v]=2w_1'Sm^{\rm r}$ and, for Gaussian errors,
+$\V[\hat\theta_{\rm r}]=4(m^{\rm r})'Sm^{\rm r}+2\tr(C^{\rm r}SC^{\rm r}S)$, $\Cov[\hat b_1,v'C^{\rm r}v]=0$ and
+$\E\hat\theta_{\rm r}-\theta_{\rm r}=\tr(C^{\rm r}S)$. Estimates: \eqref{ctl:eq:Lhat} and \eqref{ctl:eq:Vhat} with
+$C^{\rm r}$ for $\Sigma_{\rm rr}$ (the same draws); for $\Sigma_{bb}$, as in \eqref{eq:q1est}, the larger of the fitted
+version $\sum_i\big((\Pi w_1)_i^2\st_i^2+2(\Pi w_1)_i\tilde e_i\hat\omega_i'c_w+(\hat\omega_i'c_w)^2\big)$ and the version
+with the leave-out estimates $\hat\sigma_i^2$ in place of $\st_i^2$; for $\Sigma_{b{\rm r}}$ the plug-in for
+$2w_1'Sm^{\rm r}$. A positive definiteness check of the $2\times2$ matrix remains necessary: with realised products a
+fitted $\Sigma_{bb}$ need not be positive.
+
+\paragraph{The centre of the interval.} $\E\hat\theta-\theta=\lambda_1\{\Sigma_{bb}-\E\hat\V[\hat b_1]\}+\tr(C^{\rm r}S)$.
+With controls the first term need not be small on the weak-direction scale:
+$\E\hat\V[\hat b_1]=\sum_iw_{i1}^2(SM)_{ii}/M_{ii}$, which in general differs from $w_1'Sw_1$. This is a bias of the
+\emph{point estimate}. The interval of KSS (their Section~7.1; Section~\ref{sec:q1int}) is built from
+$(\hat b_1,\hat\theta_{\rm r})$ and the map $\lambda_1b^2+\theta_{\rm r}$; $\hat b_1$ is unbiased for $b_1$ and
+$\hat\theta_{\rm r}$ for $\theta_{\rm r}$ up to $\tr(C^{\rm r}S)$, so the interval need not inherit the first term, and
+the decomposition is left unchanged. What it needs, and what is \emph{not proved} here, is joint normality of
+$(\hat b_1,\hat\theta_{\rm r})$ with the control parts included (the Lindeberg condition is now on
+$(\Pi w_1)_i\varepsilon_i+c_w'\omega_i$, not on $w_{i1}$ alone), consistency of the three estimated entries, and a
+centring condition for the remainder: with $\rho$ the correlation of $\hat b_1$ and $\hat\theta_{\rm r}$,
+$|\tr(C^{\rm r}S)|/\sqrt{\Sigma_{\rm rr}(1-\rho^2)}\to0$ (if $|\rho|$ stays away from one,
+$\tr(C^{\rm r}S)=o(\Sigma_{\rm rr}^{1/2})$ suffices), or that bias estimated and subtracted. Joint normality and a
+consistent covariance do not alone give coverage when the expectation is displaced from the target. The interval
+is built on the two-dimensional statistic $(\hat b_1,\hat\theta_{\rm r})$ and need not be centred on the reported
+scalar estimate, which may keep a bias $\lambda_1\{\Sigma_{bb}-\E\hat\V[\hat b_1]\}$; there is no inconsistency in that.
+
+\subsection{Centring}\label{sec:centring}
+
+\fevc{} subtracts the mean wage before forming the bias correction (under \code{centering(mean)}, its default).
+Subtracting a constant $c$ from every wage leaves $\hat\theta$ unbiased: with $h$ the vector with entries
+$\sqrt{F_i}$, the exact weights of the four components satisfy $h'C\mu=0$ and $h'Ch=0$, so
+$\E[(y-ch)'C(y-ch)]=\mu'C\mu=\theta$. All formulas of this note then hold with $y-ch$ in place of $y$, and with $m$
+computed from the centred means. \fevc{} uses the sample mean $\bar y$ for $c$, and the baseline propositions treat the centring constant as fixed. Sampling the outcome also changes its mean. Let $c_0=h'\mu/n_{\rm py}$
+be the mean that $\bar y$ estimates. Centring at $\bar y$ instead of $c_0$ changes the estimate by
+$-2\,(\bar y-c_0)\,h'C\varepsilon$, whose mean is $-(2/n_{\rm py})\,h'VCh$ with $V=\diag(\sigma_i^2)$. When
+the error variances are bounded and bounded away from zero this change is of the order of $\lambda_{\max}$, and
+therefore negligible relative to the standard error under condition (b) of Proposition~\ref{prop:conc}.
+
+The standard error of \fevc{} 0.6.0 does not hold the mean fixed. Under \code{centering(mean)} it centres the
+pseudo-noise of Section~\ref{sec:computation} in the same way as the outcome before it enters the kernel, so the
+kernel is that of the centred estimate and no approximation that holds the observed mean fixed is made
+(\code{e(inference\_mean\_omitted)} is zero). Under \code{centering(corrected)} the standard error is that of the
+mean-centred estimate and treats the corrected-centring increment as fixed; \code{centering(none)} uses the
+uncentred kernel. In the comparison of Section~\ref{sec:kss}, on two-period samples under observation deletion,
+the centring leaves the estimate unchanged but not its standard error (Section~\ref{kss:sec:emp-se}).

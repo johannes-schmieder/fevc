@@ -1,0 +1,188 @@
+\section{What repeated wages tell us}\label{sec:setting}
+
+A worker stays at the same firm for three years. In the two-way fixed-effects model, her
+worker effect and her employer's firm effect contribute the same amount to each year's
+log wage. Once common year effects and other controls are accounted for, differences
+among her three wages tell us about her wage variability. They say little about how
+variable another worker's wages are, even at the same firm. The repeat-measurement
+method in \fevc{} keeps that distinction. It estimates an error variance within each
+worker--firm cell that supplies independent repetitions, then fits a model for the
+units for which the data provide only one measurement.
+
+This construction follows directly from the leave-out estimator of Kline, Saggio and
+S{\o}lvsten (2020, hereafter KSS). For a stayer with $T_g$ years at one firm, write
+$y_{gt}$ for log wage and $\bar y_{g,-t}$ for its mean in the other years. First
+consider the model without estimated controls. When year $t$ is left out, the
+stayer's predicted wage is $\bar y_{g,-t}$. Averaging KSS's leave-out products
+within this worker gives exactly the usual sample variance:
+\begin{equation}\label{eq:q}
+ \frac{1}{T_g}\sum_t y_{gt}(y_{gt}-\bar y_{g,-t})
+   =\frac{1}{T_g-1}\sum_t(y_{gt}-\bar y_g)^2
+   \equiv q_g .
+\end{equation}
+The equality holds for two years as well as for twenty. To interpret $q_g$ as the
+variance of each year's error, the errors must be independent across years with a
+common variance within the worker. Their variance can differ freely across workers.
+
+For a mover, the answer depends on what is left out. Under the default, \fevc{}
+deletes the entire match with one employer. Several years at that employer give one
+deletion unit, whose errors may be correlated within the match. The other employers
+offer observations at different expected wages. The program therefore pools
+information across movers to estimate the variance of a mover's match. Under
+observation deletion, each observation is a separate unit and independence is
+assumed at that level. Two years of the same mover at the same employer can then
+serve as repeat measurements. It is the combination of the common mean and the
+unit of independence that matters.
+
+The distinction matters even in a panel with many stayers. On the six-year Veneto
+design, stayers account for 75\% of the rows after matches are formed. Yet movers
+account for 97\% of the first term of the estimated sampling variance for worker
+variance, and essentially all of that term for firm variance and the covariance.
+For the variance of the sum, the movers' share is 77\%
+(Table~\ref{tab:real}). The quality of the mover model thus matters for all four
+components. How much it matters depends on which workers link firms and how strongly
+their wages influence the component of interest.
+
+\section{From wage variability to a standard error}\label{sec:estimator}
+
+\subsection{The sampling variance}
+Let $y_i=x_i'\beta+\varepsilon_i$ be the model on deletion units, conditional on
+the regressors and the effects. Under match deletion, a mover's row is the mean
+log wage of the match multiplied by $\sqrt{F_i}$, where $F_i$ is its number of
+person-years. Its fitted mean is $\sqrt{F_i}(\alpha_g+\psi_j)$ for worker $g$ at
+firm $j$. A stayer contributes one row per year with $F_i=1$. The errors have
+mean zero, are independent across units, and have variances $\sigma_i^2$.
+Throughout this derivation the controls and centring constant are known.
+Section~\ref{sec:controls} considers their estimation.
+
+The four components are the person-year variance of worker effects, the variance
+of firm effects, their covariance, and the variance of their sum. Each is a
+quadratic form $\theta=\beta'A\beta$ with known symmetric $A$. Write
+$S_{xx}=X'X$ on an identified parameterisation, $P=XS_{xx}^{-1}X'$,
+$M=I-P$, and $B=XS_{xx}^{-1}AS_{xx}^{-1}X'$. With leverage $P_{ii}<1$,
+the raw leave-out product is $\hat\sigma_i^2=y_i(y_i-x_i'\hat\beta)/(1-P_{ii})$.
+KSS subtract $\sum_i B_{ii}\hat\sigma_i^2$ from the plug-in estimate
+$\hat\beta'A\hat\beta$. Equivalently,
+\begin{equation}\label{eq:ustat}
+ \hat\theta=y'Cy,\qquad
+ C_{i\ell}=B_{i\ell}-\tfrac12 M_{i\ell}
+  \left(\frac{B_{ii}}{M_{ii}}+\frac{B_{\ell\ell}}{M_{\ell\ell}}\right).
+\end{equation}
+With exact weights $C_{ii}=0$. Every product in the estimate pairs different
+units, which is why arbitrary differences in their variances leave the point
+estimate unbiased.
+
+Those variances do enter its precision. Write $\mu=X\beta$, $m=C\mu$ and
+$\hat m=Cy$. Expanding $y'Cy$ about $\mu$ gives a linear term $2m'\varepsilon$
+and a quadratic term $\varepsilon'C\varepsilon$. They are uncorrelated because
+the errors are independent and $C$ has zero diagonal. Their variances add:
+\begin{equation}\label{eq:V}
+ \V[\hat\theta]=4\sum_i m_i^2\sigma_i^2
+       +2\sum_i\sum_{\ell\ne i} C_{i\ell}^2\sigma_i^2\sigma_\ell^2 .
+\end{equation}
+In the first term, $m_i$ measures how much an error in unit $i$ moves the
+component to first order. In the second, the weights measure how much errors
+in different units matter jointly. The raw leave-out product is unbiased for
+each $\sigma_i^2$. Two such products generally use overlapping leave-out fits,
+so their product does not in general estimate $\sigma_i^2\sigma_\ell^2$
+without bias. Repeat measurements and the model for the remaining units supply
+the variance inputs for both terms.
+
+\subsection{The fitted variance outside repeat-measurement sets}\label{sec:transfer}
+Under match deletion let $\cG$ denote the eligible stayers and $\cR$ the movers'
+matches. Each row of stayer $g$ receives $q_g$. For the remaining rows the model
+allows the variance to vary with the worker, the firm and the design. Match
+length matters even if yearly variances are constant. If the $F_i$ yearly errors in a match have
+common variance $\sigma^2$ and pairwise correlation $\rho$, the collapsed row
+has variance $\sigma^2[1+(F_i-1)\rho]$. Leverage distinguishes
+units on which the regression depends heavily. Finally, a worker's and a firm's
+wage levels help predict variability where the worker or firm effect is large
+in absolute value and errors can have a large weight in \eqref{eq:V}.
+
+The program fits a scale and then a profile. With $p_i$ and $f_i$ the midranks
+of leverage and unit mass, rescaled to $[-1,1]$, the scale regression is
+\begin{equation}\label{eq:scale}
+ z_i=(1,p_i,f_i,p_i^2,f_i^2)',\qquad
+ \hat c_z=\arg\min_c\sum_{i\in\cR}(\hat\sigma_i^2-z_i'c)^2 .
+\end{equation}
+Write $\hat s_i$ for the fitted scale, floored at 5\% of the mean raw
+product on the fitting sample. The profile uses the estimated worker and firm
+effects, each standardised over person-years and capped at three standard
+deviations in either direction. Writing these standardised, capped effects as $\tilde\alpha_i$ and $\tilde\psi_i$,
+\begin{equation}\label{eq:profile}
+ b_i=b(\tilde\alpha_i,\tilde\psi_i),\quad
+ \hat d=\arg\min_d\sum_{i\in\cR}(\hat\sigma_i^2-\hat s_i b_i'd)^2,\quad
+ \st_i^2=\hat s_i b_i'\hat d .
+\end{equation}
+Here $b(a,h)=(1,a,a^2,h,h^2,ah)'$ and $n_{\cR}$ denotes the number of mover rows.
+These equations describe the full basis in a large sample. The package allows at most one coefficient per hundred fitted units
+in each step (retaining an intercept in small samples) and drops collinear
+terms in a fixed order. Under observation deletion the fit ordinarily uses the units
+outside repeated cells. With fewer than 100 such units it uses all mover units.
+With $e_i=y_i-x_i'\hat\beta$, the final variance floor is
+$10^{-8}\operatorname{median}_i\{e_i^2/(1-P_{ii})\}$.
+It also applies to set variances. A nonpositive mean leave-out product or a fit
+in which every fitted variance hits the floor prevents inference.
+
+Fitting the profile on estimated effects has a cost. A worker with only a few
+years of wages can have an imprecise estimated effect even in a very large panel.
+The error in that effect also enters the observations used to fit the profile.
+Under Gaussian errors with a common variance the conditional mean of the raw
+product given the fitted coefficients is the common variance. With heteroskedastic
+errors the distortion can have either sign. The empirical checks in
+Section~\ref{sec:evidence} include this dependence.
+
+\subsection{Why the formula subtracts a term}
+For a repeat-measurement set $g$ with $T_g$ units let $c_g$ be the weight
+$C_{i\ell}$ between two distinct units in the set. The algebra is easiest to
+see for stayers under match deletion. For those rows
+$c_g=A_{gg}/[T_g(T_g-1)]$, with $A_{gg}$ the worker's diagonal in the target.
+For repeated cells under observation deletion the corresponding weight is
+$B_{ii}/(1-P_{ii})$. Using the set and fitted variances gives
+\begin{equation}\label{eq:Vhat}
+ \widehat{\V}[\hat\theta]
+  =4\sum_i\hat m_i^2\st_i^2
+  -2\sum_i\sum_{\ell\ne i}C_{i\ell}^2\st_i^2\st_\ell^2
+  +4\sum_g c_g^2q_g^2\,\frac{(T_g-2)(T_g-1)}{T_g+1}.
+\end{equation}
+The subtraction corrects for estimating $m_i$. Even with the true variances in
+hand, $\hat m_i^2$ exceeds $m_i^2$ on average by
+$\sum_\ell C_{i\ell}^2\sigma_\ell^2$. Summed over observations, the first term
+therefore includes the quadratic contribution to \eqref{eq:V} twice. Subtracting
+one copy leaves the desired variance.
+
+The last term accounts for using a set's sample variance more than once. The
+same wages enter the variance assigned to each row and the influences of the
+other rows in the set. Identical regressors give the adjustment its closed
+form. For a stayer, $c_g$ vanishes for firm variance and the worker--firm
+covariance. The adjustment can matter for worker variance and the variance of
+the sum. It is zero for a two-observation set under the stated fourth-moment
+condition. A covariance between two components follows by replacing the
+squares of their influences and weights with cross-products.
+
+\paragraph{What the result says about misspecification.}
+Consider exact weights, a fixed centring constant and no estimated controls.
+Suppose stayers' errors have one variance per stayer, zero third moments and
+normal fourth moments. Give each mover's row a fixed variance value
+$\sigma_i^2+\Delta_i$. Proposition~\ref{prop:mean} shows that the resulting
+variance estimate has mean $\V[\hat\theta]+b(\Delta)$, with
+\begin{equation}\label{eq:b}
+ b(\Delta)=4\sum_{i\in\cR}m_i^2\Delta_i
+      -2\sum_{i,\ell\in\cR}C_{i\ell}^2\Delta_i\Delta_\ell .
+\end{equation}
+With the true mover variances the estimate is exactly unbiased. With misspecified
+values, a good fit to the average variance can coexist with a poor standard
+error if the errors of the model occur on influential rows. Small errors in
+the first sum can also leave a discrepancy in the second when model errors
+are related across matches of the same worker. The weights change with the
+component, so the same variance model can work well for one component and
+poorly for another.
+
+For the variance estimate to concentrate around its mean, no one stayer or
+quadratic direction can carry a lasting share of sampling variance, and
+suitable moments must exist. The fitted-model consistency result also
+requires the weighted misspecification in \eqref{eq:b} to be negligible. Its
+two-regression application treats the characteristics in the profile as fixed.
+The implemented profile uses estimated effects, and some routes use projected
+weights. Appendix~\ref{sec:results} gives the exact scope of the results and
+Appendix~\ref{app:proofs} gives their proofs.

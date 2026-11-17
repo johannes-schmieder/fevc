@@ -1,0 +1,228 @@
+\section{Formal results for the baseline estimator}\label{sec:results}
+
+\begin{enumerate}[label=\textbf{A\arabic*.},leftmargin=3em]
+\item \textbf{Independent errors.} The errors have mean zero and are independent across rows: across the
+matches of a mover and across the years of a stayer. This is the assumption under which $\hat\theta$ is
+unbiased; nothing is added to it.
+\item \textbf{One variance per stayer.} The rows of stayer $g$ share one variance $\sigma_g^2$. Across stayers
+the variances are unrestricted.
+\item \textbf{Shape of stayers' errors.} They have zero third moment and the kurtosis of the normal
+distribution, $\E\varepsilon_i^4=3\sigma_i^4$. (Any other stated kurtosis can be used, with the adjustment of
+Appendix~\ref{app:proofs}.) Movers' errors may have any shape.
+\item \textbf{Movers follow the model on average.} Let $v_i^*$ be the fitted value of the model for mover row
+$i$ when the true variances are used as outcomes in the two steps \eqref{eq:scale} and \eqref{eq:profile}, and
+$\Delta_i=v_i^*-\sigma_i^2$ its error. The weighted error $b(\Delta)$ is defined in \eqref{eq:b}. The assumption is
+$b(\Delta)/\V[\hat\theta]\to0$ along the sequence of designs.
+Corollary~\ref{cor:transfer} specifies the population fit at fixed characteristics.
+\item \textbf{No dominant stayer and no dominant direction.} No single stayer carries more than a small share of
+$\V[\hat\theta]$, and no single direction (eigenvalue) accounts for more than a small share of it;
+Proposition~\ref{prop:conc} makes both precise.
+\end{enumerate}
+
+\smallskip\noindent\textbf{Not assumed:} equal variances across workers or firms; that stayers' variances
+follow the profile, or any model; normal errors for movers; any independence that $\hat\theta$ does not itself
+assume.
+
+\subsection{Mean and concentration of the variance estimator}
+The results come in three steps: the estimator is right on average when movers' variances are known; it
+settles down in large samples; and fitting the movers' variances adds an error of known form. All three are for
+the exact weights \eqref{eq:ustat}. Proofs are in Appendix~\ref{app:proofs}.
+
+\begin{proposition}[Exact mean]\label{prop:mean}
+Assume A1 to A3 and give the movers' rows any non-random numbers $\st_i^2=\sigma_i^2+\Delta_i$ in
+\eqref{eq:Vhat}. Then, in every sample,
+\[
+\E\big[\hat\V[\hat\theta]\big]=\V[\hat\theta]+b(\Delta),
+\]
+with $b(\Delta)$ as in \eqref{eq:b}. In particular $\hat\V[\hat\theta]$ is unbiased when movers' rows receive
+their true variances.
+\end{proposition}
+
+The stayers' part of the estimator is therefore exact in finite samples, whatever the stayers' variances are.
+An error in the movers' variances enters only through $b(\Delta)$. Its first part weights the errors by
+$m_i^2$, so errors that average out against $m_i^2$ do no harm there; its second part is quadratic in the
+errors. Both parts count.
+
+\paragraph{When A2 or A3 fails.} The appendix gives the mean of the estimator in three cases. They concern
+$\hat\sigma^2_\alpha$ and $\hat\sigma^2_{\alpha+\psi}$ only, because $c_g=0$ for the other two components.
+\begin{itemize}
+\item \emph{Unequal variances within a stayer.} Because $m_i$ is the same in every year of a stayer, the first
+term of \eqref{eq:V} involves a stayer's variances only through their average, and $q_g$ is unbiased for that
+average. The terms within the stayer are affected: with normal errors the estimator is too large on average by
+$6\sum_gc_g^2\,s_g^2\,(T_g-1)^2(T_g+4)/(T_g(T_g+1))$, where $s_g^2$ is the sample variance of the stayer's $T_g$
+variances.
+\item \emph{Another kurtosis.} If stayers' errors have kurtosis $\kappa$, its mean shifts by
+$2(\kappa-3)\sum_g\sigma_g^4\,c_g^2\,(T_g-1)^2(T_g+4)/(T_g(T_g+1))$: fat tails make the variance estimate too
+large.
+\item \emph{Skewness.} If stayers' errors have third moments $\mu_{3g}$, its mean shifts by
+$8\sum_g(T_g-1)\,c_g\,m_g\,\mu_{3g}$, where $m_g$ is the common value of $m_i$ on the stayer's rows. The shift is
+positive when $m_g$ and $\mu_{3g}$ tend to have the same sign, for example when stayers with high person
+effects have right-skewed errors and stayers with low person effects left-skewed ones.
+\end{itemize}
+These terms are not bounded by the adjustment in \eqref{eq:Vhat}: for a stayer with two years the adjustment
+is zero and the first two are not. Nor do they vanish in large samples. In a panel that consists of two-year
+stayers alone, with equal person effects and equal variances, a kurtosis of $\kappa$ shifts the mean of the variance estimate for
+$\hat\sigma^2_\alpha$ by the fraction $(\kappa-3)(G-1)/(2G-1)$ of the variance when there are $G$ stayers,
+which tends to $(\kappa-3)/2$. How much
+they matter depends on the share of the variance that comes from the pairs of rows within stayers, which is
+small when movers' rows carry most of the variance, as in the Veneto panel of Section~\ref{sec:evidence}. The fat-tailed and skewed simulations there violate A3.
+
+\begin{proposition}[Convergence]\label{prop:conc}
+Under the assumptions of Proposition~\ref{prop:mean}, suppose $\E\varepsilon_i^8\le\bar c\,\sigma_i^8$ on
+stayers' rows, $\E\varepsilon_i^4\le\bar\kappa\,\sigma_i^4$ on movers' rows, and
+$|\st_i^2|\le\bth\,\sigma_i^2$ on movers' rows with $\bth\ge1$. Let
+\[
+\phi_g=\frac{1}{\V[\hat\theta]}\sum_{i\in g}\sigma_i^2\Big(4m_i^2+2\sum_\ell C_{i\ell}^2\sigma_\ell^2\Big)
+\]
+be the share of the variance \eqref{eq:V} carried by the rows of stayer $g$, and let $\lambda_{\max}$ be the
+largest absolute eigenvalue of the matrix with entries $\sigma_iC_{i\ell}\sigma_\ell$. Then
+\[
+\E\bigg[\Big(\frac{\hat\V[\hat\theta]-\V[\hat\theta]-b(\Delta)}{\V[\hat\theta]}\Big)^{2}\bigg]\;\le\;
+c'\,\bth^2\Big(\max_g\phi_g+\frac{\lambda_{\max}^2}{\V[\hat\theta]}\Big),
+\]
+where $c'$ depends only on $\bar c$ and $\bar\kappa$.
+\end{proposition}
+
+So with true variances for movers the ratio $\hat\V[\hat\theta]/\V[\hat\theta]$ converges to one along any
+sequence of designs in which the moment bounds hold and (a) no single stayer carries more than a vanishing
+share of the variance and (b) $\lambda_{\max}^2/\V[\hat\theta]\to0$. The two design conditions (a) and (b) are
+implied by the design conditions of KSS's Theorem~2, under which $\hat\theta$ is asymptotically normal, provided
+the number of years per stayer is bounded (Lemma~\ref{lem:kss}). Condition (b) can fail when there are few
+firms, or when groups of firms are linked by few movers, which KSS call weak identification; the propositions
+then give no guarantee. The bounds concern exact weights and fixed mover inputs.
+
+\begin{proposition}[Fitted variances for movers]\label{prop:fitted}
+Assume A1 to A3, the moment bounds of Proposition~\ref{prop:conc}, and Assumption~1 of KSS (uniformly bounded
+fourth moments, variances bounded away from zero, leverages bounded away from one, bounded $x_i'\beta$). Let
+the movers' rows receive fitted values $\st_i^2$ that may depend on the data, and suppose there are a statistic
+$\hat\eta$ of fixed dimension, a non-random $\eta^*$, non-random functions $\psi_i$ and constants
+$c_\eta,L,r,\bar\psi$ such that $\st_i^2=\psi_i(\hat\eta)$ for all $i\in\cR$ with probability tending to one,
+and
+\[
+\E\|\hat\eta-\eta^*\|^2\le\frac{c_\eta}{n_0},\qquad
+|\psi_i(\eta)-\psi_i(\eta^*)|\le L\,\|\eta-\eta^*\|\ \text{ whenever }\|\eta-\eta^*\|\le r,\qquad
+|\psi_i(\eta^*)|\le\bar\psi ,
+\]
+for all $i\in\cR$. Put $\Delta_i=\psi_i(\eta^*)-\sigma_i^2$. Then, along a sequence of designs with
+$n_0\to\infty$ and the constants fixed,
+\[
+\frac{\hat\V[\hat\theta]}{\V[\hat\theta]}=1+\frac{b(\Delta)}{\V[\hat\theta]}+O_p\bigg(n_0^{-1/2}+
+\Big(\max_g\phi_g+\frac{\lambda_{\max}^2}{\V[\hat\theta]}\Big)^{1/2}\bigg).
+\]
+\end{proposition}
+
+The fitted values may depend on the same data as $\hat m$ in any way; the proof does not use independence
+between them.
+
+\begin{corollary}[The model for movers]\label{cor:transfer}
+Assume A1 to A3, the moment bounds of Proposition~\ref{prop:conc} and Assumption~1 of KSS. Suppose the
+characteristics are non-random and bounded: $z_i$ in \eqref{eq:scale}, and $b_i$ in place of
+$b(\tilde\alpha_i,\tilde\psi_i)$ in \eqref{eq:profile}. Let $c_z^*$ and $d^*$ be the results of the two steps when
+the true variances $\sigma_i^2$ are used as outcomes, and
+\[
+v_i^*=s_i^*\,b_i'd^*,\qquad s_i^*=z_i'c_z^* .
+\]
+Suppose that the smallest eigenvalues of $n_{\cR}^{-1}\sum_{i\in\cR}z_iz_i'$ and of
+$n_{\cR}^{-1}\sum_{i\in\cR}s_i^{*2}\,b_ib_i'$ are bounded away from zero, where $n_{\cR}$ is the number of movers'
+rows; and that, with probability tending to one, $s_i^*$ and $v_i^*$ exceed their floors by a uniform margin.
+Then Proposition~\ref{prop:fitted} applies with $n_0=n_{\cR}$ and
+\[
+\Delta_i=v_i^*-\sigma_i^2 .
+\]
+If $\sigma_i^2=s_i^*\,b_i'd$ for all $i\in\cR$ and some $d$, then $\Delta=0$, and
+$\hat\V[\hat\theta]/\V[\hat\theta]\to1$ in probability as $n_{\cR}\to\infty$ under A5. This is the case, for
+instance, when movers' variances are $\sigma_i^2=(z_i'c)(b_i'd)$ and
+$\sum_{i\in\cR}z_i\,(z_i'c)\,(b_i'd-\bar\pi)=0$ for some constant $\bar\pi\neq0$, as when the profile $b_i'd$ has
+the same mean at every value of $z_i$.
+\end{corollary}
+
+
+The corollary treats the features of the profile as fixed, with floors asymptotically inactive.
+Estimated effects in a short panel can retain estimation error as the panel grows and can share
+errors with the leave-out products. The corollary does not establish consistency for that case.
+Under the conditions of KSS's Theorem~2, a consistent variance estimate gives an
+asymptotically valid normal interval.
+\subsection{Simulation of the quadratic term}
+\begin{proposition}[Simulated double sum]\label{prop:sim}
+Let $\hat\V_{D_s}$ be \eqref{eq:Vhat} with the double sum computed by \eqref{eq:sim}. Under the assumptions of
+Proposition~\ref{prop:conc}, with $0\le\st_i^2\le\bth\sigma_i^2$ on movers' rows,
+$\E[\hat\V_{D_s}\mid\text{data}]=\hat\V[\hat\theta]$ and
+\[
+\frac{\E\big[(\hat\V_{D_s}-\hat\V[\hat\theta])^2\big]}{\V[\hat\theta]^2}\;\le\;\frac{c''\,\bth^4}{D_s}\cdot\frac{\lambda_{\max}^2}{\V[\hat\theta]} ,
+\]
+where $c''$ depends only on $\bar c$.
+\end{proposition}
+Here $D_s$ is the number of independent draws in \eqref{eq:sim}. For fitted variances the conditional mean
+identity still holds. Given the data, the variance of $\hat\V_{D_s}$ is $8\tr(\tilde K^4)/D_s$ with
+$\tilde K_{i\ell}=\st_i C_{i\ell}\st_\ell$.
+\subsection{Inference with one dominant direction}
+\begin{proposition}[The covariance matrix for $q=1$]\label{prop:q1}
+Assume A1 to A3, the moment bounds of Proposition~\ref{prop:conc} and Assumption~1 of KSS, suppose
+$\Sigma_{\rm rr}>0$, and give the movers' rows non-random numbers $\st_i^2=\sigma_i^2+\Delta_i$ with
+$|\st_i^2|\le\bth\,\sigma_i^2$ for a constant $\bth\ge1$. Let
+$\phi_g^{\rm r}$ and $\lambda_{\max}^{\rm r}$ be the quantities of Proposition~\ref{prop:conc} for the remainder,
+that is, with $C^{\rm r}$, $m^{\rm r}$ and $\Sigma_{\rm rr}$ in place of $C$, $m$ and $\V[\hat\theta]$, and let
+$\epsilon_{\rm r}=\max_g\phi_g^{\rm r}+(\lambda_{\max}^{\rm r})^2/\Sigma_{\rm rr}$. Write
+$\hat\Sigma_{bb}^{\rm lo}=\sum_iw_{i1}^2\hat\sigma_i^2$ for the leave-out number in \eqref{eq:q1est},
+$d_{\rm r}(\Delta)=2\sum_{i\in\cR}w_{i1}m_i^{\rm r}\Delta_i$, and $b_{\rm r}(\Delta)$ for \eqref{eq:b} formed with
+$C^{\rm r}$ and $m^{\rm r}$. Then, in every sample,
+\[
+\E\hat\Sigma_{bb}^{\rm lo}=\Sigma_{bb},\qquad \E\hat\Sigma_{b{\rm r}}=\Sigma_{b{\rm r}}+d_{\rm r}(\Delta),\qquad
+\E\hat\Sigma_{\rm rr}=\Sigma_{\rm rr}+b_{\rm r}(\Delta),
+\]
+and
+\begin{align*}
+\E\Big[\Big(\frac{\hat\Sigma_{bb}^{\rm lo}}{\Sigma_{bb}}-1\Big)^2\Big]&\le c_b\,\max_iw_{i1}^2,\\
+\E\Big[\frac{\big(\hat\Sigma_{b{\rm r}}-\Sigma_{b{\rm r}}-d_{\rm r}(\Delta)\big)^2}{\Sigma_{bb}\,\Sigma_{\rm rr}}\Big]&\le c_{b{\rm r}}\,\bth^2\,\epsilon_{\rm r},\qquad
+\E\Big[\Big(\frac{\hat\Sigma_{\rm rr}-\Sigma_{\rm rr}-b_{\rm r}(\Delta)}{\Sigma_{\rm rr}}\Big)^2\Big]\le c'\,\bth^2\,\epsilon_{\rm r},
+\end{align*}
+where $c_b$, $c_{b{\rm r}}$ and $c'$ depend only on the constants of the assumptions. Consequently, along a
+sequence of designs in which $\max_iw_{i1}^2\to0$, $\epsilon_{\rm r}\to0$, $b_{\rm r}(\Delta)/\Sigma_{\rm rr}\to0$,
+$d_{\rm r}(\Delta)/(\Sigma_{bb}\Sigma_{\rm rr})^{1/2}\to0$ and $|\rho|$ stays below a number less than one, the matrix
+$\hat\Sigma^{\rm lo}$ with entries $\hat\Sigma_{bb}^{\rm lo}$, $\hat\Sigma_{b{\rm r}}$, $\hat\Sigma_{\rm rr}$ satisfies
+$\Sigma^{-1/2}\hat\Sigma^{\rm lo}\Sigma^{-1/2}\to I$ in probability. The same holds when the movers' rows receive
+the fitted values of Corollary~\ref{cor:transfer}, with $\Delta_i=v_i^*-\sigma_i^2$ and $n_{\cR}\to\infty$.
+\end{proposition}
+
+The proposition is about $\hat\Sigma^{\rm lo}$, the matrix with KSS's first entry. The matrix with the rule
+\eqref{eq:q1est} need not be consistent: where the fitted variances overstate $\Sigma_{bb}$ its first entry
+stays too large. What the rule keeps is coverage. Let $\hat\rho_{\rm lo}$ be the correlation computed from
+$\hat\Sigma^{\rm lo}$.
+
+\begin{corollary}[Coverage]\label{cor:q1}
+\textup{(a)} In any sample in which $\hat\Sigma^{\rm lo}$ is positive definite and $\hat\rho_{\rm lo}^2\le2/3$, the
+interval of Section~\ref{sec:q1int} formed with \eqref{eq:q1est} contains the interval formed with
+$\hat\Sigma^{\rm lo}$.
+\textup{(b)} Suppose the conditions of the last part of Proposition~\ref{prop:q1} hold, with $|\rho|$ at most a
+constant strictly below $(2/3)^{1/2}$, together with the hypotheses of KSS's Theorem~3 for $q=1$: their
+Assumptions~1 and~2, $\max_iw_{i1}^2\to0$, and
+$\Sigma_{\rm rr}^{-1}\max_i\big((\tilde x_{i1}'\beta)^2+(\check x_{i1}'\beta)^2\big)\to0$. Then the interval formed
+with \eqref{eq:q1est} covers $\theta$ with probability of at least $1-\alpha$ in the limit.
+\end{corollary}
+
+Part (a) is algebra (Appendix~\ref{app:proofs}); the bound $2/3$ is on the squared correlation before the first entry is
+raised, and without it a larger first entry can lower the critical value and move an end point inwards. Part (b)
+combines three things: KSS's Theorem~3, under which $\hat b_1$ and $\hat\theta_{\rm r}$ are jointly asymptotically
+normal; their Lemma~7, under which the interval with a consistent matrix then covers with probability of at
+least $1-\alpha$ in the limit; and part (a), which holds with probability tending to one. The condition on
+$\tilde x_{i1}$ and $\check x_{i1}$ says that no single row dominates the linear part of the remainder; it is
+KSS's and is not implied by the conditions of the proposition. If the fitted variances overstate $\Sigma_{bb}$ in
+large samples, the interval is longer than necessary but its coverage bound stands. The conditions of the
+proposition, in words:
+\begin{itemize}
+\item \emph{No single row dominates $\hat b_1$}: $\max_iw_{i1}^2\to0$. This is the Lindeberg condition of KSS's
+Theorem~3. KSS read $1/\max_iw_{i1}^2$ as an effective number of observations behind $\hat b_1$.
+\item \emph{The remainder has no dominant stayer and no dominant direction}: $\epsilon_{\rm r}\to0$. When the
+years per stayer are bounded, a sufficient condition is the remainder's analogue of KSS's conditions, with the
+second eigenvalue set against the remaining ones, $\lambda_2^2/\sum_{\ell\ge2}\lambda_\ell^2\to0$
+(Appendix~\ref{app:proofs}). This is stronger than KSS's Assumption~2, which sets $\lambda_2^2$ against the sum
+over all eigenvalues.
+\item \emph{The model's errors average out for the remainder}, in its variance and in its covariance with
+$\hat b_1$: $b_{\rm r}(\Delta)/\Sigma_{\rm rr}\to0$ and $d_{\rm r}(\Delta)/(\Sigma_{bb}\Sigma_{\rm rr})^{1/2}\to0$. This is
+A4 for the remainder. Both are zero when movers' variances follow the model.
+\item \emph{$\hat b_1$ and the remainder are not collinear.} With equal variances $\rho=0$.
+\end{itemize}
+No independence beyond A1 is used, and the stayers' part is again exact in the mean: only the third condition
+involves the model. The zero third moments of A3 are needed for the mean of $\hat\Sigma_{b{\rm r}}$; with
+skewed stayers' errors it shifts by a term given in the appendix. As in Section~\ref{sec:results}, the
+proposition evaluates the profile at fixed characteristics; the estimator evaluates it at estimated effects.

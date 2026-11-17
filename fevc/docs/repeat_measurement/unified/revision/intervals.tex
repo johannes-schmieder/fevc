@@ -1,0 +1,191 @@
+\section{Which interval to report}\label{sec:q1}\label{sec:impl}
+
+Consider two groups of firms joined by a small number of workers who switch
+between them. Many wages can pin down relative pay within each group, while
+those few movers determine the difference in pay between the groups. Firm
+variance depends on the \emph{square} of that difference. Even if the estimated
+difference is nearly normal, its square can be far from normal. A symmetric
+interval based on the square root of \eqref{eq:Vhat} can then be too short or
+even unavailable. Whether this happens depends on the component. The same
+mobility network can support a normal interval for one component and require
+a different interval for another.
+
+The default in \fevc{} 0.6.0 reports one interval per component. In a well-connected
+design a positive variance estimate gives the familiar interval
+$\hat\theta\pm1.96\sqrt{\widehat{\V}[\hat\theta]}$ at the 95\% level.
+When a single direction accounts for more than 10\% of the estimated sampling
+variance, the program uses the $q=1$ interval of KSS if available. It can
+also use that interval when the normal variance estimate is nonpositive.
+For the variance of the sum, the nonzero eigenvalues of the target are all
+equal, and the default retains the normal interval when available. Several
+dominant directions would call for a different analysis.
+
+\subsection{One dominant direction}\label{sec:q1int}
+For each component, take the eigenvalue $\lambda_1$ of $Av=\lambda S_{xx}v$
+that is largest in absolute value. Normalise the corresponding observation
+weights $w_1=Xv_1$ to unit length. The scalar score $\hat b_1=w_1'y$
+estimates $b_1=w_1'\mu$. With exact weights and without estimated controls,
+KSS's leave-out variance estimate for this score is
+$V_b^{\rm lo}=\sum_i w_{i1}^2\hat\sigma_i^2$. Removing the direction from
+the target gives the identity
+\[
+  \hat\theta=\lambda_1(\hat b_1^2-V_b^{\rm lo})+\hat\theta_{\rm r}.
+\]
+The remainder $\hat\theta_{\rm r}$ is another leave-out estimate. Its weights
+$C^{\rm r}$ follow from \eqref{eq:ustat} with $B-\lambda_1w_1w_1'$ in place of
+$B$. Write $m^{\rm r}=C^{\rm r}\mu$ and $\hat m^{\rm r}=C^{\rm r}y$.
+The covariance matrix of the score and the remainder has entries
+\begin{equation}\label{eq:q1cov}
+ \Sigma_{bb}=\sum_i w_{i1}^2\sigma_i^2,\qquad
+ \Sigma_{b{\rm r}}=2\sum_i w_{i1}m_i^{\rm r}\sigma_i^2,\qquad
+ \Sigma_{\rm rr}=\V[\hat\theta_{\rm r}],
+\end{equation}
+where the last variance is \eqref{eq:V} for $C^{\rm r}$. The package estimates
+the entries with the same variance inputs used for the normal interval:
+\begin{equation}\label{eq:q1est}
+ V_b=\hat\Sigma_{bb}=\max\!\left\{V_b^{\rm lo},\,\sum_i w_{i1}^2\st_i^2\right\},
+ \qquad \hat\Sigma_{b{\rm r}}=2\sum_i w_{i1}\hat m_i^{\rm r}\st_i^2,\qquad
+ \hat\Sigma_{\rm rr}=\widehat{\V}[\hat\theta_{\rm r}].
+\end{equation}
+Here $\widehat{\V}[\hat\theta_{\rm r}]$ includes the pair adjustment with the
+remainder's weights. The two candidates for $V_b$ protect against different
+errors. The leave-out estimate is unbiased under the baseline assumptions,
+but it can be negative when only a few observations carry the direction. The
+fitted estimate is more stable but may understate the variance of precisely
+those observations. Taking the larger value guards against a downward error
+at the cost of potentially longer intervals. The leave-out estimate
+$V_b^{\rm lo}$ still enters the decomposition of the point estimate.
+
+The interval takes the smallest and largest values of $\lambda_1 b^2+\theta_{\rm r}$
+over a confidence ellipse for $(b,\theta_{\rm r})$ centred at
+$(\hat b_1,\hat\theta_{\rm r})$. It thus allows for the curvature of the
+square. With $\hat\rho$ the estimated correlation in \eqref{eq:q1est}, the curvature is
+\begin{equation}\label{eq:kappa}
+ \hat\kappa=\frac{2|\lambda_1|V_b}
+ {\sqrt{\hat\Sigma_{\rm rr}(1-\hat\rho^2)}} .
+\end{equation}
+Writing $u=(b-\hat b_1,\theta_{\rm r}-\hat\theta_{\rm r})'$, the ellipse
+is $u'\hat\Sigma^{-1}u\le z_{\alpha,\hat\kappa}^{\,2}$.
+The Andrews--Mikusheva (2016) radius $z_{\alpha,\kappa}$ is the
+$1-\alpha$ quantile of
+$\sqrt{Z_1^2+(|Z_2|+\kappa^{-1})^2}-\kappa^{-1}$ for independent
+standard normal $Z_1,Z_2$, interpreted by continuity at zero curvature.
+The package simulates the critical value with 100,000 draws. Its 95\% radius rises from 1.96 at zero curvature towards
+2.45 at high curvature. A positive-definite covariance matrix is necessary.
+The reported endpoints can be asymmetric, and their distance from the point
+estimate cannot be summarised by a single standard error.
+
+\subsection{The choice made by the command}
+When the normal variance estimate is positive, \fevc{} compares 0.10 with
+\[
+ \frac{4\lambda_1^2\max(\hat b_1^2-V_b,0)V_b+2\lambda_1^2V_b^2}
+      {\widehat{\V}[\hat\theta]} .
+\]
+The numerator estimates the sampling variance attributable to the leading
+direction, including the part that depends on the size of its score. Both
+numerator and denominator are estimated, so the ratio can exceed one.
+KSS's squared-eigenvalue share uses only the design. The two statistics answer
+different questions, even when both cutoffs are set at 10\%.
+
+When \fevc{} reports a $q=1$ interval, it displays endpoints and leaves the
+standard-error column empty for that component. The high-rank standard
+error, when it exists, remains available for comparison.
+\code{e(inference\_intervals)} records the interval selected by the default.
+When all four components have admissible normal intervals and their joint
+covariance is available, \code{e(V)} gives that covariance. Its fourth row
+and column respect the identity between the variance of the sum and the
+three base components. Users can request the normal form with
+\code{inference(highrank)} or the $q=1$ form wherever available with
+\code{inference(q1)}. Under the default a request that cannot support
+inference returns point estimates with a reason. \code{inference(none)}
+requests point estimates alone.
+
+The coverage result for a prespecified $q=1$ interval requires a diffuse
+remainder, a leading score supported by a growing effective number of
+observations, accurate variance inputs in the relevant directions, and the
+conditions for joint normality. For the larger-of-two rule in \eqref{eq:q1est},
+the result also bounds the correlation between score and remainder
+(Corollary~\ref{cor:q1}). The 10\% switching rule was chosen on development
+simulations and evaluated on fresh designs. Its coverage is an empirical
+finding (Section~\ref{sec:impl-mc}). Adding observations away from a
+bottleneck cannot by itself justify an interval that rests on the same handful
+of movers.
+
+\section{Controls, centring and computation}\label{sec:controls}
+
+\subsection{Which estimator the control adjustment describes}
+Year effects illustrate why estimated controls matter. Removing the true year
+effects would leave repeated observations of the same worker at the same firm
+with a common expected wage. Removing \emph{estimated} year effects also puts
+the estimation error of each year coefficient into every adjusted wage for
+that year. Treating those wages as independent can materially understate
+uncertainty. In the dense Gaussian example in Appendix~\ref{app:ctlnum},
+holding the control estimates fixed gives only 62\% of the true \emph{variance}
+of the estimated variance of the sum under match deletion with one error
+variance per cell. The adjusted calculation gives 99.8\%.
+
+The standard error describes the \emph{fixed-offset} estimator. This estimator
+first fits the controls, removes their fitted contribution to wages, and then
+performs leave-out estimation on the adjusted outcome. Its uncertainty includes
+estimation of the controls to first order. The default joint point estimate
+instead re-estimates the control coefficients inside each leave-out fit. That
+adds a term which can be material when the control index is large or closely
+aligned with a difference between groups of firms. It falls outside the reported
+standard error. Under match deletion, \code{nuisance(fixedoffset)} gives the point
+estimator to which the adjustment applies directly. Under observation deletion
+the supported inference route requires joint nuisance estimation, and the
+native route also requires unit frequencies.
+
+To see the origin of the correction, let $v$ be the error vector in the
+outcome after subtracting the fitted control index, and $S=\V[v]$. Although
+the original deletion units are independent, $S$ generally has off-diagonal
+entries. Under Gaussian errors the exact variance of the fixed-offset
+quadratic form is $4m'Sm+2\tr(CSCS)$. The program adjusts the linear
+influences and applies the corresponding control adjustment to simulated
+noise. The feasible formula uses residual products to estimate the
+within-unit control terms. Its trace calculation omits the covariance between
+a unit error and its within-unit control product. Also, a set still receives
+one pooled variance even when its control-adjusted weights differ within the
+cell. Error variances that move with a control inside a match, poorly identified
+control coefficients, or a dominant direction aligned with the controls can
+make these approximations consequential. Appendix~\ref{app:controls} gives
+the derivation and its seven approximations. The dense check uses true variances
+outside repeated cells. End-to-end evidence with fitted variances appears in
+Section~\ref{sec:impl-mc}.
+
+\subsection{Centring and the cost of inference}\label{sec:computation}
+Under the default \code{centering(mean)}, the program centres the simulated
+noise in the same way as the outcome. Under \code{centering(none)} it uses
+the uncentred weights. Under \code{centering(corrected)} it treats the
+increment for the centring correction as fixed when computing the standard
+error. These choices concern the sampling variability of the econometric
+estimate. The Monte Carlo standard error of the \emph{point estimate}, also
+available in \fevc{}, measures numerical variation from random projections.
+
+The most expensive-looking term in \eqref{eq:Vhat} sums over every pair of
+observations. It can be computed with a few linear solves. In the baseline
+case draw independent $\zeta_i$ with mean zero and variance $\st_i^2$, apply
+$C$ once, and sum the squared entries of $C\zeta$ with weights $\st_i^2$.
+Conditional on the fitted variances,
+\begin{equation}\label{eq:sim}
+ \E_\zeta\!\left[\sum_i\st_i^2(C\zeta)_i^2\right]
+      =\sum_{i,\ell}C_{i\ell}^2\st_i^2\st_\ell^2 .
+\end{equation}
+The calculation uses normal draws and reuses them across components, their
+covariances and the remainder. With many diffuse directions, each draw
+already averages noise across many observations. Proposition~\ref{prop:sim}
+relates the precision of this average to the concentration of the spectrum.
+
+The native route reuses the point estimator's leverages and target weights,
+with 200 random projections by default and the finite-projection correction
+in the point estimate. Eight noise draws for inference require 35 additional
+solves for the normal covariance calculation. With the leading directions
+and remainders the default takes about 90 additional solves, with the exact
+number depending on convergence. With jointly estimated controls a separate
+offset pass adds two solves per point-estimate projection. The native and
+matrix-free Mata routes find the leading directions by a restarted Lanczos
+iteration. Exact Mata uses a dense eigendecomposition, while Mata with random
+projections runs its own projection stage for inference. On three Veneto
+panels with 2.3 to 5.2 million person-years, no controls and 16 threads, the
+default added 24--30\% to the measured running time of point estimation. The
+cost on a particular design depends especially on controls and solver route.

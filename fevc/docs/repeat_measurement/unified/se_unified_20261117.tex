@@ -1,0 +1,125 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage[skip=5pt,font=small]{caption}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{groupplots}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!50!black]{hyperref}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\emergencystretch}{3em}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\textfraction}{0.08}
+\setcounter{tocdepth}{1}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\V}{\mathbb{V}}
+\newcommand{\Cov}{\mathbb{C}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\st}{\tilde\sigma}
+\newcommand{\op}{\mathrm{op}}
+\newcommand{\cR}{\mathcal{R}}
+\newcommand{\cG}{\mathcal{G}}
+\newcommand{\bnu}{\bar\nu}
+\newcommand{\bth}{\bar\vartheta}
+\newcommand{\fevc}{\texorpdfstring{\texttt{fevc}}{fevc}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\pend}{\textit{stopped}}
+\definecolor{cstay}{HTML}{0072B2}
+\definecolor{cmove}{HTML}{D55E00}
+\definecolor{cgrey}{HTML}{555555}
+\makeatletter
+\newcommand{\R}[1]{\ifcsname res@#1\endcsname\csname res@#1\endcsname\else\textbf{[\detokenize{#1}]}\fi}
+\newcommand{\setres}[2]{\expandafter\gdef\csname res@#1\endcsname{#2}}
+\newcommand{\tabinput}[1]{\@@input #1 }
+\makeatother
+\input{../note/gen/numbers.tex}
+\input{../note/gen/q1_numbers.tex}
+\allowdisplaybreaks[2]
+
+
+\hypersetup{pdftitle={Repeat Measurements and Inference for Leave-Out Variance Components},
+ pdfauthor={fevc project},bookmarksnumbered=true}
+\raggedbottom
+\widowpenalty=10000
+\clubpenalty=10000
+\linespread{1.10}\selectfont
+\makeatletter
+\newcommand{\compactcontents}{\begingroup\small
+  \renewcommand*\l@section{\@dottedtocline{1}{0em}{2em}}%
+  \tableofcontents\endgroup}
+\makeatother
+\title{Repeat Measurements and Inference for\\ Leave-Out Variance Components}
+\author{Technical note for \fevc{} 0.6.0}
+\date{November 17, 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+The precision of a leave-out estimate of worker or firm variance depends on
+whose wages are volatile. Repeated wages at the same employer supply a direct
+estimate of variability for each eligible worker--firm cell. For units observed
+only once, \fevc{} fits a variance model using match size, leverage and
+estimated wage effects. The same variance inputs give normal intervals when
+uncertainty is spread across the mobility network and an interval due to Kline,
+Saggio and S{\o}lvsten (KSS) when one direction dominates. On six Veneto samples the firm-variance standard errors
+agree within about 7\% with those of the KSS Matlab model-based procedure on five
+samples. A simulation on the sixth illustrates the cost of misspecification:
+the model assigns too little variance to a few movers connecting groups of
+firms. In that design the normal standard errors for worker variance and
+worker--firm covariance are too small, while the reported intervals account for
+the dominant direction.
+\end{abstract}
+\compactcontents
+\clearpage
+
+\input{revision/method}
+\input{revision/intervals}
+\input{revision/evidence}
+
+\section*{References}
+\addcontentsline{toc}{section}{References}
+Andrews, I. and A. Mikusheva (2016). A geometric approach to nonlinear econometric models. \emph{Econometrica}
+84(3), 1249--1264.
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten (2018). Leave-out estimation of variance components. arXiv:1806.01494v1,
+June 2018.
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten (2020). Leave-out estimation of variance components.
+\emph{Econometrica} 88(5), 1859--1898.
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten (2020). Replication package for ``Leave-out estimation of variance
+components'' (the Econometrica replication code, folder \code{Replication ECTA}).
+
+\noindent Kline, P., R. Saggio and M. S{\o}lvsten. LeaveOutTwoWay, a Matlab package for leave-out estimation of
+variance components (the ``KSS Matlab package''). GitHub, commit \code{8b957ffe}, October 17, 2024.
+
+\smallskip
+\noindent\textit{Source note.} The November 16 method document was prepared by
+Claude at Johannes Schmieder's request. This editorial revision was prepared
+with Codex from that document, its proofs and its recorded results.
+\clearpage
+\appendix
+\linespread{1.02}\selectfont
+\input{revision/results}
+{\small\input{a1_proofs}}
+\input{revision/controls}
+\input{revision/checks}
+{\small\input{a6_repro}}
+\end{document}

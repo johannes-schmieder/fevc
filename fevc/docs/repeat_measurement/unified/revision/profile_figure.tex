@@ -1,0 +1,25 @@
+\begin{figure}[htbp]
+\centering
+\input{../note/gen/fig_profile.tex}
+\begin{tikzpicture}
+\begin{groupplot}[group style={group size=2 by 1, horizontal sep=1.3cm}, width=0.5\textwidth, height=0.36\textwidth,
+  ymin=0, ymax=20, xmin=-2.4, xmax=2.4, ymajorgrids, grid style={gray!20},
+  xlabel style={font=\footnotesize}, ylabel style={font=\footnotesize}, ticklabel style={font=\footnotesize},
+  title style={font=\footnotesize}, legend style={font=\footnotesize, draw=none, fill=none, legend cell align=left}]
+\nextgroupplot[title={By estimated person effect}, xlabel={standardised person effect (decile means)},
+  ylabel={variance of a mover's row ($\times100$)}, legend style={at={(0.98,0.97)}, anchor=north east}]
+\addlegendimage{only marks, mark=*, mark size=1.8pt, cmove}
+\addlegendentry{leave-out estimates, average}
+\addlegendimage{no marks, thick, cstay}
+\addlegendentry{fitted by the model, average}
+\addplot[cmove, only marks, mark=*, mark size=1.8pt, forget plot] coordinates {\figalphalo};
+\addplot[cstay, thick, no marks, forget plot] coordinates {\figalphafit};
+\nextgroupplot[title={By estimated firm effect}, xlabel={standardised firm effect (decile means)}]
+\addplot[cmove, only marks, mark=*, mark size=1.8pt] coordinates {\figpsilo};
+\addplot[cstay, thick, no marks] coordinates {\figpsifit};
+\end{groupplot}
+\end{tikzpicture}
+\caption{Movers' rows by decile of the estimated effects: average leave-out estimate $\hat\sigma_i^2$ and average
+fitted variance $\st_i^2$. The bin boundaries are deciles of stayers' estimated effects. The plotted observations are movers' rows in the six-year Veneto method study.}
+\label{fig:profile}
+\end{figure}

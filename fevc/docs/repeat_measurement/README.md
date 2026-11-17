@@ -1,5 +1,10 @@
 # Repeat-measurement standard errors: method note and prototype evidence
 
+For the method used in `fevc` 0.6.0, read
+[Repeat Measurements and Inference for Leave-Out Variance Components](unified/se_unified_20261117.pdf).
+It explains the reported intervals, their assumptions, and the evidence from Veneto and the KSS comparison.
+The [November 16 edition](unified/se_unified_20261116.pdf) includes the full development and simulation tables.
+
 This directory holds the note that derived the repeat-measurement standard errors of the four variance
 components, its addendum on estimated control coefficients, and the prototype code, aggregate results
 and development log behind the note's evidence. The note describes a prototype. `fevc` 0.6.0 implements
@@ -247,6 +252,7 @@ cd ../control_term
 latexmk -pdf control_term_v3.tex
 cd ../unified
 latexmk -pdf se_unified_20261116.tex   # or pdflatex three times
+latexmk -pdf se_unified_20261117.tex   # revised edition; sources in revision/ and shared proofs in a1_proofs.tex
 ```
 
 The unified document builds over the committed PDF as well; build it in a copy of `note/` and `unified/`
