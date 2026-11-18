@@ -41,7 +41,7 @@ assert `"`rng_before'"' == `"`rng_after'"'
 assert "`e(algorithm)'" == "exact"
 assert "`e(backend_selected)'" == "mata"
 assert "`e(rng_selected)'" == "stata"
-assert "`e(version)'" == "0.6.0"
+assert "`e(version)'" == "0.6.1"
 assert "`e(inference)'" == "highrank"
 assert "`e(inference_model)'" == "repeat_measurement"
 assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"

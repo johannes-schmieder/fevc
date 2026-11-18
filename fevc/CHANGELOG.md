@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased (0.6.1)
+## 0.6.1 — 2026-11-18
 
 The estimator, the standard errors, `e(V)` and the native plugins are those
 of 0.6.0; the display, `inference(highrank)`'s search and the postestimation
-commands change. The version strings stay at 0.6.0 until a release.
+commands change.
 
 - One table of the components in every mode, with the same columns:
   estimate, standard error (blank for a `q = 1` component), the interval at

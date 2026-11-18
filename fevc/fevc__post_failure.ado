@@ -10,7 +10,7 @@ program define fevc__post_failure, eclass
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
     ereturn clear
     ereturn local cmd "fevc"
-    ereturn local version "0.6.0"
+    ereturn local version "0.6.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"

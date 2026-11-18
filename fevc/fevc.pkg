@@ -1,7 +1,7 @@
 v 3
 d fevc: KSS leave-out variance components with standard errors by default; block projections on request
-d MIT portable source package. Version 0.6.0.
-d Distribution-Date: 20261114
+d MIT portable source package. Version 0.6.1.
+d Distribution-Date: 20261118
 f LICENSE
 f THIRD_PARTY_NOTICES.txt
 f fevc.ado

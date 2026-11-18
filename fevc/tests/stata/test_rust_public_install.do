@@ -116,7 +116,7 @@ if `"`install_mode'"' == "qualified" {
         backend(rust) rng(counter_v1) algorithm(auto) engine(auto)   ///
         exact_limit(500) nodisplay
     assert `"`e(cmd)'"' == "fevc"
-    assert `"`e(version)'"' == "0.6.0"
+    assert `"`e(version)'"' == "0.6.1"
     assert `"`e(algorithm_requested)'"' == "auto"
     assert `"`e(algorithm)'"' == "exact"
     assert `"`e(engine_requested)'"' == "auto"

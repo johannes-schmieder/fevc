@@ -57,7 +57,7 @@ Stata after updating a loaded native plugin. See
 
 After installing or updating the package and restarting Stata, you can
 check which features the loaded plugin supports. With the plugins included
-in version 0.6.0, all of the following assertions should hold, and the
+in version 0.6.1, all of the following assertions should hold, and the
 example should run on the Rust backend. This has been verified on macOS,
 Linux, and Windows.
 
@@ -77,7 +77,7 @@ assert "`e(backend_selected)'" == "rust"
 The probe values correspond to live progress reporting, outcome centering,
 mean-centered projections, and two capabilities that the standard errors
 of the components need on the native backend (mean centering, and units
-that pool movers and stayers). The 0.6.0 plugins also provide the residual and repeat-measurement
+that pool movers and stayers). The 0.6.1 plugins also provide the residual and repeat-measurement
 capabilities used by the default standard errors. Unsupported requests still
 return point estimates with an explanation under `inference(auto)`; see
 [inference support and limitations](fevc/docs/INFERENCE.md).
@@ -85,20 +85,20 @@ return point estimates with an explanation under `inference(auto)`; see
 ## Installing a specific release
 
 To install the tagged
-[0.6.0 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0)
+[0.6.1 release](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.1)
 from GitHub:
 
 ```stata
 net install fevc, replace ///
-    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.6.0/")
+    from("https://raw.githubusercontent.com/johannes-schmieder/fevc/v0.6.1/")
 ```
 
 Restart Stata after updating to load the new programs and native plugin.
 
 ## Release ZIP and offline installation
 
-Download `fevc-0.6.0.zip` from the
-[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.0).
+Download `fevc-0.6.1.zip` from the
+[release page](https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.1).
 The ZIP contains only the installation files, programs, help, license
 notices, and five native plugins; it does not include tests, development
 tools, or benchmark data. Extract it and run:

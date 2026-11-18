@@ -581,7 +581,7 @@ program define fevc__rust_post_comp_v7, eclass sortpreserve
 
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.6.0"
+    ereturn local version "0.6.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
