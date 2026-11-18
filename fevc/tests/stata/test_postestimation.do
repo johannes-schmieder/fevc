@@ -44,6 +44,12 @@ estat dec
 estat sam
 estat com
 estat dia
+* Point estimates only: estat inference says that there are no standard
+* errors of the components and leaves the results unchanged.
+estat inference
+estat inf
+capture noisily estat inference, all
+assert _rc == 198
 assert mreldif(mcse_before,e(mcse))==0
 assert mreldif(covariance_before,e(mcse_cov_raw))==0
 matrix posted=e(results)
@@ -58,6 +64,8 @@ assert _rc == 198
 
 ereturn clear
 capture noisily estat decomposition
+assert _rc == 301
+capture noisily estat inference
 assert _rc == 301
 
 fevc, version

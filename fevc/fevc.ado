@@ -38,11 +38,29 @@ program define fevc, eclass
         global VCKSS_REPORT_TIMER 1
         quietly mata: vckss_timer__on(1)
     }
-    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE {
+    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE SEARCH_SUPPRESS ///
+        SEARCH_REASON SEARCH_ATTACHED SEARCH_FAILED {
         capture macro drop VCKSS_SE_`key'
     }
     capture noisily _fevc_command `0'
     local command_rc = _rc
+    if `command_rc' & `command_rc'!=1 & "$VCKSS_SE_SEARCH_ATTACHED"=="1" & ///
+        "$VCKSS_SE_PHASE"=="1" &                                          ///
+        `"`e(withholding_status)'"'!="INFERENCE_VARIANCE_INVALID" {
+        // inference(highrank) finds the leading directions for their shares
+        // only; its normal intervals and e(V) do not depend on them. If the
+        // run that carried the search stopped, run once more without it: the
+        // high-rank pass of 0.6.0. A variance estimate that is not positive
+        // stops highrank whether the search runs or not.
+        local search_failure `"`e(withholding_status)'"'
+        if `"`search_failure'"'=="" local search_failure "return code `command_rc'"
+        global VCKSS_SE_SEARCH_SUPPRESS 1
+        global VCKSS_SE_SEARCH_REASON `"`search_failure'"'
+        di as txt _newline "Note: the leading-direction search stopped (`search_failure')."
+        di as txt "      Estimating once more without it; no lead shares are reported."
+        capture noisily _fevc_command `0'
+        local command_rc = _rc
+    }
     if `command_rc' & `command_rc'!=1 & "$VCKSS_SE_ATTACHED"=="1" {
         // The attempt carried default standard errors and failed. The point
         // estimate must not depend on them, so run once more without them
@@ -65,12 +83,13 @@ program define fevc, eclass
             local command_rc = _rc
         }
     }
-    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE {
+    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE SEARCH_SUPPRESS ///
+        SEARCH_REASON SEARCH_ATTACHED SEARCH_FAILED {
         capture macro drop VCKSS_SE_`key'
     }
     if "`report_timer'" != "" {
         quietly mata: vckss_timer__off(`report_timer')
-        if !`command_rc' & inlist("$VCKSS_REPORT_LEVEL","1","2") & ///
+        if !`command_rc' & "$VCKSS_REPORT_LEVEL"=="2" & ///
             "$VCKSS_REPORT_API"=="2" & "`e(backend_selected)'"=="rust" {
             mata: st_local("elapsed", strofreal(vckss_timer__seconds(`report_timer'), "%9.1f"))
             di as txt "  Total elapsed `elapsed's | Complete"
@@ -168,6 +187,7 @@ program define _fevc_command, eclass
         `nmc_se' `nmc_meta' `nmc_rhs'
     capture macro drop VCKSS_INFERENCE_ERROR VCKSS_INFERENCE_DETAIL
     capture macro drop VCKSS_SE_AUTO VCKSS_SE_AUTO_REASON
+    capture macro drop VCKSS_DISPLAY_DEFERRED
     capture noisily _vckss_impl `0'
     local command_rc = _rc
     if `command_rc' & "$VCKSS_INFERENCE_ERROR"!="" {
@@ -257,7 +277,11 @@ program define _fevc_command, eclass
     if !`command_rc' & "`e(cmd)'" == "fevc" &                  ///
         !inlist("`e(status)'", "WITHHELD", "ALPHA", "RELEASED") {
         ereturn local estat_cmd "fevc_estat"
+        // Native exact and compressed posters leave the display until the
+        // numerical MCSE and the population metadata are posted.
+        if "$VCKSS_DISPLAY_DEFERRED"=="1" fevc__display
     }
+    capture macro drop VCKSS_DISPLAY_DEFERRED
     // UserBreak is untyped; no partial estimate or prior fit may survive it.
     if `command_rc' == 1 ereturn clear
     if `command_rc' & `"`e(status)'"' == "WITHHELD" {
@@ -1840,10 +1864,10 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         quietly count if `complete_worker_tag' & `originalstayer' &   ///
             !`retained_firm_member'
         local N_hyb_unattached = r(N)
-        if inlist("$VCKSS_REPORT_LEVEL","1","2") & inlist("$VCKSS_REPORT_API","1","2") & c(noisily) {
-            di as txt "  Stayer exclusions: " as result `N_hyb_singleton_drop' ///
-                as txt " physical-singleton workers; " as result `N_hyb_unattached' ///
-                as txt " workers outside retained firms"
+        if "$VCKSS_REPORT_LEVEL"=="2" & inlist("$VCKSS_REPORT_API","1","2") & c(noisily) {
+            di as txt "  Stayers excluded: " as result `N_hyb_singleton_drop' ///
+                as txt " with one observation; " as result `N_hyb_unattached' ///
+                as txt " outside retained firms"
         }
         quietly summarize `frequency' if `hybrid_stayer', meanonly
         local hybrid_stayer_physical = r(sum)
@@ -9624,6 +9648,18 @@ program define _fevc_residual_se_mata
             "inference_status", "inference_message")
     }
     local mata_rc = _rc
+    // inference(highrank) keeps the strictness of 0.6.0, when it ran without
+    // the search: a component variance estimate that is not positive stops
+    // the request. The runtime lets it through when the search runs, for the
+    // q = 1 interval of the other modes.
+    if !`mata_rc' & "$VCKSS_SE_LEADING"=="highrank" & "`inference_status'"=="CONVERGED" {
+        forvalues se_j = 1/3 {
+            if !(`inference_V_primitive'[`se_j',`se_j']>0) {
+                local inference_status "INFERENCE_VARIANCE_INVALID"
+                local inference_message "a component variance estimate is not positive"
+            }
+        }
+    }
     // With leading directions the interval of every component is decided
     // now; a q = 1 interval for any of them withholds the joint covariance.
     if !`mata_rc' & "$VCKSS_SE_LEADING"!="" & "`inference_status'"=="CONVERGED" {

@@ -86,9 +86,12 @@ estat diagnostics
 fevc log_wage, worker(worker_id) firm(firm_id) mcse(off)
 ```
 
-The MCSEs are displayed below the decomposition and stored in `e(mcse)` and
-in the `mcse` row of `e(results)`. `estat diagnostics` reports whether they
-are available. `e(mcse_cov_raw)` and `e(mcse_cov)` contain the raw and usable
+The MCSEs are displayed in one line below the decomposition, with the
+largest of them as a share of the components' standard errors when these
+are reported (above 10% the display warns and suggests more probes, for
+example `probes(2000)`), and stored in `e(mcse)` and in the `mcse` row of
+`e(results)`. `estat diagnostics` reports their method, status and
+availability. `e(mcse_cov_raw)` and `e(mcse_cov)` contain the raw and usable
 4 by 4 numerical covariances in the same target order. When exporting MCSEs,
 also save `e(mcse_mode)`, `e(mcse_method)`, `e(mcse_status)`,
 `e(mcse_available)`, `e(mcse_cov_raw)`, `e(centering)` and
@@ -101,12 +104,12 @@ default if the forecast exceeds it; add `memorycheck(error)` to stop
 instead. The budget is a forecast of the command's own allocations, not an
 operating-system memory cap. See the [memory guide](docs/MEMORY.md).
 
-With the Rust backend, the command reports sample preparation, the
-selected calculation, memory forecasts and live progress while it runs.
-`nolog` keeps only the final results, `verbose` adds details on the
-calculation and memory planning, and `nodisplay` suppresses successful
-output; `quietly` also suppresses progress. None of these options changes
-the estimates.
+By default the command prints its results only. `verbose` adds live
+progress while it runs (with the Rust backend: sample preparation, the
+selected calculation, memory forecasts and one line per phase) and details
+on the calculation and memory planning; `nolog` keeps only the final
+results, and `nodisplay` suppresses successful output; `quietly` also
+suppresses progress. None of these options changes the estimates.
 
 ## Outcome centering
 
@@ -165,11 +168,13 @@ estat decomposition, full
 estat sample
 estat computation
 estat diagnostics
+estat inference
 ```
 
 These views show the decomposition, retained population, computation choices,
-and diagnostics. Estimates and supporting results are also stored in `e()`;
-see `help fevc` for their names.
+diagnostics and the standard errors of the components in detail. Estimates
+and supporting results are also stored in `e()`; see `help fevc` for their
+names.
 
 By default the command reports repeat-measurement standard errors for the
 four components: a confidence interval for each, normal where the estimate
@@ -183,7 +188,14 @@ are as good as that model for those units and not robust to arbitrary
 heteroskedasticity; with controls, their estimation enters to first order.
 `inference(highrank)` gives normal intervals only, `inference(q1)` the
 `q = 1` interval wherever it exists, and `inference(none)` point estimates
-only. See `help fevc##se` and the [inference guide](docs/INFERENCE.md),
+only. The display shows one table with the same columns in every mode:
+estimate, standard error, interval, which interval it is, and the leading
+direction's share of the estimated sampling variance (also under
+`inference(highrank)`, which finds the directions for that purpose); it
+shows no p-values, which `test` and `lincom` give from `e(V)`.
+`estat inference` shows both intervals of every component, why it received
+the one reported, the leading direction and the method. See
+`help fevc##se` and the [inference guide](docs/INFERENCE.md),
 which gives the simulations behind the rule and their limits; they are not
 a coverage guarantee. The
 [standard-error document](docs/repeat_measurement/unified/se_unified_20261116.pdf)
@@ -210,10 +222,10 @@ the options that tuned them; a request for one stops with a message.
 
 ## Runnable examples
 
-The installed help starts with a clickable example and contains six more
+The installed help starts with a clickable example and contains seven more
 short, runnable examples; Examples 6 and 7 show `inference(highrank)` and
-`inference(q1)` and how to read their results. Clicked examples restore
-your data. To generate example data and explore them yourself:
+`inference(q1)` and how to read their results, and Example 8 the detailed
+`estat` displays. Clicked examples restore your data. To generate example data and explore them yourself:
 
 ```stata
 fevc, simulate_data(ex1) clear

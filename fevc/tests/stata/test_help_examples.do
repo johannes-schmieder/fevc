@@ -54,24 +54,27 @@ assert rowsof(e(component_inference)) == 4
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
-// Example 6: inference(highrank) gives normal intervals, posts e(V) and
-// computes no leading direction.
+// Example 6: inference(highrank) gives normal intervals and posts e(V); it
+// finds the leading directions too, so that the display shows their shares.
 fevc_run highrank_inference using fevc.sthlp
 assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_SE"
 assert "`e(inference_variance_fit)'" == "repeat_measurement"
-assert "`e(inference_leading_request)'" == ""
-assert e(inference_joint_posted) == 1
-tempname help_V help_ci
+assert "`e(inference_leading_request)'" == "highrank"
+assert e(inference_joint_posted) == 1 & e(inference_q1_components) == 0
+tempname help_V help_ci help_table
 matrix `help_V' = e(V)
 assert rowsof(`help_V') == 4 & colsof(`help_V') == 4
 matrix `help_ci' = e(component_inference)
 assert rowsof(`help_ci') == 4
+matrix `help_table' = e(inference_intervals)
 forvalues target = 1/4 {
     assert el(`help_ci',`target',2) > 0 & el(`help_ci',`target',2) < .
+    assert el(`help_table',`target',7) == 0
+    // The help: no direction carries more than a few per cent here.
+    if `target' < 4 assert el(`help_table',`target',10) < .1
 }
-capture confirm matrix e(inference_intervals)
-assert _rc
-matrix drop `help_V' `help_ci'
+confirm matrix e(inference_leading)
+matrix drop `help_V' `help_ci' `help_table'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 // The help says the default would give the same normal intervals here.
@@ -116,6 +119,34 @@ assert el(`help_auto',3,7) == 1 & el(`help_auto',4,7) == 0
 assert e(inference_q1_components) == 2 & e(inference_joint_posted) == 0
 matrix drop `help_auto'
 restore
+
+// Example 8: the default on the data of Example 4 and the three detailed
+// displays. A suite that switches the default off gets point estimates,
+// and estat inference then says that there are no standard errors.
+fevc_run postestimation using fevc.sthlp
+if lower(strtrim(`"`: environment FEVC_DEFAULT_INFERENCE'"'))=="none" | ///
+    lower(strtrim("$FEVC_DEFAULT_INFERENCE"))=="none" {
+    assert "`e(inference_variance_fit)'" == ""
+    capture confirm matrix e(inference_intervals)
+    assert _rc
+}
+else {
+    // As the help says: the worker variance keeps the normal interval
+    // (lead share below 10%); the firm variance and the covariance, whose
+    // leading direction carries most of their estimated variance (more
+    // than all of it on these data), receive the q = 1 interval.
+    assert "`e(status)'" == "FEVC_REPEAT_MEASUREMENT_Q1"
+    tempname help_details
+    matrix `help_details' = e(inference_intervals)
+    assert el(`help_details',1,7) == 0 & el(`help_details',1,10) < .1
+    assert el(`help_details',2,7) == 1 & el(`help_details',2,10) > 1
+    assert el(`help_details',3,7) == 1 & el(`help_details',3,10) > 1
+    assert "`e(inference_leading_request)'" == "auto"
+    matrix drop `help_details'
+}
+assert e(N) == 440
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 fevc_run projection_inference using fevc.sthlp
 assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"

@@ -195,4 +195,9 @@ def test_leading_directions_travel_through_their_own_export_and_one_stata_helper
     assert 'st_matrix("__fevc_se_leading",lead_table)' in mata
     display = read("fevc/fevc__display.ado")
     assert "program define _fevc_display_intervals" in display
-    assert "e(V) is not posted: it is posted only when every component is normal." in display
+    assert "e(V) is not posted: a component has a q = 1 interval." in display
+    # inference(highrank) requests the search as the other two modes do and
+    # keeps the normal interval of every component.
+    assert 'if inlist("`inference\'","auto","highrank","q1") {' in route
+    assert 'else if "$VCKSS_SE_LEADING"=="highrank" {' in post
+    assert '!inlist("$VCKSS_SE_LEADING","auto","highrank","q1")' in post

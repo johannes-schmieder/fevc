@@ -7,11 +7,13 @@ program define fevc__display
     quietly fevc__stayer_population_post
 
     if "`numericaldiagnosticsonly'"!="" {
-        _fevc_display_numerical 1
+        _fevc_display_numerical
         exit
     }
+    // estat inference: the details of the standard errors of the components.
     if "`inferencediagnosticsonly'" != "" {
-        if inlist("`e(inference_variance_fit)'","leaveout_residual","repeat_measurement") _fevc_display_residual_se
+        if "`e(inference_variance_fit)'"=="repeat_measurement" _fevc_display_inference_details
+        else if "`e(inference_variance_fit)'"=="leaveout_residual" _fevc_display_residual_se
         else _fevc_display_structured
         exit
     }
@@ -83,7 +85,12 @@ program define fevc__display
     _fevc_display_decomp
     _fevc_display_inference
 
-    if inlist("`e(inference_variance_fit)'","leaveout_residual","repeat_measurement") {
+    local se_details 0
+    if "`e(inference_variance_fit)'"=="repeat_measurement" {
+        _fevc_display_interval_notes
+        local se_details 1
+    }
+    else if "`e(inference_variance_fit)'"=="leaveout_residual" {
         _fevc_display_residual_se
     }
     else if "`e(inference_variance_fit)'"!="" & e(inference_joint_posted)==0 {
@@ -97,9 +104,10 @@ program define fevc__display
         di as txt _newline "Projection covariance: " as result  ///
             "e(projection_V)" as txt "; component e(V) is not posted."
     }
-    else if "$VCKSS_SE_AUTO"=="1" {
-        di as txt _newline "Standard errors: not computed; " ///
-            "$VCKSS_SE_AUTO_REASON."
+    else if "$VCKSS_SE_AUTO"=="1" | (e(inference_auto)==1 & `"`e(inference_auto_reason)'"'!="") {
+        local reason `"$VCKSS_SE_AUTO_REASON"'
+        if `"`reason'"'=="" local reason `"`e(inference_auto_reason)'"'
+        di as txt _newline "{p 0 2 2}Standard errors: not computed; `reason'.{p_end}"
         di as txt "e(V) is not posted. Numerical MCSE is computational, not sampling."
     }
     else if e(mcse_available)==1 {
@@ -109,8 +117,15 @@ program define fevc__display
     else {
         di as txt _newline "Inference: not requested; e(V) is not posted."
     }
-    di as txt "Details: " as result "estat decomposition, full" ///
-        as txt "; " as result "estat sample"
+    if `se_details' {
+        di as txt "Details: " as result "estat inference" as txt "; "  ///
+            as result "estat decomposition, full" as txt "; "        ///
+            as result "estat sample" as txt ";"
+    }
+    else {
+        di as txt "Details: " as result "estat decomposition, full" ///
+            as txt "; " as result "estat sample"
+    }
     di as txt "         " as result "estat computation" as txt ///
         "; " as result "estat diagnostics"
 end
@@ -143,7 +158,7 @@ program define _fevc_display_decomp
     di as txt "Target-weighted Var(Y): " as result               ///
         %13.7g e(target_outcome_variance)
 
-    _fevc_display_numerical
+    _fevc_display_mcse_line
 
 end
 
@@ -222,94 +237,18 @@ end
 
 program define _fevc_display_inference
     version 15.0
-    tempname component_inference q1_inference projection_inference
+    tempname projection_inference
 
-    // Repeat-measurement standard errors with leading directions report one
-    // interval per component, normal or q = 1.
+    // Standard errors of the components: one table in every mode, one
+    // interval per component (normal or q = 1).
     capture confirm matrix e(inference_intervals)
     local by_component = (_rc==0)
+    if !`by_component' & inlist("`e(inference)'","highrank","q1") & ///
+        !inlist("`e(inference_model)'","structured_common","structured_leverage") {
+        capture confirm matrix e(component_inference)
+        local by_component = (_rc==0)
+    }
     if `by_component' _fevc_display_intervals
-    if !`by_component' & inlist("`e(inference)'", "highrank", "q1") {
-        matrix `component_inference' = e(component_inference)
-        di as txt _newline "Econometric component inference ("    ///
-            as result "`e(inference)'" as txt "; "               ///
-            as result %4.1f e(level) as txt "% confidence level)"
-        if e(inference_mean_omitted)==1 {
-            di as txt "Observed mean treated as fixed; mean-estimation uncertainty omitted."
-        }
-        di as txt "{hline 78}"
-        di as txt %-18s "Component" %12s "Estimate" %12s "Std. err." ///
-            %10s "P>|z|" %13s "Lower" %13s "Upper"
-        di as txt "{hline 78}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm cov."
-            else local row_label "Total worker-firm"
-            local pvalue = 2*normal(-abs(                         ///
-                `component_inference'[`row',1]/                   ///
-                `component_inference'[`row',2]))
-            di as txt %-18s "`row_label'" as result              ///
-                %12.6g `component_inference'[`row',1]             ///
-                %12.6g `component_inference'[`row',2]             ///
-                %10.4f `pvalue'                                   ///
-                %13.6g `component_inference'[`row',3]             ///
-                %13.6g `component_inference'[`row',4]
-        }
-        di as txt "{hline 78}"
-    }
-    if !`by_component' & "`e(inference)'"=="highrank" & "`e(inference_variance_fit)'"!="" {
-        tempname q0_status
-        matrix `q0_status' = e(q0_status)
-        local targetnames : rownames `q0_status'
-        forvalues row = 1/4 {
-            local targetstatus = `q0_status'[`row',1]
-            if `targetstatus'>0 {
-                local targetname : word `row' of `targetnames'
-                local reason = cond(`targetstatus'==1,"nonpositive variance", ///
-                    cond(`targetstatus'==4,"no positive linear influence","spectrum not certified"))
-                di as txt "  `targetname': q0 unavailable (`reason')."
-            }
-        }
-    }
-    if !`by_component' & "`e(inference)'" == "q1" {
-        matrix `q1_inference' = e(q1_inference)
-        tempname q1_status
-        capture matrix `q1_status' = e(q1_status)
-        local has_q1_status = !_rc
-        di as txt _newline "Rank-one weak-identification intervals"
-        di as txt "{hline 78}"
-        di as txt %-26s "Component" %13s "AM lower" %13s "AM upper" ///
-            %13s "F" %13s "Curvature"
-        di as txt "{hline 78}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result              ///
-                %13.6g `q1_inference'[`row',5]                    ///
-                %13.6g `q1_inference'[`row',6]                    ///
-                %13.6g `q1_inference'[`row',15]                   ///
-                %13.6g `q1_inference'[`row',16]
-        }
-        di as txt "{hline 78}"
-        if `has_q1_status' {
-            forvalues row = 1/4 {
-                local targetstatus = `q1_status'[`row',1]
-                if `targetstatus'>0 {
-                    local reason = cond(`targetstatus'==1,"nonpositive variance", ///
-                        cond(`targetstatus'==2,"singular covariance", ///
-                        cond(`targetstatus'==3,"interval calculation failed", ///
-                        cond(`targetstatus'==4,"unidentified leading mode", ///
-                        cond(`targetstatus'==6,"leading mode not certified","target variance fit invalid")))))
-                    local targetnames : rownames `q1_status'
-                    local targetname : word `row' of `targetnames'
-                    di as txt "  `targetname': q1 unavailable (`reason')."
-                }
-            }
-        }
-    }
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
         _fevc_display_structured
     }
@@ -340,17 +279,83 @@ program define _fevc_display_inference
     }
 end
 
+// The 4 x 16 layout of e(inference_intervals) (see fevc__residual_se_post),
+// or the same layout from the normal intervals of e(component_inference)
+// when no leading direction was computed. Leaves the request (auto,
+// highrank or q1) in the caller's local request.
+program define _fevc_interval_table
+    version 15.0
+    args table
+    capture confirm matrix e(inference_intervals)
+    if !_rc {
+        matrix `table' = e(inference_intervals)
+        c_local request "`e(inference_leading_request)'"
+        exit
+    }
+    tempname normal
+    matrix `normal' = e(component_inference)
+    matrix `table' = J(4,16,.)
+    forvalues t = 1/4 {
+        forvalues j = 1/4 {
+            matrix `table'[`t',`j'] = `normal'[`t',`j']
+        }
+        if !missing(`normal'[`t',2]) {
+            matrix `table'[`t',7] = 0
+            matrix `table'[`t',8] = `normal'[`t',3]
+            matrix `table'[`t',9] = `normal'[`t',4]
+        }
+    }
+    c_local request "`e(inference)'"
+end
+
+// A share as the tables print it: a percentage, >100% for a ratio of two
+// estimates above one, . when there is none.
+program define _fevc_share_text
+    version 15.0
+    args share
+    local text "."
+    if !missing(`share') {
+        if `share'>1 local text ">100%"
+        else if `share'<.0005 local text "<0.1%"
+        else {
+            local text : display %5.1f 100*`share'
+            local text = strtrim("`text'")+"%"
+        }
+    }
+    c_local share_text "`text'"
+end
+
+// The rule's threshold as a percentage, e.g. 10.
+program define _fevc_threshold_text
+    version 15.0
+    local threshold = e(inference_share_threshold)
+    if missing(`threshold') local threshold .1
+    local text : display %9.0g 100*`threshold'
+    c_local threshold_text = strtrim("`text'")
+end
+
 // One interval per component: the normal interval with its standard error,
-// or the q = 1 interval, which has none.
+// or the q = 1 interval, which has none; the same columns in every mode.
+// 78 columns: label 17, four numbers of 11, interval 10, share 7.
 program define _fevc_display_intervals
     version 15.0
     tempname table
-    matrix `table' = e(inference_intervals)
-    di as txt _newline "Component inference (" as result %4.1f e(level) ///
-        as txt "% confidence level)"
+    _fevc_interval_table `table'
+    _fevc_threshold_text
+    local level : display %9.0g e(level)
+    local level = strtrim("`level'")
+    if "`request'"=="highrank" {
+        local title "(* normal interval requested by inference(highrank))"
+    }
+    else if "`request'"=="q1" {
+        local title "(* q = 1 interval requested by inference(q1))"
+    }
+    else local title "(q = 1 interval when the lead share exceeds `threshold_text'%)"
+    di as txt _newline "Component inference `title'"
     di as txt "{hline 78}"
-    di as txt %-18s "Component" %12s "Estimate" %12s "Std. err." ///
-        %13s "Lower" %13s "Upper" %10s "Interval"
+    di as txt %71s "" %7s "Lead"
+    di as txt %-17s "Component" %11s "Estimate" %11s "Std. err." ///
+        %22s "[`level'% conf. interval]" %10s "Interval" %7s "share"
     di as txt "{hline 78}"
     forvalues row = 1/4 {
         if `row' == 1 local row_label "Worker variance"
@@ -359,132 +364,382 @@ program define _fevc_display_intervals
         else local row_label "Total worker-firm"
         local regime = `table'[`row',7]
         local kind = cond(`regime'==1,"q = 1",cond(`regime'==0,"normal","none"))
+        if ("`request'"=="highrank" & `regime'==0) | ///
+            ("`request'"=="q1" & `regime'==1) local kind "`kind'*"
+        // The rule does not apply to the variance of the sum. Under
+        // inference(highrank) a share is shown only for a direction that the
+        // search found and resolved.
+        local share_text "."
+        local lead_ok = !("`request'"=="highrank" & ///
+            (`table'[`row',15]!=1 | `table'[`row',16]==7))
+        if `row'<4 & `lead_ok' _fevc_share_text `=`table'[`row',10]'
         if `regime'==0 {
-            di as txt %-18s "`row_label'" as result %12.6g `table'[`row',1] ///
-                %12.6g `table'[`row',2] %13.6g `table'[`row',8]        ///
-                %13.6g `table'[`row',9] as txt %10s "`kind'"
+            di as txt %-17s "`row_label'" as result                 ///
+                "  " %9.0g `table'[`row',1] "  " %9.0g `table'[`row',2] ///
+                "  " %9.0g `table'[`row',8] "  " %9.0g `table'[`row',9] ///
+                as txt %10s "`kind'" as result %7s "`share_text'"
         }
         else {
-            di as txt %-18s "`row_label'" as result %12.6g `table'[`row',1] ///
-                as txt %12s "" as result %13.6g `table'[`row',8]      ///
-                %13.6g `table'[`row',9] as txt %10s "`kind'"
+            di as txt %-17s "`row_label'" as result                 ///
+                "  " %9.0g `table'[`row',1] as txt %11s ""             ///
+                as result "  " %9.0g `table'[`row',8] "  " %9.0g `table'[`row',9] ///
+                as txt %10s "`kind'" as result %7s "`share_text'"
         }
     }
     di as txt "{hline 78}"
 end
 
-// What the intervals above mean and why each component got the one it has.
+// At most a few lines under the table: what the share and the q = 1
+// interval are, whether e(V) is posted and why not. The method, the
+// assumptions and every diagnostic are in estat inference.
 program define _fevc_display_interval_notes
     version 15.0
     tempname table
-    matrix `table' = e(inference_intervals)
-    local q1_components = e(inference_q1_components)
-    local threshold : display %2.0f 100*e(inference_share_threshold)
-    local threshold = strtrim("`threshold'")
-    local largest = 0
-    local shares ""
-    local weighty 0
+    capture confirm matrix e(inference_intervals)
+    if _rc {
+        capture confirm matrix e(component_inference)
+        if _rc {
+            if e(inference_joint_posted)==1 di as txt "e(V) is posted for the four components."
+            else di as txt "e(V) is not posted; see estat inference."
+            exit
+        }
+    }
+    _fevc_interval_table `table'
+    _fevc_threshold_text
+    local threshold = e(inference_share_threshold)
+    if missing(`threshold') local threshold .1
+    local shares 0
+    local q1 0
     local none 0
+    local missing_se 0
+    local weighty 0
     local unavailable 0
-    forvalues row = 1/3 {
+    local would 0
+    local unrequested 0
+    local noshare 0
+    forvalues row = 1/4 {
+        local regime = `table'[`row',7]
         local share = `table'[`row',10]
-        if `table'[`row',7]==0 & `table'[`row',16]!=0 & !missing(`share') & ///
-            `share'>e(inference_share_threshold) local unavailable 1
-        if !missing(`share') local largest = max(`largest',`share')
-        // The share is a ratio of two estimates: it can exceed one, and it
-        // does not exist when the variance estimate is not positive.
-        local text : display %4.1f 100*`share'
-        local text = strtrim("`text'")+"%"
-        if missing(`share') local text "none"
-        else if `share'>1 local text "over 100%"
-        local shares "`shares'`=cond(`row'>1,", ","")'`text'"
-        if `table'[`row',7]==1 & `table'[`row',14]>.1 local weighty 1
-        if missing(`table'[`row',7]) local none 1
+        local status = `table'[`row',16]
+        // As in the table: under inference(highrank) only a resolved
+        // direction has a share.
+        local lead_ok = !("`request'"=="highrank" & ///
+            (`table'[`row',15]!=1 | `status'==7))
+        if `row'<4 & !`lead_ok' local noshare 1
+        if !`lead_ok' local share = .
+        if `row'<4 & !missing(`share') local shares 1
+        if `regime'==1 local ++q1
+        if missing(`regime') local ++none
+        if missing(`table'[`row',2]) local missing_se 1
+        if `regime'==1 & `table'[`row',14]>.1 & !missing(`table'[`row',14]) local weighty 1
+        if "`request'"=="auto" & `row'<4 & `regime'==0 & `status'!=0 & ///
+            !missing(`share') & `share'>`threshold' local unavailable 1
+        // What the default rule would have reported under inference(highrank).
+        if "`request'"=="highrank" & `row'<4 & `status'==0 & `lead_ok' & ///
+            (missing(`table'[`row',2]) | (!missing(`share') & `share'>`threshold')) {
+            local ++would
+        }
+        if "`request'"=="q1" & `regime'==0 local unrequested 1
     }
-    di as txt "Interval by component. normal: estimate +/- " ///
-        as result %4.2f invnormal(.5+e(level)/200) as txt " standard errors."
-    if "`e(inference_leading_request)'"=="q1" {
-        di as txt "q = 1: requested with inference(q1) for every component that has one."
+    if `shares' {
+        di as txt "Lead share: leading direction's share of the estimated sampling variance."
     }
-    else {
-        di as txt "q = 1: used when one direction of the worker-firm network carries more than `threshold'%"
-        di as txt "of the component's estimated sampling variance, or when the variance estimate"
-        di as txt "is not positive. Shares (worker, firm, covariance): `shares'."
+    if `noshare' {
+        di as txt "Lead share .: no converged leading direction (see estat inference)."
     }
-    if `q1_components'>0 {
-        di as txt "A q = 1 estimate is not close to normal, so it has no standard error; its"
-        di as txt "interval is the Andrews-Mikusheva interval along that direction (KSS 2020,"
-        di as txt "Section 7.1) and need not be symmetric around the estimate."
-        di as txt "e(V) is not posted: it is posted only when every component is normal."
-        di as txt "All intervals and the standard errors of the normal form are in"
-        di as txt "e(inference_intervals); the directions are in e(inference_leading)."
+    if `q1' {
+        di as txt "q = 1: Andrews-Mikusheva interval (KSS 2020, Sec. 7.1); no standard error."
     }
-    else di as txt "No component needs the q = 1 interval, and e(V) is posted."
-    if `weighty' {
-        di as txt "Warning: a leading direction rests on few deletion units (a squared weight"
-        di as txt "         above 0.1). The q = 1 interval assumes that no unit dominates it."
+    if "`request'"=="highrank" & `shares' {
+        if `would'==0 {
+            di as txt "The default rule (lead share above `threshold_text'%) gives the same intervals."
+        }
+        else {
+            local components = cond(`would'==1,"1 component would get","`would' components would get")
+            di as txt "Under the default rule (lead share above `threshold_text'%), `components' q = 1."
+        }
     }
-    if e(inference_leading_unresolved)>0 {
-        di as txt "Note: " as result e(inference_leading_unresolved) as txt ///
-            " leading direction(s) were not resolved within the cap on linear solves;"
-        di as txt "      the largest eigenvalues are then close, and no single direction dominates."
+    if `unrequested' {
+        di as txt "normal (no *): that component has no q = 1 interval; see estat inference."
+    }
+    if `none' {
+        di as txt "none: no interval; the variance estimates are not positive."
     }
     if `unavailable' {
-        di as txt "Warning: a component calls for the q = 1 interval, but that interval could not"
-        di as txt "         be formed; the normal interval shown for it can under-cover."
+        di as txt "Warning: q = 1 needed but unavailable for a component; normal may under-cover."
+    }
+    if `weighty' {
+        di as txt "Warning: a q = 1 direction rests on few deletion units; see estat inference."
+    }
+    if "`e(centering)'"=="corrected" | "$VCKSS_CENTERING"=="corrected" {
+        di as txt "Standard errors treat the centering(corrected) increment as fixed."
+    }
+    if e(inference_joint_posted)==1 {
+        di as txt "e(V) is posted: every component has a normal interval."
+    }
+    else if `q1' di as txt "e(V) is not posted: a component has a q = 1 interval."
+    else if `missing_se' di as txt "e(V) is not posted: a variance estimate is not positive."
+    else di as txt "e(V) is not posted: the estimated covariance is not admissible."
+end
+
+// estat inference: everything about the standard errors of the components
+// that the main display leaves out, component by component, with the method
+// and its assumptions. 78 columns: label 26, four components of 13.
+program define _fevc_display_inference_details
+    version 15.0
+    tempname table lead rank
+    _fevc_interval_table `table'
+    _fevc_threshold_text
+    local threshold = e(inference_share_threshold)
+    if missing(`threshold') local threshold .1
+    local has_lead 0
+    capture confirm matrix e(inference_leading)
+    if !_rc {
+        matrix `lead' = e(inference_leading)
+        local has_lead 1
+    }
+    local has_rank 0
+    capture confirm matrix e(inference_effective_rank)
+    if !_rc {
+        matrix `rank' = e(inference_effective_rank)
+        local has_rank 1
+    }
+    local level : display %9.0g e(level)
+    local level = strtrim("`level'")
+    local draws : display %12.0fc e(inference_draws)
+    local units : display %15.0fc e(inference_independent_units)
+    di as txt _newline "Standard errors of the components"
+    di as txt "Method: " as result "repeat-measurement" as txt "; "   ///
+        as result strtrim("`draws'") as txt " pseudo-noise draws; " ///
+        as result strtrim("`units'") as txt " deletion units; level " ///
+        as result "`level'%"
+    if "`request'"=="highrank" {
+        di as txt "Request: " as result "inference(highrank)" as txt ///
+            ": the normal interval of every component"
+    }
+    else if "`request'"=="q1" {
+        di as txt "Request: " as result "inference(q1)" as txt   ///
+            ": the q = 1 interval wherever it exists"
+    }
+    else {
+        di as txt "Request: " as result "inference(auto)" as txt ///
+            ": q = 1 interval when the lead share exceeds `threshold_text'%"
+    }
+    di as txt "{hline 78}"
+    di as txt %-26s "" %13s "Worker" %13s "Firm" %13s "Worker-firm" %13s "Total"
+    di as txt %-26s "" %13s "variance" %13s "variance" %13s "covariance" ///
+        %13s "worker-firm"
+    di as txt "{hline 78}"
+    _fevc_detail_numbers "Estimate" `table' 1
+    _fevc_detail_numbers "Std. err. (normal form)" `table' 2
+    _fevc_detail_numbers "Normal interval, lower" `table' 3
+    _fevc_detail_numbers "                 upper" `table' 4
+    _fevc_detail_numbers "q = 1 interval, lower" `table' 5
+    _fevc_detail_numbers "                upper" `table' 6
+    _fevc_detail_numbers "q = 1 curvature" `table' 11
+    _fevc_detail_numbers "q = 1 critical value" `table' 12
+    forvalues t = 1/4 {
+        local status = `table'[`t',16]
+        local text`t' = cond(`status'==0,"computed",cond(`status'==1,"var. <= 0", ///
+            cond(`status'==2,"singular",cond(`status'==3,"failed",       ///
+            cond(`status'==7,"no direction",                            ///
+            cond(missing(`status'),".","code `status'"))))))
+    }
+    _fevc_detail_row "q = 1 status" "`text1'" "`text2'" "`text3'" "`text4'"
+    di as txt "{hline 78}"
+    forvalues t = 1/4 {
+        local regime = `table'[`t',7]
+        local share = `table'[`t',10]
+        local normal_ok = !missing(`table'[`t',2])
+        local q1_ok = (`table'[`t',16]==0)
+        local kind`t' = cond(`regime'==1,"q = 1",cond(`regime'==0,"normal","none"))
+        if ("`request'"=="highrank" & `regime'==0) | ///
+            ("`request'"=="q1" & `regime'==1) local kind`t' "`kind`t''*"
+        // Why the component has the interval it has.
+        if missing(`regime') local why`t' "none exists"
+        else if inlist("`request'","highrank","q1") {
+            local why`t' = cond(`regime'==1 | "`request'"=="highrank","requested","no q = 1")
+        }
+        else if `t'==4 local why`t' "sum: normal"
+        else if `regime'==1 & !`normal_ok' local why`t' "var. <= 0"
+        else if `regime'==1 local why`t' "share > `threshold_text'%"
+        else if !missing(`share') & `share'>`threshold' & !`q1_ok' local why`t' "no q = 1"
+        else local why`t' "share <= `threshold_text'%"
+        // As in the main table: under inference(highrank) only a resolved
+        // direction has a share.
+        local share_text "."
+        if !("`request'"=="highrank" & (`table'[`t',15]!=1 | `table'[`t',16]==7)) {
+            _fevc_share_text `=`table'[`t',10]'
+        }
+        local share`t' "`share_text'"
+        local converged`t' = cond(`table'[`t',15]==1,"yes",cond(missing(`table'[`t',15]),".","no"))
+    }
+    _fevc_detail_row "Reported interval" "`kind1'" "`kind2'" "`kind3'" "`kind4'"
+    _fevc_detail_row "Reason" "`why1'" "`why2'" "`why3'" "`why4'"
+    _fevc_detail_row "Lead share" "`share1'" "`share2'" "`share3'" "`share4'"
+    if `has_lead' {
+        _fevc_detail_numbers "Leading eigenvalue lambda1" `lead' 5
+        _fevc_detail_numbers "Second eigenvalue lambda2" `lead' 6
+    }
+    _fevc_detail_numbers "KSS's Lindeberg max w_i1^2" `table' 14
+    if `has_rank' _fevc_detail_numbers "Effective rank" `rank' 1
+    _fevc_detail_row "Search converged" "`converged1'" "`converged2'" ///
+        "`converged3'" "`converged4'"
+    if `has_lead' _fevc_detail_numbers "Search solves" `lead' 3
+    di as txt "{hline 78}"
+    // Each paragraph is one display: SMCL wraps it at the line size.
+    if "`request'"=="highrank" {
+        di as txt "{p 0 2 2}* Requested. The default reports the q = 1 interval "   ///
+            "when the lead share exceeds `threshold_text'% or the normal-form "   ///
+            "variance is not positive, and the normal interval otherwise.{p_end}"
+    }
+    else if "`request'"=="q1" {
+        di as txt "{p 0 2 2}* Requested. A component without a q = 1 interval "     ///
+            "keeps the normal interval if it has one.{p_end}"
+    }
+    else {
+        di as txt "{p 0 2 2}Reason: the default reports the q = 1 interval when "   ///
+            "the lead share exceeds `threshold_text'% or the normal-form variance " ///
+            "is not positive (var. <= 0), and the normal interval otherwise; the " ///
+            "variance of the sum always keeps the normal interval.{p_end}"
+    }
+    di as txt "{p 0 2 2}Lead share: the leading direction's share of the "         ///
+        "estimated sampling variance, (4 lambda1^2 max(b^2 - V[b], 0) V[b] + "      ///
+        "2 lambda1^2 V[b]^2) / V, with b the leading score, V[b] its variance and " ///
+        "V the normal-form variance; a ratio of two estimates, it can exceed one.{p_end}"
+    _fevc_display_residual_se
+    // Warnings about the components as reported.
+    local weighty 0
+    local unavailable 0
+    local none 0
+    local normal_low 0
+    local low 0
+    forvalues t = 1/4 {
+        local regime = `table'[`t',7]
+        if `regime'==1 & `table'[`t',14]>.1 & !missing(`table'[`t',14]) local weighty 1
+        if "`request'"=="auto" & `t'<4 & `regime'==0 & `table'[`t',16]!=0 & ///
+            !missing(`table'[`t',10]) & `table'[`t',10]>`threshold' local unavailable 1
+        if missing(`regime') local none 1
+        if `has_rank' & `t'<4 {
+            if `rank'[`t',1]<10 {
+                local low 1
+                if `regime'==0 local normal_low 1
+            }
+        }
+    }
+    // The effective rank is that of the normal approximation: a low one
+    // matters for a component that keeps the normal interval.
+    if (`low' | e(inference_low_rank_warning)==1) & `normal_low' {
+        di as txt "Warning: a low effective rank means few directions carry a component;"
+        di as txt "         normal confidence intervals can then under-cover."
+    }
+    else if `low' {
+        di as txt "{p 0 6 2}Note: every component with an effective rank below 10 has "  ///
+            "the q = 1 interval.{p_end}"
+    }
+    if `weighty' {
+        di as txt "{p 0 9 2}Warning: a leading direction rests on few deletion units "   ///
+            "(a squared weight above 0.1); the q = 1 interval assumes that no unit "     ///
+            "dominates it.{p_end}"
+    }
+    if `"`e(inference_leading_failure)'"'!="" {
+        di as txt "{p 0 6 2}Note: the run with the leading-direction search stopped (" ///
+            as result `"`e(inference_leading_failure)'"' as txt "); the command ran "   ///
+            "once more without it, so no direction and no lead share are reported. "     ///
+            "The normal intervals and e(V) do not depend on the search.{p_end}"
+    }
+    else if e(inference_leading_unresolved)>0 & !missing(e(inference_leading_unresolved)) {
+        di as txt "{p 0 6 2}Note: " as result e(inference_leading_unresolved) as txt  ///
+            " leading direction(s) were not resolved within the cap on linear "        ///
+            "solves; the largest eigenvalues are then close, and no single "           ///
+            "direction dominates.{p_end}"
+    }
+    if `unavailable' {
+        di as txt "{p 0 9 2}Warning: a component calls for the q = 1 interval, but "     ///
+            "that interval could not be formed; the normal interval shown for it "     ///
+            "can under-cover.{p_end}"
     }
     if `none' {
         di as txt "Note: a component has neither interval: its variance estimates are not positive."
     }
+    if e(inference_joint_posted)==1 {
+        di as txt "e(V) is posted for the four components; " as result "test" ///
+            as txt " and " as result "lincom" as txt " use it."
+    }
+    else di as txt "e(V) is not posted: some component lacks a normal interval."
+    di as txt "{p 0 2 2}Stored: e(inference_intervals), e(inference_leading), "       ///
+        "e(inference_effective_rank), e(component_inference).{p_end}"
 end
 
-// Leave-out residual standard errors: what was computed, what it assumes,
-// and the diagnostics that say when the normal interval is doubtful.
+// One row of estat inference: a label and four formatted cells.
+program define _fevc_detail_row
+    version 15.0
+    args label c1 c2 c3 c4
+    di as txt %-26s `"`label'"' as result %13s `"`c1'"' %13s `"`c2'"' ///
+        %13s `"`c3'"' %13s `"`c4'"'
+end
+
+// One row of numbers: column `column' of the 4-row matrix `matrix'.
+program define _fevc_detail_numbers
+    version 15.0
+    args label matrix column
+    forvalues t = 1/4 {
+        local cell`t' : display %9.0g `matrix'[`t',`column']
+        local cell`t' = strtrim("`cell`t''")
+    }
+    _fevc_detail_row `"`label'"' "`cell1'" "`cell2'" "`cell3'" "`cell4'"
+end
+
+// What the standard errors assume and how they are formed: the method text
+// of estat inference (repeat-measurement) and of the removed leave-out
+// residual model.
 program define _fevc_display_residual_se
     version 15.0
+    local repeat = ("`e(inference_variance_fit)'"=="repeat_measurement")
+    if `repeat' {
+        di as txt _newline "Method and assumptions"
+        di as txt "{p 0 2 2}Deletion units that share a worker-firm cell (a "         ///
+            "stayer's observations; under observation deletion also a mover's match " ///
+            "of two or more observations) are repeat measurements and get the "       ///
+            "sample variance of their outcomes; the remaining units of movers use a " ///
+            "fitted model (leverage, match size, estimated effects).{p_end}"
+        local controls = cond(e(inference_nuisance_omitted)==0, ///
+            " Estimated controls enter to first order.","")
+        di as txt "{p 0 2 2}Assumes independent deletion units. "                     ///
+            "The standard error is as good as that model for movers.`controls'{p_end}"
+        di as txt "{p 0 2 2}q = 1: the Andrews-Mikusheva interval of KSS (2020, "     ///
+            "Section 7.1) along the leading direction, the range of the estimate "    ///
+            "over a confidence ellipse for the leading score and the remainder, with " ///
+            "a critical value set by the curvature. It need not be symmetric around "  ///
+            "the estimate and has no standard error. It assumes that no deletion "     ///
+            "unit dominates the direction, so that KSS's Lindeberg statistic "         ///
+            "max w_i1^2 is small.{p_end}"
+        if "`e(centering)'"=="corrected" | "$VCKSS_CENTERING"=="corrected" {
+            di as txt "{p 0 2 2}Standard errors describe the mean-centred estimate; "  ///
+                "the corrected-centering increment is treated as fixed.{p_end}"
+        }
+        exit
+    }
     tempname rank
     matrix `rank' = e(inference_effective_rank)
-    local repeat = ("`e(inference_variance_fit)'"=="repeat_measurement")
-    di as txt _newline "Standard errors: " ///
-        cond(`repeat',"repeat-measurement","leave-out residual") " (" ///
+    local units : display %15.0fc e(inference_independent_units)
+    di as txt _newline "Standard errors: leave-out residual (" ///
         as result e(inference_draws) as txt " pseudo-noise draws; " ///
-        as result %12.0fc e(inference_independent_units) as txt " deletion units)."
-    capture confirm matrix e(inference_intervals)
-    local by_component = (_rc==0)
-    if `by_component' _fevc_display_interval_notes
-    else if e(inference_joint_posted)==1 {
+        as result strtrim("`units'") as txt " deletion units)."
+    if e(inference_joint_posted)==1 {
         di as txt "e(V) is posted for the four components. Numerical MCSE is computational only."
     }
     else {
         di as txt "e(V) is not posted; use the available individual intervals."
     }
-    if `repeat' {
-        di as txt "Deletion units that share a worker-firm cell (a stayer's observations; under"
-        di as txt "observation deletion also a mover's match of two or more observations) get the"
-        di as txt "sample variance of their outcomes; the remaining units of movers use a fitted"
-        di as txt "model (leverage, match size, estimated effects)."
-        di as txt "Assumes independent deletion units. The standard error is as good as that"
-        di as txt "model for movers." cond(e(inference_nuisance_omitted)==0, ///
-            " Estimated controls enter to first order.","")
-    }
-    else {
-        di as txt "Assumes independent deletion units and similar error variances among units"
-        di as txt "that share a worker or a firm. Not robust to arbitrary heteroskedasticity."
-    }
-    // With leading directions the interval of each component already
-    // reflects whether one direction carries it.
-    if !`by_component' {
-        di as txt "Effective rank (worker, firm, covariance): " as result ///
-            %9.1f `rank'[1,1] %9.1f `rank'[2,1] %9.1f `rank'[3,1] ///
-            as txt "; largest unit influence share: " as result %6.4f e(inference_max_influence_share)
-        if e(inference_low_rank_warning)==1 {
-            di as txt "Warning: a low effective rank means few directions carry a component;"
-            di as txt "         normal confidence intervals can then under-cover."
-        }
-    }
-    if "`e(centering)'"=="corrected" | "$VCKSS_CENTERING"=="corrected" {
-        di as txt "Standard errors describe the mean-centred estimate; the corrected-centering"
-        di as txt "increment is treated as fixed."
+    di as txt "Assumes independent deletion units and similar error variances among units"
+    di as txt "that share a worker or a firm. Not robust to arbitrary heteroskedasticity."
+    di as txt "Effective rank (worker, firm, covariance): " as result ///
+        %6.1f `rank'[1,1] %6.1f `rank'[2,1] %6.1f `rank'[3,1]
+    di as txt "Largest unit influence share: " as result %6.4f e(inference_max_influence_share)
+    if e(inference_low_rank_warning)==1 {
+        di as txt "Warning: a low effective rank means few directions carry a component;"
+        di as txt "         normal confidence intervals can then under-cover."
     }
 end
 
@@ -596,18 +851,26 @@ program define _fevc_display_structured
         "successful computation does not establish the asymptotic condition."
 end
 
+// Numerical MCSE in full, for estat diagnostics: mode, method, status, the
+// four values, the developer's conditional values and what the MCSE leaves
+// out. It is computational precision, not a sampling standard error.
 program define _fevc_display_numerical
     version 15.0
-    args showoff
     tempname mcse
     if "`e(mcse_status)'"=="unavailable_capability" {
-        di as txt "Approximate numerical MCSE unavailable: installed plugin lacks numerical V2."
+        di as txt _newline "Approximate numerical MCSE unavailable: installed plugin lacks numerical V2."
     }
     if inlist("`e(mcse_mode)'","all","conditional") {
-        if "`e(mcse_mode)'"=="all" di as txt "Approximate numerical MCSE (all main point probes)"
-        else di as txt "Numerical MCSE (developer: conditional on leverage sketch)"
+        if "`e(mcse_mode)'"=="all" di as txt _newline "Approximate numerical MCSE (all main point probes)"
+        else di as txt _newline "Numerical MCSE (developer: conditional on leverage sketch)"
         di as txt "  MCSE method: " as result "`e(mcse_method)'" ///
-            as txt "; status: " as result "`e(mcse_status)'"
+            as txt "; status: " as result "`e(mcse_status)'"  ///
+            as txt "; available: " as result e(mcse_available)
+        if "`e(algorithm)'"=="jla" {
+            local probes : display %12.0fc e(probes)
+            di as txt "  Projections: " as result strtrim("`probes'") ///
+                as txt "; centering: " as result "`e(mcse_centering)'"
+        }
         if e(mcse_available)==1 {
             matrix `mcse' = e(mcse)
             di as txt "  worker=" as result %10.5g `mcse'[1,1] ///
@@ -616,10 +879,140 @@ program define _fevc_display_numerical
                 as txt "; total=" as result %10.5g `mcse'[1,4]
         }
         else di as txt "  Unavailable: " as result "`e(mcse_status)'"
+        // The developer's narrower calculation holds the leverage directions
+        // fixed; under mcse(all) it is reported beside the main values.
+        if "`e(mcse_mode)'"=="all" & e(mcse_conditional_available)==1 {
+            capture confirm matrix e(mcse_conditional)
+            if !_rc {
+                matrix `mcse' = e(mcse_conditional)
+                if colsof(`mcse')==4 {
+                    di as txt "  Conditional on the leverage sketch (developer):"
+                    di as txt "  worker=" as result %10.5g `mcse'[1,1] ///
+                        as txt "; firm=" as result %10.5g `mcse'[1,2] ///
+                        as txt "; covariance=" as result %10.5g `mcse'[1,3] ///
+                        as txt "; total=" as result %10.5g `mcse'[1,4]
+                }
+            }
+        }
         di as txt "  Main point estimates only; excludes projection/inference calculations."
-        di as txt "  Excludes finite-probe bias, solver/floating-point error and sampling uncertainty."
+        di as txt "  Excludes finite-probe bias, solver/floating-point error and sampling"
+        di as txt "  uncertainty. More projections (probes()) reduce it."
     }
-    else if "`e(mcse_mode)'"=="off" & "`showoff'"=="1" {
-        di as txt "Numerical MCSE: off (mcse(off)); method: none; available: 0."
+    else if "`e(mcse_mode)'"=="off" {
+        di as txt _newline "Numerical MCSE: off (mcse(off)); method: none; available: 0."
+    }
+end
+
+// Two significant digits, keeping trailing zeros: .00020, .018, 1.2, 12.
+program define _fevc_sig2
+    version 15.0
+    args value
+    local text "."
+    if !missing(`value') {
+        if `value'==0 local text "0"
+        else {
+            local digits = min(15,max(0,1-floor(log10(abs(`value')))))
+            local text : display %21.`digits'f `value'
+            local text = strtrim("`text'")
+            if substr("`text'",1,2)=="0." local text = substr("`text'",2,.)
+            if substr("`text'",1,3)=="-0." local text = "-"+substr("`text'",3,.)
+        }
+    }
+    c_local sig_text "`text'"
+end
+
+// The numerical MCSE under the decomposition table, in one line (two when
+// it does not fit in 79 columns): its four values and, when the components
+// have standard errors, its largest share of one. The share uses the
+// normal-form standard error for a component reported with the q = 1
+// interval. Above 10% the line warns and suggests more projections.
+program define _fevc_display_mcse_line
+    version 15.0
+    if "`e(mcse_status)'"=="unavailable_capability" {
+        di as txt "Numerical MCSE unavailable: the installed plugin lacks numerical V2."
+        exit
+    }
+    if !inlist("`e(mcse_mode)'","all","conditional") exit
+    if "`e(mcse_method)'"=="exact" | "`e(algorithm)'"=="exact" {
+        di as txt "Exact leverages: no numerical MCSE from projections."
+        exit
+    }
+    if e(mcse_available)!=1 {
+        di as txt "Numerical MCSE unavailable (" as result "`e(mcse_status)'" ///
+            as txt "); see " as result "estat diagnostics" as txt "."
+        exit
+    }
+    tempname mcse se
+    matrix `mcse' = e(mcse)
+    local have_se 0
+    capture confirm matrix e(inference_intervals)
+    if !_rc {
+        matrix `se' = e(inference_intervals)
+        local have_se 1
+    }
+    else if "`e(inference_variance_fit)'"!="" {
+        capture confirm matrix e(component_inference)
+        if !_rc {
+            matrix `se' = e(component_inference)
+            local have_se 1
+        }
+    }
+    local names worker firm cov sum
+    local largest = .
+    local flagged ""
+    forvalues j = 1/4 {
+        local name : word `j' of `names'
+        _fevc_sig2 `=`mcse'[1,`j']'
+        local part`j' "`name' `sig_text'"
+        if `have_se' {
+            local error = `se'[`j',2]
+            if `error'>0 & !missing(`error') {
+                local ratio = `mcse'[1,`j']/`error'
+                if missing(`largest') | `ratio'>`largest' local largest = `ratio'
+                if `ratio'>.1 {
+                    if "`flagged'"=="" local flagged "`name'"
+                    else local flagged "`flagged', `name'"
+                }
+            }
+        }
+    }
+    local probes : display %12.0fc e(probes)
+    local probes = strtrim("`probes'")
+    local line "Numerical MCSE (`probes' projections):"
+    if "`e(mcse_mode)'"=="conditional" {
+        local line "Conditional numerical MCSE (`probes' projections):"
+    }
+    local tail ""
+    if !missing(`largest') {
+        local percent = max(1,ceil(100*`largest'))
+        local tail "at most `percent'% of a standard error."
+        local part4 "`part4';"
+    }
+    forvalues j = 1/4 {
+        local separator = cond(`j'==1,1,2)
+        if strlen("`line'")+`separator'+strlen("`part`j''")<=79 {
+            if `j'==1 local line "`line' `part`j''"
+            else local line "`line'  `part`j''"
+        }
+        else {
+            di as txt "`line'"
+            local line "  `part`j''"
+        }
+    }
+    if "`tail'"!="" {
+        if strlen("`line'")+1+strlen("`tail'")<=79 local line "`line' `tail'"
+        else {
+            di as txt "`line'"
+            local line "  `tail'"
+        }
+    }
+    di as txt "`line'"
+    if "`flagged'"!="" {
+        local more = max(2000,10*e(probes))
+        local more : display %12.0f `more'
+        local more = strtrim("`more'")
+        di as txt "{p 0 9 2}Warning: numerical MCSE over 10% of the standard error " ///
+            "for `flagged'; more projections reduce it: rerun with "            ///
+            as result "probes(`more')" as txt " or more.{p_end}"
     }
 end

@@ -113,11 +113,20 @@ program define _rm_check
     assert rowsof(`rank')==4 & `rank'[1,1]>=1
     assert e(inference_max_influence_share)>0 & e(inference_max_influence_share)<=1
     assert e(inference_mean_omitted)==0
-    * inference(highrank) computes no leading direction.
-    capture confirm matrix e(inference_intervals)
-    assert _rc
-    capture confirm matrix e(inference_leading)
-    assert _rc
+    * inference(highrank) finds the leading directions, as the default does,
+    * and reports the normal interval of every component.
+    assert "`e(inference_leading_request)'"=="highrank"
+    assert e(inference_q1_components)==0
+    tempname table lead
+    matrix `table' = e(inference_intervals)
+    matrix `lead' = e(inference_leading)
+    assert rowsof(`table')==4 & colsof(`table')==16
+    assert rowsof(`lead')==4 & colsof(`lead')==28
+    forvalues j = 1/4 {
+        assert `table'[`j',7]==0
+        assert reldif(`table'[`j',2],`ci'[`j',2])<1e-12
+        assert `table'[`j',8]==`table'[`j',3] & `table'[`j',9]==`table'[`j',4]
+    }
 end
 
 * Leading directions and the interval reported for every component, against
@@ -220,7 +229,8 @@ program define _rm_leading_check
 end
 
 * Whether the display of a command shows a text: expected (1 or 0), the
-* text, the command.
+* text, the command. Lines are joined, so that a text wrapped by an SMCL
+* paragraph is still found.
 program define _rm_display
     gettoken expected 0 : 0
     gettoken text 0 : 0
@@ -229,15 +239,16 @@ program define _rm_display
     quietly log using `"`out'"', text replace name(_rm_display)
     `0'
     quietly log close _rm_display
-    local found 0
+    local joined ""
     file open `fh' using `"`out'"', read text
     file read `fh' line
     while r(eof)==0 {
-        if strpos(`"`macval(line)'"',`"`text'"') local found 1
+        local piece = strtrim(`"`macval(line)'"')
+        local joined `"`macval(joined)' `macval(piece)'"'
         file read `fh' line
     }
     file close `fh'
-    assert `found'==`expected'
+    assert (strpos(`"`macval(joined)'"',`"`text'"')>0)==`expected'
 end
 
 * --- point estimates are not touched -----------------------------------------
@@ -340,14 +351,14 @@ foreach j in 1 4 {
     _rm_far ctl2_match_se_old[1,`j'] ctl2_match_se[1,`j'] 0.1
     _rm_far ci[`j',2] ctl2_match_se_old[1,`j'] 0.1
 }
-* The display says that the term is included, and nothing about controls
-* without them.
-_rm_display 1 "Estimated controls enter to first order." fevc log_wage x2, ///
-    worker(worker_id) firm(firm_id) backend(mata) algorithm(exact) ///
-    inference(highrank) inferencemodel(repeat_measurement)
-_rm_display 0 "first order" fevc log_wage, worker(worker_id) firm(firm_id) ///
-    backend(mata) algorithm(exact) inference(highrank) ///
-    inferencemodel(repeat_measurement)
+* estat inference says that the term is included, and nothing about
+* controls without them.
+quietly fevc log_wage x2, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) inference(highrank) inferencemodel(repeat_measurement)
+_rm_display 1 "Estimated controls enter to first order." estat inference
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    algorithm(exact) inference(highrank) inferencemodel(repeat_measurement)
+_rm_display 0 "first order" estat inference
 quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
     algorithm(exact) stayers(movers) inference(highrank) ///
     inferencemodel(repeat_measurement) nodisplay
@@ -1031,7 +1042,7 @@ foreach route in "backend(mata) algorithm(exact)" "backend(rust) probes(800)" {
         _rm_same_check
         assert "`e(status)'"==cond("`inference'"=="q1", ///
             "FEVC_REPEAT_MEASUREMENT_Q1","FEVC_REPEAT_MEASUREMENT_SE")
-        assert "`e(inference_leading_request)'"==cond("`inference'"=="q1","q1","")
+        assert "`e(inference_leading_request)'"=="`inference'"
     }
 }
 macro drop RM_SAME_STATUS

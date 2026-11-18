@@ -220,11 +220,14 @@ program define _fevc_repeat_se_post, eclass
     ereturn local status "FEVC_REPEAT_MEASUREMENT_SE"
     if e(inference_computed_targets)<4 ereturn local status "FEVC_REPEAT_MEASUREMENT_SE_PARTIAL"
     if e(inference_computed_targets)==0 ereturn local status "FEVC_STRUCTURED_INFERENCE_UNAVAILABLE"
-    // Leading directions and the interval reported for every component.
+    // Leading directions and the interval reported for every component. A
+    // highrank run repeated without the search records that no direction is
+    // available.
+    if "$VCKSS_SE_SEARCH_FAILED"=="1" _fevc_se_search_unavailable
     _fevc_se_regime_post
     capture confirm scalar e(inference_leading_steps)
     if !_rc {
-        if "`route'"=="rust" {
+        if "`route'"=="rust" & "$VCKSS_SE_SEARCH_FAILED"!="1" {
             // The search, four remainder influences and four remainder
             // kernels per draw are not part of the offset pass.
             ereturn scalar inference_offset_pass_solves =            ///
@@ -241,13 +244,16 @@ end
 // The rule. A component is reported with the q = 1 interval when its
 // leading direction carries more than `share_threshold' of the estimated
 // sampling variance, or when the high-rank variance estimate is not
-// positive; under inference(q1) wherever that interval exists. The variance
-// of the sum has no dominant direction (its nonzero eigenvalues are all
-// equal) and keeps the normal interval under inference(auto).
+// positive; under inference(q1) wherever that interval exists; never under
+// inference(highrank), which keeps the normal interval of every component
+// and, through the unchanged joint status, e(V). The variance of the sum has
+// no dominant direction (its nonzero eigenvalues are all equal) and keeps
+// the normal interval under inference(auto).
 //
 // V: 4 x 4 high-rank covariance. b: 1 x 4 estimates. level: confidence level
 // in per cent. Reads __fevc_se_leading (4 x 28, the layout of the native
-// export) and $VCKSS_SE_LEADING (auto or q1). Leaves __fevc_se_intervals:
+// export) and $VCKSS_SE_LEADING (auto, highrank or q1). Leaves
+// __fevc_se_intervals:
 //   1 estimate   2 highrank_se   3 normal_lb   4 normal_ub   5 q1_lb
 //   6 q1_ub      7 regime (0 normal, 1 q = 1, missing: none)  8 lb  9 ub
 //  10 variance_share  11 curvature  12 critical_value  13 eigen_share
@@ -259,7 +265,7 @@ program define _fevc_se_regime_decide
     global VCKSS_SE_ANY_Q1 0
     capture matrix drop __fevc_se_intervals
     capture confirm matrix __fevc_se_leading
-    if _rc | !inlist("$VCKSS_SE_LEADING","auto","q1") exit
+    if _rc | !inlist("$VCKSS_SE_LEADING","auto","highrank","q1") exit
     if rowsof(__fevc_se_leading)!=4 | colsof(__fevc_se_leading)!=28 {
         di as error "repeat-measurement leading directions have the wrong shape"
         exit 498
@@ -288,6 +294,9 @@ program define _fevc_se_regime_decide
         if "$VCKSS_SE_LEADING"=="q1" {
             if `q1_ok' local regime = 1
             else if `normal_ok' local regime = 0
+        }
+        else if "$VCKSS_SE_LEADING"=="highrank" {
+            if `normal_ok' local regime = 0
         }
         else {
             if `q1_ok' & `t'<4 & (!`normal_ok' | `share'>`share_threshold') local regime = 1
@@ -335,6 +344,30 @@ program define _fevc_se_regime_decide
     global VCKSS_SE_SHARE_THRESHOLD `share_threshold'
 end
 
+// inference(highrank) after its search stopped and the run was repeated
+// without it: the leading table holds status 7 (no direction) and the
+// intervals are the normal ones of e(component_inference), as the regime
+// helper forms them from the high-rank variances.
+program define _fevc_se_search_unavailable
+    version 15.0
+    capture confirm matrix __fevc_se_intervals
+    if !_rc exit
+    tempname normal V b
+    matrix `normal' = e(component_inference)
+    matrix `b' = e(b)
+    matrix `V' = J(4,4,0)
+    matrix __fevc_se_leading = J(4,28,.)
+    forvalues t = 1/4 {
+        matrix `V'[`t',`t'] = cond(missing(`normal'[`t',2]),.,`normal'[`t',2]^2)
+        matrix __fevc_se_leading[`t',1] = 7
+        matrix __fevc_se_leading[`t',2] = 0
+        matrix __fevc_se_leading[`t',3] = 0
+        matrix __fevc_se_leading[`t',4] = 0
+    }
+    global VCKSS_SE_LEADING highrank
+    _fevc_se_regime_decide `V' `b' `=e(level)'
+end
+
 program define _fevc_se_regime_post, eclass
     version 15.0
     capture confirm matrix __fevc_se_intervals
@@ -362,15 +395,24 @@ program define _fevc_se_regime_post, eclass
     ereturn scalar inference_leading_steps = `steps'
     ereturn scalar inference_share_threshold = $VCKSS_SE_SHARE_THRESHOLD
     ereturn local inference_leading_request "$VCKSS_SE_LEADING"
-    ereturn local inference_regime_rule = cond("$VCKSS_SE_LEADING"=="q1", ///
-        "inference(q1): the q = 1 interval wherever it exists", ///
-        "q = 1 interval when the leading direction carries more than " + ///
-        strofreal($VCKSS_SE_SHARE_THRESHOLD) + ///
-        " of the estimated sampling variance or the high-rank variance estimate is not positive; normal interval otherwise")
+    local rule "q = 1 interval when the leading direction carries more than "
+    local rule "`rule'`=strofreal($VCKSS_SE_SHARE_THRESHOLD)' of the estimated sampling variance or the high-rank variance estimate is not positive; normal interval otherwise"
+    if "$VCKSS_SE_LEADING"=="q1" local rule "inference(q1): the q = 1 interval wherever it exists"
+    if "$VCKSS_SE_LEADING"=="highrank" {
+        local rule "inference(highrank): the normal interval of every component; leading directions computed for their shares only"
+    }
+    ereturn local inference_regime_rule "`rule'"
     ereturn local inference_reference_selected = cond(`q1_components'==0, ///
         "q0 normal","q0 normal or q1 by component")
     ereturn local inference_reference                             ///
         "normal approximation, or the Andrews-Mikusheva interval along one leading direction (KSS q = 1), by component"
+    if "$VCKSS_SE_LEADING"=="highrank" {
+        ereturn local inference_reference                         ///
+            "normal approximation for every component; the leading direction of each is computed and its share reported"
+    }
+    // Why no direction is available (status 7), or empty.
+    ereturn local inference_leading_failure = cond("$VCKSS_SE_SEARCH_FAILED"=="1", ///
+        `"$VCKSS_SE_SEARCH_REASON"',"")
     ereturn matrix inference_leading = `leading'
     ereturn matrix inference_intervals = `table'
 end

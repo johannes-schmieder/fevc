@@ -1,5 +1,6 @@
 *! Implements estat summaries for fevc results, including decomposition,
-*! sample selection, computation, and inference diagnostics.
+*! sample selection, computation, numerical diagnostics, and the details of
+*! the standard errors of the components.
 
 program define fevc_estat, rclass
     version 15.0
@@ -12,7 +13,7 @@ program define fevc_estat, rclass
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "" {
         di as err "estat subcommand required"
-        di as err "available subcommands are decomposition, sample, computation, and diagnostics"
+        di as err "available subcommands are decomposition, sample, computation, diagnostics, and inference"
         exit 198
     }
 
@@ -28,6 +29,9 @@ program define fevc_estat, rclass
     }
     else if `length' >= 3 & "`subcommand'" == substr("diagnostics",1,`length') {
         _fevc_estat_diagnostics `0'
+    }
+    else if `length' >= 3 & "`subcommand'" == substr("inference",1,`length') {
+        _fevc_estat_inference `0'
     }
     else {
         di as err "estat subcommand `subcommand' is not allowed after fevc"
@@ -266,9 +270,41 @@ program define _fevc_estat_diagnostics
 
     fevc__display, numericaldiagnosticsonly
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") | ///
-        inlist("`e(inference_variance_fit)'","leaveout_residual","repeat_measurement") {
+        "`e(inference_variance_fit)'"=="leaveout_residual" {
         fevc__display, inferencediagnosticsonly
+    }
+    if "`e(inference_variance_fit)'"=="repeat_measurement" {
+        di as txt _newline "Standard errors of the components: type " ///
+            as result "estat inference" as txt "."
     }
     di as txt _newline "Type " as result "ereturn list" as txt ///
         " for the complete machine-readable diagnostic record."
+end
+
+// The standard errors of the components in detail: for every component
+// both intervals, the regime and why, the leading direction and the search,
+// then the method and its assumptions.
+program define _fevc_estat_inference
+    version 15.0
+    if strtrim(`"`0'"') != "" {
+        di as err "estat inference does not allow options"
+        exit 198
+    }
+    if "`e(inference_variance_fit)'"=="repeat_measurement" {
+        fevc__display, inferencediagnosticsonly
+        exit
+    }
+    di as txt _newline "Standard errors of the components: not computed for this fit."
+    if e(inference_auto)==1 & `"`e(inference_auto_reason)'"'!="" {
+        di as txt "{p 0 2 2}The default returned point estimates only: " ///
+            `"`e(inference_auto_reason)'"' ".{p_end}"
+    }
+    else if "`e(projection_effect)'"!="" {
+        di as txt "{p 0 2 2}With project() the components have point estimates " ///
+            "only; the projection results are in e(projection_results).{p_end}"
+    }
+    else {
+        di as txt "{p 0 2 2}They were not requested (inference(none)); the "     ///
+            "default, inference(auto), computes them.{p_end}"
+    }
 end

@@ -129,18 +129,25 @@ assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt
 assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"gram_probes"))==0
 // Four solves per pseudo-noise draw, three for the kernel image of the
 // outcome, and under joint nuisance with a control two per point probe for
-// the fixed-offset pass.
+// the fixed-offset pass. inference(highrank) also finds the leading
+// directions, as the other modes do: the search, four remainder influences
+// and four remainder kernels per draw.
 assert e(inference_draws)==8 & e(inference_simulations)==4*8
 assert e(inference_spectrum_probes)==8 & e(inference_spectrum_iterations)==0
 assert e(inference_offset_pass_solves)==2*160
-assert e(inference_solver_columns)==4*8+3+2*160
+assert e(inference_leading_steps)>0
+assert e(inference_solver_columns)==4*8+3+2*160+e(inference_leading_steps)+4+4*8
 assert e(inference_solver_max_complete) <= e(inference_solver_tolerance)
 assert e(inference_joint_posted)==1
-// inference(highrank) computes no leading direction.
-capture confirm matrix e(inference_intervals)
-assert _rc
+assert `"`e(inference_leading_request)'"' == "highrank"
+assert e(inference_q1_components)==0
+matrix q0_table = e(inference_intervals)
+assert rowsof(q0_table)==4 & colsof(q0_table)==16
 forvalues target = 1/4 {
     assert q0_ci[`target',2]>0 & reldif(q0_ci[`target',2],sqrt(q0_V[`target',`target']))<1e-12
+    // Every component keeps the normal interval.
+    assert el(q0_table,`target',colnumb(q0_table,"regime"))==0
+    assert el(q0_table,`target',colnumb(q0_table,"lb"))==el(q0_table,`target',colnumb(q0_table,"normal_lb"))
 }
 
 matrix map = (1,0,0 \ 0,1,0 \ 0,0,1 \ 1,1,2)

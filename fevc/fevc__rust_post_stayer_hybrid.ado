@@ -223,5 +223,6 @@ program define fevc__rust_post_stayer_hybrid, eclass sortpreserve
     ereturn matrix stayer_hybrid_sample_accounting = `accounting'
     ereturn matrix rust_stayer_augmentation_receipt = `aug'
     ereturn matrix rust_stayer_exact_memory_receipt = `memory'
-    if "`nodisplay'"=="" fevc__display
+    // The command displays the result once e() is complete.
+    if "`nodisplay'"=="" global VCKSS_DISPLAY_DEFERRED 1
 end

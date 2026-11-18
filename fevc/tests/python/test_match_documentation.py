@@ -98,17 +98,26 @@ def test_help_preserves_all_runnable_example_names():
     current = (ROOT / "fevc/fevc.sthlp").read_text()
     pattern = r"\{\* example_start - ([^}]+)\}\{\.\.\.\}(.*?)\{\* example_end\}\{\.\.\.\}"
     current_examples = dict(re.findall(pattern, current, re.S))
-    # The qualified inventory is kept; the 0.6.0 interval overrides added two.
-    additive_examples = {"highrank_inference", "q1_inference"}
-    assert len(current_examples) == 7
+    # The qualified inventory is kept; the 0.6.0 interval overrides added two
+    # and the postestimation walk-through one.
+    additive_examples = {"highrank_inference", "q1_inference", "postestimation"}
+    assert len(current_examples) == 8
     assert set(INVENTORY["examples"]) | additive_examples == current_examples.keys()
     # Numerical fixture and truth checks run in Stata after moving generation
     # into the installed helper; example text is no longer byte-identical.
     for name, number in (("weights_targets", 3), ("component_inference", 5),
-                         ("highrank_inference", 2), ("q1_inference", 4)):
+                         ("highrank_inference", 2), ("q1_inference", 4),
+                         ("postestimation", 4)):
         assert f"simulate_data(ex{number})" in current_examples[name]
     assert "inference(highrank)" in current_examples["highrank_inference"]
     assert "inference(q1)" in current_examples["q1_inference"]
+    # Examples 1 to 3 show the command only; the estat displays have their
+    # own example.
+    for name in ("jla_controls", "exact_controls", "weights_targets"):
+        assert "estat" not in current_examples[name]
+        assert "matrix list" not in current_examples[name]
+    for display in ("estat decomposition, full", "estat diagnostics", "estat inference"):
+        assert display in current_examples["postestimation"]
 
 
 def test_catalog_preserves_match_install_inventory():

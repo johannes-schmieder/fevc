@@ -87,6 +87,26 @@ numerator and denominator are estimated, so the ratio can exceed one.
 KSS's squared-eigenvalue share uses only the design. The two statistics answer
 different questions, even when both cutoffs are set at 10\%.
 
+The variance share was preferred for three reasons. First, the departure from
+normality comes from the leading direction's part of the sampling variance,
+and that part depends on the error variances along the direction and on the
+size of its score, not only on the design: a weakly connected direction can
+dominate the eigenvalues and still carry little of the variance. Second, it
+reports the $q=1$ interval only where it is needed, which matters because a
+$q=1$ component has no standard error and leaves \code{e(V)} unposted. On the stored
+draws of the $q=1$ simulations (27 designs, 1,000 draws each), both rules kept
+coverage, with a lowest coverage of 0.940 for KSS's rule and 0.937 for the
+variance share, but KSS's rule chose $q=1$ for 78 of the 81
+design--component pairs, including the firm variance and the covariance of a
+design without a bottleneck, whose eigenvalue shares were 0.11 and 0.12. The
+variance share chose it in 7\% of the draws of designs without a bottleneck.
+This comparison is development evidence: it was made after the results of those
+simulations were known. Third, the variance share uses only quantities that the
+$q=1$ calculation already produces, whereas KSS's share needs a separate
+randomized trace of the squared target kernel (KSS's code uses 10,000 draws).
+Its drawbacks are that it is a ratio of estimates, so it is noisy and can exceed
+one, and that it inherits the variance model's errors.
+
 When \fevc{} reports a $q=1$ interval, it displays endpoints and leaves the
 standard-error column empty for that component. The high-rank standard
 error, when it exists, remains available for comparison.

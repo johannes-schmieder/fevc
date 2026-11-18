@@ -739,5 +739,7 @@ program define fevc__rust_post_exact_v7, eclass sortpreserve
     ereturn local numerical_error "deterministic dense numerical backend"
     ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
-    if "`nodisplay'" == "" fevc__display
+    // The caller completes e() (numerical MCSE, population metadata) before
+    // the command displays the result.
+    if "`nodisplay'" == "" global VCKSS_DISPLAY_DEFERRED 1
 end

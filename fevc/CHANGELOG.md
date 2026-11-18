@@ -1,16 +1,76 @@
 # Changelog
 
-## Unreleased
+## Unreleased (0.6.1)
 
-Documentation only; the estimator, the standard errors and the native
-plugins are those of 0.6.0.
+The estimator, the standard errors, `e(V)` and the native plugins are those
+of 0.6.0; the display, `inference(highrank)`'s search and the postestimation
+commands change. The version strings stay at 0.6.0 until a release.
+
+- One table of the components in every mode, with the same columns:
+  estimate, standard error (blank for a `q = 1` component), the interval at
+  `level()`, which interval it is (`normal` or `q = 1`, marked `*` when
+  `inference(highrank)` or `inference(q1)` requested it) and the lead share,
+  the leading direction's share of the estimated sampling variance (the
+  statistic of the default rule; `>100%` above one; `.` for the variance of
+  the sum). The heading states the rule ("q = 1 interval when the lead share
+  exceeds 10%") or the request. 80 columns.
+- `inference(highrank)` runs the leading-direction search, as the other two
+  modes do, through the same request on every route (no native or plugin
+  change), and keeps the normal interval of every component and `e(V)`. It
+  now posts `e(inference_intervals)` and `e(inference_leading)`, with
+  `e(inference_leading_request)` equal to `highrank`; its standard errors,
+  `e(V)` and estimates are bitwise those of 0.6.0. The search costs about 55
+  linear solves more with the default eight draws (about 90 in all where
+  0.6.0 took 35); the display says how many components the default rule
+  would report with the `q = 1` interval. The search never stops
+  `inference(highrank)`: if the run that carries it stops, the command runs
+  once more without it (the 0.6.0 pass, same intervals, `e(V)` and status),
+  records status 7 (no direction) and `e(inference_leading_failure)`, and
+  shows no lead share; an unresolved direction shows none either. As in
+  0.6.0, highrank stops only when a normal interval is unavailable (on Mata,
+  a component variance estimate that is not positive).
+- No p-values (`P>|z|`) in the component display; `test` and `lincom` give
+  them from `e(V)` when it is posted.
+- At most a few lines under the table: what the lead share and the `q = 1`
+  interval are, whether `e(V)` is posted and why not. The method text (the
+  repeat-measurement sets, the fitted model for movers, the independence
+  assumption), the Andrews-Mikusheva description and the effective-rank
+  warning move to the new `estat inference`.
+- New `estat inference`: per component the estimate, the normal-form
+  standard error and interval, the `q = 1` interval with curvature, critical
+  value and status, the interval reported and why, the lead share,
+  `lambda1` and `lambda2`, KSS's Lindeberg statistic `max w_i1^2`, the
+  effective rank and the convergence and solves of the search; then the
+  method, its assumptions and the warnings that apply. After a fit without
+  standard errors it says why there are none.
+- The numerical MCSE is one line (two when needed) under the decomposition
+  table in every mode, including `inference(none)`, with its largest share
+  of a standard error (the normal-form one for a `q = 1` component); above
+  10% it names the components and suggests more probes (`probes(2000)` or
+  more). Exact leverages say that there is no numerical MCSE from
+  projections. `estat diagnostics` keeps its method, status, conditional
+  values and exclusions. The native exact and compressed point routes now
+  display after the MCSE and the population metadata are posted, so their
+  display shows the MCSE and the combined target population.
+- No live progress by default: the native "Total elapsed | phase" lines,
+  the prepared-sample, pruning and stayer lines appear under `verbose` only
+  (the default shows the results, whose header and `estat sample` carry the
+  retained sample and the exclusions). `nolog`, `nodisplay` and `quietly`
+  are unchanged. The Stata stayer line fits in 80 columns, and the padding
+  of the deletion-unit count is fixed.
+- Help: Examples 1 to 3 show the command only; the new Example 8 walks
+  through `estat decomposition, full`, `estat diagnostics` and
+  `estat inference`. The help describes the table, the overrides, the cost,
+  the MCSE line and its warning, and `estat inference`.
+
+Earlier unreleased documentation changes:
 
 - Help: Examples 6 and 7 show `inference(highrank)` (normal intervals and
   `e(V)`, read from `e(component_inference)`, on `ex2`) and `inference(q1)`
   (the `q = 1` interval and no `e(V)`, read from `e(inference_intervals)`,
-  on the bottleneck of `ex4`). The help now says that the two overrides fix
+  on the bottleneck of `ex4`). The help then said that the two overrides fix
   the interval, that `inference(highrank)` posts neither
-  `e(inference_intervals)` nor `e(inference_leading)`, that
+  `e(inference_intervals)` nor `e(inference_leading)` (superseded above), that
   `algorithm(exact)` and an explicit `engine(compressed)` carry the
   standard errors only with `backend(mata)` (or `rng(stata)`), and that the
   Windows plugin passes native Stata qualification; it points to the
