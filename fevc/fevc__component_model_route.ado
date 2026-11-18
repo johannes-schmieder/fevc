@@ -86,13 +86,15 @@ program define fevc__component_model_route, rclass
     local se_auto_reason ""
     local se_suppressed = (`se_auto' & "$VCKSS_SE_SUPPRESS"=="1")
     local supplied = (strtrim(`"`inferencemodel'"') != "")
-    // The leading direction of every component is found unless
-    // inference(highrank) asks for the normal interval alone. inference(auto)
-    // then reports, component by component, the normal interval or the q = 1
-    // interval; inference(q1) reports the q = 1 interval wherever it exists.
-    // The pass itself is the high-rank one.
+    // The leading direction of every component is found in every mode, so
+    // that its share of the estimated sampling variance is always reported.
+    // inference(auto) then reports, component by component, the normal
+    // interval or the q = 1 interval; inference(q1) reports the q = 1 interval
+    // wherever it exists; inference(highrank) reports the normal interval of
+    // every component. The pass itself is the high-rank one, and the routes
+    // request the search alike for the three modes.
     local se_leading ""
-    if inlist("`inference'","auto","q1") {
+    if inlist("`inference'","auto","highrank","q1") {
         local se_leading `inference'
         local inference highrank
     }
@@ -265,8 +267,8 @@ program define fevc__component_model_route, rclass
     // Read by the Mata runtimes and the posting helper; empty unless this
     // request carries repeat-measurement standard errors.
     global VCKSS_SE_MODEL = cond(`residual',"`inferencemodel'","")
-    // auto or q1 when the leading directions are computed; the search is
-    // capped at this many linear solves per component.
+    // auto, highrank or q1 when the leading directions are computed; the
+    // search is capped at this many linear solves per component.
     global VCKSS_SE_LEADING = cond(`residual' & "`inferencemodel'"=="repeat_measurement", ///
         "`se_leading'","")
     global VCKSS_SE_LEADING_CAP 40

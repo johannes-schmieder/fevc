@@ -78,7 +78,12 @@ assert e(inference_draws)==16
 assert e(inference_repeat_sets)==0 & e(inference_pair_term)==0
 assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"gram_probes"))==0
 assert el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"ordering"))==0
-assert e(inference_solver_columns)==4*16+3
+// The pass, and the leading directions that inference(highrank) finds as the
+// other modes do: the search, four remainder influences and four remainder
+// kernels per draw. Every component keeps the normal interval.
+assert e(inference_leading_steps)>0
+assert e(inference_solver_columns)==4*16+3+e(inference_leading_steps)+4+4*16
+assert "`e(inference_leading_request)'"=="highrank" & e(inference_q1_components)==0
 local returned_matrices : e(matrices)
 foreach legacy in structured_variance_summary structured_variance_folds ///
     structured_variance_cv residual_moment_diagnostics {

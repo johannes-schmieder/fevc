@@ -228,10 +228,15 @@ foreach deletion in observation match {
                 matrix work = e(rust_execution_receipt)
                 assert el(work,1,colnumb(work,"threads"))==4 & el(work,1,colnumb(work,"mode"))==1+("`solver'"=="cmg")
                 assert el(work,1,colnumb(work,"gram"))==0 & el(work,1,colnumb(work,"projection"))==0 & el(work,1,colnumb(work,"point"))==600
-                // Four solves per pseudo-noise draw, three influence solves, and
-                // under joint nuisance the offset pass of two solves per probe.
+                // Four solves per pseudo-noise draw, three influence solves,
+                // under joint nuisance the offset pass of two solves per probe,
+                // and the leading directions (the search, four remainder
+                // influences and four remainder kernels per draw), which
+                // inference(highrank) finds as the other modes do.
                 assert el(work,1,colnumb(work,"component"))==el(e(component_inference_receipt),1,colnumb(e(component_inference_receipt),"solver_columns"))
-                assert el(work,1,colnumb(work,"component"))==4*e(inference_draws)+3+e(inference_offset_pass_solves)
+                assert e(inference_leading_steps)>0
+                assert el(work,1,colnumb(work,"component"))==4*e(inference_draws)+3+ ///
+                    e(inference_offset_pass_solves)+e(inference_leading_steps)+4+4*e(inference_draws)
                 assert e(inference_offset_pass_solves)==cond("`deletion'"=="observation",400,0)
                 assert el(work,1,colnumb(work,"logical"))==el(work,1,colnumb(work,"fit"))+1+600+el(work,1,colnumb(work,"component"))
                 assert el(work,1,colnumb(work,"residual"))<=e(residual_acceptance_tolerance)

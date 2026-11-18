@@ -69,9 +69,12 @@ foreach deletion in observation match {
             assert e(inference_joint_posted)==(e(inference_q1_components)==0)
         }
         else {
+            // inference(highrank) finds the leading directions too and
+            // keeps the normal interval of every component it can.
             assert inlist(e(inference_joint_status),0,1,2)
-            capture confirm matrix e(inference_intervals)
-            assert _rc
+            assert "`e(inference_leading_request)'"=="highrank"
+            assert rowsof(e(inference_intervals))==4 & colsof(e(inference_intervals))==16
+            assert e(inference_q1_components)==0
         }
         if e(inference_joint_available)==0 {
             assert !strpos(" `returned_matrices' "," V_primitive ")
@@ -86,7 +89,10 @@ foreach deletion in observation match {
 }
 // The number of pseudo-noise draws changes only its own numerical domain;
 // omitted and explicit defaults agree, points and caller state are invariant
-// at every tested count, and every draw costs four linear solves.
+// at every tested count, and every draw costs four linear solves, and four
+// more for the remainders of the leading directions, which
+// inference(highrank) finds as the other modes do; the search itself does
+// not depend on the draws.
 foreach deletion in observation match {
     local options deletion(`deletion')
     if "`deletion'"=="match" local options `options' deletionid(match) nuisance(fixedoffset)
@@ -94,6 +100,7 @@ foreach deletion in observation match {
     matrix default_b = e(b)
     matrix default_ci = e(component_inference)
     scalar default_columns = e(inference_solver_columns)
+    scalar default_steps = e(inference_leading_steps)
     foreach count in 8 4 16 {
         quietly fevc outcome control, `common' `options' centering(none) inference(highrank) inferencedraws(`count')
         assert e(inference_draws)==`count' & e(inference_simulations)==4*`count'
@@ -101,7 +108,8 @@ foreach deletion in observation match {
         matrix `compat_assert_b' = e(b)
         assert mreldif(`compat_assert_b',default_b)==0
         matrix drop `compat_assert_b'
-        assert e(inference_solver_columns)==default_columns+4*(`count'-8)
+        assert e(inference_leading_steps)==default_steps
+        assert e(inference_solver_columns)==default_columns+8*(`count'-8)
         if `count'==8 assert mreldif(e(component_inference),default_ci)==0
         assert `"`c(rngstate)'"'==`"`rng_before'"'
     }
