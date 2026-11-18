@@ -1113,7 +1113,8 @@ Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
 88(5): 1859-1898.
 
 {pstd}
-"Feasible Standard Errors for Leave-Out Variance Components." November 18, 2026.
+Schmieder, Johannes. 2026. "Feasible Standard Errors for Leave-Out Variance
+Components." Technical note, November 18, 2026.
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/docs/feasible-standard-errors.pdf":docs/feasible-standard-errors.pdf}
 in the source repository. It derives the standard errors of the components,
 reports their coverage in simulations, compares them with those of KSS and

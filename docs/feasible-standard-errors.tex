@@ -58,7 +58,7 @@
 
 
 \hypersetup{pdftitle={Feasible Standard Errors for Leave-Out Variance Components},
- pdfauthor={fevc project},bookmarksnumbered=true}
+ pdfauthor={Johannes F. Schmieder},bookmarksnumbered=true}
 \raggedbottom
 \widowpenalty=10000
 \clubpenalty=10000
@@ -68,11 +68,14 @@
   \renewcommand*\l@section{\@dottedtocline{1}{0em}{2em}}%
   \tableofcontents\endgroup}
 \makeatother
-\title{Feasible Standard Errors for\\ Leave-Out Variance Components}
-\author{Technical note for \fevc{} 0.6.1}
-\date{November 18, 2026}
+\title{\vspace{-1.8cm}Feasible Standard Errors for\\ Leave-Out Variance Components}
+\author{Johannes F. Schmieder\thanks{\href{mailto:johannes@bu.edu}{\texttt{johannes@bu.edu}}. This note was prepared
+ with the assistance of AI tools (Anthropic's Claude and OpenAI's Codex), which drafted text, derivations and code
+ under the author's direction. All errors are the author's.}\\[2pt] {\normalsize Boston University}}
+\date{Technical note for \fevc{} 0.6.1, November 18, 2026}
 \begin{document}
 \maketitle
+\vspace{-0.8cm}
 \begin{abstract}
 The precision of a leave-out estimate of worker or firm variance depends on
 whose wages are volatile. Repeated wages at the same employer measure that
@@ -122,12 +125,6 @@ components'' (the Econometrica replication code, folder \code{Replication ECTA})
 \noindent Kline, P., R. Saggio and M. S{\o}lvsten. LeaveOutTwoWay, a Matlab package for leave-out estimation of
 variance components (the ``KSS Matlab package''). GitHub, commit \code{8b957ffe}, October 17, 2024.
 
-\smallskip
-\noindent\textit{Source note.} The method notes of November 13 and 16 were prepared by
-Claude at Johannes Schmieder's request. An editorial revision of November 17 was
-prepared with Codex from the November 16 document, its proofs and its recorded results.
-This edition, prepared by Claude, restores the exposition and the main tables of the
-November 13 note and describes \fevc{} 0.6.1.
 \clearpage
 \appendix
 \linespread{1.02}\selectfont
