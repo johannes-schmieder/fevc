@@ -453,7 +453,9 @@ profile coefficients), with `e(inference_repeat_sets)` and
 more deletion units: an eligible stayer under match deletion, and under
 observation deletion also every match of a mover with two or more
 observations.
-With `inference(auto)`, the default, or `inference(q1)` the model also posts
+In every mode (`inference(auto)`, the default, `inference(highrank)` and
+`inference(q1)`; before 0.6.1 not under `inference(highrank)`) the model
+also posts
 `e(inference_intervals)` (one row per target: estimate, high-rank standard
 error, normal bounds, `q = 1` bounds, regime (0 normal, 1 `q = 1`, missing
 when neither exists), the reported bounds, the share of the estimated
@@ -463,11 +465,23 @@ status of the decomposition) and `e(inference_leading)` (one row per target
 with the 28 values of the leading direction and its decomposition), with
 `e(inference_q1_components)`, `e(inference_leading_steps)`,
 `e(inference_leading_unresolved)`, `e(inference_share_threshold)`,
-`e(inference_leading_request)` and `e(inference_regime_rule)`. The status is
+`e(inference_leading_request)` (`auto`, `highrank` or `q1`) and
+`e(inference_regime_rule)`. The status is
 `FEVC_REPEAT_MEASUREMENT_Q1` when a component is reported with the `q = 1`
 interval; `e(V)` is then not posted, `e(inference_joint_posted)` is zero and
 the native joint status is 3. `e(inference)` remains `highrank`, the pass
-that was run, and `e(component_inference)` keeps the normal table. Under
+that was run, and `e(component_inference)` keeps the normal table.
+Under `inference(highrank)` the regime is 0 for every target with a positive
+variance estimate (missing otherwise), the reported bounds are the normal
+ones, `e(inference_q1_components)` is 0 and the status is never
+`FEVC_REPEAT_MEASUREMENT_Q1`; `e(V)`, `e(V_primitive)`,
+`e(inference_joint_posted)` and the native joint status are those of 0.6.0,
+and `e(component_inference)` and `e(V)` equal those of the same request in
+0.6.0. `e(inference_intervals)`, `e(inference_leading)`,
+`e(inference_leading_steps)` and `e(inference_solver_columns)` equal those
+of `inference(auto)` on the same data, except the regime and the reported
+bounds; `e(inference_regime_rule)` and `e(inference_reference)` say that
+the normal interval was requested for every component. Under
 `inference(auto)`, `e(inference_auto)` is 1 and
 `e(inference_auto_reason)` is empty when the standard errors were computed
 and otherwise states why the request returned

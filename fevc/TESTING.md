@@ -227,10 +227,21 @@ the default explicitly.
 - `test_default_inference.do` checks the command's own default, natively
   and in Mata, and restores the suite setting.
 - `test_help_examples.do` runs the help's examples through `fevc_run`,
-  including Examples 6 (`inference(highrank)`: normal intervals and `e(V)`)
-  and 7 (`inference(q1)` on the bottleneck of `ex4`: `q = 1` intervals and no
-  `e(V)`), and checks what the help says the default reports on the same
-  data.
+  including Examples 6 (`inference(highrank)`: normal intervals, `e(V)` and
+  the leading directions' shares) and 7 (`inference(q1)` on the bottleneck
+  of `ex4`: `q = 1` intervals and no `e(V)`), and 8 (the default with
+  `estat decomposition, full`, `estat diagnostics` and `estat inference`),
+  and checks what the help says the default reports on the same data.
+- `test_inference_display.do` checks the display on `ex4` on Mata JLA,
+  Mata exact and, with a capable plugin, natively: the same table in the
+  three modes (columns, no p-values, the interval of every row and its lead
+  share against `e(inference_intervals)`, the heading's rule or request,
+  the lines under the table), every line within 80 columns, the stored
+  results of `inference(highrank)` (normal intervals, the search, and every
+  result but the regime equal to that of `inference(auto)`), the numerical
+  MCSE line with its ratio to the standard errors and its warning (forced
+  with `probes(8)`), `estat inference` and `estat diagnostics`, and that
+  the default output shows no live progress while `verbose` does.
 
 The Monte Carlo harness of the interval rule is `tools/default_interval/`;
 its run records are in `docs/default_interval/`. Run a focused file with the

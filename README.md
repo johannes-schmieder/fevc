@@ -116,6 +116,9 @@ estat decomposition, full
 * Numerical precision of the randomized calculation
 matrix list e(mcse)
 estat diagnostics
+
+* The standard errors of the components in detail
+estat inference
 ```
 
 Match deletion is the default. The displayed decomposition separates worker,

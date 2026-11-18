@@ -8,7 +8,9 @@ the `q = 1` interval of KSS, chosen from the data, and `e(V)` is posted when
 every component is normal. `inference(highrank)` asks for normal intervals
 only and `inference(q1)` for the `q = 1` interval wherever it exists; both
 are strict and stop when the standard errors cannot be computed, where the
-default returns point estimates with a reason. `inference(none)` gives point
+default returns point estimates with a reason. In the unreleased 0.6.1
+source all three modes find the leading directions and report their shares
+in one table (see [Display](#display)). `inference(none)` gives point
 estimates only. `inferencemodel(repeat_measurement)` names the method and
 may be omitted; `inferencedraws()` and `inferenceseed()` set its
 pseudo-noise draws and their seed. Block projections of the fixed effects
@@ -139,10 +141,14 @@ bitwise unchanged. What the term does not cover:
 
 ### Leading directions and the interval of every component
 
-`inference(highrank)` with this model computes the covariance above and
-reports normal intervals. `inference(auto)` and `inference(q1)` with this
-model run the same pass and add, for each of the four reported targets, the
-leading direction and the `q = 1` decomposition along it:
+All three modes compute the covariance above and add, for each of the four
+reported targets, the leading direction and the `q = 1` decomposition along
+it; `inference(highrank)` reports the normal interval of every component
+and uses the directions only for their shares. (In 0.6.0
+`inference(highrank)` skipped the search; its standard errors and `e(V)` are
+the same either way: on the six routes of `ex2` and `ex4` checked for
+0.6.1, every element of `e(component_inference)`, `e(V)` and `e(kss)`
+matched the 0.6.0 source bitwise.)
 
 - the direction is the eigenvector `v` of `A_t v = lambda S v` of largest
   absolute eigenvalue, with `S` the normal matrix of the unit design and
@@ -177,7 +183,10 @@ leading direction and the `q = 1` decomposition along it:
 One more linear solve per target gives the remainder's influence and one per
 target and draw its kernel, so the request adds the search, 4 and 4 per draw
 to the 3 and 4 per draw of the pass: about 90 solves with the default eight
-draws where the pass alone takes 35.
+draws where the pass alone takes 35. This is the cost of every mode; in
+0.6.1 `inference(highrank)` runs the search too, about 55 solves more than
+the 35 it took in 0.6.0 (the native plan reserves the search at its cap of
+40 solves per target).
 
 The reported interval is chosen component by component, by one rule on every
 route (`fevc__residual_se_post.ado`). With `inference(auto)` a component
@@ -187,12 +196,58 @@ ten per cent of the estimated sampling variance,
 the high-rank variance estimate is not positive, and the normal interval
 otherwise; the variance of the sum, whose nonzero eigenvalues are all equal,
 keeps the normal interval. With `inference(q1)` every target receives the
-`q = 1` interval when it exists. A `q = 1` component has no standard error,
+`q = 1` interval when it exists. With `inference(highrank)` every target
+with a positive variance estimate receives the normal interval, whatever
+its share, and `e(V)` is posted whenever the joint covariance is
+admissible. A `q = 1` component has no standard error,
 and `e(V)` is posted only when every component has a normal interval.
 Neither KSS nor the technical note has a result for a data-dependent choice
 between the two intervals, and the case of two or more dominant directions
 is not covered. The share is a ratio of two estimates and can exceed one;
-the display then says "over 100%".
+the display then says ">100%".
+
+### Display
+
+The command shows one table of the components with the same columns in
+every mode: estimate, standard error (blank for a `q = 1` component),
+the interval at `level()`, which interval it is (`normal` or `q = 1`,
+marked `*` when `inference(highrank)` or `inference(q1)` requested it) and
+the lead share, the statistic of the rule above (`variance_share`, column
+10 of `e(inference_intervals)`; `.` for the variance of the sum, to which
+the rule does not apply). The heading states the rule ("q = 1 interval when
+the lead share exceeds 10%") or the request. Under it at most a few lines
+say what the lead share and the `q = 1` interval are, whether `e(V)` is
+posted and why not, and, after `inference(highrank)`, how many components
+the default rule would report with the `q = 1` interval. The display shows
+no p-values; `test` and `lincom` give them from `e(V)` when it is posted.
+
+`estat inference` shows the rest, component by component: the
+normal-form standard error and interval, the `q = 1` interval with its
+curvature, critical value and status, the interval reported and why (the
+share against the threshold, a variance estimate that is not positive, a
+`q = 1` interval that does not exist, or the request), the lead share,
+`lambda1` and `lambda2` (columns 5 and 6 of `e(inference_leading)`), KSS's
+Lindeberg statistic `max w_i1^2` (`max_weight_sq`), the effective rank, and
+the convergence and solves of the search; then the method (the
+repeat-measurement sets, the fitted model for movers, the independence
+assumption, the `q = 1` interval) and the warnings that apply: a low
+effective rank for a component that keeps the normal interval, a leading
+direction that rests on few deletion units, an unresolved search, a `q = 1`
+interval that is needed but could not be formed.
+
+The numerical MCSE of the point estimates is one line under the
+decomposition table in every mode, including `inference(none)`, for
+example `Numerical MCSE (200 projections): worker .00043  firm .00020  cov
+.00027  sum .00025; at most 8% of a standard error.` (two lines when it
+does not fit in 80 columns). The clause divides each MCSE by the standard
+error of its component, the normal-form one for a `q = 1` component, and
+is left out without standard errors. Above 10% the display names the
+components and suggests more probes, `probes(2000)` or ten times the
+current number, whichever is larger; the MCSE falls with the square root
+of the number of probes. With exact leverages the line says that there is
+no numerical MCSE from projections. `estat diagnostics` keeps the method,
+status, availability, conditional values and exclusions. The MCSE is
+computational precision, not a standard error.
 
 #### Development of the rule
 
