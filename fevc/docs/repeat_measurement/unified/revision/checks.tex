@@ -96,10 +96,9 @@ of the KSS Matlab model-based $q=1$ intervals were scored invalid.
 Coverage estimates based on 100--200 draws have Wilson half-widths of
 roughly 2--6 percentage points in the reported cases.
 
-\paragraph{Observations on the KSS code.}
-Running the two code bases unchanged turned up the following points. They are
-recorded here because they bound how closely the published numbers can be
-reproduced, and in case they are useful to the authors.
+\paragraph{Reproducing the published numbers.}
+Two features of the KSS code bound how closely the published numbers can be
+reproduced.
 \begin{itemize}
 \item The file of critical values read by the interval routine is not part of the
 replication package, and the package's own table has the $q=1$ column only. The
@@ -107,18 +106,8 @@ $q=2$ intervals of Table~IV could therefore not be reproduced.
 \item The randomised traces and the choice of mover on each edge of a path are not
 seeded. Two calls on the same data gave standard errors 0.5--8\% apart (0.000579
 and 0.000576; 0.00137 and 0.00141; 0.00244 and 0.00264).
-\item In the variance routine of the replication code (\code{finish\_SE.m}, lines 47
-and 58) the kernel net of the leading direction is formed with \code{x1bar(qqq)}, a
-single element, where the main routine (\code{leave\_out\_FD.m}, line 841) uses the
-column \code{x1bar(:,qqq)}. As written, a constant is subtracted where the projection
-on the leading direction appears to be meant. This enters the variance of the
-remainder in the $q=1$ interval. Its effect on the reported intervals was not
-measured.
-\item The replication package's \code{leave\_out\_COMPLETE} stopped with an error when
-eigenvalue diagnostics and standard errors were both requested. The GitHub version of
-the KSS Matlab package supplied the model-based $q=1$ intervals.
-\item The Lindeberg statistic printed by the first-difference code is twice the
-published, per-observation one.
 \end{itemize}
+The GitHub version of the KSS Matlab package supplied the model-based $q=1$
+intervals.
 Appendix~\ref{kss:app:repro} identifies
 the actual programs, settings and inputs.
