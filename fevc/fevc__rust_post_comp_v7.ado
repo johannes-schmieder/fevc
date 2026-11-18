@@ -639,5 +639,7 @@ program define fevc__rust_post_comp_v7, eclass sortpreserve
     ereturn local execution_plan_schema "`h_exec_schema'"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
-    if "`nodisplay'" == "" fevc__display
+    // The caller completes e() (numerical MCSE, population metadata) before
+    // the command displays the result.
+    if "`nodisplay'" == "" global VCKSS_DISPLAY_DEFERRED 1
 end

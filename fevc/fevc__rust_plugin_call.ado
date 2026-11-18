@@ -8,7 +8,9 @@ program define fevc__rust_plugin_call, rclass
     gettoken subcommand rest : parsed
     // Error strings belong to the plugin caller's macro scope. The progress
     // wrapper adds a scope and has no reporting work for this read-only call.
-    if inlist("$VCKSS_REPORT_LEVEL","1","2") & lower(strtrim("`subcommand'"))!="lasterror" {
+    // Live native progress (one line per phase update) is shown only under
+    // verbose (level 2); the default display reports the retained sample.
+    if "$VCKSS_REPORT_LEVEL"=="2" & lower(strtrim("`subcommand'"))!="lasterror" {
         fevc__progress $VCKSS_REPORT_LEVEL `plugin' `0'
     }
     else plugin call `plugin' `0'

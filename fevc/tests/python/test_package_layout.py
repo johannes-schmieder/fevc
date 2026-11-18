@@ -281,6 +281,7 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
         "projection_inference",
         "highrank_inference",
         "q1_inference",
+        "postestimation",
     )
     for example in examples:
         marker = f"{{* example_start - {example}}}{{...}}"
@@ -324,14 +325,21 @@ def test_compact_display_and_postestimation_surface_are_documented() -> None:
         "% of Var(Y)",
         "KSS corrected = plug-in - estimated bias",
         "Approximate numerical MCSE (all main point probes)",
-        "Econometric component inference",
+        "Numerical MCSE (`probes' projections):",
+        "Exact leverages: no numerical MCSE from projections.",
+        "Component inference `title'",
+        "[`level'% conf. interval]",
+        "Standard errors of the components",
         "Explicit structured-model diagnostics",
         "Omitted variance drivers can invalidate SEs and intervals",
         "multi-mode targets are outside the confirmed coverage claim",
         "KSS projection of",
     ):
         assert text in display
-    for subcommand in ("decomposition", "sample", "computation", "diagnostics"):
+    # The component table carries no p-values in any mode; only the separate
+    # projection table keeps them.
+    assert display.count('"P>|z|"') == 1
+    for subcommand in ("decomposition", "sample", "computation", "diagnostics", "inference"):
         assert f'"{subcommand}"' in estat
     assert 'ereturn local estat_cmd "fevc_estat"' in ado
     assert "fevc__display, inferencediagnosticsonly" in estat

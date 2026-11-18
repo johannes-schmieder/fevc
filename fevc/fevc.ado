@@ -70,7 +70,7 @@ program define fevc, eclass
     }
     if "`report_timer'" != "" {
         quietly mata: vckss_timer__off(`report_timer')
-        if !`command_rc' & inlist("$VCKSS_REPORT_LEVEL","1","2") & ///
+        if !`command_rc' & "$VCKSS_REPORT_LEVEL"=="2" & ///
             "$VCKSS_REPORT_API"=="2" & "`e(backend_selected)'"=="rust" {
             mata: st_local("elapsed", strofreal(vckss_timer__seconds(`report_timer'), "%9.1f"))
             di as txt "  Total elapsed `elapsed's | Complete"
@@ -168,6 +168,7 @@ program define _fevc_command, eclass
         `nmc_se' `nmc_meta' `nmc_rhs'
     capture macro drop VCKSS_INFERENCE_ERROR VCKSS_INFERENCE_DETAIL
     capture macro drop VCKSS_SE_AUTO VCKSS_SE_AUTO_REASON
+    capture macro drop VCKSS_DISPLAY_DEFERRED
     capture noisily _vckss_impl `0'
     local command_rc = _rc
     if `command_rc' & "$VCKSS_INFERENCE_ERROR"!="" {
@@ -257,7 +258,11 @@ program define _fevc_command, eclass
     if !`command_rc' & "`e(cmd)'" == "fevc" &                  ///
         !inlist("`e(status)'", "WITHHELD", "ALPHA", "RELEASED") {
         ereturn local estat_cmd "fevc_estat"
+        // Native exact and compressed posters leave the display until the
+        // numerical MCSE and the population metadata are posted.
+        if "$VCKSS_DISPLAY_DEFERRED"=="1" fevc__display
     }
+    capture macro drop VCKSS_DISPLAY_DEFERRED
     // UserBreak is untyped; no partial estimate or prior fit may survive it.
     if `command_rc' == 1 ereturn clear
     if `command_rc' & `"`e(status)'"' == "WITHHELD" {
@@ -1840,10 +1845,10 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         quietly count if `complete_worker_tag' & `originalstayer' &   ///
             !`retained_firm_member'
         local N_hyb_unattached = r(N)
-        if inlist("$VCKSS_REPORT_LEVEL","1","2") & inlist("$VCKSS_REPORT_API","1","2") & c(noisily) {
-            di as txt "  Stayer exclusions: " as result `N_hyb_singleton_drop' ///
-                as txt " physical-singleton workers; " as result `N_hyb_unattached' ///
-                as txt " workers outside retained firms"
+        if "$VCKSS_REPORT_LEVEL"=="2" & inlist("$VCKSS_REPORT_API","1","2") & c(noisily) {
+            di as txt "  Stayers excluded: " as result `N_hyb_singleton_drop' ///
+                as txt " with one observation; " as result `N_hyb_unattached' ///
+                as txt " outside retained firms"
         }
         quietly summarize `frequency' if `hybrid_stayer', meanonly
         local hybrid_stayer_physical = r(sum)

@@ -172,6 +172,14 @@ assert rowsof(`compat_assert_V') == 4
 matrix drop `compat_assert_V'
 assert "`e(inference_centering)'" == "uncentered"
 assert e(inference_mean_omitted) == 0
+// inference(highrank) finds the leading directions, and the installed
+// estat inference shows them.
+assert "`e(inference_leading_request)'" == "highrank"
+assert e(inference_q1_components) == 0
+confirm matrix e(inference_intervals)
+confirm matrix e(inference_leading)
+capture noisily estat inference
+assert _rc == 0
 // Pseudo-noise is centred as the estimate is, so the observed mean is not
 // held fixed under the default centering either.
 fevc y c1 c2, worker(worker) firm(firm) ///

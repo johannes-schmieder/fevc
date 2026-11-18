@@ -46,7 +46,7 @@ program define _progress_read_log, rclass
             if strpos(`"`line'"',"Selection:") local ++selection
             if strpos(`"`line'"',"Method:") local ++methods
             if strpos(`"`line'"',"allocations") local ++allocations
-            if strpos(`"`line'"',"Stayer exclusions: 1 physical-singleton workers; 1 workers outside retained firms") local ++exclusions
+            if strpos(`"`line'"',"Stayers excluded: 1 with one observation; 1 outside retained firms") local ++exclusions
         }
         if regexm(`"`line'"', "^  Total elapsed +([0-9]+[.][0-9]+)s [|] ") {
             local elapsed = real(regexs(1))
@@ -148,7 +148,9 @@ foreach deletion in observation match {
             assert `"`test_sort_state'"'==`"`sortstate'"'
             assert "$VCKSS_REPORT_LEVEL$VCKSS_REPORT_API$VCKSS_REPORT_NOTICE$VCKSS_REPORT_ALLOWED$VCKSS_REPORT_TIMER"==""
             quietly _progress_read_log `"`transcript'"'
-            if inlist("`output'","default","verbose") {
+            // Live progress is shown under verbose only; the default
+            // prints the results alone.
+            if "`output'"=="verbose" {
                 assert r(messages)>0 & r(allocations)>0
                 assert r(times)>0 & r(complete)==1
                 if "`algorithm'"=="jla" assert r(pairs)>0
@@ -162,8 +164,7 @@ foreach deletion in observation match {
                     if "`deletion'"=="match" & e(stayer_hybrid_N_stayers)>0 local forecasts=2
                     assert inrange(r(allocations),1,`forecasts')
                 }
-                if "`output'"=="verbose" assert r(selection)>0
-                else assert r(selection)==0
+                assert r(selection)>0
             }
             else assert r(messages)==0 & r(selection)==0 & r(allocations)==0 & r(times)==0
         }
@@ -192,7 +193,8 @@ foreach id of numlist 51/79 1/30 {
     quietly timer clear `id'
 }
 
-// Stayer exclusions precede augmentation and are distinct from graph pruning.
+// Stayer exclusions precede augmentation and are distinct from graph pruning;
+// verbose reports them, within 80 columns, and the default does not.
 preserve
 quietly set obs 291
 quietly replace worker = 37 if _n==289
@@ -200,13 +202,17 @@ quietly replace firm = 1 if _n==289
 quietly replace worker = 38 if _n>=290
 quietly replace firm = 99 if _n>=290
 quietly replace y = sin(_n) if _n>=289
-quietly log using `"`transcript'"', text replace name(progress_test)
-fevc y, worker(worker) firm(firm) deletion(match) stayers(both) backend(rust) algorithm(exact)
-quietly log close progress_test
-assert e(stayer_hybrid_N_singleton_drop)==1
-assert e(stayer_hybrid_N_unattached)==1
-quietly _progress_read_log `"`transcript'"'
-assert r(exclusions)==1
+foreach output in verbose default {
+    local options = cond("`output'"=="verbose","verbose","")
+    quietly log using `"`transcript'"', text replace name(progress_test)
+    fevc y, worker(worker) firm(firm) deletion(match) stayers(both) backend(rust) ///
+        algorithm(exact) `options'
+    quietly log close progress_test
+    assert e(stayer_hybrid_N_singleton_drop)==1
+    assert e(stayer_hybrid_N_unattached)==1
+    quietly _progress_read_log `"`transcript'"'
+    assert r(exclusions)==("`output'"=="verbose")
+}
 restore
 
 // Native reporting preserves repeat-measurement standard errors and their
@@ -241,7 +247,7 @@ foreach deletion in observation match {
             if `posted' matrix covariance = e(V)
             if "`reference'"=="q1" matrix table = e(inference_intervals)
             quietly log using `"`transcript'"', text replace name(progress_test)
-            fevc y x, `common'
+            fevc y x, `common' verbose
             quietly log close progress_test
             quietly _progress_read_log `"`transcript'"'
             assert r(times)>0 & r(pairs)>0 & r(complete)==1 & r(components)>0
