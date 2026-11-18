@@ -1,0 +1,79 @@
+{
+  "version": "0.6.1",
+  "tag": "v0.6.1",
+  "release_url": "https://github.com/johannes-schmieder/fevc/releases/tag/v0.6.1",
+  "release_id": 450090597,
+  "published_at": "2026-11-18T14:49:40Z",
+  "tag_commit": "f3d9f312d5b95cf705b518527dca847d92bf1ebd",
+  "package_content_commit": "3752f826e4871ad7cc69aa750038c1e1c0286221",
+  "native_build_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "assets": [
+    {
+      "name": "fevc-0.6.1.zip",
+      "size": 12487572,
+      "sha256": "09a1db5577084f09cb30955fac1f3ac9457d89350de2ed087e38db4f7e9202bd"
+    },
+    {
+      "name": "fevc-corresponding-source-2082f209.tar.gz",
+      "size": 8295909,
+      "sha256": "e99f0120a27c141dd37cf2576feab96dec6f97b7acd3aedf984d4f65f905563c"
+    },
+    {
+      "name": "release-manifest.json",
+      "size": 14616,
+      "sha256": "052c37089db2282c9f257309d580b2861d736205ef01205c9256e7b78411d0cc"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 277,
+      "sha256": "c2db2627f0ff7b7324acf58513e4c4246b03c3281e52d90a79b019ca874b1ea0"
+    }
+  ],
+  "asset_verification": "Compared the four downloads to the locally built assets, checked release and tag identity against GitHub, and checked every ZIP entry against the release manifest.",
+  "github_source_checks": "https://github.com/johannes-schmieder/fevc/actions/runs/44323046410",
+  "local_checks": [
+    "fevc/tools/run_checks.py passed on local Stata/MP 19, including 1,033 Python tests, generated CMG sources, Stata quick/full suites, clean installation, helper migration and benchmark smoke tests.",
+    "fevc/tools/build_github_release.py validated the native adoption and Windows evidence and built an identical ZIP from the version commit and tag commit.",
+    "fevc/tools/verify_native_installers.py passed on fresh and replacement ZIP installations, including native/default inference, pooled component and caller-state regressions."
+  ],
+  "public_installations": [
+    {
+      "channel": "GitHub main",
+      "cases": [
+        "fresh",
+        "replace"
+      ],
+      "runtime": "19 Mac (Apple Silicon)",
+      "installed_files_verified": 66
+    },
+    {
+      "channel": "GitHub tag",
+      "cases": [
+        "fresh",
+        "replace"
+      ],
+      "runtime": "19 Mac (Apple Silicon)",
+      "installed_files_verified": 66
+    },
+    {
+      "channel": "github install",
+      "cases": [
+        "fresh",
+        "replace"
+      ],
+      "runtime": "19 Mac (Apple Silicon)",
+      "installed_files_verified": 66
+    },
+    {
+      "channel": "downloaded ZIP",
+      "cases": [
+        "fresh",
+        "replace"
+      ],
+      "runtime": "19 Mac (Apple Silicon)",
+      "installed_files_verified": 66
+    }
+  ],
+  "installation_checks": "Each isolated install checked the reported 0.6.1 version, native capability, the automatic and forced normal intervals on help fixture ex4, estat inference, the highrank covariance and leading-direction results, and all installed file hashes. Replacement repaired a modified help file.",
+  "scope": "Public installation checks ran on macOS arm64 with Stata 19. Stata 15.1 Rosetta installation and display-regression checks and the scope of the reused binary qualification are recorded in compatibility.json."
+}
