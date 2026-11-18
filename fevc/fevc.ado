@@ -38,11 +38,29 @@ program define fevc, eclass
         global VCKSS_REPORT_TIMER 1
         quietly mata: vckss_timer__on(1)
     }
-    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE {
+    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE SEARCH_SUPPRESS ///
+        SEARCH_REASON SEARCH_ATTACHED SEARCH_FAILED {
         capture macro drop VCKSS_SE_`key'
     }
     capture noisily _fevc_command `0'
     local command_rc = _rc
+    if `command_rc' & `command_rc'!=1 & "$VCKSS_SE_SEARCH_ATTACHED"=="1" & ///
+        "$VCKSS_SE_PHASE"=="1" &                                          ///
+        `"`e(withholding_status)'"'!="INFERENCE_VARIANCE_INVALID" {
+        // inference(highrank) finds the leading directions for their shares
+        // only; its normal intervals and e(V) do not depend on them. If the
+        // run that carried the search stopped, run once more without it: the
+        // high-rank pass of 0.6.0. A variance estimate that is not positive
+        // stops highrank whether the search runs or not.
+        local search_failure `"`e(withholding_status)'"'
+        if `"`search_failure'"'=="" local search_failure "return code `command_rc'"
+        global VCKSS_SE_SEARCH_SUPPRESS 1
+        global VCKSS_SE_SEARCH_REASON `"`search_failure'"'
+        di as txt _newline "Note: the leading-direction search stopped (`search_failure')."
+        di as txt "      Estimating once more without it; no lead shares are reported."
+        capture noisily _fevc_command `0'
+        local command_rc = _rc
+    }
     if `command_rc' & `command_rc'!=1 & "$VCKSS_SE_ATTACHED"=="1" {
         // The attempt carried default standard errors and failed. The point
         // estimate must not depend on them, so run once more without them
@@ -65,7 +83,8 @@ program define fevc, eclass
             local command_rc = _rc
         }
     }
-    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE {
+    foreach key in SUPPRESS SUPPRESS_REASON ATTACHED PHASE SEARCH_SUPPRESS ///
+        SEARCH_REASON SEARCH_ATTACHED SEARCH_FAILED {
         capture macro drop VCKSS_SE_`key'
     }
     if "`report_timer'" != "" {
@@ -9629,6 +9648,18 @@ program define _fevc_residual_se_mata
             "inference_status", "inference_message")
     }
     local mata_rc = _rc
+    // inference(highrank) keeps the strictness of 0.6.0, when it ran without
+    // the search: a component variance estimate that is not positive stops
+    // the request. The runtime lets it through when the search runs, for the
+    // q = 1 interval of the other modes.
+    if !`mata_rc' & "$VCKSS_SE_LEADING"=="highrank" & "`inference_status'"=="CONVERGED" {
+        forvalues se_j = 1/3 {
+            if !(`inference_V_primitive'[`se_j',`se_j']>0) {
+                local inference_status "INFERENCE_VARIANCE_INVALID"
+                local inference_message "a component variance estimate is not positive"
+            }
+        }
+    }
     // With leading directions the interval of every component is decided
     // now; a q = 1 interval for any of them withholds the joint covariance.
     if !`mata_rc' & "$VCKSS_SE_LEADING"!="" & "`inference_status'"=="CONVERGED" {

@@ -481,7 +481,18 @@ and `e(component_inference)` and `e(V)` equal those of the same request in
 `e(inference_leading_steps)` and `e(inference_solver_columns)` equal those
 of `inference(auto)` on the same data, except the regime and the reported
 bounds; `e(inference_regime_rule)` and `e(inference_reference)` say that
-the normal interval was requested for every component. Under
+the normal interval was requested for every component. The search does not
+stop `inference(highrank)`: if the run that carries it stops, the command
+runs once more without the search (the 0.6.0 pass), so the standard errors,
+`e(V)` and the status are those of 0.6.0; every row of
+`e(inference_leading)` and `e(inference_intervals)` then has status 7 (no
+direction), convergence 0 and missing shares, `e(inference_leading_steps)`
+is 0, `e(inference_leading_unresolved)` is 4 and
+`e(inference_leading_failure)` holds the status of the stopped run (empty
+otherwise). As in 0.6.0 a strict `inference(highrank)` stops only when a
+normal interval is unavailable: on the Mata routes with
+`INFERENCE_VARIANCE_INVALID` when a component variance estimate is not
+positive; natively that component is withheld under the partial status. Under
 `inference(auto)`, `e(inference_auto)` is 1 and
 `e(inference_auto_reason)` is empty when the standard errors were computed
 and otherwise states why the request returned

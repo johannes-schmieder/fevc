@@ -22,7 +22,13 @@ commands change. The version strings stay at 0.6.0 until a release.
   `e(V)` and estimates are bitwise those of 0.6.0. The search costs about 55
   linear solves more with the default eight draws (about 90 in all where
   0.6.0 took 35); the display says how many components the default rule
-  would report with the `q = 1` interval.
+  would report with the `q = 1` interval. The search never stops
+  `inference(highrank)`: if the run that carries it stops, the command runs
+  once more without it (the 0.6.0 pass, same intervals, `e(V)` and status),
+  records status 7 (no direction) and `e(inference_leading_failure)`, and
+  shows no lead share; an unresolved direction shows none either. As in
+  0.6.0, highrank stops only when a normal interval is unavailable (on Mata,
+  a component variance estimate that is not positive).
 - No p-values (`P>|z|`) in the component display; `test` and `lincom` give
   them from `e(V)` when it is posted.
 - At most a few lines under the table: what the lead share and the `q = 1`

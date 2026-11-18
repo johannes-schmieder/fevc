@@ -82,6 +82,9 @@ program define _disp_rows
         if ("`request'"=="highrank" & `regime'==0) | ///
             ("`request'"=="q1" & `regime'==1) local kind "`kind'*"
         local share = `table'[`t',10]
+        // Under inference(highrank) a direction that the search did not
+        // find or resolve has no share.
+        if "`request'"=="highrank" & (`table'[`t',15]!=1 | `table'[`t',16]==7) local share = .
         local text "."
         if `t'<4 & !missing(`share') {
             if `share'>1 local text ">100%"
@@ -322,6 +325,159 @@ foreach route of local routes {
         _disp_has 1 "Prepared graph sample"
     }
 }
+
+* --- inference(highrank) does not depend on the search ----------------------
+* The search serves the lead shares only. A run whose search or
+* decomposition stops is repeated without it: the normal intervals, standard
+* errors and e(V) are those of the request with the search, status 7 (no
+* direction) is recorded for every component, the shares are not shown, and
+* the status is the normal highrank one.
+program define _disp_search_failed
+    args reason reference_prefix
+    assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE"
+    assert "`e(inference_leading_request)'"=="highrank"
+    assert "`e(inference_leading_failure)'"=="`reason'"
+    assert e(inference_leading_steps)==0 & e(inference_leading_unresolved)==4
+    assert e(inference_q1_components)==0 & e(inference_joint_posted)==1
+    tempname table lead ci b V
+    matrix `table' = e(inference_intervals)
+    matrix `lead' = e(inference_leading)
+    matrix `ci' = e(component_inference)
+    matrix `b' = e(b)
+    matrix `V' = e(V)
+    assert mreldif(`ci',`reference_prefix'_ci)==0
+    assert mreldif(`b',`reference_prefix'_b)==0
+    assert mreldif(`V',`reference_prefix'_V)==0
+    forvalues t = 1/4 {
+        assert `lead'[`t',1]==7 & `lead'[`t',2]==0
+        assert `table'[`t',16]==7 & `table'[`t',15]==0 & missing(`table'[`t',10])
+        assert `table'[`t',7]==0
+        assert `table'[`t',8]==`table'[`t',3] & `table'[`t',9]==`table'[`t',4]
+    }
+end
+
+fevc, simulate_data(ex4) clear
+if `native' {
+    * A native failure of the attachment that carries the search: the
+    * injected failure applies to the request with the q1 reference, which is
+    * how the search is requested natively.
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+        inference(highrank) nodisplay
+    matrix native_ci = e(component_inference)
+    matrix native_b = e(b)
+    matrix native_V = e(V)
+    local native_offset = e(inference_offset_pass_solves)
+    capture program drop fevc__rust_public_call
+    program define fevc__rust_public_call, rclass
+        version 15.0
+        gettoken command rest : 0
+        if substr("`command'",1,16)=="augmentcomponent" & strpos(`"`rest'"',"reference(q1)") {
+            gettoken handle rest : rest, parse(" ,")
+            fevc_rust `command' 2147483647 `rest'
+            exit 498
+        }
+        fevc_rust `command' `rest'
+        return add
+    end
+    _disp_log fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+        inference(highrank)
+    _disp_search_failed STALE_CONTEXT native
+    assert e(inference_offset_pass_solves)==`native_offset'
+    * The log also holds the failure report of the first run.
+    _disp_has 1 "Note: the leading-direction search stopped (STALE_CONTEXT)."
+    _disp_has 1 "Lead share .: no converged leading direction (see estat inference)."
+    _disp_has 0 "Under the default rule"
+    _disp_rows highrank
+    _disp_log estat inference
+    _disp_width
+    _disp_has 1 "no direction"
+    _disp_has 1 "Note: the run with the leading-direction search stopped"
+    * inference(q1) needs the search and stays strict.
+    capture noisily fevc log_wage, worker(worker_id) firm(firm_id) backend(rust) ///
+        inference(q1) nodisplay
+    assert _rc==498 & "`e(withholding_status)'"=="STALE_CONTEXT"
+    program drop fevc__rust_public_call
+    quietly fevc_rust snapshot
+    assert r(state)==0 & r(handle)==0
+}
+
+* An unresolved search (here marked on a fitted result): under
+* inference(highrank) its share is not shown, with the same line.
+program define _disp_unresolve, eclass
+    tempname table
+    matrix `table' = e(inference_intervals)
+    matrix `table'[2,15] = 0
+    ereturn matrix inference_intervals = `table'
+end
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) inference(highrank)
+_disp_unresolve
+_disp_log fevc__display
+_disp_width
+_disp_rows highrank
+_disp_has 1 "Lead share .: no converged leading direction (see estat inference)."
+* The default keeps using the share of an unresolved direction, as before.
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) inference(auto)
+_disp_unresolve
+_disp_log fevc__display
+_disp_rows auto
+_disp_has 0 "Lead share .:"
+
+* Strictness is that of 0.6.0: on the Mata routes a variance estimate that
+* is not positive stops inference(highrank), with no rerun; natively the
+* component is withheld (the partial status).
+preserve
+clear
+quietly set obs 120
+generate long w = ceil(_n/6)
+generate long f = 1+mod(floor((_n-1)/3),3)
+generate double y = 5+sin(w*.7)+f*.2+.3*sin(_n*.31)+cos(_n*.9)
+capture _disp_log fevc y, worker(w) firm(f) backend(mata) stayers(movers) inference(highrank)
+assert _rc==498 & "`e(withholding_status)'"=="INFERENCE_VARIANCE_INVALID"
+_disp_has 0 "Note: the leading-direction search stopped"
+if `native' {
+    quietly fevc y, worker(w) firm(f) backend(rust) stayers(movers) inference(highrank)
+    assert "`e(status)'"=="FEVC_REPEAT_MEASUREMENT_SE_PARTIAL"
+    assert "`e(inference_leading_failure)'"==""
+}
+restore
+
+* A Mata decomposition that fails its identity check (the runtime's
+* function replaced in memory): the same rerun on Mata JLA and Mata exact.
+foreach route in "backend(mata)" "backend(mata) algorithm(exact)" {
+    local name = cond(strpos("`route'","exact"),"exact","jla")
+    quietly fevc log_wage, worker(worker_id) firm(firm_id) `route' ///
+        inference(highrank) nodisplay
+    matrix mata_`name'_ci = e(component_inference)
+    matrix mata_`name'_b = e(b)
+    matrix mata_`name'_V = e(V)
+}
+mata: mata drop vckss_rse__lead_finish()
+mata:
+real matrix vckss_rse__lead_finish(struct vckss_rse_leading scalar lead,
+    real colvector y, real colvector variance, real matrix influence,
+    real colvector maker_inverse, real matrix diagonal,
+    real colvector unit_set, real colvector unit_mover, real matrix quadratic,
+    real scalar draws, real scalar confidence, real scalar seed,
+    real scalar identity_tolerance)
+{
+    return(J(0,0,.))
+}
+end
+foreach route in "backend(mata)" "backend(mata) algorithm(exact)" {
+    local name = cond(strpos("`route'","exact"),"exact","jla")
+    _disp_log fevc log_wage, worker(worker_id) firm(firm_id) `route' inference(highrank)
+    _disp_search_failed TARGET_IDENTITY_FAILED mata_`name'
+    _disp_has 1 "Note: the leading-direction search stopped (TARGET_IDENTITY_FAILED)."
+    _disp_rows highrank
+    capture noisily fevc log_wage, worker(worker_id) firm(firm_id) `route' ///
+        inference(q1) nodisplay
+    assert _rc!=0 & "`e(withholding_status)'"=="TARGET_IDENTITY_FAILED"
+}
+* The runtimes load again, unchanged, on the next request.
+mata: mata clear
+quietly fevc log_wage, worker(worker_id) firm(firm_id) backend(mata) ///
+    inference(highrank) nodisplay
+assert "`e(inference_leading_failure)'"=="" & e(inference_leading_steps)>0
 
 capture erase `"$DISP_FILE"'
 macro drop DISP_FILE

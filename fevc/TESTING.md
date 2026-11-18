@@ -241,7 +241,16 @@ the default explicitly.
   result but the regime equal to that of `inference(auto)`), the numerical
   MCSE line with its ratio to the standard errors and its warning (forced
   with `probes(8)`), `estat inference` and `estat diagnostics`, and that
-  the default output shows no live progress while `verbose` does.
+  the default output shows no live progress while `verbose` does. It also
+  forces the search to stop under `inference(highrank)` (a native failure
+  of the attachment that carries it, injected through
+  `fevc__rust_public_call`, and a Mata decomposition whose function is
+  replaced in memory) and checks that the rerun without the search keeps
+  the standard errors, `e(V)`, estimates and status, records status 7 and
+  shows no shares; that an unresolved direction shows no share under
+  `inference(highrank)` but keeps its share under the default; that
+  `inference(q1)` stays strict; and that a variance estimate that is not
+  positive still stops `inference(highrank)` on Mata.
 
 The Monte Carlo harness of the interval rule is `tools/default_interval/`;
 its run records are in `docs/default_interval/`. Run a focused file with the

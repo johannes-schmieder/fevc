@@ -148,10 +148,22 @@ and uses the directions only for their shares. (In 0.6.0
 `inference(highrank)` skipped the search; its standard errors and `e(V)` are
 the same either way: on the six routes of `ex2` and `ex4` checked for
 0.6.1, every element of `e(component_inference)`, `e(V)` and `e(kss)`
-matched the 0.6.0 source bitwise. Because it runs the search, a strict
-`inference(highrank)` request now also stops where the search or the
-decomposition fails its own checks, as `inference(q1)` does; a target whose
-`q = 1` pieces are unavailable is not such a failure.)
+matched the 0.6.0 source bitwise.) The search never stops
+`inference(highrank)`: when the run that carries it stops (a failed search
+solve, a direction or a decomposition that fails its own checks, a native
+error in the attachment), the command says so and runs once more without
+the search, which is the high-rank pass of 0.6.0. The normal intervals,
+standard errors, `e(V)` and status are then those of 0.6.0, every target is
+recorded with status 7 (no direction) in `e(inference_leading)` and
+`e(inference_intervals)`, `e(inference_leading_failure)` names the status
+of the stopped run, and the display shows no lead share. A direction the
+search did not resolve within its cap is recorded as unconverged, as under
+`inference(auto)`; `inference(highrank)` then shows no share for it.
+`inference(highrank)` stops, as in 0.6.0, only when a normal interval
+itself is unavailable: on the Mata routes when a component variance
+estimate is not positive (`INFERENCE_VARIANCE_INVALID`); natively such a
+component is withheld and the status is `FEVC_REPEAT_MEASUREMENT_SE_PARTIAL`.
+`inference(q1)` needs the directions and stays strict about the search.
 
 - the direction is the eigenvector `v` of `A_t v = lambda S v` of largest
   absolute eigenvalue, with `S` the normal matrix of the unit design and
@@ -217,7 +229,9 @@ the interval at `level()`, which interval it is (`normal` or `q = 1`,
 marked `*` when `inference(highrank)` or `inference(q1)` requested it) and
 the lead share, the statistic of the rule above (`variance_share`, column
 10 of `e(inference_intervals)`; `.` for the variance of the sum, to which
-the rule does not apply). The heading states the rule ("q = 1 interval when
+the rule does not apply, and under `inference(highrank)` for a direction
+the search did not find or resolve, with the line "Lead share .: no
+converged leading direction (see estat inference)"). The heading states the rule ("q = 1 interval when
 the lead share exceeds 10%") or the request. Under it at most a few lines
 say what the lead share and the `q = 1` interval are, whether `e(V)` is
 posted and why not, and, after `inference(highrank)`, how many components

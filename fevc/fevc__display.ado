@@ -366,9 +366,13 @@ program define _fevc_display_intervals
         local kind = cond(`regime'==1,"q = 1",cond(`regime'==0,"normal","none"))
         if ("`request'"=="highrank" & `regime'==0) | ///
             ("`request'"=="q1" & `regime'==1) local kind "`kind'*"
-        // The rule does not apply to the variance of the sum.
+        // The rule does not apply to the variance of the sum. Under
+        // inference(highrank) a share is shown only for a direction that the
+        // search found and resolved.
         local share_text "."
-        if `row'<4 _fevc_share_text `=`table'[`row',10]'
+        local lead_ok = !("`request'"=="highrank" & ///
+            (`table'[`row',15]!=1 | `table'[`row',16]==7))
+        if `row'<4 & `lead_ok' _fevc_share_text `=`table'[`row',10]'
         if `regime'==0 {
             di as txt %-17s "`row_label'" as result                 ///
                 "  " %9.0g `table'[`row',1] "  " %9.0g `table'[`row',2] ///
@@ -412,10 +416,17 @@ program define _fevc_display_interval_notes
     local unavailable 0
     local would 0
     local unrequested 0
+    local noshare 0
     forvalues row = 1/4 {
         local regime = `table'[`row',7]
         local share = `table'[`row',10]
         local status = `table'[`row',16]
+        // As in the table: under inference(highrank) only a resolved
+        // direction has a share.
+        local lead_ok = !("`request'"=="highrank" & ///
+            (`table'[`row',15]!=1 | `status'==7))
+        if `row'<4 & !`lead_ok' local noshare 1
+        if !`lead_ok' local share = .
         if `row'<4 & !missing(`share') local shares 1
         if `regime'==1 local ++q1
         if missing(`regime') local ++none
@@ -424,7 +435,7 @@ program define _fevc_display_interval_notes
         if "`request'"=="auto" & `row'<4 & `regime'==0 & `status'!=0 & ///
             !missing(`share') & `share'>`threshold' local unavailable 1
         // What the default rule would have reported under inference(highrank).
-        if "`request'"=="highrank" & `row'<4 & `status'==0 &       ///
+        if "`request'"=="highrank" & `row'<4 & `status'==0 & `lead_ok' & ///
             (missing(`table'[`row',2]) | (!missing(`share') & `share'>`threshold')) {
             local ++would
         }
@@ -432,6 +443,9 @@ program define _fevc_display_interval_notes
     }
     if `shares' {
         di as txt "Lead share: leading direction's share of the estimated sampling variance."
+    }
+    if `noshare' {
+        di as txt "Lead share .: no converged leading direction (see estat inference)."
     }
     if `q1' {
         di as txt "q = 1: Andrews-Mikusheva interval (KSS 2020, Sec. 7.1); no standard error."
@@ -528,7 +542,8 @@ program define _fevc_display_inference_details
         local status = `table'[`t',16]
         local text`t' = cond(`status'==0,"computed",cond(`status'==1,"var. <= 0", ///
             cond(`status'==2,"singular",cond(`status'==3,"failed",       ///
-            cond(missing(`status'),".","code `status'")))))
+            cond(`status'==7,"no direction",                            ///
+            cond(missing(`status'),".","code `status'"))))))
     }
     _fevc_detail_row "q = 1 status" "`text1'" "`text2'" "`text3'" "`text4'"
     di as txt "{hline 78}"
@@ -550,7 +565,12 @@ program define _fevc_display_inference_details
         else if `regime'==1 local why`t' "share > `threshold_text'%"
         else if !missing(`share') & `share'>`threshold' & !`q1_ok' local why`t' "no q = 1"
         else local why`t' "share <= `threshold_text'%"
-        _fevc_share_text `=`table'[`t',10]'
+        // As in the main table: under inference(highrank) only a resolved
+        // direction has a share.
+        local share_text "."
+        if !("`request'"=="highrank" & (`table'[`t',15]!=1 | `table'[`t',16]==7)) {
+            _fevc_share_text `=`table'[`t',10]'
+        }
         local share`t' "`share_text'"
         local converged`t' = cond(`table'[`t',15]==1,"yes",cond(missing(`table'[`t',15]),".","no"))
     }
@@ -622,7 +642,13 @@ program define _fevc_display_inference_details
             "(a squared weight above 0.1); the q = 1 interval assumes that no unit "     ///
             "dominates it.{p_end}"
     }
-    if e(inference_leading_unresolved)>0 & !missing(e(inference_leading_unresolved)) {
+    if `"`e(inference_leading_failure)'"'!="" {
+        di as txt "{p 0 6 2}Note: the run with the leading-direction search stopped (" ///
+            as result `"`e(inference_leading_failure)'"' as txt "); the command ran "   ///
+            "once more without it, so no direction and no lead share are reported. "     ///
+            "The normal intervals and e(V) do not depend on the search.{p_end}"
+    }
+    else if e(inference_leading_unresolved)>0 & !missing(e(inference_leading_unresolved)) {
         di as txt "{p 0 6 2}Note: " as result e(inference_leading_unresolved) as txt  ///
             " leading direction(s) were not resolved within the cap on linear "        ///
             "solves; the largest eigenvalues are then close, and no single "           ///

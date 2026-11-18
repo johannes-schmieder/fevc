@@ -92,10 +92,15 @@ program define fevc__component_model_route, rclass
     // interval or the q = 1 interval; inference(q1) reports the q = 1 interval
     // wherever it exists; inference(highrank) reports the normal interval of
     // every component. The pass itself is the high-rank one, and the routes
-    // request the search alike for the three modes.
+    // request the search alike for the three modes. Under inference(highrank)
+    // the search serves the lead shares only: if the run that carried it
+    // stopped, the public entry point runs once more without it
+    // (VCKSS_SE_SEARCH_SUPPRESS), which is the high-rank pass of 0.6.0.
+    local se_search_suppressed = ("`inference'"=="highrank" & ///
+        "$VCKSS_SE_SEARCH_SUPPRESS"=="1")
     local se_leading ""
     if inlist("`inference'","auto","highrank","q1") {
-        local se_leading `inference'
+        if !`se_search_suppressed' local se_leading `inference'
         local inference highrank
     }
     local project_supplied = (strtrim(`"`project'"') != "")
@@ -272,6 +277,10 @@ program define fevc__component_model_route, rclass
     global VCKSS_SE_LEADING = cond(`residual' & "`inferencemodel'"=="repeat_measurement", ///
         "`se_leading'","")
     global VCKSS_SE_LEADING_CAP 40
+    // The entry point reruns a stopped highrank run without the search; the
+    // posting helper then records that no direction is available.
+    global VCKSS_SE_SEARCH_ATTACHED = (`residual' & "$VCKSS_SE_LEADING"=="highrank")
+    global VCKSS_SE_SEARCH_FAILED = (`residual' & `se_search_suppressed')
     fevc__residual_se_post regime_clear
     c_local inferencemodel "`inferencemodel'"
     c_local inferencedraws `inferencedraws'

@@ -99,9 +99,14 @@ def test_standard_errors_are_the_default_and_never_reroute_or_cost_the_estimate(
     # A failed attempt with default standard errors reruns without them.
     entry = command[command.index("program define fevc, eclass") :]
     entry = entry[: entry.index("\nend\n")]
-    assert entry.count("capture noisily _fevc_command `0'") == 2
+    # A highrank attempt whose leading-direction search stopped reruns
+    # without the search; its intervals and e(V) do not depend on it.
+    assert entry.count("capture noisily _fevc_command `0'") == 3
     assert '"$VCKSS_SE_ATTACHED"=="1"' in entry and "`command_rc'!=1" in entry
     assert "global VCKSS_SE_SUPPRESS 1" in entry
+    assert '"$VCKSS_SE_SEARCH_ATTACHED"=="1"' in entry
+    assert "global VCKSS_SE_SEARCH_SUPPRESS 1" in entry
+    assert '!="INFERENCE_VARIANCE_INVALID"' in entry
     # Only failures that can come from the standard errors are repeated.
     assert '"$VCKSS_SE_PHASE"=="1"' in entry
     assert command.count("global VCKSS_SE_PHASE 1") == 2

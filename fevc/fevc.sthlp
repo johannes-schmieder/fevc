@@ -478,7 +478,10 @@ allows it, so {cmd:test} and {cmd:lincom} work whatever the leading
 directions. It still finds the leading directions, so that its display
 shows the lead shares and how many components the default rule would
 report with the q = 1 interval; where one direction dominates, the normal
-intervals can under-cover. {cmd:estat inference} also shows the effective
+intervals can under-cover. Its intervals and {cmd:e(V)} do not depend on
+the search: if the search stops, the command says so and runs once more
+without it, with the same results and no lead shares, and a direction the
+search did not resolve shows no share either. {cmd:estat inference} also shows the effective
 ranks and warns when one is low. Examples
 {help fevc##highrank_example:6} and {help fevc##q1_example:7} show both
 overrides and how to read their results.
