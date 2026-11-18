@@ -857,10 +857,10 @@ lead shares show that no direction carries more than a few per cent of a
 component's estimated sampling variance, and the display says that the
 default rule gives the same intervals. {cmd:e(component_inference)} holds
 the estimate, standard error and interval limits of each component, and
-{cmd:test} and {cmd:lincom} use {cmd:e(V)}; they also give the p-values,
-which the display leaves out. {cmd:estat inference} reports the effective
-rank of every component and warns when a component with a normal interval
-has one below 10, because normal intervals can then under-cover.
+{cmd:test} and {cmd:lincom} use {cmd:e(V)}. {cmd:estat inference} reports
+the effective rank of every component and warns when a component with a
+normal interval has one below 10, because normal intervals can then
+under-cover.
 
 {cmd}{...}
         preserve

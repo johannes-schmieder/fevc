@@ -148,7 +148,10 @@ and uses the directions only for their shares. (In 0.6.0
 `inference(highrank)` skipped the search; its standard errors and `e(V)` are
 the same either way: on the six routes of `ex2` and `ex4` checked for
 0.6.1, every element of `e(component_inference)`, `e(V)` and `e(kss)`
-matched the 0.6.0 source bitwise.)
+matched the 0.6.0 source bitwise. Because it runs the search, a strict
+`inference(highrank)` request now also stops where the search or the
+decomposition fails its own checks, as `inference(q1)` does; a target whose
+`q = 1` pieces are unavailable is not such a failure.)
 
 - the direction is the eigenvector `v` of `A_t v = lambda S v` of largest
   absolute eigenvalue, with `S` the normal matrix of the unit design and
