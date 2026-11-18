@@ -1,6 +1,14 @@
 # Native package provenance
 
-## Current 0.6.0 release
+## 0.6.1 inference display and diagnostics
+
+Version 0.6.1 uses the five plugins and corresponding source archive from
+0.6.0. The [compatibility review](inference-display-20261118/compatibility.json)
+identifies the package commits, changed installation files, unchanged native
+inputs and checks for the new Stata interface. The additional search under
+`inference(highrank)` changes the cost of that request.
+
+## 0.6.0 native qualification
 
 All five 0.6.0 plugins are built from `2082f209` with unmodified common
 CMG `e5613e81` and the explicit 128-level limit. They include repeat-measurement

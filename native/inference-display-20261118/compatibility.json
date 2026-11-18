@@ -1,0 +1,89 @@
+{
+  "version": "0.6.1",
+  "prior_tag": "v0.6.0",
+  "prior_package_commit": "b861a368026fab4291757035d9969cd25a8b6dc3",
+  "reviewed_package_commit": "3752f826e4871ad7cc69aa750038c1e1c0286221",
+  "merge_commit": "93c31a441c414a592f52a85f49b51e609b4a0e0b",
+  "build_source_commit": "2082f20974d6437814905c351f13509ff934d04e",
+  "adoption_manifest": "native/repeat-measurement-20261115/manifest.json",
+  "adoption_manifest_sha256": "5f7b590e8c28eeefac8c9c3adec74e6b4882d50ac2787429f38b574baddcf239",
+  "corresponding_source": {
+    "path": "fevc-corresponding-source-2082f209.tar.gz",
+    "sha256": "e99f0120a27c141dd37cf2576feab96dec6f97b7acd3aedf984d4f65f905563c"
+  },
+  "archive_sha256": "09a1db5577084f09cb30955fac1f3ac9457d89350de2ed087e38db4f7e9202bd",
+  "archive_file_count": 68,
+  "changed_archive_paths": [
+    "fevc/fevc.ado",
+    "fevc/fevc.mata",
+    "fevc/fevc.pkg",
+    "fevc/fevc.sthlp",
+    "fevc/fevc__component_model_route.ado",
+    "fevc/fevc__display.ado",
+    "fevc/fevc__post_failure.ado",
+    "fevc/fevc__residual_se_post.ado",
+    "fevc/fevc__rust_plugin_call.ado",
+    "fevc/fevc__rust_post_comp_v7.ado",
+    "fevc/fevc__rust_post_exact_v7.ado",
+    "fevc/fevc__rust_post_stayer_hybrid.ado",
+    "fevc/fevc_estat.ado",
+    "fevc/stata.toc"
+  ],
+  "binary_sha256": {
+    "fevc_rust_linux_x64.plugin": "0b9b150f10b15df5cf63b3dea9b66b84dcc9b8f0747059daacc40d430a6b9dc2",
+    "fevc_rust_macos.plugin": "c892c6e29f231e9b36b90fdd5826c4775e23873f9a8a9b83df61e984989416bf",
+    "fevc_rust_macos_arm64.plugin": "4a6ad2c30dfc58f034011ef1e434d351a6082b33c962cf52cd401b3262425639",
+    "fevc_rust_macos_x86_64.plugin": "c01d68b9af514b551035c2cd69ab0f49e470cd44a117bdc7061e9e8ad415f09f",
+    "fevc_rust_windows_x64.plugin": "e27fd9ad34b7484423f5178563aed36385a5619d4f52a5b66c5e70f080c309a5"
+  },
+  "qualification_reused": "The five shipped binaries match the 0.6.0 release. Their recorded platform runtime and build qualification applies to these bytes.",
+  "identity_checks": [
+    "Compared the complete archive path inventory and all file digests against the published 0.6.0 release manifest.",
+    "Compared the adoption manifest digest, all binary records, the corresponding source archive and the recorded limitations. Each matches 0.6.0.",
+    "Git comparison of the two package commits found only documentation changes under rust. The Rust and C production sources, CMG vendor and package component, build inputs and workflows, Windows qualification protocol and timing driver, acceptance policy, default-interval registrations and license notices match.",
+    "build_github_release.py rechecked the adopted evidence and the Windows qualification campaign and reproduced the package ZIP."
+  ],
+  "affected_behavior": "Stata now requests leading directions under highrank and can retry if that search fails. Reporting, progress, stored diagnostics and the order of posting metadata changed. The Mata runtime version and package catalogs identify 0.6.1.",
+  "installation_checks": {
+    "method": "Fresh and replacement Stata net install from the extracted candidate ZIP. Each case verified the version, active native backend, automatic intervals, forced highrank covariance and diagnostics, estat inference and all 66 installed file hashes. A modified help file exercised replacement.",
+    "mac_arm64_stata19": [
+      {
+        "mode": "fresh",
+        "runtime": "19 Mac (Apple Silicon)",
+        "files": 66,
+        "plugins": 5
+      },
+      {
+        "mode": "replace",
+        "runtime": "19 Mac (Apple Silicon)",
+        "files": 66,
+        "plugins": 5
+      }
+    ],
+    "mac_rosetta_stata15": [
+      {
+        "mode": "fresh",
+        "runtime": "15.1 Macintosh (Intel 64-bit)",
+        "files": 66,
+        "plugins": 5
+      },
+      {
+        "mode": "replace",
+        "runtime": "15.1 Macintosh (Intel 64-bit)",
+        "files": 66,
+        "plugins": 5
+      }
+    ],
+    "stata15_regression": "test_inference_display.do passed with native=1 using matsize 2000, including native and Mata display and search-failure cases."
+  },
+  "limits": [
+    "Mac x86-64 runtime qualification uses Rosetta.",
+    "Package validation does not expand scientific or platform claims.",
+    "One/two native Windows workers; higher concurrency covered only by Rust tests.",
+    "Mac x86-64 runtime testing uses Rosetta; native Intel hardware is not tested.",
+    "Performance compares requests supported by both versions. Weighted observation deletion uses movers; broader observation/both capability is qualified by runtime/oracle tests without an incumbent Windows native timing comparison.",
+    "Stata 16 was not installed; Stata 17 license was expired. Actual local compatibility executions cover Stata 15.1, 18 and 19.",
+    "Bounded scientific and performance tests do not establish general coverage or representative-scale performance. Default-SE timing observations are informational.",
+    "Platform and timing evidence from 0.6.0 covers the native binaries. The additional search and possible retry under inference(highrank) change command cost. This review makes no new cross-platform timing or coverage claim."
+  ]
+}
