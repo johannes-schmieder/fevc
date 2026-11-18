@@ -27,25 +27,24 @@ non-Gaussian errors they omit cumulant terms arising from small nonzero
 diagonal entries of the projected weights. They are approximate benchmarks
 in those scenarios. Coverage is measured against the known component.
 
-\subsection{A single bottleneck}
-A separate study used two groups of 50 firms, with the number of workers
-who moved between groups varying from 100 to 10, plus designs without a
-bottleneck, skewed errors, unusually noisy bridging workers, and a stress
-test with only three bridging workers. With 1,000 draws per design, the
-prespecified $q=1$ intervals covered between 94.1\% and 100\% across the
-75 registered component--design cases. In the ten-bridge designs with
-normal errors in the main panel, the worst normal coverage was 48.7\%.
-Comparing an interval based on estimated inputs with one based on the true
-covariance showed that some of the extra length came from the geometry of
-the interval itself.
+\subsection{The bottleneck study}
+Section~\ref{sec:q1sim} reports the registered results. Its panels had about 40,700
+rows after pruning, of which about 6,500 were movers' matches. The registered
+tolerances were coverage of at least 0.92 for each of the three components in each
+design and 0.94 on average over the 75 cases, no failed draw, no interval missing in
+more than 1\% of the draws of a case, coverage of at least 0.92 for the normal interval
+of the variance of the sum in each design, and, without a bottleneck, a mean length of
+the $q=1$ interval of at most 1.10 times that of the normal interval. Comparing an
+interval based on estimated inputs with one based on the true covariance showed that
+some of the extra length comes from the geometry of the interval itself: relative to
+the interval with the true matrix, the estimated one was on average 1.02, 1.08 and
+1.19 times as long with 100, 30 and 10 bridging workers.
 
-The study missed its registered length tolerance: without a bottleneck, the
-covariance interval in one design was 12.7\% longer than the normal interval,
-above the 10\% limit. This is a test of the prespecified $q=1$ construction.
-It did not test the automatic rule applied by the released package.
+The study is a test of the prespecified $q=1$ construction. It did not test the
+automatic rule applied by the package, which Section~\ref{sec:impl-mc} covers.
 In the three-bridge stress test the condition that no single row carry the
-leading score fails. The observed coverage in two Gaussian designs cannot
-extend the coverage result to a fixed handful of bridging workers. The
+leading score fails. The coverage observed in its two Gaussian designs, 94.0\% to
+98.0\%, cannot extend the coverage result to a fixed handful of bridging workers. The
 simulations also did not stress the correlation boundary in
 Corollary~\ref{cor:q1}. Two or more dominant directions lie outside the design.
 
@@ -54,12 +53,15 @@ The automatic rule was chosen on 32,000 development fits. Each confirmation
 manifest fixed its designs, seeds, deletion modes, repetitions and
 acceptance thresholds in advance. The first no-control confirmation failed
 on its result inventory when one fit returned point estimates only. The
-second no-control confirmation used fresh designs, and the controls
-confirmation used new seeds. A compatibility check carried the controls
+second no-control confirmation kept the designs of the first and used new
+outcome seeds, and the controls confirmation used new seeds. A compatibility check carried the controls
 result from \code{f3938986} to candidate \code{d4b2d942} on the basis of
 36 byte-identical default results. The released plugins were later built
 from \code{2082f209}. The check does not extend the registered confirmation
-claim to the later compatibility and exact-eigensolver changes.
+claim to the later compatibility and exact-eigensolver changes. Version 0.6.1
+ships those plugins unchanged and leaves the estimator, the standard errors and
+\code{e(V)} as they were. It changes the display, the stored diagnostics and the
+search for leading directions under \code{inference(highrank)}.
 The \href{https://github.com/johannes-schmieder/fevc/tree/59bf4094/fevc/docs/default_interval}{package simulation records}
 give the complete attempt counts and thresholds.
 The \href{https://github.com/johannes-schmieder/fevc/blob/59bf4094/fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf}{November 16 document}
@@ -94,15 +96,29 @@ of the KSS Matlab model-based $q=1$ intervals were scored invalid.
 Coverage estimates based on 100--200 draws have Wilson half-widths of
 roughly 2--6 percentage points in the reported cases.
 
-The Econometrica replication code and the KSS Matlab package have different
-implementation limits. The supplied critical-value table supports $q=1$
-only, so the published $q=2$ intervals could not be reproduced. The
-split-sample routine draws paths and traces without setting a seed, giving
-differences of 0.5--8\% in standard errors across repeated calls on the
-same data. Its remainder calculation indexes a single element where the
-main routine uses the leading-direction column. The effect of this apparent
-indexing error on interval widths has not been measured. In the replication
-package's model-based routine, requesting the eigenvalue diagnostics
-resulted in an error. The GitHub version of the KSS Matlab package supplied
-the model-based $q=1$ intervals. Appendix~\ref{kss:app:repro} identifies
+\paragraph{Observations on the KSS code.}
+Running the two code bases unchanged turned up the following points. They are
+recorded here because they bound how closely the published numbers can be
+reproduced, and in case they are useful to the authors.
+\begin{itemize}
+\item The file of critical values read by the interval routine is not part of the
+replication package, and the package's own table has the $q=1$ column only. The
+$q=2$ intervals of Table~IV could therefore not be reproduced.
+\item The randomised traces and the choice of mover on each edge of a path are not
+seeded. Two calls on the same data gave standard errors 0.5--8\% apart (0.000579
+and 0.000576; 0.00137 and 0.00141; 0.00244 and 0.00264).
+\item In the variance routine of the replication code (\code{finish\_SE.m}, lines 47
+and 58) the kernel net of the leading direction is formed with \code{x1bar(qqq)}, a
+single element, where the main routine (\code{leave\_out\_FD.m}, line 841) uses the
+column \code{x1bar(:,qqq)}. As written, a constant is subtracted where the projection
+on the leading direction appears to be meant. This enters the variance of the
+remainder in the $q=1$ interval. Its effect on the reported intervals was not
+measured.
+\item The replication package's \code{leave\_out\_COMPLETE} stopped with an error when
+eigenvalue diagnostics and standard errors were both requested. The GitHub version of
+the KSS Matlab package supplied the model-based $q=1$ intervals.
+\item The Lindeberg statistic printed by the first-difference code is twice the
+published, per-observation one.
+\end{itemize}
+Appendix~\ref{kss:app:repro} identifies
 the actual programs, settings and inputs.

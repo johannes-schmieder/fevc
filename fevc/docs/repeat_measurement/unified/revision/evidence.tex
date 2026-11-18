@@ -1,5 +1,11 @@
 \section{Evidence on the variance model and the interval}\label{sec:evidence}
 
+The evidence comes in four steps. A method study on a six-year Veneto panel shows
+which wages determine precision and how the mover model behaves when the truth is
+known. A bottleneck study shows what the $q=1$ interval adds. Registered simulations
+through the Stata command test the interval a user actually receives. The comparison
+with KSS follows in Section~\ref{sec:kss}.
+
 \subsection{Which wages determine precision?}
 The Veneto Worker History panel for 1996--2001 contains 5.16 million
 person-years, 1.11 million workers and 86,647 firms after pruning. Its
@@ -23,14 +29,19 @@ Variance of the sum & 0.1499 & 0.000095 & 77\\
 \end{tabular}
 \par\smallskip\begin{minipage}{0.92\linewidth}\footnotesize
 Shares refer to the first term of \eqref{eq:Vhat}, rounded to whole
-percentages. These are method-study estimates under match deletion.
-Year effects and two age terms were removed and treated as known.
-The study used exact stayer leverages, 1,600 projections for movers and
-16 draws for the variance calculation.
+percentages. These are method-study estimates under match deletion, from a prototype
+that follows the algorithm of \fevc{}. Year effects and two age terms were removed and
+treated as known. The study used exact stayer leverages, 1,600 projections for movers
+and 16 draws for the variance calculation.
 \end{minipage}
 \end{table}
 
-Among movers, a small fraction of observations can have a large influence on
+The standard errors are small, between 0.06\% and 0.75\% of the estimates
+(Table~\ref{tab:real}). Stayers supply nearly a quarter of the first term for the
+variance of the sum with variance estimates that need no model. The rest of that term,
+and nearly all of it for the other three components, rests on the model for movers.
+
+Among movers, a small fraction of rows can have a large influence on
 precision. Just 1\% of movers' rows lie beyond the cap on the estimated
 worker effect, yet they account for 26\% of the first term of the estimated
 sampling variance for the sum. Figure~\ref{fig:profile} shows why allowing
@@ -40,40 +51,153 @@ the firm effect rises. The fitted profile captures much of this shape.
 It overpredicts the worker-effect decile averages in deciles 2--4 and
 underpredicts them in deciles 7--9. Because an estimated effect and the
 raw leave-out product use some of the same wages, these averages are an
-imperfect benchmark. The actual mover variances remain unobserved.
+imperfect benchmark. The actual mover variances remain unobserved, which is why the
+next subsection turns to simulations in which they are known.
 
 \input{revision/profile_figure}
 
 \subsection{What changes when the truth is known?}\label{sec:sim}
 Holding the six-year network and effects fixed, a method study drew new wages
-under ten variance patterns, including flat variances, skewed errors, and
-different wage profiles for movers and stayers. Each scenario had 200 draws.
-With the movers' true variances supplied, the variance calculation isolates
-the contribution from repeated wages. In the eight scenarios without skewness
-the root-mean-square standard error was 1.00--1.01 times the benchmark across
-components. With skewed stayer errors the ratio for the variance of the sum
-was 0.97 or 1.03, depending on the sign of skewness relative to wages. These
-are the signs predicted by the calculation in Appendix~\ref{app:proofs}.
+under ten variance patterns, including flat variances, skewed and fat-tailed errors,
+and different wage profiles for movers and stayers. Each scenario had 200 draws, and
+each draw ran the estimator as on the data: projected leverages for movers, the two
+regressions with estimated effects in the profile, and simulated double sums.
+Table~\ref{tab:sim} reports the ratio of the root-mean-square standard error to the
+benchmark standard deviation, that is, the square root of the mean variance estimate
+over the true variance, together with the coverage of the normal 95\% interval.
 
-Refitting the mover model in every draw gives ratios of 0.96--1.10 across
-the forty component--scenario cases, with normal-interval coverage of
-93.5--98.0\%. These ratios divide the square root of the mean variance
-estimate by the benchmark standard deviation. Looking only at the resulting
-ratios can conceal offsetting errors. With true effects and true variances
-as inputs to the fit, misspecification alone would understate the standard
-error for the variance of the sum by 4--8\% in eight scenarios. Using
-estimated effects and fitting on noisy wages, together with the other
-steps of the calculation, often moved the result in the opposite direction.
-The comparison cannot attribute the difference to any one step.
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{4.5pt}
+\caption{Simulation on the six-year Veneto design, with the fitted model for movers}
+\label{tab:sim}
+\begin{tabular}{@{}rl cccc c cccc@{}}
+\toprule
+ & & \multicolumn{4}{c}{Standard error / benchmark} & & \multicolumn{4}{c}{Coverage of the 95\% interval}\\
+\cmidrule(lr){3-6}\cmidrule(l){8-11}
+ & Scenario & Worker & Firm & Cov. & Sum & & Worker & Firm & Cov. & Sum\\
+\midrule
+\tabinput{\srcbase unified/revision/tab_sim_model.tex}
+\bottomrule
+\end{tabular}
+\par\smallskip\begin{minipage}{0.97\linewidth}\footnotesize
+A ratio of 1 means that the mean variance estimate equals the true variance. 200 draws
+per scenario; the Monte Carlo standard error of a coverage rate is about 0.015. In
+scenarios 1 to 7 movers and stayers share one variance profile; in 8 to 10 movers have
+their own. Scenarios 3 to 5 depart from the assumed shape of stayers' errors.
+\end{minipage}
+\end{table}
 
-The ten scenarios also informed the choice of model. A separate validation
-fixed tolerances in advance and used fresh draws on the original design,
-a random half of its workers and a three-year window. The six-year and
-half-worker runs met every tolerance. In the three-year window the firm-variance
-standard error was 1.152 and 1.162 times its benchmark in two scenarios,
-exceeding the registered upper limit of 1.15. Shorter panels give less
-information about a worker's effect. These results show how far the error
-can move across designs drawn from the same underlying population.
+\emph{The repeat-measurement part is exact.} With the movers' true variances supplied,
+the calculation isolates the contribution from repeated wages. In the eight scenarios
+without skewness the ratio was 1.00--1.01 for every component, fat tails included.
+With skewed stayer errors the ratio for the variance of the sum was 0.97 or 1.03,
+depending on the sign of skewness relative to wages. These are the signs predicted by
+the calculation in Appendix~\ref{app:proofs}.
+
+\emph{With the fitted model the standard error stays close.} Across the forty
+component--scenario cases the ratio lies between 0.96 and 1.10. It is never more than
+4\% too small, and coverage is between 93.5\% and 98.0\%. This includes scenario 10,
+in which movers follow the decile profile of their own leave-out products in the data
+and which is not within the model: its ratios are 1.06 to 1.10.
+
+\emph{Why the ratios lean above one.} Looking only at the ratios would conceal two
+opposing contributions. With true effects and true variances as inputs to the fit,
+misspecification alone would understate the standard error for the variance of the sum
+by 4--8\% in eight scenarios. One source is the cap: where true variances keep rising
+beyond three standard deviations, the 1\% of rows beyond the cap can carry a third of
+the first term, and raising the cap from three to six standard deviations would move
+the predicted ratio in that scenario from 0.95 to 0.99. Using estimated effects and
+fitting on noisy wages, together with the other steps of the calculation, moved the
+result in the opposite direction, often by more. The comparison cannot attribute the
+difference to any one step, and no result predicts its sign in other designs.
+
+\begin{table}[htbp]\centering\small\setlength{\tabcolsep}{4pt}
+\caption{Validation with tolerances fixed in advance: ratio and coverage by design}
+\label{tab:val}
+\begin{tabular}{@{}lc cccc cc@{}}
+\toprule
+ & & \multicolumn{4}{c}{Standard error / benchmark (range)} & & \\
+\cmidrule(lr){3-6}
+Design & Scenarios & Worker & Firm & Cov. & Sum & Coverage & Met\\
+\midrule
+\tabinput{\srcbase note/gen/tab_val.tex}
+\bottomrule
+\end{tabular}
+\par\smallskip\begin{minipage}{0.97\linewidth}\footnotesize
+200 fresh draws per scenario. Ranges are over scenarios; coverage is the smallest and
+largest value over scenarios and components. \emph{Met}: whether the design met every
+registered tolerance. Registered tolerances: for every scenario and component a
+ratio between 0.93 and 1.15 and coverage of at least 0.90; for every design an average
+coverage of at least 0.94, no failed draw, no nonpositive variance estimate, and
+floors binding for at most 2\% of movers' rows in any draw.
+\end{minipage}
+\end{table}
+
+\emph{The results hold on fresh draws and on two other designs.} The ten scenarios
+also informed the choice of model. The estimator was then frozen and run once more
+with tolerances written down in advance, on fresh draws of the six-year design, on a
+random half of its workers, and on a three-year window (Table~\ref{tab:val}). The
+six-year and half-worker runs met every tolerance, and the six-year ratios reproduced
+those of Table~\ref{tab:sim} to within 0.007. In the three-year window the
+firm-variance standard error was 1.152 and 1.162 times its benchmark in two scenarios,
+above the registered limit of 1.15. Across the 88 cases of the three designs the ratio
+was below 0.95 in one and above 1.10 in eleven. Shorter panels give less information
+about each worker's effect, and there the standard error of firm variance errs on the
+conservative side by up to a sixth.
+
+\subsection{What the \texorpdfstring{$q=1$}{q=1} interval adds at a bottleneck}\label{sec:q1sim}
+A separate study built synthetic panels with a bottleneck of chosen width: 100 firms
+in two groups of 50, 12,000 workers observed for two to six years, and $b$ bridging
+workers who move once between the groups. The link has $b=100$, 30 or 10 workers, or
+there is no bottleneck. Error variances are flat, follow a wage profile, are steeper
+for movers, or are three times as high for the bridging workers alone, a feature the
+mover model cannot see. The designs, 1,000 draws per design, and the tolerances were
+fixed beforehand. The study tests the $q=1$ construction of
+Section~\ref{sec:q1int} applied to every draw, not the automatic choice.
+
+\begin{table}[htbp]\centering\footnotesize\setlength{\tabcolsep}{4.5pt}
+\caption{Coverage of 95\% intervals with a bottleneck of $b$ bridging workers}
+\label{tab:q1}
+\input{../note/gen/tab_q1.tex}
+\par\smallskip\begin{minipage}{0.97\linewidth}\footnotesize
+1,000 draws per design; ranges over designs and over worker variance, firm variance
+and the covariance. \emph{Normal}: $\hat\theta\pm1.96\,\widehat{\V}[\hat\theta]^{1/2}$.
+\emph{$q=1$}: the interval of Section~\ref{sec:q1int} with \eqref{eq:q1est}.
+\emph{Leave-out}: the same with KSS's $V_b^{\rm lo}$ alone. \emph{True $\Sigma$}: the
+interval with the true covariance matrix, which no estimate can use. A draw without an
+interval counts as not covered. \emph{Length}: mean length of the $q=1$ interval over
+that of the normal interval, and over that of the interval with the true matrix.
+$\max_iw_{i1}^2$ is the largest squared weight of one row in the leading direction and
+$\kappa$ the curvature. Noisy bridge: the bridging workers' errors have three times
+the variance.
+\end{minipage}
+\end{table}
+
+\emph{The $q=1$ interval covers throughout.} All 27,000 draws produced a $q=1$
+interval. Across the 75 registered component--design cases it covered between 94.1\%
+and 100\%, on average 97.8\%, including with skewed errors and with noisy bridging
+workers (Table~\ref{tab:q1}). It is conservative, and most of that is the construction
+of KSS and not the estimates: with the true covariance matrix coverage is 94.5\% to
+99.6\%.
+
+\emph{The normal interval fails as the bottleneck narrows.} Its coverage falls to
+48.7\% with ten bridging workers. The estimate is then far from normal, and the
+variance estimate is nonpositive in up to 47.8\% of the draws. Where bridging workers
+are noisier than the model can know, the normal standard error is 0.59 to 0.67 times
+the true one. For the variance of the sum, which has no dominant direction, the normal
+standard error is 1.00 to 1.06 times the true one in every design.
+
+\emph{The larger-of-two rule earns its place.} With ten bridging workers KSS's
+leave-out variance of the score alone gives coverage of 79.5--91.1\%, because the
+products of a few rows are too noisy. With noisy bridging workers the fitted variance
+alone is about a third of the true value and its interval covers 80.3--92.5\%. The
+larger of the two covers in both situations.
+
+One registered tolerance was missed. Without a bottleneck the $q=1$ interval was to be
+at most 10\% longer than the normal one, and for the covariance in one design it was
+12.7\% longer. The interval is not wrong there: it covered 96.9\% against 94.9\% for
+the normal one. The result stands as a failure of the tolerance. A stress test with
+only three bridging workers lies outside the coverage result
+(Appendix~\ref{app:evidence}).
 
 \subsection{Coverage of the interval selected by the command}\label{sec:impl-mc}
 The coverage question for a user is whether the interval actually reported
@@ -82,7 +206,8 @@ The package experiments applied the Stata command to two-block networks of
 about 48,000 person-years, ranging from well connected to a single pronounced
 bottleneck. They included both deletion modes, normal and skewed errors, and
 variance patterns both within and outside the fitted model. Each confirmation
-used 20 designs, two deletion modes and 1,000 replications per combination.
+used 20 designs, two deletion modes and 1,000 replications per combination, which
+gives 160 cases of a design, a deletion mode and a component.
 
 \begin{table}[htbp]\centering
 \caption{Registered confirmations of nominal 95\% intervals through the command}
@@ -97,36 +222,54 @@ With controls & 40,000 & 0.923 & 0.960 & Passed\\
 \bottomrule
 \end{tabular}
 \par\smallskip\begin{minipage}{0.92\linewidth}\footnotesize
-Coverage is over replications within design, deletion mode and component.
-The first run's coverage figures are descriptive. One fit returned point
-estimates only, and the validation program rejected its task. The registered
-failure stands. The no-control confirmations used build \code{fb49e16d} and
-the controls confirmation used \code{f3938986}. These are pre-release
-builds. The comparison in Section~\ref{sec:kss} uses released 0.6.0.
+Coverage is over replications within a case; lowest and mean are over the 160 cases.
+Registered tolerances: coverage of at least 0.92 in every case and 0.94 on average,
+an interval for all four components in at least 99\% of the replications of a design
+and deletion mode, and, without a bottleneck, a reported interval of median length at
+most 1.10 times the normal one with \code{e(V)} posted in at least half of the
+samples. In the first run one fit of 40,000 returned point estimates only. The
+validation program of the time had no rule for that documented fallback and rejected
+its task, so the registered verdict is a failure and stands; counting the fit as a
+miss, every tolerance was met, and the coverage figures shown are descriptive. The
+no-control confirmations used build \code{fb49e16d} and the controls confirmation
+\code{f3938986}. These are pre-release builds; Appendix~\ref{app:evidence} describes
+how far the evidence carries to the released package.
 \end{minipage}
 \end{table}
 
-On the second no-control confirmation, using normal intervals throughout would
-have given lowest coverage of 78.9\% on the same replications, compared with
-93.0\% for the selected interval. Without a bottleneck the selected interval
-was at most 1.059 times as long as the normal one, and the command returned a
-joint covariance in 89\% of those samples. Selecting the 10\% threshold had
-involved a trade-off. In the development runs, lowering it to 5\% raised
-minimum coverage from 93.7\% to 94.0\%, but more than doubled the frequency
-of selecting $q=1$ without a bottleneck, from 4.3\% to 9.8\%.
+\emph{The reported interval covers.} In the two passed confirmations none of the
+80,000 fits failed or fell back to point estimates. Over their 320 cases the reported
+95\% interval covered 96.0\% on average, between 92.3\% and 99.6\% case by case. It
+covered at least 95\% in 239 cases and less than 94\% in 16.
 
-The controls confirmation used new seeds and four kinds of controls. The
-lowest coverage occurred where the blocks differed and a control loaded on
-the worker effect. The worker- and firm-variance standard errors were 8\%
-and 7\% below the spread of the estimates there. Separate development stress
-tests show why the distinction between joint and fixed-offset estimation
-matters. In one case with a control index as large as the effects, the
-joint estimate's covariance-component standard error was 12\% too small.
-With match deletion and a fixed offset on the same design, the component
-standard errors ranged from 0.99 to 1.07 of the spread. The registered
-controls confirmation excluded this large-index case, variances that move
-with a control inside a cell, and a control loaded on the firm effect when
-the blocks differ.
+\emph{How to read the lowest case.} With 1,000 replications a coverage rate has a
+sampling standard error of about 0.007. If every case had exactly 95\% coverage, the
+lowest of 160 independent cases would typically be 0.931, and 0.935 if only 40 were
+independent, as when the four components of a fit move together. The lowest case
+without controls, 0.930, is therefore what nominal coverage looks like. The lowest case
+with controls, 0.923, is a real but small shortfall, discussed below.
+
+\emph{The switch is what delivers this.} On the second no-control confirmation, using
+normal intervals throughout would have given a lowest coverage of 78.9\% on the same
+replications, compared with 93.0\% for the selected interval. The switch costs little
+where it is not needed: without a bottleneck the selected interval was at most 1.059
+times as long as the normal one, and the command returned a joint covariance in 89\%
+of those samples. Selecting the 10\% threshold involved a trade-off. In the development
+runs, lowering it to 5\% raised the lowest coverage from 93.7\% to 94.0\%, but more
+than doubled the frequency of selecting $q=1$ without a bottleneck, from 4.3\% to
+9.8\%.
+
+\emph{Controls.} The controls confirmation used new seeds and four kinds of controls.
+Its lowest coverage occurred where the two blocks differed and a control loaded on the
+worker effect. The worker- and firm-variance standard errors were 8\% and 7\% below
+the spread of the estimates there. Separate development stress tests show why the
+distinction between joint and fixed-offset estimation matters. In one case without a
+bottleneck, under match deletion and with a control index as large as the effects, the
+joint estimate's covariance-component standard error was 12\% too small. With a fixed
+offset on the same design, the component standard errors ranged from 0.99 to 1.07 of
+the spread. By registered design the controls confirmation excluded this large-index
+case, variances that move with a control inside a cell, and a control loaded on the
+firm effect when the blocks differ.
 
 \section{Comparison with KSS}\label{sec:kss}\label{kss:sec:empirical}
 \subsection{The same point estimator, three sources of variance information}
@@ -138,24 +281,28 @@ conservative variance contribution. Its published application reports inference
 for firm variance. The model-based procedure in the KSS Matlab package instead
 smooths raw leave-out products over leverage $P_{ii}$ and the component's
 own weight $B_{ii}$. It fits a separate variance model for each of three
-components. The distinction matters for interpreting agreement with \fevc{}:
-both model-based procedures can err if the characteristics they pool over
-miss variation in a few influential workers' wages.
+components. \fevc{} uses one set of variance inputs for all four components and their
+covariance. Agreement between \fevc{} and the KSS Matlab package is agreement between
+two model-based procedures, and both can err if the characteristics they pool over
+miss variation in a few influential workers' wages. Agreement with the split-sample
+procedure is the stronger check, because that procedure uses no variance model.
 
 \subsection{Firm variance on the six Table IV samples}\label{kss:sec:emp-se}
 The six samples of KSS Table~IV pair wages in 1999 and 2001 for pooled,
 younger and older Veneto workers. Each group supplies a leave-one-out and
-a more tightly connected leave-two-out sample. On common rows, with KSS's
+a more tightly connected leave-two-out sample. They were rebuilt from the raw data
+with KSS's own code, and all \fevc{} runs in this section use observation deletion,
+as KSS do, with the 2001 indicator as the only control. On common rows, with KSS's
 year-effect treatment and enough projections, \fevc{} reproduces the KSS
 firm-variance point estimates within numerical uncertainty. With two
 observations per worker, leaving out one wage leaves the worker effect
 pinned down by the other. The two leave-out products of a mover then sum
 to the first-difference product used by KSS. The default estimates can
-differ because \fevc{} jointly estimates the year effect and approximates
+differ slightly because \fevc{} jointly estimates the year effect and approximates
 leverages by random projections.
 
 \begin{table}[htbp]\centering
-\caption{Firm variance on KSS's Table IV samples}\label{tab:six}
+\caption{Firm variance on KSS's Table IV samples: standard errors}\label{tab:six}
 \small\begin{tabular}{@{}llrrrr@{}}
 \toprule
 Sample & Connected set & KSS split & KSS Matlab & \fevc{} & \fevc{} interval\\
@@ -169,44 +316,65 @@ Older  & Leave-one-out & .00244 & .00196 & .00199 & $q=1$\\
 \bottomrule
 \end{tabular}
 \par\smallskip\begin{minipage}{0.92\linewidth}\footnotesize
-Numbers are standard errors on the normal scale. The final column identifies
-the interval actually reported by the \fevc{} default. KSS split uses the
-Econometrica replication code, and KSS Matlab uses the model-based procedure
+Entries are standard errors of the normal form, the square root of the variance
+estimate. The final column identifies the interval reported by the \fevc{} default. In
+the three $q=1$ rows the default prints the interval and no standard error; the entry
+is the normal-form standard error kept in \code{e(inference\_intervals)}. KSS split
+uses the Econometrica replication code, and KSS Matlab uses the model-based procedure
 in commit \code{8b957ffe}. $^a$Published KSS values (at their printed precision).
 The pooled split-sample reruns were stopped after 23 hours before the first
 call finished.
 \end{minipage}
 \end{table}
 
-On the leave-one-out samples, 15--22\% of movers lack an independent
-second path. KSS's conservative substitution yields the largest standard
-errors there. On five of the six samples the two model-based standard
-errors agree within about 7\%. The revealing exception is the older
-leave-two-out sample. Its standard errors range from .00094 for the
-\fevc{} default to .00137 for KSS's split-sample calculation. Yet the
-reported $q=1$ intervals are almost identical: $[.0154,.0218]$ for
-\fevc{} and $[.0155,.0220]$ for KSS. Those intervals depend on the joint
-uncertainty of the leading score and the remainder. A normal standard
-error alone cannot explain their widths.
+Four findings stand out in Table~\ref{tab:six}.
+\begin{itemize}
+\item \emph{The two model-based standard errors agree.} On five of the six samples
+they are within about 7\% of each other.
+\item \emph{The interval choice lines up with KSS's intervals.} \fevc{} reports the $q=1$ interval
+on exactly the three samples where KSS's $q=1$ and normal intervals differ, and the
+normal interval on the three where they coincide.
+\item \emph{Where the standard errors differ most, the intervals agree.} On the older
+leave-two-out sample the standard errors range from .00094 for \fevc{} to .00137 for
+KSS's split-sample calculation. Yet the reported $q=1$ intervals are almost identical:
+$[.0154,.0218]$ for \fevc{} and $[.0155,.0220]$ for KSS. Those intervals depend on the
+joint uncertainty of the leading score and the remainder, which a normal standard
+error alone cannot summarise.
+\item \emph{The split-sample standard errors are the largest where they are
+conservative by construction.} On the leave-one-out samples, 15--22\% of movers lack
+an independent second path and receive KSS's conservative substitution.
+\end{itemize}
+For worker variance and the covariance, for which KSS publish no standard errors,
+the only comparison is the KSS Matlab package. The two agree within 6\% on the pooled
+samples and within 11\% on the older samples, with no consistent sign. On the younger
+samples the \fevc{} standard errors are 12--25\% larger.
 
-On these samples \fevc{} took 18--96 seconds for all four components.
-The KSS Matlab package took roughly ten minutes to ten hours for three.
-The split-sample Table~IV driver took about thirteen minutes on the older
-leave-two-out sample for its two calls, with the pooled runs censored as
-shown in Table~\ref{tab:six}. These are observed times on comparable cluster
+\emph{Time.} On these samples \fevc{} took 18--96 seconds for all four components and
+their covariance. The KSS Matlab package took roughly ten minutes to ten hours for
+three components. The split-sample Table~IV driver took about thirteen minutes on the
+older leave-two-out sample for its two calls on firm variance, and the pooled runs
+were stopped after 23 hours. These are observed times on comparable cluster
 nodes with different speeds, worker counts, leverage calculations and outputs.
 They indicate orders of magnitude. The shared variance fit and the trace
 calculation in \eqref{eq:sim} explain part of the difference.
 
-\subsection{What thirty movers can change}\label{kss:sec:synth}
+\subsection{Against a known truth}\label{kss:sec:synth}
 On real data there is no benchmark that determines which standard error is
-closer. A simulation on the two older-worker networks preserves their
-actual moves and draws new wages from a version of KSS's Monte Carlo design.
-Stayers have no wage noise, and each mover has one observation per employer.
-This is a direct test of the fitted mover model. The design makes variance
-depend partly on the mover's weight in the firm-variance estimator, a
-characteristic used by the KSS Matlab smoother. The parameters were fitted
-on each older-worker sample. KSS fitted theirs on the pooled sample.
+closer. A simulation on the two older-worker networks, where the methods differ most,
+preserves their actual moves and draws new wages from a version of KSS's Monte Carlo
+design. Stayers have no wage noise, and each mover has one observation per employer,
+so the simulation is a direct test of the fitted mover model. The design makes the
+variance depend partly on the mover's weight $B_{ii}$ in the firm-variance estimator.
+That characteristic is an input of the KSS Matlab smoother and is not in the model of
+\fevc{}, so the design favours the former. The parameters were fitted on each
+older-worker sample; KSS fitted theirs on the pooled sample.
+
+\emph{On the leave-one-out network \fevc{} is on target.} Its firm-variance standard
+error and that of the KSS Matlab package are within 4\% of the simulated spread, while
+the split-sample standard error is 44\% too large and its intervals are 30\% longer.
+The \fevc{} standard errors for worker variance and the covariance are 1\% and 4\%
+below the spread, and its reported intervals cover about 97\% for all three
+components.
 
 \begin{table}[htbp]\centering
 \caption{Older leave-two-out network: standard errors and coverage when the truth is known}
@@ -227,43 +395,42 @@ Worker--firm covariance & KSS Matlab model-based & $+1\%$ & 90.0\% & 96.0\%\\
 \end{tabular}
 \par\smallskip\begin{minipage}{0.92\linewidth}\footnotesize
 All simulated mover noise falls on the second year's wage in this design.
-Bias compares the mean available normal standard error with the standard
+Bias compares the mean normal-form standard error with the standard
 deviation across 1,000 \fevc{} estimates, net of numerical projection noise.
-KSS procedures used the first 200 draws. Reported coverage uses the selected
-interval, counting missing or invalid intervals as misses. The KSS procedures
-use $q=1$ here. Sampling uncertainty in the coverage rates is larger with
-200 draws than with 1,000.
+Normal coverage is that of the normal interval, which the \fevc{} default does not
+report here. Reported coverage uses the selected interval, counting missing or invalid
+intervals as misses; the KSS procedures use $q=1$ here. KSS procedures used the first 200
+draws, so their coverage rates are less precise than those from 1,000.
 \end{minipage}
 \end{table}
 
-The two older-worker networks give quite different answers. On the
-leave-one-out network the split-sample firm-variance standard error is
-44\% too large relative to the simulated spread, and the \fevc{} and KSS
-Matlab standard errors are within 4\% of that spread. On the leave-two-out
-network, the firm-variance finding changes sign for \fevc{}, and its normal
-standard errors for worker variance and covariance are 14--15\% too small
-(Table~\ref{tab:known}). Splitting the simulated noise across the two years
-gives shortfalls of 16--17\% for the latter two components. Across these
-variants the $q=1$ intervals reported by \fevc{} cover roughly 96--98\%.
+\emph{On the leave-two-out network the reported intervals cover.} One direction
+dominates there. For firm variance \fevc{} reported the $q=1$ interval on every draw,
+and that interval has the same median length as the split-sample interval,
+0.0086, with coverage of 98.9\% against 97.5\% (Table~\ref{tab:known}). The KSS Matlab
+procedure produced shorter intervals (median length 0.0076), but 19\% of its $q=1$
+intervals failed the study's validity criterion and counted as misses
+(Appendix~\ref{app:evidence} gives the scoring convention). For worker variance and
+the covariance the \fevc{} intervals covered 97.6\% and 97.5\%, and 96.1\% and 96.6\%
+when the simulated noise is split across the two years.
 
-On the older leave-two-out network, it is possible to compare coverage at
-a given interval length as well. The split-sample method and \fevc{} both
-gave a median firm-variance interval length of 0.0086, with coverage of
-97.5\% and 98.9\%, respectively. Their coverage estimates have different
-Monte Carlo precision because the methods ran on different numbers of draws.
-The KSS Matlab procedure produced shorter intervals (median length 0.0076),
-but 19\% of its $q=1$ intervals failed the study's validity criterion and
-counted as misses. Appendix~\ref{app:evidence} gives the scoring convention.
+\emph{The normal-form standard errors fall short on this network.} For firm variance
+the shortfall is 6\%. For worker variance and the covariance it is 14--15\%, and
+16--17\% with split noise, and normal intervals would cover only 88--89\%. As in the
+noisy-bridge designs of Section~\ref{sec:q1sim}, the fitted model is wrong on exactly
+the rows that carry the component. This is the situation in which the default does not
+report a normal interval.
 
-The difference can be traced to about thirty movers on the leave-two-out
-network. A single direction accounts for 95\% of the sampling variance of
-estimated worker variance and 92\% for the covariance. The ten movers with
-the largest weights carry half the weight of that direction. Their fitted
-error variances are just 44--48\% of their true values. Most of the
-direction's weight is in leverage deciles six through nine. Inspecting
-only the highest-leverage observations would miss it. Fitting the same model
-directly to the true variances gives nearly the same discrepancy along
-the direction. Here the functional form explains the shortfall.
+\emph{The shortfall traces to about thirty movers.} A single direction accounts for
+95\% of the sampling variance of estimated worker variance and 92\% for the
+covariance. The ten movers with the largest weights carry half the weight of that
+direction. Their fitted error variances are just 44--48\% of their true values. Most
+of the direction's weight is in leverage deciles six through nine, so inspecting only
+the highest-leverage observations would miss it. Fitting the same model directly to
+the true variances gives nearly the same discrepancy along the direction: the
+functional form, not sampling noise, explains the shortfall. The larger-of-two rule of
+Section~\ref{sec:q1int} is what protects the reported interval, because KSS's
+leave-out variance of the leading score does not depend on the model.
 
 This example gives content to $b(\Delta)$ in \eqref{eq:b}. An error in the
 model matters to the extent that it falls on the workers who carry a
@@ -271,7 +438,6 @@ particular component. Whether actual wage noise rises on these links is
 unknown. The coefficient on the firm-variance weight in the older sample
 has the opposite sign from the estimate on KSS's pooled sample, and the
 regression used to calibrate noise explains only 0.9\% of the variation
-in the raw products. Agreement on the real samples and coverage in a
-simulation answer different questions. Together they show why both the
-source of the variance estimates and the type of interval belong beside a
-reported variance decomposition.
+in the raw products. The simulation is therefore best read as a stress test: it shows
+what happens when wage noise is tied to the very weights that carry a component, and
+that the reported interval holds up even then.

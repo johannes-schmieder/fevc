@@ -41,21 +41,23 @@
 \newcommand{\bth}{\bar\vartheta}
 \newcommand{\fevc}{\texorpdfstring{\texttt{fevc}}{fevc}}
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\pend}{\textit{stopped}}
 \definecolor{cstay}{HTML}{0072B2}
 \definecolor{cmove}{HTML}{D55E00}
 \definecolor{cgrey}{HTML}{555555}
 \makeatletter
+\def\input@path{{../fevc/docs/repeat_measurement/unified/}}
 \newcommand{\R}[1]{\ifcsname res@#1\endcsname\csname res@#1\endcsname\else\textbf{[\detokenize{#1}]}\fi}
 \newcommand{\setres}[2]{\expandafter\gdef\csname res@#1\endcsname{#2}}
 \newcommand{\tabinput}[1]{\@@input #1 }
+% \tabinput reads with the TeX primitive, which ignores \input@path: give it the full relative path.
+\newcommand{\srcbase}{../fevc/docs/repeat_measurement/}
 \makeatother
 \input{../note/gen/numbers.tex}
 \input{../note/gen/q1_numbers.tex}
 \allowdisplaybreaks[2]
 
 
-\hypersetup{pdftitle={Repeat Measurements and Inference for Leave-Out Variance Components},
+\hypersetup{pdftitle={Feasible Standard Errors for Leave-Out Variance Components},
  pdfauthor={fevc project},bookmarksnumbered=true}
 \raggedbottom
 \widowpenalty=10000
@@ -66,25 +68,34 @@
   \renewcommand*\l@section{\@dottedtocline{1}{0em}{2em}}%
   \tableofcontents\endgroup}
 \makeatother
-\title{Repeat Measurements and Inference for\\ Leave-Out Variance Components}
-\author{Technical note for \fevc{} 0.6.0}
-\date{November 17, 2026}
+\title{Feasible Standard Errors for\\ Leave-Out Variance Components}
+\author{Technical note for \fevc{} 0.6.1}
+\date{November 18, 2026}
 \begin{document}
 \maketitle
 \begin{abstract}
 The precision of a leave-out estimate of worker or firm variance depends on
-whose wages are volatile. Repeated wages at the same employer supply a direct
-estimate of variability for each eligible worker--firm cell. For units observed
-only once, \fevc{} fits a variance model using match size, leverage and
-estimated wage effects. The same variance inputs give normal intervals when
-uncertainty is spread across the mobility network and an interval due to Kline,
-Saggio and S{\o}lvsten (KSS) when one direction dominates. On six Veneto samples the firm-variance standard errors
-agree within about 7\% with those of the KSS Matlab model-based procedure on five
-samples. A simulation on the sixth illustrates the cost of misspecification:
-the model assigns too little variance to a few movers connecting groups of
-firms. In that design the normal standard errors for worker variance and
-worker--firm covariance are too small, while the reported intervals account for
-the dominant direction.
+whose wages are volatile. Repeated wages at the same employer measure that
+volatility directly, worker by worker. For units without a repeat measurement,
+\fevc{} fits a variance model in match length, leverage and estimated wage effects.
+Under the baseline assumptions the resulting variance estimate is exactly unbiased
+when movers' variances are known, and it has an explicit error term when the model
+for them is wrong. The same inputs
+give a normal interval when uncertainty is spread across the mobility network and
+the interval of Kline, Saggio and S{\o}lvsten (KSS) when one direction dominates,
+and the command chooses between them for each of the four components. In
+registered simulations of the command, the reported 95\% intervals covered 96\% on
+average and between 92\% and 99.6\% in each of 320 cases. On KSS's six Veneto
+samples the firm-variance standard errors are within about 7\% of those of the KSS
+Matlab package on five, and on the sixth the reported interval nearly coincides
+with KSS's split-sample interval. \fevc{} took 18--96 seconds per sample where the
+KSS Matlab package took ten minutes to ten hours. The note also marks where
+accuracy ends. When the few movers who connect groups of firms are noisier than the
+model predicts, normal standard errors were too small, by 14--17\% for worker
+variance and the covariance on a real network and by a third or more in synthetic
+designs built for the purpose, while the $q=1$ interval still covered at least
+95\%. With estimated controls the standard error omits a term of the default joint
+estimate that matters when the control index is large.
 \end{abstract}
 \compactcontents
 \clearpage
@@ -92,6 +103,7 @@ the dominant direction.
 \input{revision/method}
 \input{revision/intervals}
 \input{revision/evidence}
+\input{revision/scope}
 
 \section*{References}
 \addcontentsline{toc}{section}{References}
@@ -111,9 +123,11 @@ components'' (the Econometrica replication code, folder \code{Replication ECTA})
 variance components (the ``KSS Matlab package''). GitHub, commit \code{8b957ffe}, October 17, 2024.
 
 \smallskip
-\noindent\textit{Source note.} The November 16 method document was prepared by
-Claude at Johannes Schmieder's request. This editorial revision was prepared
-with Codex from that document, its proofs and its recorded results.
+\noindent\textit{Source note.} The method notes of November 13 and 16 were prepared by
+Claude at Johannes Schmieder's request. An editorial revision of November 17 was
+prepared with Codex from the November 16 document, its proofs and its recorded results.
+This edition, prepared by Claude, restores the exposition and the main tables of the
+November 13 note and describes \fevc{} 0.6.1.
 \clearpage
 \appendix
 \linespread{1.02}\selectfont
@@ -121,5 +135,5 @@ with Codex from that document, its proofs and its recorded results.
 {\small\input{a1_proofs}}
 \input{revision/controls}
 \input{revision/checks}
-{\small\input{a6_repro}}
+{\small\input{revision/repro}}
 \end{document}

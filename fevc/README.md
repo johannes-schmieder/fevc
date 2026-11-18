@@ -197,11 +197,16 @@ shows no p-values, which `test` and `lincom` give from `e(V)`.
 the one reported, the leading direction and the method. See
 `help fevc##se` and the [inference guide](docs/INFERENCE.md),
 which gives the simulations behind the rule and their limits; they are not
-a coverage guarantee. The
-[standard-error document](docs/repeat_measurement/unified/se_unified_20261116.pdf)
-derives the method, describes its implementation in 0.6.0 and compares it
-with the standard errors of KSS; its sources and the method note it grew
-from are in [docs/repeat_measurement/](docs/repeat_measurement/README.md).
+a coverage guarantee. The note
+[Feasible Standard Errors for Leave-Out Variance Components](../docs/feasible-standard-errors.pdf)
+derives the method, reports the coverage of the reported intervals in
+simulations of the command (96% on average, 92.3% to 99.6% over 320 cases)
+and compares the standard errors with those of KSS: within about 7% of the
+KSS Matlab package on five of six samples, at a fraction of the computing
+time. Its last section states what
+is proved, what rests on simulation and where the standard errors were
+measurably off. The proofs, supporting material and earlier editions are in
+[docs/repeat_measurement/](docs/repeat_measurement/README.md).
 
 ```stata
 * Normal intervals for every component and e(V), for test and lincom
@@ -260,7 +265,7 @@ cap actually applied, the available capacity and the measured concurrency.
 The companion paper, *fevc: Leave-out bias-corrected variance decompositions
 in Stata* (Schmieder, 2026), and its technical supplement explain the method
 and sample construction. The standard errors of the components are derived
-in the [standard-error document](docs/repeat_measurement/unified/se_unified_20261116.pdf)
-of November 16, 2026, which also compares them with those of KSS.
+in [Feasible Standard Errors for Leave-Out Variance Components](../docs/feasible-standard-errors.pdf),
+which also compares them with those of KSS.
 
 The package code is MIT; see [licensing](../CODE_LICENSE.md).

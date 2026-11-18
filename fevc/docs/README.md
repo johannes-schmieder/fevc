@@ -14,7 +14,7 @@ and the installed `help fevc`.
   components (the default), block projections, assumptions, simulations and
   limitations, and the models removed in 0.6.0. The derivation and the
   comparison with KSS are in the
-  [standard-error document](repeat_measurement/unified/se_unified_20261116.pdf).
+  [standard-error document](../../docs/feasible-standard-errors.pdf).
 - [Pooled mover–stayer inference](POOLED_COMPONENT_INFERENCE.md) and its
   [development assessment](POOLED_COMPONENT_ASSESSMENT.md): design records of
   the structured models removed from the command in 0.6.0.
@@ -57,12 +57,9 @@ status are in [native provenance](../../native/README.md).
   [INFERENCE.md](INFERENCE.md) for a prototype (LaTeX source and PDF), its
   control-term addendum of November 14, the prototype's code, aggregate
   results and development log, and where the command differs from the note.
-- [Standard errors for leave-out variance components: unified document](repeat_measurement/unified/se_unified_20261116.pdf)
-  (November 16, 2026; [LaTeX sources](repeat_measurement/unified/se_unified_20261116.tex)):
-  the method note and its addendum in one document, the implementation in
-  0.6.0 with the interval rule and the package's Monte Carlo runs, and a
-  comparison with the standard errors of KSS (2020) and of the KSS Matlab
-  package.
+- [Feasible Standard Errors for Leave-Out Variance Components](../../docs/feasible-standard-errors.pdf)
+  derives the intervals used by the command and compares them with the KSS
+  standard errors. [LaTeX source](../../docs/feasible-standard-errors.tex).
 - [Standard errors: technical supplement](standard_errors/standard_errors.tex): the
   leave-out residual method, removed before release, whose pass (pseudo-noise
   trace, control term, cost and memory accounting) the repeat-measurement

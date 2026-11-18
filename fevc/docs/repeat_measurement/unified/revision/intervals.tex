@@ -6,19 +6,28 @@ those few movers determine the difference in pay between the groups. Firm
 variance depends on the \emph{square} of that difference. Even if the estimated
 difference is nearly normal, its square can be far from normal. A symmetric
 interval based on the square root of \eqref{eq:Vhat} can then be too short or
-even unavailable. Whether this happens depends on the component. The same
-mobility network can support a normal interval for one component and require
-a different interval for another.
+even unavailable. KSS treat this case with a separate interval, which they index by
+$q=1$. (Their $q$ counts dominant directions. It is unrelated to the sample variance
+$q_g$.) The variance inputs of Section~\ref{sec:estimator} supply everything that
+interval needs.
 
-The default in \fevc{} 0.6.0 reports one interval per component. In a well-connected
-design a positive variance estimate gives the familiar interval
+\fevc{} reports one interval per component. In a well-connected design a positive
+variance estimate gives the familiar interval
 $\hat\theta\pm1.96\sqrt{\widehat{\V}[\hat\theta]}$ at the 95\% level.
 When a single direction accounts for more than 10\% of the estimated sampling
-variance, the program uses the $q=1$ interval of KSS if available. It can
-also use that interval when the normal variance estimate is nonpositive.
-For the variance of the sum, the nonzero eigenvalues of the target are all
-equal, and the default retains the normal interval when available. Several
-dominant directions would call for a different analysis.
+variance, the program reports the $q=1$ interval if it is available. It also
+uses that interval when the normal variance estimate is nonpositive.
+For the variance of the sum the nonzero eigenvalues of the target are all
+equal, so no direction can dominate, and the default keeps the normal interval when
+available. The choice is made component by component: the same mobility network can
+support a normal interval for one component and call for the $q=1$ interval for
+another.
+
+On large, well-connected panels the normal interval is the rule. On three Veneto
+panels of 2.3 to 5.2 million person-years, under both deletion modes, the leading
+direction's share was between 0.03\% and 8.1\% and every component received the
+normal interval. In the simulations the switch is what keeps coverage when a
+bottleneck is present (Section~\ref{sec:impl-mc}).
 
 \subsection{One dominant direction}\label{sec:q1int}
 For each component, take the eigenvalue $\lambda_1$ of $Av=\lambda S_{xx}v$
@@ -48,14 +57,22 @@ the entries with the same variance inputs used for the normal interval:
  \hat\Sigma_{\rm rr}=\widehat{\V}[\hat\theta_{\rm r}].
 \end{equation}
 Here $\widehat{\V}[\hat\theta_{\rm r}]$ includes the pair adjustment with the
-remainder's weights. The two candidates for $V_b$ protect against different
-errors. The leave-out estimate is unbiased under the baseline assumptions,
-but it can be negative when only a few observations carry the direction. The
-fitted estimate is more stable but may understate the variance of precisely
-those observations. Taking the larger value guards against a downward error
-at the cost of potentially longer intervals. The leave-out estimate
-$V_b^{\rm lo}$ still enters the decomposition of the point estimate.
+remainder's weights.
 
+\paragraph{Why the larger of two numbers.}
+The two candidates for $V_b$ protect against different errors. The leave-out
+estimate is KSS's. It is unbiased and needs no model for anyone, because
+$\Sigma_{bb}$ is linear in the error variances. But with a bottleneck the score rests
+on the few rows that link the groups, and the leave-out products of a few rows are
+noisy: their weighted sum can come out far too small, or negative. The fitted estimate
+is positive and stable, but only as good as the model on those few rows. Taking the
+larger guards against a downward error in either. This is why a model that understates
+the variance of the linking movers shortens the normal standard error but not the
+$q=1$ interval (Section~\ref{kss:sec:synth}). The price is, as a rule, a longer
+interval. The leave-out estimate $V_b^{\rm lo}$ still enters the decomposition of the
+point estimate, which is KSS's.
+
+\paragraph{The interval.}
 The interval takes the smallest and largest values of $\lambda_1 b^2+\theta_{\rm r}$
 over a confidence ellipse for $(b,\theta_{\rm r})$ centred at
 $(\hat b_1,\hat\theta_{\rm r})$. It thus allows for the curvature of the
@@ -70,66 +87,80 @@ The Andrews--Mikusheva (2016) radius $z_{\alpha,\kappa}$ is the
 $1-\alpha$ quantile of
 $\sqrt{Z_1^2+(|Z_2|+\kappa^{-1})^2}-\kappa^{-1}$ for independent
 standard normal $Z_1,Z_2$, interpreted by continuity at zero curvature.
-The package simulates the critical value with 100,000 draws. Its 95\% radius rises from 1.96 at zero curvature towards
-2.45 at high curvature. A positive-definite covariance matrix is necessary.
-The reported endpoints can be asymmetric, and their distance from the point
+The package simulates the critical value with 100,000 draws. Its 95\% radius rises
+from 1.96 at zero curvature towards 2.45 at high curvature, so without a dominant
+direction the two intervals nearly coincide. A positive-definite covariance matrix is
+necessary. The reported endpoints can be asymmetric, and their distance from the point
 estimate cannot be summarised by a single standard error.
 
 \subsection{The choice made by the command}
-When the normal variance estimate is positive, \fevc{} compares 0.10 with
+When the normal variance estimate is positive, \fevc{} compares 0.10 with the
+\emph{lead share}
 \[
  \frac{4\lambda_1^2\max(\hat b_1^2-V_b,0)V_b+2\lambda_1^2V_b^2}
-      {\widehat{\V}[\hat\theta]} .
+      {\widehat{\V}[\hat\theta]} ,
 \]
-The numerator estimates the sampling variance attributable to the leading
-direction, including the part that depends on the size of its score. Both
-numerator and denominator are estimated, so the ratio can exceed one.
-KSS's squared-eigenvalue share uses only the design. The two statistics answer
-different questions, even when both cutoffs are set at 10\%.
+which the output table displays for every component but the variance of the sum. The
+numerator estimates the
+sampling variance attributable to the leading direction, including the part that
+depends on the size of its score. Both numerator and denominator are estimated, so the
+ratio can exceed one. KSS suggest a heuristic threshold instead: treat as dominant the
+directions whose squared eigenvalue is at least one tenth of the sum of squared
+eigenvalues. That statistic uses only the design. The two answer different questions,
+even though both cutoffs are 10\%.
 
-The variance share was preferred for three reasons. First, the departure from
-normality comes from the leading direction's part of the sampling variance,
-and that part depends on the error variances along the direction and on the
-size of its score, not only on the design: a weakly connected direction can
-dominate the eigenvalues and still carry little of the variance. Second, it
-reports the $q=1$ interval only where it is needed, which matters because a
-$q=1$ component has no standard error and leaves \code{e(V)} unposted. On the stored
-draws of the $q=1$ simulations (27 designs, 1,000 draws each), both rules kept
-coverage, with a lowest coverage of 0.940 for KSS's rule and 0.937 for the
-variance share, but KSS's rule chose $q=1$ for 78 of the 81
-design--component pairs, including the firm variance and the covariance of a
-design without a bottleneck, whose eigenvalue shares were 0.11 and 0.12. The
-variance share chose it in 7\% of the draws of designs without a bottleneck.
-This comparison is development evidence: it was made after the results of those
-simulations were known. Third, the variance share uses only quantities that the
-$q=1$ calculation already produces, whereas KSS's share needs a separate
-randomized trace of the squared target kernel (KSS's code uses 10,000 draws).
-Its drawbacks are that it is a ratio of estimates, so it is noisy and can exceed
-one, and that it inherits the variance model's errors.
+The variance share was preferred for three reasons.
+\begin{itemize}
+\item \emph{It measures what causes the problem.} The departure from normality comes
+from the leading direction's part of the sampling variance. That part depends on the
+error variances along the direction and on the size of its score, not only on the
+design: a weakly connected direction can dominate the eigenvalues and still carry
+little of the variance.
+\item \emph{It reports the $q=1$ interval only where it is needed.} A $q=1$ component
+has no standard error and leaves \code{e(V)} unposted. On the stored draws of the
+$q=1$ simulations (27 designs, 1,000 draws each) both rules kept coverage, with a
+lowest coverage of 0.940 for KSS's heuristic and 0.937 for the variance share. But
+KSS's heuristic chose $q=1$ for 78 of the 81 design--component pairs, including the firm variance
+and the covariance of a design without a bottleneck, whose eigenvalue shares were 0.11
+and 0.12. The variance share chose it in 7\% of the draws of designs without a
+bottleneck. This comparison was made after the results of those simulations were
+known, so it is development evidence.
+\item \emph{It is free.} The variance share uses only quantities that the $q=1$
+calculation already produces. The eigenvalue share needs a separate randomised trace
+of the squared target kernel (KSS's code uses 10,000 draws).
+\end{itemize}
+Its drawbacks are that it is a ratio of estimates, so it is noisy, and that it
+inherits the variance model's errors.
 
-When \fevc{} reports a $q=1$ interval, it displays endpoints and leaves the
-standard-error column empty for that component. The high-rank standard
-error, when it exists, remains available for comparison.
-\code{e(inference\_intervals)} records the interval selected by the default.
-When all four components have admissible normal intervals and their joint
-covariance is available, \code{e(V)} gives that covariance. Its fourth row
-and column respect the identity between the variance of the sum and the
-three base components. Users can request the normal form with
-\code{inference(highrank)} or the $q=1$ form wherever available with
-\code{inference(q1)}. Under the default a request that cannot support
-inference returns point estimates with a reason. \code{inference(none)}
-requests point estimates alone.
+\paragraph{What the user sees.}
+The output shows, for every component, the estimate, the standard error, the interval,
+which interval it is, and the lead share (none for the variance of the sum). For a $q=1$ component the standard-error
+column is empty. \code{e(inference\_intervals)} holds both intervals of every component
+and the normal-form standard error, and \code{estat inference} explains the choice.
+When all four components have normal intervals and their joint covariance is
+available, \code{e(V)} gives that covariance. Its fourth row and column respect the
+identity between the variance of the sum and the three base components.
+\code{inference(highrank)} requests the normal form for every component and still
+reports the lead shares when the search for the directions succeeds. \code{inference(q1)} requests the $q=1$ form wherever it is
+available. Under the default a request that cannot support inference returns point
+estimates with a reason, and \code{inference(none)} requests point estimates alone.
 
+\paragraph{Two or more dominant directions.}
+The command does not implement an interval for more than one dominant direction.
+\code{estat inference} reports the two largest eigenvalues and an effective rank for
+each component and warns when the rank is low. A second eigenvalue close to the first
+is the sign that neither interval's conditions hold.
+
+\paragraph{What supports the choice.}
 The coverage result for a prespecified $q=1$ interval requires a diffuse
 remainder, a leading score supported by a growing effective number of
 observations, accurate variance inputs in the relevant directions, and the
 conditions for joint normality. For the larger-of-two rule in \eqref{eq:q1est},
 the result also bounds the correlation between score and remainder
-(Corollary~\ref{cor:q1}). The 10\% switching rule was chosen on development
-simulations and evaluated on fresh designs. Its coverage is an empirical
-finding (Section~\ref{sec:impl-mc}). Adding observations away from a
-bottleneck cannot by itself justify an interval that rests on the same handful
-of movers.
+(Corollary~\ref{cor:q1}). The 10\% switching rule itself was chosen on development
+simulations and confirmed on fresh designs. Its coverage is an empirical
+finding (Section~\ref{sec:impl-mc}), and neither KSS nor this note has a theorem for
+a data-dependent choice of interval.
 
 \section{Controls, centring and computation}\label{sec:controls}
 
@@ -139,22 +170,25 @@ effects would leave repeated observations of the same worker at the same firm
 with a common expected wage. Removing \emph{estimated} year effects also puts
 the estimation error of each year coefficient into every adjusted wage for
 that year. Treating those wages as independent can materially understate
-uncertainty. In the dense Gaussian example in Appendix~\ref{app:ctlnum},
-holding the control estimates fixed gives only 62\% of the true \emph{variance}
-of the estimated variance of the sum under match deletion with one error
-variance per cell. The adjusted calculation gives 99.8\%.
+uncertainty. \fevc{} adds a first-order term for the estimation of the control
+coefficients, and the term does its job. In the dense Gaussian example of
+Appendix~\ref{app:ctlnum}, holding the control estimates fixed gives only 62\% of the
+true \emph{variance} of the estimated variance of the sum under match deletion with
+one error variance per cell. The adjusted calculation gives 99.8\%.
 
 The standard error describes the \emph{fixed-offset} estimator. This estimator
 first fits the controls, removes their fitted contribution to wages, and then
 performs leave-out estimation on the adjusted outcome. Its uncertainty includes
 estimation of the controls to first order. The default joint point estimate
 instead re-estimates the control coefficients inside each leave-out fit. That
-adds a term which can be material when the control index is large or closely
-aligned with a difference between groups of firms. It falls outside the reported
-standard error. Under match deletion, \code{nuisance(fixedoffset)} gives the point
-estimator to which the adjustment applies directly. Under observation deletion
-the supported inference route requires joint nuisance estimation, and the
-native route also requires unit frequencies.
+adds a term which falls outside the reported standard error. In the dense check, under
+observation deletion, the joint estimate's variance is 0.995 to 1.035 times the
+fixed-offset one. The term can
+be material when the control index is large or closely aligned with a difference
+between groups of firms (Section~\ref{sec:impl-mc}). Under match deletion,
+\code{nuisance(fixedoffset)} gives the point estimator to which the adjustment
+applies directly. Under observation deletion the supported inference route requires
+joint nuisance estimation, and the native route does not accept frequency weights.
 
 To see the origin of the correction, let $v$ be the error vector in the
 outcome after subtracting the fitted control index, and $S=\V[v]$. Although
@@ -180,10 +214,11 @@ the uncentred weights. Under \code{centering(corrected)} it treats the
 increment for the centring correction as fixed when computing the standard
 error. These choices concern the sampling variability of the econometric
 estimate. The Monte Carlo standard error of the \emph{point estimate}, also
-available in \fevc{}, measures numerical variation from random projections.
+reported by \fevc{}, measures numerical variation from random projections and is a
+separate quantity.
 
 The most expensive-looking term in \eqref{eq:Vhat} sums over every pair of
-observations. It can be computed with a few linear solves. In the baseline
+rows. It is computed with a few linear solves instead. In the baseline
 case draw independent $\zeta_i$ with mean zero and variance $\st_i^2$, apply
 $C$ once, and sum the squared entries of $C\zeta$ with weights $\st_i^2$.
 Conditional on the fitted variances,
@@ -193,19 +228,29 @@ Conditional on the fitted variances,
 \end{equation}
 The calculation uses normal draws and reuses them across components, their
 covariances and the remainder. With many diffuse directions, each draw
-already averages noise across many observations. Proposition~\ref{prop:sim}
-relates the precision of this average to the concentration of the spectrum.
+already averages noise across many rows, so few draws are needed; the default is
+eight. Proposition~\ref{prop:sim} relates the precision of this average to the
+concentration of the spectrum. On the six-year Veneto panel, where the method study
+used 16 draws, other sets of draws or a run with 64 draws changed no standard error by
+more than 0.6\%.
 
 The native route reuses the point estimator's leverages and target weights,
 with 200 random projections by default and the finite-projection correction
-in the point estimate. Eight noise draws for inference require 35 additional
-solves for the normal covariance calculation. With the leading directions
-and remainders the default takes about 90 additional solves, with the exact
-number depending on convergence. With jointly estimated controls a separate
-offset pass adds two solves per point-estimate projection. The native and
-matrix-free Mata routes find the leading directions by a restarted Lanczos
-iteration. Exact Mata uses a dense eigendecomposition, while Mata with random
-projections runs its own projection stage for inference. On three Veneto
-panels with 2.3 to 5.2 million person-years, no controls and 16 threads, the
-default added 24--30\% to the measured running time of point estimation. The
-cost on a particular design depends especially on controls and solver route.
+in the point estimate. The standard errors then add about 90 linear solves to the
+roughly 600 to 800 of the point estimates: three plus four per noise draw for the
+normal covariance (35 with the default eight draws), and about 55 for the leading
+directions and the $q=1$ pieces. The default, \code{inference(highrank)} and
+\code{inference(q1)} all take them, because
+\code{inference(highrank)} also searches for the leading directions in order to report
+the lead shares. The native and matrix-free Mata routes find the directions by a
+restarted Lanczos iteration. Exact Mata uses a dense eigendecomposition, while Mata
+with random projections runs its own projection stage for inference.
+
+On three Veneto panels with 2.3 to 5.2 million person-years, no controls and 16
+threads, the default added 24--30\% to the measured running time of point estimation.
+With controls under the default \code{nuisance(joint)}, forming the fixed-offset
+version of the units takes one further pass of two solves per point-estimate
+projection, 400 at the default. This note has no measured running time for that case.
+By the
+solve counts the offset pass is then the larger part of the cost of inference, and
+\code{nuisance(fixedoffset)} avoids it.

@@ -65,14 +65,10 @@ variance per set, whatever those variances are. With the fitted model it is
 as good as that model; estimated effects enter the profile, and centering
 is treated as described [below](#centering-routes-and-the-reported-covariance). Observation
 deletion needs joint nuisance and, natively, unit frequencies. The
-derivation is in the method note of November 13, 2026 and its control-term
-addendum of November 14, with the prototype's code and evidence, in
-[`fevc/docs/repeat_measurement/`](repeat_measurement/README.md), whose
-README lists where the command differs from the note. The
-[unified document](repeat_measurement/unified/se_unified_20261116.pdf) of
-November 16, 2026 combines the note and the addendum with the
-implementation in 0.6.0 and a comparison with the standard errors of KSS
-and of the KSS Matlab package. The
+[standard-error note](../../docs/feasible-standard-errors.pdf) derives the
+method and compares it with the KSS standard errors. The
+[method archive](repeat_measurement/README.md) contains the earlier note,
+control-term addendum, prototype code and results. The
 simulation harness is `fevc/tools/default_interval/` and its evidence
 `fevc/docs/default_interval/`.
 

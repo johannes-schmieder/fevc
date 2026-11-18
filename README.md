@@ -18,9 +18,15 @@ their covariance posted as `e(V)` when every component is normal.
 `q = 1` interval wherever it exists; `inference(none)` gives point estimates
 only. Standard errors for projections of fixed effects on covariates are
 available on request (`project()`). See the
-[inference guide](fevc/docs/INFERENCE.md) and the
-[standard-error document](fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf),
-which derives the method and compares it with the KSS standard errors.
+[inference guide](fevc/docs/INFERENCE.md) and the note
+[Feasible Standard Errors for Leave-Out Variance Components](docs/feasible-standard-errors.pdf),
+which derives the method and reports the evidence for it. In registered
+simulations of the command the reported 95% intervals covered 96% on
+average, between 92.3% and 99.6% over 320 cases. On the six samples of
+Kline, Saggio, and Sølvsten's Table IV the firm-variance standard errors are
+within about 7% of those of the KSS Matlab package on five, at seconds
+instead of minutes to hours per sample. The note also states the designs in
+which the standard errors were measurably off.
 
 Because the randomized approximation depends on random draws, `fevc` reports
 by default a numerical Monte Carlo standard error (MCSE) for each of the four
@@ -137,8 +143,8 @@ options, and more examples, or read the [usage guide](fevc/README.md).
 
 - [Technical supplement](https://johannes-schmieder.com/papers/fevc_technical_supplement.pdf)
 - [Usage guide](fevc/README.md)
-- [Inference guide](fevc/docs/INFERENCE.md) and the
-  [standard-error document](fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf)
+- [Inference guide](fevc/docs/INFERENCE.md) and the note
+  [Feasible Standard Errors for Leave-Out Variance Components](docs/feasible-standard-errors.pdf)
   ([sources and method note](fevc/docs/repeat_measurement/README.md))
 - [Outcome centering](fevc/docs/CENTERING.md)
 - [Installation](INSTALLATION.md)

@@ -85,7 +85,7 @@ is. \textbf{The two estimators are therefore not first-order equivalent in gener
 describes the fixed-offset estimator. (For example, workers with two or four observations, a
 control alternating $\pm1$, unit error variance: $\V[\hat\theta_{\rm joint}]/\V[\hat\theta_{\rm fixed}]\to1+4\gamma^2/45$.)
 In the check of Appendix~\ref{app:ctlnum} the joint variance is 0.995 to 1.035 times the fixed-offset one. A term
-for \eqref{ctl:eq:joint} is not part of this analysis, nor of \fevc{} 0.6.0; Section~\ref{sec:impl-mc} reports what
+for \eqref{ctl:eq:joint} is not part of this analysis, nor of \fevc; Section~\ref{sec:impl-mc} reports what
 the package simulations show of it.
 
 \subsection{Estimating it within the method}\label{ctl:est}
@@ -149,7 +149,7 @@ $\tilde e_i\hat\omega_i'$ and $\hat H=\Pi'\hat K\Lambda Z'+Z\Lambda\hat K'\Pi$, 
 $\hat Q_{\rm full}=\hat Q-2\tr(CS_dC\hat H)+\tr(C\hat HC\hat H)$, whose conditional mean is
 $\tr\{C(S_d-\hat H)C(S_d-\hat H)\}$, while $\hat L=4\hat m'(S_d-\hat H)\hat m$ exactly. The middle term is the average
 of $u'\hat Hu$ over the existing draws; the last needs $2k$ further applications of $C$, whereas the control term as implemented needs no
-further solve. (Under the default \code{nuisance(joint)} \fevc{} 0.6.0 adds an offset pass of two solves per
+further solve. (Under the default \code{nuisance(joint)} \fevc{} adds an offset pass of two solves per
 point-estimate probe, 400 by default, to form the fixed-offset units; \code{nuisance(fixedoffset)} avoids it.) $S_d-\hat H$ need not be
 positive semidefinite, so it cannot be drawn from.
 \item $\hat\omega_i=\omega_i-G_i\delta$, not $\omega_i$: the realised product is shrunk by the fit, as a residual is.
@@ -234,7 +234,7 @@ $-2\,(\bar y-c_0)\,h'C\varepsilon$, whose mean is $-(2/n_{\rm py})\,h'VCh$ with 
 the error variances are bounded and bounded away from zero this change is of the order of $\lambda_{\max}$, and
 therefore negligible relative to the standard error under condition (b) of Proposition~\ref{prop:conc}.
 
-The standard error of \fevc{} 0.6.0 does not hold the mean fixed. Under \code{centering(mean)} it centres the
+The standard error of \fevc{} does not hold the mean fixed. Under \code{centering(mean)} it centres the
 pseudo-noise of Section~\ref{sec:computation} in the same way as the outcome before it enters the kernel, so the
 kernel is that of the centred estimate and no approximation that holds the observed mean fixed is made
 (\code{e(inference\_mean\_omitted)} is zero). Under \code{centering(corrected)} the standard error is that of the

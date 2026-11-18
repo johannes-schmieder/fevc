@@ -1,0 +1,78 @@
+\section{Scope: what is established and how to read the output}\label{sec:scope}
+
+\subsection{What rests on what}
+\begin{itemize}
+\item \emph{Proved.} For exact weights, known control coefficients and a fixed centring
+constant: the variance estimate is exactly unbiased when movers' variances are known;
+it converges under design conditions implied by KSS's; a wrong mover model adds the
+explicit term $b(\Delta)$; and the same inputs give a consistent covariance matrix for
+KSS's $q=1$ interval, with a coverage bound for the larger-of-two rule
+(Appendices~\ref{sec:results} and~\ref{app:proofs}).
+\item \emph{Shown by simulation.} The profile evaluated at estimated effects and the
+projected weights (Section~\ref{sec:sim}); the $q=1$ interval at a bottleneck
+(Section~\ref{sec:q1sim}); the automatic choice of interval and the control term
+through the command (Section~\ref{sec:impl-mc}). These runs show calibration on the
+designs that were run. They are not a coverage guarantee beyond them.
+\item \emph{Compared.} Agreement with the KSS Matlab package and with KSS's
+split-sample method on six real samples, and against a known truth on two of their
+networks (Section~\ref{sec:kss}).
+\end{itemize}
+
+\subsection{Where the standard error was measurably off}
+In most designs the standard error was within ten per cent of its benchmark and the
+reported interval covered. The exceptions found are these.
+\begin{itemize}
+\item \emph{A few linking movers whose noise the model misses.} On the older
+leave-two-out network, with wage noise tied to the weights that carry the component,
+the normal-form standard errors for worker variance and the covariance were 14--17\%
+too small. The reported $q=1$ intervals covered 96--98\%. In the synthetic designs with
+noisy bridging workers the normal standard error was 0.59 to 0.67 times the true one,
+and the $q=1$ interval covered 95.0--99.1\%. The exposure is to users who override the
+default with \code{inference(highrank)} on a design with a large lead share.
+\item \emph{Short panels.} In a three-year window the firm-variance standard error was
+up to 16\% too large, beyond the registered 15\%. The error is on the conservative
+side.
+\item \emph{Estimated controls.} The standard error describes the fixed-offset
+estimate. Where blocks of firms differ and a control loads on the worker effect, the
+worker- and firm-variance standard errors were 7--8\% short in the registered
+confirmation. With a control index as large as the effects, a stress case outside
+that confirmation, the covariance standard error of the default joint estimate was
+12\% short, and \code{nuisance(fixedoffset)} removed the shortfall. Variances that
+move with a control inside a cell and poorly identified control coefficients are
+further limits (Appendix~\ref{app:controls}).
+\item \emph{A handful of bridging workers, or several weak links.} The coverage result
+for the $q=1$ interval requires that no single row dominates the leading score. Two
+groups of firms joined by three workers are outside it, although the interval covered
+in the two such designs that were run. Two or more dominant directions are not
+implemented.
+\item \emph{Three registered checks failed and stand as failures:} the three-year
+validation limit above, a length tolerance for the $q=1$ interval without a
+bottleneck (12.7\% against 10\%), and the first package confirmation, on its
+inventory.
+\end{itemize}
+Two things lie outside the standard error altogether. Independence of errors across
+deletion units is the assumption of the point estimate itself; if it fails, the
+estimate is affected and not only its precision. And the numerical noise of the point
+estimate from random projections is reported separately: at the default 200
+projections it was 10--12\% of the standard error on the older-worker samples, where
+more projections are advisable.
+
+\subsection{Reading the output}
+\begin{itemize}
+\item \emph{A normal interval with a small lead share} is the usual case on large,
+well-connected panels. The standard error and \code{e(V)} can be used as usual, for
+example with \code{test} and \code{lincom}.
+\item \emph{A $q=1$ interval} means that one direction of the mobility network carries
+more than a tenth of the estimated sampling variance, or that the normal variance
+estimate was not positive. Report the interval. It has no standard
+error, and \code{e(V)} is not posted.
+\item \emph{With controls,} the standard error covers their estimation to first order.
+If the control index is large relative to the effects, \code{nuisance(fixedoffset)}
+under match deletion gives the estimate that the standard error describes.
+\item \emph{The line on numerical precision} under the table says how large the
+projection noise of the point estimate is relative to the standard error. Above about
+a tenth, raise \code{probes()}.
+\item \emph{\code{estat inference}} shows both intervals of every component, the lead
+share, the two largest eigenvalues and the effective rank, and the warnings that
+apply.
+\end{itemize}

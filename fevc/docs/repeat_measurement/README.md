@@ -1,8 +1,12 @@
 # Repeat-measurement standard errors: method note and prototype evidence
 
-For the method used in `fevc` 0.6.0, read
-[Repeat Measurements and Inference for Leave-Out Variance Components](unified/se_unified_20261117.pdf).
-It explains the reported intervals, their assumptions, and the evidence from Veneto and the KSS comparison.
+For the method used in `fevc`, read
+[Feasible Standard Errors for Leave-Out Variance Components](../../../docs/feasible-standard-errors.pdf)
+(November 18, 2026). It explains the reported intervals, their assumptions, and the evidence from Veneto, the
+simulations of the command and the KSS comparison, and it closes with what is proved, what rests on simulation
+and where the standard errors were measurably off. Its exposition and main tables come from the November 13
+note below; its sources are `docs/feasible-standard-errors.tex` and `unified/revision/`, with the proofs in
+`unified/a1_proofs.tex` and the generated numbers and tables in `note/gen/`.
 The [November 16 edition](unified/se_unified_20261116.pdf) includes the full development and simulation tables.
 
 This directory holds the note that derived the repeat-measurement standard errors of the four variance
@@ -243,7 +247,10 @@ The result files name the SCC compute nodes they ran on; those are left as they 
 
 ## Rebuilding
 
-The PDFs build with pdfLaTeX (TeX Live 2023 was used; the note needs `pgfplots`):
+From the repository root, rebuild the [current note](../../../docs/feasible-standard-errors.tex) with
+`latexmk -cd -pdf docs/feasible-standard-errors.tex`.
+
+The earlier PDFs build with pdfLaTeX (TeX Live 2023 was used; the note needs `pgfplots`):
 
 ```bash
 cd fevc/docs/repeat_measurement/note
@@ -252,10 +259,9 @@ cd ../control_term
 latexmk -pdf control_term_v3.tex
 cd ../unified
 latexmk -pdf se_unified_20261116.tex   # or pdflatex three times
-latexmk -pdf se_unified_20261117.tex   # revised edition; sources in revision/ and shared proofs in a1_proofs.tex
 ```
 
-The unified document builds over the committed PDF as well; build it in a copy of `note/` and `unified/`
+The November 16 build overwrites its committed PDF; build it in a copy of `note/` and `unified/`
 side by side to keep the committed bytes. Built that way its text is identical to the committed PDF. The
 comparison's aggregate results (per-sample estimates, per-draw simulation records, summaries and manifests)
 come from runs on private data and are kept outside the repository; Appendix F of the document gives their

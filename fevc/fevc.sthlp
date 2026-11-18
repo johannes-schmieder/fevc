@@ -595,10 +595,11 @@ are separate from the point-estimation probes set by {cmd:probes()}, and the
 numerical MCSE does not cover them. The
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
 gives the formulas, the simulations and their limits; the
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf":standard-error document}
-({cmd:fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf} in the
-source repository) derives the method, describes its implementation in
-0.6.0 and compares it with the standard errors of KSS.
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/docs/feasible-standard-errors.pdf":standard-error document}
+({cmd:docs/feasible-standard-errors.pdf} in the
+source repository) derives the method, reports the coverage of the
+reported intervals in simulations of the command and compares the standard
+errors with those of KSS.
 {help fevc##component_example:Examples 5 to 8} show the syntax and how to
 read the results.
 
@@ -1112,12 +1113,11 @@ Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
 88(5): 1859-1898.
 
 {pstd}
-"Standard Errors for Leave-Out Variance Components: The Repeat-Measurement
-Method, Its Implementation in fevc 0.6.0, and a Comparison with the KSS
-Standard Errors." November 16, 2026.
-{browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf":fevc/docs/repeat_measurement/unified/se_unified_20261116.pdf}
-in the source repository. It derives the standard errors of the components
-and compares them with those of KSS; the
+"Feasible Standard Errors for Leave-Out Variance Components." November 18, 2026.
+{browse "https://github.com/johannes-schmieder/fevc/blob/main/docs/feasible-standard-errors.pdf":docs/feasible-standard-errors.pdf}
+in the source repository. It derives the standard errors of the components,
+reports their coverage in simulations, compares them with those of KSS and
+states their limits; the
 {browse "https://github.com/johannes-schmieder/fevc/blob/main/fevc/docs/INFERENCE.md":inference guide}
 describes what the command computes.
 
